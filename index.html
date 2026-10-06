@@ -72,7 +72,11 @@
   var PORTAL = 'sponsorship';
   var TOOL = 'Team HQ';
   var POLL_MS = 30000, IDLE_POLL_MS = 120000, IDLE_AFTER = 10 * 60000, COOL_POLL_MS = 180000;
-  var HOT = { tasks: 1, nudges: 1, notes: 1, agenda: 1, planitems: 1, people: 1, blocks: 1 };
+  var HOT = { tasks: 1, nudges: 1, notes: 1, agenda: 1, planitems: 1, people: 1, blocks: 1, syncs: 1, syncitems: 1 };
+  /* Sync Ups spaces: the relay hands each person only the spaces they are in. Until the relay
+     says so (scope "members"), nothing is read into the page and nothing is saved. */
+  var SYNC = { syncs: 1, syncitems: 1 };
+  var syncShared = null;   /* null not checked yet, true kept to members, false not yet */
   var FLUSH_MS = 350, RETRY_MS = 8000;
   var MAX_FILE = 940000;              /* the relay takes at most 1,000,000 bytes a save */
   var MAX_RECEIPT = 4 * 1024 * 1024;  /* base64 adds a third; the relay's request limit is about 6 MB */
@@ -110,7 +114,7 @@
     }
     if (seg.length === 2) {
       if (seg[0] === 'leads') return { proj: PORTAL, file: 'leads', key: seg[1], ro: true };
-      if (COLLS.indexOf(seg[0]) >= 0) return { proj: PROJECT, file: seg[0], key: seg[1] };
+      if (COLLS.indexOf(seg[0]) >= 0 || SYNC[seg[0]]) return { proj: PROJECT, file: seg[0], key: seg[1] };
     }
     throw err('invalid_argument', 'Team HQ does not keep anything at ' + path);
   }
@@ -118,13 +122,13 @@
 
   /* ---------- talking to the relay ---------- */
   var status = { offline: false, lastError: '' };
-  function call(proj, path, method, body) {
+  function call(proj, path, method, body, signal) {
     var rs = RS(), tok = rs && rs.token();
     if (!tok) return Promise.reject(err('SIGNED_OUT', 'Not signed in', 401));
     var headers = { 'Authorization': 'Bearer ' + tok };
     if (body) headers['Content-Type'] = 'application/json';
     return fetch(RELAY_URL + '/' + proj + path, {
-      method: method, cache: 'no-store', headers: headers, body: body ? JSON.stringify(body) : undefined
+      method: method, cache: 'no-store', headers: headers, body: body ? JSON.stringify(body) : undefined, signal: signal
     }).then(function (r) {
       status.offline = false;
       return r.json().catch(function () { return {}; }).then(function (b) {
@@ -156,6 +160,10 @@
   function load(f) {
     if (f.loading) return f.loading;
     f.loading = net('GET', f).then(function (b) {
+      if (f.proj === PROJECT && SYNC[f.name]) {
+        syncShared = !!(b && b.scope === 'members');
+        if (!syncShared) return { content: { docs: {} }, sha: null };
+      }
       return { content: normalise(b && b.data), sha: (b && b.sha) || null };
     }, function (e) {
       /* the relay answers a missing file with {data:null}; a 404 means something else is
@@ -202,6 +210,7 @@
     return new Promise(function (res, rej) {
       var go = function () {
         if (f.denied) { rej(err('NO_ACCESS', 'You do not have access to save this.', 403)); return; }
+        if (f.proj === PROJECT && SYNC[f.name] && syncShared !== true) { rej(err('SYNC_NOT_PRIVATE', 'Sync Ups waits until the relay can keep each space to its members.')); return; }
         if (kind === 'update' && f.loaded && docIn(f, p.key) === null) { rej(err('not-found', 'No document to update: ' + path)); return; }
         var op = { kind: kind, key: p.key, data: data, res: res, rej: rej };
         f.pending.push(op); f.view = null;
@@ -380,7 +389,24 @@
   /* ---------- receipt photos ----------
      Stored as files in team-hq-data under receipts/, through the relay's /commit route,
      and read back through /file/, so the photos never sit anywhere public. */
-  var blobs = {};
+  var blobs = {}, files = {};
+  function typeOf(id) { var e = (/\.([a-z0-9]+)$/i.exec(id) || [])[1] || ''; e = e.toLowerCase();
+    return { pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', heic: 'image/heic',
+      csv: 'text/csv', txt: 'text/plain', md: 'text/markdown', json: 'application/json',
+      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' }[e] || 'application/octet-stream'; }
+  /* the file exactly as it was attached, read back through the relay */
+  function relayFile(id) {
+    if (files[id]) return Promise.resolve(files[id]);
+    if (!/^(receipts|attachments)\//.test(String(id))) return Promise.reject(err('NOT_HERE', 'That file was attached in the Claude copy.'));
+    return call(PROJECT, '/file/' + id.split('/').map(encodeURIComponent).join('/'), 'GET').then(function (b) {
+      var bin = atob((b && b.content) || ''), bytes = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      files[id] = new Blob([bytes], { type: typeOf(id) });
+      return files[id];
+    });
+  }
+  window.__relayFile = relayFile;
   function toBase64(fileObj) {
     return new Promise(function (res, rej) {
       var r = new FileReader();
@@ -390,18 +416,19 @@
     });
   }
   var ASSETS = {
-    upload: function (fileObj) {
+    upload: function (fileObj, opts) {
       if (!fileObj) return Promise.reject(err('NO_FILE', 'No file.'));
-      if (fileObj.size > MAX_RECEIPT) return Promise.reject(err('TOO_BIG', 'That photo is over 4 MB. Try a smaller one.'));
+      if (fileObj.size > MAX_RECEIPT) return Promise.reject(err('TOO_BIG', (fileObj.name || 'That file') + ' is over 4 MB, the most the save relay takes. Try a smaller copy.'));
+      var folder = (opts && /^(receipts|attachments)$/.test(opts.folder)) ? opts.folder : 'receipts';
       var safe = String(fileObj.name || 'receipt').replace(/[^A-Za-z0-9._-]/g, '_').slice(-80);
-      var path = 'receipts/' + now().toString(36) + '-' + safe;
+      var path = folder + '/' + now().toString(36) + Math.random().toString(36).slice(2, 6) + '-' + safe;
       return toBase64(fileObj).then(function (b64) {
         return serial(function () {
-          return call(PROJECT, '/commit', 'POST', { message: 'Receipt ' + safe + ' (' + (me().name || 'Team HQ') + ')',
+          return call(PROJECT, '/commit', 'POST', { message: (folder === 'receipts' ? 'Receipt ' : 'File ') + safe + ' (' + (me().name || 'Team HQ') + ')',
             files: [{ path: path, content: b64, encoding: 'base64' }] });
         });
       }).then(function () {
-        blobs[path] = URL.createObjectURL(fileObj);
+        blobs[path] = URL.createObjectURL(fileObj); files[path] = fileObj;
         return { id: path, name: fileObj.name, size: fileObj.size, type: fileObj.type };
       });
     }
@@ -410,14 +437,41 @@
   window.__relayBlob = function (img, id) {
     if (!img || !id) return;
     if (blobs[id]) { img.src = blobs[id]; return; }
-    if (String(id).indexOf('receipts/') !== 0) { img.alt = 'Receipt (kept in the Claude version)'; return; }
-    call(PROJECT, '/file/' + id.split('/').map(encodeURIComponent).join('/'), 'GET').then(function (b) {
-      var bin = atob((b && b.content) || ''), bytes = new Uint8Array(bin.length);
-      for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      var type = /\.pdf$/i.test(id) ? 'application/pdf' : /\.png$/i.test(id) ? 'image/png' : 'image/jpeg';
-      blobs[id] = URL.createObjectURL(new Blob([bytes], { type: type }));
-      img.src = blobs[id];
-    }, function () { img.alt = 'The receipt could not be loaded'; });
+    relayFile(id).then(function (b) { blobs[id] = URL.createObjectURL(b); img.src = blobs[id]; },
+      function () { img.alt = 'The picture could not be loaded'; });
+  };
+
+
+  /* ---------- asking Claude (Ask, and Plan My Day) ----------
+     Through the relay's POST /team-hq/ask, which holds MISMO's Anthropic API key so the
+     page never does. Until that route is deployed and switched on for team-hq, a one-time
+     check finds it missing and both features stay hidden; once it answers, they appear by
+     themselves on the next load — no new copy of this page needed. */
+  var askReady = false;
+  function probeAsk() {
+    /* an empty question costs nothing: a relay that is fully set up refuses it with 400
+       NO_PROMPT before calling Claude; anything else means not ready */
+    return call(PROJECT, '/ask', 'POST', { prompt: '' }).then(function () { return false; },
+      function (e) { return !!(e && e.status === 400 && e.code === 'NO_PROMPT'); })
+      .then(function (ok) {
+        askReady = ok;
+        if (ok) { try { if (window.__show && window.__S) window.__show(window.__S.tab || 'today'); } catch (x) {} }
+        return ok;
+      });
+  }
+  var SAMPLE = function (prompt, opts) {
+    opts = opts || {};
+    return call(PROJECT, '/ask', 'POST', { prompt: String(prompt || ''), tier: opts.modelTier === 'complex' ? 'complex' : 'default' }, opts.signal)
+      .then(function (b) {
+        var text = (b && b.text) || '';
+        if (opts.onText) { try { opts.onText({ text: text }); } catch (x) {} }
+        return { text: text };
+      }, function (e) {
+        /* the page already knows these words for what went wrong */
+        if (e && e.name === 'AbortError') throw err('canceled', 'Canceled');
+        if (e && e.status === 429) throw err('rate_limited', e.message, 429);
+        throw e;
+      });
   };
 
   /* ---------- files handed to the person ---------- */
@@ -492,6 +546,11 @@
       return load(file(PROJECT, 'people'));
     }).then(function () {
       ready = true; starting = false; gate(null); resumeWrites();
+      probeAsk().catch(function () {});
+      /* is the relay keeping Sync Ups spaces to their members yet? */
+      load(file(PROJECT, 'syncs')).then(function () {
+        try { if (syncShared && window.__show && window.__S && window.__S.tab === 'syncs') window.__show('syncs'); } catch (x) {}
+      }, function () { syncShared = false; });
       readyWaiters.splice(0).forEach(function (r) { r(); });
     }, function (e) {
       starting = false;
@@ -555,10 +614,14 @@
       if (cap === 'user') return whenReady().then(function () { return USER; });
       if (cap === 'assets') return whenReady().then(function () { return ASSETS; });
       if (cap === 'downloads') return Promise.resolve(DOWNLOADS);
-      return Promise.resolve(null);      /* 'sample' — asking Claude from the page — is not available here */
+      if (cap === 'sample') return Promise.resolve(askReady ? SAMPLE : null);
+      return Promise.resolve(null);
     }
   };
   window.__hqRelay = { files: F, place: place,
+    askReady: function () { return askReady; },
+    syncMode: function () { return syncShared === true ? 'shared' : 'waiting'; },
+    myEmail: function () { return myId(); },
     canPrivate: function () { var rs = RS(); return !!(rs && rs.role(PRIVATE)); }, poll: function () { poll(true); }, pending: anyPending, status: status,
     why: function () { return WHY[status.lastError] || status.lastError || ''; },
     config: { RELAY_URL: RELAY_URL, PROJECT: PROJECT, PRIVATE: PRIVATE, POLL_MS: POLL_MS } };
@@ -1850,6 +1913,83 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .pnh .spacer{flex:1 1 auto}
 .pnt{margin-top:6px;font-size:13.5px;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink)}
 
+/* ---------- Sync Ups ---------- */
+.syspace > summary .syavs{display:inline-flex;gap:2px}
+.sybody{padding:0}
+.sybar{display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--rule)}
+.sylists{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;padding:14px 16px;background:var(--surface-2)}
+.sylist{background:var(--surface);border:1px solid var(--border);border-radius:6px;display:flex;flex-direction:column;min-width:0}
+.sylist.over{border-color:var(--c1);box-shadow:0 0 0 2px var(--sky-wash)}
+.sylh{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:10px 12px;background:none;border:0;border-bottom:1px solid var(--rule);cursor:pointer;color:var(--ink);font:inherit}
+.sylh:hover{background:var(--surface-2)}
+.sylh:focus-visible{outline:2px solid var(--c1);outline-offset:-2px}
+.syln{flex:1 1 auto;font-weight:700;font-size:13.5px;overflow-wrap:anywhere}
+.sylh .cnt{background:var(--surface-2);border:1px solid var(--border);border-radius:3px;padding:0 7px;font-size:11px;color:var(--ink-2)}
+.sylb{display:flex;flex-direction:column;gap:6px;padding:8px}
+.syempty{font-size:12.5px;color:var(--ink-3);padding:6px 4px}
+.syc{display:flex;align-items:flex-start;gap:9px;padding:8px 9px;border:1px solid var(--rule);border-radius:4px;background:var(--surface);cursor:pointer}
+.syc:hover{background:var(--surface-2)}
+.syc:focus-visible{outline:2px solid var(--c1);outline-offset:1px}
+.syc.open{background:var(--sky-wash);border-color:var(--sky-soft)}
+.syc .pchk{margin-top:1px}
+.syct{flex:1 1 auto;min-width:0;font-size:13px;font-weight:600;color:var(--ink);overflow-wrap:anywhere}
+.syct small{display:block;font-weight:400;font-size:11.5px;color:var(--ink-3);margin-top:1px}
+.syc.done .syct > span{color:var(--ink-3);text-decoration:line-through;text-decoration-color:var(--border-strong)}
+.sycr{display:flex;align-items:center;gap:5px;flex:0 0 auto;flex-wrap:wrap;justify-content:flex-end}
+.syqa{margin:0 8px 8px}
+.syfold{border-top:1px solid var(--rule)}
+.syfold > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:11px 16px;font-weight:700;font-size:13.5px;color:var(--ink)}
+.syfold > summary::-webkit-details-marker{display:none}
+.syfold > summary:hover{background:var(--surface-2)}
+.syfold > summary .caret{width:14px;height:14px;flex:0 0 auto;fill:none;stroke:var(--ink-3);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;transition:transform .15s}
+.syfold[open] > summary .caret{transform:rotate(90deg)}
+.syfold > summary .cnt{background:var(--surface-2);border:1px solid var(--border);border-radius:3px;padding:0 7px;font-size:11px;color:var(--ink-2);font-weight:600}
+.sylog .pih{padding-left:16px}
+.systeps{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.systep{display:flex;align-items:center;gap:8px}
+.systep input[type=text]{flex:1 1 auto;min-width:0}
+.syaddstep{width:100%}
+.sydone{margin:4px 0 0;padding-left:18px;font-size:13px;color:var(--ink-2)}
+.syacts{display:flex;flex-direction:column;gap:10px;margin-bottom:8px}
+.syact{border:1px solid var(--rule);border-radius:6px;padding:10px;background:var(--surface-2)}
+.syrm{align-items:flex-start}
+.sypeople{display:flex;flex-direction:column;gap:6px}
+.sypeople .chkrow{gap:8px}
+.sypeople input:disabled + .av + span{color:var(--ink-3)}
+@media(max-width:620px){.sylists{grid-template-columns:1fr;padding:10px}.sybar{padding:10px}}
+.syboards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;padding:12px 16px 16px}
+.syboard{border:1px solid var(--border);border-radius:6px;background:var(--surface);min-width:0}
+.syboardh{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--rule)}
+.syboardh b{flex:1 1 auto;font-size:13.5px}
+.syboardh .cnt{background:var(--surface-2);border:1px solid var(--border);border-radius:3px;padding:0 7px;font-size:11px;color:var(--ink-2)}
+.syboard .rows{border:0;border-radius:0}
+.syboard .syempty{padding:10px 12px}
+/* ---------- My Notes panel ---------- */
+.mynote{display:flex;flex-direction:column;gap:8px;height:100%}
+.mynote-t{font-weight:700;font-size:14.5px}
+.mynote-x{flex:1 1 auto;min-height:220px;resize:vertical;font:inherit;font-size:14px;line-height:1.55;padding:10px 12px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--ink)}
+.mynote-s{font-size:12px;color:var(--ink-3)}
+/* ---------- attachments ---------- */
+.attblock{display:flex;flex-direction:column;gap:8px}
+.attrows{display:flex;flex-direction:column;gap:6px}
+.attnone{font-size:13px;color:var(--ink-3)}
+.attrow{display:flex;align-items:center;gap:8px;border:1px solid var(--rule);border-radius:4px;padding:6px 8px;background:var(--surface)}
+.attopen{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:10px;background:none;border:0;padding:2px;cursor:pointer;text-align:left;color:var(--ink);font:inherit}
+.attopen:hover .attn > span{text-decoration:underline}
+.atti{width:20px;height:20px;flex:0 0 auto;fill:none;stroke:var(--c1);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.attn{min-width:0;font-size:13.5px;font-weight:600;overflow-wrap:anywhere}
+.attn small{display:block;font-weight:400;font-size:11.5px;color:var(--ink-3)}
+.attadd{position:relative;display:flex;align-items:center;gap:8px;flex-wrap:wrap;border:1px dashed var(--border-strong);border-radius:4px;padding:10px 12px;cursor:pointer;color:var(--ink-2);font-size:13.5px;font-weight:600}
+.attadd:hover,.attadd.over{border-color:var(--c1);background:var(--sky-wash)}
+.attadd input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.attadd svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.attadd small{flex:1 1 100%;font-weight:400;font-size:11.5px;color:var(--ink-3)}
+.attsheet{max-width:min(900px,calc(100vw - 32px))}
+.attview{display:flex;flex-direction:column;align-items:center;gap:8px;max-height:70vh;overflow:auto}
+.attview img{max-width:100%;max-height:68vh;object-fit:contain;border:1px solid var(--rule);border-radius:4px;background:#fff}
+.attview iframe{width:100%;height:68vh;border:1px solid var(--rule);border-radius:4px;background:#fff}
+@media(max-width:620px){.attrow{flex-wrap:wrap}.attopen{flex:1 1 100%}}
+
 #rs-account{flex:0 0 auto;display:inline-flex;align-items:center}
 #rs-account .rs-who,#rs-account .rs-signin{border-radius:4px}
 </style>
@@ -1939,6 +2079,9 @@ c57 -33 76 -84 76 -200 0 -116 -19 -167 -76 -200 -32 -19 -52 -20 -294 -20
     <button type="button" data-hq="agenda" title="Team Meeting">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3v3M16 3v3"/><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7.5 11h9M7.5 15h5.5"/></svg>
       <span>Team Meeting</span></button>
+    <button type="button" data-hq="syncs" title="Sync Ups">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M3 19c.6-3 2.6-5 5-5s4.4 2 5 5M11 19c.6-3 2.6-5 5-5s4.4 2 5 5"/></svg>
+      <span>Sync Ups</span></button>
     <button type="button" data-hq="expenses" title="Expenses">
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="6" width="19" height="13" rx="2"/><path d="M2.5 10h19M6 15h4"/></svg>
       <span>Expenses</span></button>
@@ -1960,6 +2103,7 @@ c57 -33 76 -84 76 -200 0 -116 -19 -167 -76 -200 -32 -19 -52 -20 -294 -20
   <section class="view" id="app-plans" hidden></section>
   <section class="view" id="app-dates" hidden></section>
   <section class="view" id="app-agenda" hidden></section>
+  <section class="view" id="app-syncs" hidden></section>
   <section class="view" id="app-expenses" hidden></section>
 </main>
 
@@ -3356,7 +3500,7 @@ async function boot(){
         snap=>{
           S[KEYOF[c]] = snap.docs.map(d=>{
             let b; try{ b=JSON.parse(JSON.stringify(d.data()||{})); }catch(e){ b=Object.assign({}, d.data()||{}); }
-            b.id=d.id; return b; });
+            b.id=d.id; return b; }).filter(x=> c!=='expenses' || expSeen(x));
           sortAll();
           if(first>0){ first--; if(first===0){ S.ready=true; } }
           if(S.ready) renderAll();
@@ -3474,7 +3618,7 @@ function show(tab){
 function renderAll(){ render(S.tab); badges(); }
 function render(tab){
   if(!S.ready) return;
-  const fn = {today:vToday, mine:vMine, rocks:vRocks, plans:vPlans, dates:vDates, agenda:vAgenda, expenses:vExpenses}[tab];
+  const fn = {today:vToday, mine:vMine, rocks:vRocks, plans:vPlans, dates:vDates, agenda:vAgenda, syncs:vSyncs, expenses:vExpenses}[tab];
   if(fn) fn(document.getElementById('app-'+tab));
 }
 function badges(){
@@ -3968,6 +4112,9 @@ function editTask(t, after){
     });
     body.appendChild(dpills);
 
+    body.appendChild(attBlock(d.files||[], list=>{ d.files=list; },
+      {note: isNew? 'Files are kept with the task when you save it.' : 'Files are kept with the task when you click Save.', folder:'attachments'}));
+
     const acts=el('div','rowacts');
     if(!isNew){
       const del=el('button','btn danger','Delete');
@@ -3979,7 +4126,7 @@ function editTask(t, after){
     const save=el('button','btn','Save'); save.type='button';
     const TLAB = {t:'the name', o:'who is accountable', s:'the status', p:'the priority',
       due:'the due date', r:'the project', w:'the part', rail:'the running rail flag',
-      notes:'the notes', d:'who is doing it'};
+      notes:'the notes', d:'who is doing it', files:'the files'};
     save.addEventListener('click', async ()=>{
       if(!fT.value.trim()){ fT.focus(); toast('Give the task a name first.'); return; }
       d.t=fT.value.trim(); d.o=fO.value; d.s=fS.value; d.p=fP.value; d.due=fD.value;
@@ -4336,7 +4483,8 @@ function vToday(root){
   root.appendChild(hl);
 
   // ask
-  /* Ask needs Claude, so it lives only in the Claude version */
+  /* Ask goes through the relay; shown once the relay's ask route answers */
+  if(!window.__hqRelay || window.__hqRelay.askReady()) root.appendChild(askBlock());
 
   // countdowns
   const pinned = cdAll();
@@ -6073,8 +6221,9 @@ const WTYPES = {
   sponsors:  {n:'Sponsorship Prospects', d:'What is open in the Sponsorship Portal \u2014 who has never been approached, who has gone quiet, and who has nobody\u2019s name on them.'},
   taskcal:   {n:'My Tasks on a Calendar', d:'Your own work laid out by the day it is due. Drag one to another day to move it, click it to open it.'},
   freebusy:  {n:'Who Is Free',         d:'The next two weeks, person by person \u2014 for picking a day that suits everyone.'},
-  /* planday needs Claude */ __planday: {n:'Plan My Day',         d:'Reads everything on your board and tells you what to do, in what order, and what can wait.'},
+  planday:   {n:'Plan My Day',         d:'Reads everything on your board and tells you what to do, in what order, and what can wait.'},
   newcerts:  {n:'New Certifications',  d:'Who the Certification Management System has certified lately, newest first.'},
+  mynote:    {n:'My Notes',            d:'Long-form notes only you can see. Add as many as you like; each is its own panel.'},
   numbers:   {n:'Numbers from My Systems', d:'Headline numbers out of the Financial System, certification and the rest.', multi:1}
 };
 const DEF_ROWS = [
@@ -6432,6 +6581,7 @@ function widget(w, ri, ci, L, span){
   if(w.t==='rock' && w.k && rock(w.k)) title = rock(w.k).name;
   if(w.t==='person' && w.k && person(w.k)) title = person(w.k).name.split(' ')[0]+'\u2019s Board';
   if(w.t==='plan' && w.k && planOf(w.k)) title = planOf(w.k).title;
+  if(w.t==='mynote' && w.k && syCard(w.k)) title = syCard(w.k).t || 'My Notes';
   /* a numbers panel holding exactly one figure is that figure, so say so */
   if(w.t==='numbers' && w.k && w.k.length===1){ const f1=figure(w.k[0]); if(f1) title = f1.n; }
   /* The chevron folds the panel away. The title opens it in the right rail at
@@ -7149,6 +7299,7 @@ function buildWidget(w, b){
     return;
   }
   if(w.t==='plan') return planWidget(w, b);
+  if(w.t==='mynote') return noteWidget(w, b);
   b.appendChild(emptyBox('This panel is no longer available.','Take it off your board.'));
 }
 
@@ -7201,11 +7352,11 @@ function addWidget(L){
 
     const onBoard = [];
     eachPanel(L,(w)=>{ if(WTYPES[w.t] && onBoard.indexOf(w.t)<0) onBoard.push(w.t); });
-    const rest = Object.keys(WTYPES).filter(k=> onBoard.indexOf(k)<0);
+    const rest = Object.keys(WTYPES).filter(k=> onBoard.indexOf(k)<0 && (k!=='planday' || !window.__hqRelay || window.__hqRelay.askReady()));
     onBoard.concat(rest).forEach(k=>{
       const t=WTYPES[k];
       /* these can sit on the board more than once, so they always offer Add It */
-      if(k==='rock' || k==='person' || k==='plan'){
+      if(k==='rock' || k==='person' || k==='plan' || k==='mynote'){
         const mine = allOf(k);
         const r=el('div','prow'+(mine.length?' is-on':''));
         const txt=el('div','wrt');
@@ -7246,6 +7397,7 @@ function addWidget(L){
 /* a few panels need you to say which one before they go on */
 function pickExtra(k, t, L){
   const done = ()=>{ saveMine(); closeSheet(); vMine($('#app-mine')); };
+  if(k==='mynote') return newNotePanel(L, done);
   if(k==='rock' || k==='person'){
     sheet(box=>{
       box.appendChild(el('h2',null, k==='rock'?'Which Team Project?':'Whose Board?'));
@@ -7468,7 +7620,7 @@ function money(n){ const v=Number(n)||0;
 function isMeal(c){ return String(c||'').indexOf('Meal Trvl') === 0; }
 function expOf(id){ return S.expenses.find(x=>x.id===id) || null; }
 function myExpenses(id){ return S.expenses.filter(x=>x.who===id); }
-function canProcess(){ const p=person(S.me); return !!p && (p.id==='vanessa' || p.id==='jonna' || p.mgr); }
+function canProcess(){ return expSeesAll(); }
 
 /* every policy check on one expense, from the MBA travel and expense policy */
 function checkExp(e){
@@ -7535,6 +7687,9 @@ function vExpenses(root){
     const ex=el('button','btn ghost sm','Export for DataBasics'); ex.type='button'; ex.style.marginLeft='auto';
     ex.addEventListener('click', exportExpenses);
     bar.appendChild(ex);
+    if(expSeesAll()){ const rb=el('button','btn ghost sm','Download the Receipts'); rb.type='button';
+      rb.title='Every receipt in this list, as the files that were attached'; rb.addEventListener('click', downloadReceipts);
+      bar.appendChild(rb); }
     root.appendChild(bar);
   }
 
@@ -7597,8 +7752,8 @@ function vExpenses(root){
 function expRow(e){
   const r=el('button','exprow'+(worst(e)==='ok'?'':' flag')); r.type='button';
   const rc=el('span','rc'+(e.receipt?'':' none'));
-  if(e.asset){ const im=el('img'); im.alt=''; im.loading='lazy'; window.__relayBlob(im, e.asset); rc.appendChild(im); }
-  else if(e.receipt) rc.innerHTML='<svg viewBox="0 0 24 24"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6"/></svg>';
+  if(e.asset && !/pdf/.test(e.rcptType||'')){ const im=el('img'); window.__relayBlob(im, e.asset); im.alt=''; im.loading='lazy'; rc.appendChild(im); }
+  else if(e.receipt || e.asset) rc.innerHTML='<svg viewBox="0 0 24 24"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6"/></svg>';
   else rc.innerHTML='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5M12 16h.01"/></svg>';
   r.appendChild(rc);
   const x=el('span','ex');
@@ -7626,7 +7781,10 @@ function editExp(e0, tripName){
     function paintRcpt(){
       lab.textContent=''; lab.appendChild(fi);
       lab.className='rcpt'+(e.asset?' has':'');
-      if(e.asset){ const im=el('img'); im.alt='Receipt'; window.__relayBlob(im, e.asset); lab.appendChild(im); }
+      if(e.asset && /pdf/.test(e.rcptType||'')){ const ph2=el('div','ph');
+        ph2.innerHTML='<svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5M9 14h6M9 17h4"/></svg>';
+        ph2.appendChild(el('span',null, e.rcptName||'Receipt (PDF)')); lab.appendChild(ph2); }
+      else if(e.asset){ const im=el('img'); window.__relayBlob(im, e.asset); im.alt='Receipt'; lab.appendChild(im); }
       else {
         ph.textContent='';
         ph.innerHTML='<svg viewBox="0 0 24 24"><path d="M3 8a2 2 0 012-2h2.5l1.3-2h6.4l1.3 2H21a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><circle cx="13" cy="13" r="3.6"/></svg>';
@@ -7642,9 +7800,9 @@ function editExp(e0, tripName){
       if(!a){ toast('Receipt photos need edit access to Team HQ.'); return; }
       toast('Uploading the receipt…');
       try{
-        const r = await a.upload(file);
-        e.asset = r.id; e.receipt = 1; if(cbR) cbR.checked = true;
-        paintRcpt(); sync(); toast('Receipt attached.');
+        const r = await attUpload(file, 'receipts');
+        e.asset = r.id; e.rcptName = r.name; e.rcptType = r.type; e.receipt = 1; if(cbR) cbR.checked = true;
+        paintRcpt(); paintRacts(); sync(); toast('Receipt attached.');
       }catch(err){ toast('That receipt would not upload. Try a smaller photo.'); }
     }
     fi.addEventListener('change', ()=> take(fi.files && fi.files[0]));
@@ -7653,11 +7811,15 @@ function editExp(e0, tripName){
     lab.addEventListener('drop', ev=>{ ev.preventDefault(); lab.style.borderColor='';
       const f = ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files[0]; take(f); });
     body.appendChild(lab);
-    if(e.asset){
+    /* the receipt itself: look at it, or download it as the file that was attached */
+    const racts=el('div','rowflex'); body.appendChild(racts);
+    function paintRacts(){ racts.textContent=''; if(!e.asset) return;
+      const v=el('button','btn ghost sm','Look at the Receipt'); v.type='button'; v.addEventListener('click', ()=> attView(rcptAtt(e)));
+      const d=el('button','btn ghost sm','Download the Receipt'); d.type='button'; d.addEventListener('click', ()=> attDownload(rcptAtt(e)));
       const rm=el('button','btn ghost sm','Remove the Receipt'); rm.type='button';
-      rm.addEventListener('click', ()=>{ e.asset=''; paintRcpt(); sync(); });
-      const w=el('div','rowflex'); w.appendChild(rm); body.appendChild(w);
-    }
+      rm.addEventListener('click', ()=>{ e.asset=''; e.rcptName=''; e.rcptType=''; paintRcpt(); paintRacts(); sync(); });
+      racts.appendChild(v); racts.appendChild(d); racts.appendChild(rm); }
+    paintRacts();
 
     const g=el('div','fields');
     const trips = Array.from(new Set(S.expenses.map(x=>x.trip).filter(Boolean)));
@@ -7668,9 +7830,16 @@ function editExp(e0, tripName){
     const fWho  = field(g,'Whose Expense', sel(peopleOpts(), e.who, 'Unassigned'));
     const fCat  = field(g,'Expense Type', sel(DB_CATS, e.cat, 'Pick a Type'));
     const fDate = field(g,'Expense Date', inp('date', e.date));
-    const fName = field(g,'Expense Name', inp('text', e.name, 'What Was It?'), 'w4');
+    const fName = field(g,'Expense Name', inp('text', e.name, 'Company or restaurant name'), 'w4');
     const fAmt  = field(g,'Expense Amount', inp('number', e.amt, '0.00')); fAmt.step='0.01'; fAmt.min='0';
     const fRAmt = field(g,'Receipt Amount', inp('number', e.rcptAmt, '0.00')); fRAmt.step='0.01'; fRAmt.min='0';
+    /* the two amounts start out the same: whichever is typed first fills in the other,
+       until the other one is changed by hand */
+    let amtLinked = String(e.amt||'')===String(e.rcptAmt||''), amtLead = null;
+    const mirror=(src, dst, who)=>()=>{ if(!amtLinked) return; if(amtLead===null) amtLead=who;
+      if(amtLead===who) dst.value=src.value; else amtLinked=false; };
+    fAmt.addEventListener('input', mirror(fAmt, fRAmt, 'amt'));
+    fRAmt.addEventListener('input', mirror(fRAmt, fAmt, 'rcpt'));
     body.appendChild(g);
 
     const g2=el('div','fields');
@@ -7685,7 +7854,7 @@ function editExp(e0, tripName){
     body.appendChild(g2);
 
     const g3=el('div','fields');
-    const fNotes = field(g3,'Notes', ta(e.notes||'',
+    const fNotes = field(g3,'Notes (Optional)', ta(e.notes||'',
       'Business reason, who was there, anything that would otherwise have to be asked', 3), 'w4');
     body.appendChild(g3);
 
@@ -7728,7 +7897,8 @@ function editExp(e0, tripName){
       read();
       if(!e.cat){ fCat.focus(); toast('Pick an expense type.'); return; }
       if(!(Number(e.amt)>0)){ fAmt.focus(); toast('Enter the amount.'); return; }
-      if(!e.name) e.name = e.cat;
+      if(!e.name){ fName.focus(); toast('Add the expense name \u2014 the company or restaurant.'); return; }
+      e.members = expMembers(e);
       await put('expenses', e); closePanel(); toast(isNew?'Expense added.':'Saved.');
     });
     acts.appendChild(cancel); acts.appendChild(save); body.appendChild(acts);
@@ -8918,6 +9088,8 @@ function itemBody(p, s, it, b){
   fN.addEventListener('change', ()=> save({note:fN.value.trim()}));
   b.appendChild(g);
 
+  b.appendChild(attBlock(it.files||[], list=>{ save({files:list}); }, {folder:'attachments'}));
+
   /* the link to somebody's board */
   const t=linkedTask(it);
   const lk=el('div');
@@ -9468,6 +9640,891 @@ function leadRowGo(p, it){ return leadRow(p, it); }
   r.addEventListener('focusout', ()=>{ setTimeout(()=>{
     if(S.planDirty && S.tab==='plans' && !planBusy(r)){ S.planDirty=0; vPlans(r); } }, 40); }); })();
 window.__itemPanel = itemPanel;
+
+/* ============ SYNC UPS ============
+   Weekly sync-ups between a few people — two of the team, or the two VPs and the
+   President. Each space belongs to its members: nobody else on the team sees it, it is
+   not on the team view, and Ask never reads it. Inside a space the members organize
+   things their own way: their own lists (topics, each person's to-dos, parked items),
+   cards that move between them, and a log of each week's sync.
+
+   Where it is kept depends on where Team HQ is running:
+     shared   resources.mismo.org, once the save relay keeps each space to its members
+              (files syncs and syncitems, filtered by the relay on every read).
+     waiting  resources.mismo.org before that relay rule is deployed: nothing is saved,
+              because nothing could yet be kept private.
+     private  the Claude copy: spaces live in the person's own private store, so they are
+              just for that person until the move.
+*/
+const SY = { syncs:[], items:[], started:false, mode:null, priv:null, privTimer:null, readyP:null };
+const SY_DAYS = [{v:'Mon',n:'Mon'},{v:'Tue',n:'Tue'},{v:'Wed',n:'Wed'},{v:'Thu',n:'Thu'},{v:'Fri',n:'Fri'}];
+const SY_DAYNAME = {Mon:'Monday',Tue:'Tuesday',Wed:'Wednesday',Thu:'Thursday',Fri:'Friday'};
+const SY_DOW = {Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};
+
+function syncMode(){
+  if(window.__hqRelay) return (window.__hqRelay.syncMode && window.__hqRelay.syncMode()) || 'waiting';
+  return (S.db && S.uid) ? 'private' : 'none';
+}
+/* who a member is: an email on resources.mismo.org (the relay checks it), 'me' on the Claude copy */
+function syMe(){
+  if(window.__hqRelay) return String((window.__hqRelay.myEmail && window.__hqRelay.myEmail()) || '').toLowerCase();
+  return 'me';
+}
+function syPersonOf(key){
+  if(key==='me') return person(S.me);
+  key=String(key||'').toLowerCase();
+  if(!key) return null;
+  return S.people.find(p=> String(p.email||'').toLowerCase()===key) || null;
+}
+function syKeyOf(p){ if(!p) return ''; return window.__hqRelay ? String(p.email||'').toLowerCase() : (p.id===S.me?'me':''); }
+function syFirst(key){ const p=syPersonOf(key); return p? p.name.split(' ')[0] : (key==='me'? 'Me' : String(key).split('@')[0]); }
+function syOf(id){ return SY.syncs.find(s=>s.id===id) || null; }
+function syItems(sid, kind){ return SY.items.filter(i=>i.sync===sid && (i.kind||'card')===(kind||'card')).sort((a,b)=>(a.ord||0)-(b.ord||0)); }
+function syCard(id){ return SY.items.find(i=>i.id===id) || null; }
+function syMine(){ const me=syMe(); return SY.syncs.filter(s=> (s.members||[]).indexOf(me)>=0)
+  .sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''))); }
+
+/* ---- reading ---- */
+function syStart(){
+  if(SY.started) return;
+  const mode=syncMode(); SY.mode=mode;
+  if(mode==='shared'){
+    SY.started=true;
+    const take=(col)=> snap=>{
+      const list=snap.docs.map(d=>{ let b; try{ b=JSON.parse(JSON.stringify(d.data()||{})); }catch(e){ b={}; } b.id=d.id; return b; });
+      if(col==='syncs') SY.syncs=list; else { SY.items=list; SY.syncsSeen=true; }
+      syRefresh();
+    };
+    try{ S.db.collection('syncs').onSnapshot(take('syncs'), ()=>{}); }catch(e){}
+    try{ S.db.collection('syncitems').onSnapshot(take('syncitems'), ()=>{}); }catch(e){}
+  } else if(mode==='private'){
+    SY.started=true;
+    SY.readyP = S.db.doc('data/users/'+S.uid+'/syncups').get().then(snap=>{
+      const d = snap && snap.exists ? JSON.parse(JSON.stringify(snap.data()||{})) : {};
+      SY.priv = {syncs:d.syncs||{}, items:d.items||{}};
+      SY.syncs = Object.keys(SY.priv.syncs).map(id=>Object.assign({id}, SY.priv.syncs[id]));
+      SY.items = Object.keys(SY.priv.items).map(id=>Object.assign({id}, SY.priv.items[id]));
+      syRefresh();
+    }).catch(()=>{ SY.priv={syncs:{},items:{}}; syRefresh(); });
+  }
+}
+function syRefresh(){
+  if(S.tab==='syncs'){ const r=$('#app-syncs'); if(r) vSyncs(r); }
+  if(S.tab==='mine' && !S.noteHold){ const a=document.activeElement; if(!(a && a.closest && a.closest('.mynote'))){ const r=$('#app-mine'); if(r) vMine(r); } }
+}
+
+/* ---- saving ---- */
+function syPut(col, obj){
+  obj.id = obj.id || uid(col==='syncs'?'sy':'si');
+  const arr0 = col==='syncs' ? SY.syncs : SY.items;
+  const i=arr0.findIndex(x=>x.id===obj.id); if(i>=0) arr0[i]=obj; else arr0.push(obj);
+  syRefresh();
+  const body=Object.assign({}, obj); delete body.id;
+  if(SY.mode==='shared'){
+    return S.db.collection(col).doc(obj.id).set(body).then(()=>obj, ()=>{ toast('That didn’t save. Try again in a moment.'); return obj; });
+  }
+  if(SY.mode==='private'){
+    const go=()=>{ SY.priv[col==='syncs'?'syncs':'items'][obj.id]=body; syPrivSave();
+      const arr = col==='syncs' ? SY.syncs : SY.items;
+      if(!arr.some(x=>x.id===obj.id)){ arr.push(obj); syRefresh(); } return obj; };
+    return SY.priv ? Promise.resolve(go()) : (SY.readyP||Promise.resolve()).then(go);
+  }
+  return Promise.resolve(obj);
+}
+function syDrop(col, id){
+  const arr = col==='syncs' ? SY.syncs : SY.items;
+  const i=arr.findIndex(x=>x.id===id); if(i>=0) arr.splice(i,1);
+  syRefresh();
+  if(SY.mode==='shared') return S.db.collection(col).doc(id).delete().catch(()=>toast('That didn’t delete. Try again.'));
+  if(SY.mode==='private'){ const go=()=>{ delete SY.priv[col==='syncs'?'syncs':'items'][id]; syPrivSave(); };
+    if(SY.priv) go(); else (SY.readyP||Promise.resolve()).then(go); }
+  return Promise.resolve();
+}
+function syPrivSave(){
+  clearTimeout(SY.privTimer);
+  SY.privTimer=setTimeout(()=>{
+    try{ S.db.doc('data/users/'+S.uid+'/syncups').set({syncs:SY.priv.syncs, items:SY.priv.items}); }
+    catch(e){ toast('That didn’t save. Try again in a moment.'); }
+  }, 400);
+}
+/* an item carries its space's members, so the relay can keep it to them */
+function syNewItem(s, kind, extra){
+  return Object.assign({sync:s.id, members:(s.members||[]).slice(), kind:kind||'card', at:Date.now(), by:S.me||''}, extra||{});
+}
+function sySaveItem(it, patch){ return syPut('syncitems', Object.assign({}, syCard(it.id)||it, patch||{})); }
+/* on resources.mismo.org a person's email comes from their sign-in, so teammates can add them */
+function syEnsureEmail(){
+  if(!window.__hqRelay || !S.ready || !S.me) return;
+  const em=syMe(), p=person(S.me);
+  if(!em || !p || String(p.email||'').toLowerCase()===em) return;
+  put('people', Object.assign({}, p, {email:em}));
+}
+
+/* ---- dates ---- */
+/* the days a space meets — several a week if it likes (older spaces kept one, as `day`) */
+function syDays(s){ const ds=Array.isArray(s&&s.days)? s.days : (s&&s.day? [s.day] : []);
+  return SY_DAYS.map(x=>x.v).filter(v=> ds.indexOf(v)>=0); }
+function syNext(s){
+  const want=syDays(s).map(v=>SY_DOW[v]); if(!want.length) return null;
+  const d=new Date(today());
+  for(let i=0;i<7;i++){ if(want.indexOf(d.getDay())>=0) return isoOf(d); d.setDate(d.getDate()+1); }
+  return null;
+}
+function syWhen(s){
+  const ds=syDays(s), n=syNext(s); if(!n) return 'No set day';
+  const names=ds.map(v=>SY_DAYNAME[v]);
+  const list=names.length<=2? names.join(' and ') : names.slice(0,-1).join(', ')+' and '+names[names.length-1];
+  const k=days(n);
+  return 'Every '+list+' \u00b7 '+(k===0? 'today' : k===1? 'tomorrow' : 'next '+fmtD(n));
+}
+/* pick any number of days; none means no set day */
+function syDayPicker(cur, onChange){
+  const w=el('div','btnrow tiny'); const set=new Set(cur||[]);
+  SY_DAYS.forEach(o=>{ const b=el('button',null,o.n); b.type='button'; b.title=SY_DAYNAME[o.v];
+    b.setAttribute('aria-pressed', set.has(o.v)?'true':'false');
+    b.addEventListener('click', ()=>{ if(set.has(o.v)) set.delete(o.v); else set.add(o.v);
+      b.setAttribute('aria-pressed', set.has(o.v)?'true':'false');
+      onChange(SY_DAYS.map(x=>x.v).filter(v=>set.has(v))); });
+    w.appendChild(b); });
+  return w;
+}
+
+/* ---- the view ---- */
+function syBusy(root){
+  if(S.syForce) return false;
+  const a=document.activeElement;
+  if(a && root.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.type!=='checkbox'){ S.syDirty=1; return true; }
+  return false;
+}
+function vSyncs(root){
+  syStart(); syEnsureEmail();
+  if(syBusy(root)) return;
+  S.syForce=0;
+  root.textContent='';
+  if(!S.openSyncs) S.openSyncs={};
+  const mode=syncMode();
+  const right=el('div','rowflex');
+  if(mode==='shared' || mode==='private'){
+    const nb=el('button','btn'); nb.type='button';
+    nb.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>';
+    nb.appendChild(el('span',null, mode==='shared'? 'Start a Shared Space' : 'Start a Space'));
+    nb.addEventListener('click', ()=> syNewSheet());
+    right.appendChild(nb);
+  }
+  vhead(root,'Sync Ups','Your weekly sync-ups. Each space is seen only by the people in it — not by the rest of the team, and never on the team view.', right);
+
+  if(mode==='waiting'){
+    const bx=el('div','box');
+    bx.appendChild(emptyBox('Sync Ups opens once the save relay can keep each space to its members.',
+      'Until then nothing is saved here, because nothing could yet be kept private. Perry’s relay update switches it on; nothing on this page needs to change.'));
+    root.appendChild(bx); return;
+  }
+  if(mode==='none'){ root.appendChild(emptyBox('Sync Ups needs you signed in.','Team HQ has to know who you are to show your spaces.')); return; }
+  if(mode==='private'){
+    const c=el('div','statusnote');
+    c.textContent='On the Claude copy your spaces are just for you. Sharing a space with a teammate works on resources.mismo.org.';
+    root.appendChild(c);
+  }
+  const mine=syMine();
+  if(!mine.length){
+    const bx=el('div','box');
+    bx.appendChild(emptyBox('No spaces yet.', mode==='shared'
+      ? 'Click Start a Shared Space and pick who it is with. Only the two of you (or however many you add) will see it.'
+      : 'Click Start a Space to set one up.'));
+    root.appendChild(bx); return;
+  }
+  const wrap=el('div','psecs');
+  mine.forEach(s=> wrap.appendChild(sySpace(s)));
+  root.appendChild(wrap);
+  if(S.syQA){ const q=root.querySelector('input[data-syqa="'+S.syQA+'"]'); S.syQA=null; if(q) q.focus(); }
+}
+
+function sySpace(s){
+  const d=el('details','psec syspace');
+  d.open=!!S.openSyncs[s.id];
+  d.addEventListener('toggle', ()=>{ S.openSyncs[s.id]=d.open; });
+  const sm=el('summary');
+  sm.innerHTML='<svg class="caret" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
+  const tt=el('span','pst'); tt.appendChild(document.createTextNode(s.name||'Sync Up'));
+  const others=(s.members||[]).filter(m=>m!==syMe());
+  tt.appendChild(el('small',null, (others.length? 'With '+others.map(syFirst).join(', ') : 'Just you')+' · '+syWhen(s)));
+  sm.appendChild(tt);
+  const r=el('span','psr');
+  const cards=syItems(s.id), open=cards.filter(c=>!c.done);
+  const late=open.filter(c=>{ const n=days(c.due); return n!==null && n<0; }).length;
+  if(late) r.appendChild(el('span','chip ch-od', late+' Past Due'));
+  r.appendChild(el('span','chip ch-ns', open.length+' Open'));
+  const av=el('span','syavs'); (s.members||[]).forEach(m=>{ const p=syPersonOf(m); if(p) av.appendChild(avatar(p.id,'xs')); });
+  r.appendChild(av);
+  sm.appendChild(r);
+  d.appendChild(sm);
+
+  const body=el('div','psecbody sybody');
+  const bar=el('div','sybar');
+  const mk=(txt, fn, cls)=>{ const b=el('button','btn '+(cls||'ghost')+' sm', txt); b.type='button'; b.addEventListener('click', fn); bar.appendChild(b); return b; };
+  mk('Log This Week’s Sync', ()=> syLogPanel(s.id, null), 'sm');
+  mk('Add a List', ()=> syListPanel(s.id, null));
+  mk('Space Settings', ()=> sySpacePanel(s.id));
+  body.appendChild(bar);
+
+  const grid=el('div','sylists');
+  (s.lists||[]).forEach(L=> grid.appendChild(syList(s, L)));
+  if(!(s.lists||[]).length) grid.appendChild(emptyBox('No lists yet.','Click Add a List.'));
+  body.appendChild(grid);
+
+  body.appendChild(syBoards(s));
+  const logs=syItems(s.id,'log').sort((a,b)=> String(b.date||'').localeCompare(String(a.date||'')));
+  const ld=el('details','syfold');
+  ld.open=!!S.openSyncs[s.id+':log'];
+  ld.addEventListener('toggle', ()=>{ S.openSyncs[s.id+':log']=ld.open; });
+  const ls=el('summary');
+  ls.innerHTML='<svg class="caret" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
+  ls.appendChild(el('span',null,'Past Syncs')); ls.appendChild(el('span','cnt', String(logs.length)));
+  ld.appendChild(ls);
+  const lb=el('div','sylog');
+  if(!logs.length) lb.appendChild(el('div','empty','Nothing logged yet. Click Log This Week’s Sync after you meet.'));
+  logs.forEach(g=>{
+    const row=el('div','pirow'); const h=el('div','pih'); h.tabIndex=0; h.setAttribute('role','button');
+    const tx=el('span','pt'); tx.appendChild(el('span',null, fmtD(g.date,1)||'Undated'));
+    const bits=[]; if(g.notes) bits.push(g.notes.length>110? g.notes.slice(0,110)+'…' : g.notes);
+    if(bits.length) tx.appendChild(el('small',null,bits.join(' · ')));
+    h.appendChild(tx);
+    const rr=el('span','pr'); if((g.actions||[]).length) rr.appendChild(el('span','chip ch-ns', g.actions.length+(g.actions.length===1?' Action Item':' Action Items')));
+    h.appendChild(rr);
+    const go=()=> syLogPanel(s.id, g.id);
+    h.addEventListener('click', go); h.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); go(); } });
+    row.appendChild(h); lb.appendChild(row);
+  });
+  ld.appendChild(lb);
+  body.appendChild(ld);
+  d.appendChild(body);
+  return d;
+}
+
+/* what each person in the space has on the team board, so the sync starts from the same page */
+function syBoards(s){
+  const people=(s.members||[]).map(syPersonOf).filter(Boolean);
+  const open=p=> S.tasks.filter(t=> t.s!=='Done' && (t.o===p.id || isDoing(t,p.id)))
+    .sort((a,b)=> String(a.due||'9999').localeCompare(String(b.due||'9999')));
+  const total=people.reduce((n,p)=>n+open(p).length,0);
+  const d=el('details','syfold');
+  d.open=!!S.openSyncs[s.id+':boards'];
+  d.addEventListener('toggle', ()=>{ S.openSyncs[s.id+':boards']=d.open; });
+  const sm=el('summary');
+  sm.innerHTML='<svg class="caret" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
+  sm.appendChild(el('span',null,'On Everyone\u2019s Board')); sm.appendChild(el('span','cnt', String(total)));
+  d.appendChild(sm);
+  const b=el('div','syboards');
+  if(!people.length) b.appendChild(el('div','empty','Nobody in this space has open tasks on the team board.'));
+  people.forEach(p=>{
+    const col=el('div','syboard');
+    const hd=el('div','syboardh'); hd.appendChild(avatar(p.id,'xs')); hd.appendChild(el('b',null,p.name.split(' ')[0]+'\u2019s Tasks'));
+    const list=open(p); hd.appendChild(el('span','cnt', String(list.length)));
+    col.appendChild(hd);
+    if(!list.length) col.appendChild(el('div','syempty','Nothing open.'));
+    else { const rr=el('div','rows'); list.forEach(t=> rr.appendChild(taskRow(t))); col.appendChild(rr); }
+    b.appendChild(col);
+  });
+  d.appendChild(b);
+  return d;
+}
+function syList(s, L){
+  const box=el('div','sylist'); box.dataset.list=L.id;
+  const cards=syItems(s.id).filter(c=>c.list===L.id);
+  const hd=el('button','sylh'); hd.type='button'; hd.title='List settings';
+  hd.appendChild(el('span','syln', L.name||'List'));
+  hd.appendChild(el('span','cnt', String(cards.filter(c=>!c.done).length)));
+  hd.addEventListener('click', ()=> syListPanel(s.id, L.id));
+  box.appendChild(hd);
+  const body=el('div','sylb');
+  const sorted=cards.slice().sort((a,b)=> (a.done?1:0)-(b.done?1:0) || (a.ord||0)-(b.ord||0));
+  sorted.forEach(c=> body.appendChild(syCardRow(s, c)));
+  if(!cards.length) body.appendChild(el('div','syempty','Nothing here yet.'));
+  /* drag a card onto another list */
+  box.addEventListener('dragover', e=>{ if(S.syDrag){ e.preventDefault(); box.classList.add('over'); } });
+  box.addEventListener('dragleave', ()=> box.classList.remove('over'));
+  box.addEventListener('drop', e=>{
+    e.preventDefault(); box.classList.remove('over');
+    const c=syCard(S.syDrag); S.syDrag=null;
+    if(!c || c.list===L.id) return;
+    sySaveItem(c, {list:L.id, ord:syNextOrd(s.id, L.id)});
+  });
+  box.appendChild(body);
+  const qa=el('div','quickadd syqa');
+  qa.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>';
+  const i=inp('text','','Add a card and press Enter…'); i.dataset.syqa=L.id;
+  i.addEventListener('keydown', e=>{
+    if(e.key!=='Enter') return;
+    const v=i.value.trim(); if(!v) return; e.preventDefault();
+    S.syForce=1; S.syQA=L.id;
+    syPut('syncitems', syNewItem(s, 'card', {list:L.id, t:v, ord:syNextOrd(s.id, L.id)}));
+  });
+  qa.appendChild(i); box.appendChild(qa);
+  return box;
+}
+function syNextOrd(sid, lid){
+  const xs=syItems(sid).filter(c=>c.list===lid);
+  return (xs.length? Math.max.apply(null, xs.map(c=>+c.ord||0)) : 0)+10;
+}
+function syCardRow(s, c){
+  const row=el('div','syc'+(c.done?' done':'')+(S.syOpen===c.id && panelOpen()?' open':''));
+  row.draggable=true; row.dataset.cid=c.id; row.tabIndex=0; row.setAttribute('role','button');
+  row.addEventListener('dragstart', e=>{ S.syDrag=c.id; try{ e.dataTransfer.setData('text/plain', c.id); e.dataTransfer.effectAllowed='move'; }catch(x){} });
+  row.addEventListener('dragend', ()=>{ S.syDrag=null; });
+  const ck=el('button','pchk'+(c.done?' on':'')); ck.type='button';
+  ck.innerHTML='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  ck.title=c.done? 'Done — click to untick' : 'Tick it off'; ck.setAttribute('aria-label', ck.title);
+  ck.addEventListener('click', e=>{ e.stopPropagation(); sySetDone(c, !c.done); });
+  row.appendChild(ck);
+  const tx=el('span','syct'); tx.appendChild(el('span',null,c.t||'(untitled)'));
+  const meta=[];
+  const steps=c.check||[]; if(steps.length) meta.push(steps.filter(x=>x.done).length+' of '+steps.length+' steps');
+  if(c.task) meta.push('On the board');
+  if(meta.length) tx.appendChild(el('small',null,meta.join(' · ')));
+  row.appendChild(tx);
+  const r=el('span','sycr');
+  if(!c.done){ const dc=dueChip(c.due); if(dc) r.appendChild(dc); }
+  const p=syPersonOf(c.who); if(p) r.appendChild(avatar(p.id,'xs'));
+  row.appendChild(r);
+  const go=()=> syCardPanel(c.id);
+  row.addEventListener('click', go);
+  row.addEventListener('keydown', e=>{ if((e.key==='Enter'||e.key===' ') && e.target===row){ e.preventDefault(); go(); } });
+  return row;
+}
+function sySetDone(c, on){
+  const patch = on ? {done:1, doneAt:Date.now(), doneBy:S.me||''} : {done:0, doneAt:0, doneBy:''};
+  const t = c.task ? S.tasks.find(x=>x.id===c.task) : null;
+  if(t && on && t.s!=='Done') put('tasks', Object.assign({}, t, {s:'Done'}));
+  return sySaveItem(c, patch).then(()=> syRepaint('card', c.id));
+}
+
+/* ---- the rail ---- */
+function syTop(){ const e=PSTACK[PSTACK.length-1]; return panelOpen() && e ? e : null; }
+function syRepaint(kind, id){
+  const e=syTop(); if(!e || e.syKind!==kind || e.syId!==id) return;
+  const b=$('#panel-b'); b.textContent=''; e.build(b);
+}
+function syPanel(kind, id, title, sub, build){
+  const top=syTop();
+  if(top && top.syKind) PSTACK.pop();     /* one sync item after another swaps rather than stacks */
+  panel(title, sub, build);
+  const e=PSTACK[PSTACK.length-1]; e.syKind=kind; e.syId=id;
+  if(kind==='card'){ S.syOpen=id; $$('.syc[data-cid]').forEach(r=> r.classList.toggle('open', r.dataset.cid===id)); }
+}
+(function(){ const pn=document.getElementById('panel'); if(!pn || !window.MutationObserver) return;
+  new MutationObserver(()=>{ if(!panelOpen()){ S.syOpen=null; $$('.syc.open').forEach(r=>r.classList.remove('open')); } })
+    .observe(pn,{attributes:true, attributeFilter:['class']}); })();
+
+function syMemberOpts(s){ return (s.members||[]).map(m=>{ const p=syPersonOf(m); return {v:m, n:p? p.name : m}; }); }
+
+function syCardPanel(cid){
+  const c0=syCard(cid); if(!c0) return;
+  const s0=syOf(c0.sync); if(!s0) return;
+  syPanel('card', cid, c0.t||'Card', s0.name||'', body=>{
+    const c=syCard(cid), s=syOf(c0.sync);
+    if(!c || !s){ body.appendChild(emptyBox('This card is gone.','Someone in the space may have deleted it.')); return; }
+    const cur=()=> syCard(cid) || c;
+    const save=patch=> sySaveItem(cur(), patch);
+    body.appendChild(el('p','note','Changes save as you go. Only the people in “'+(s.name||'this space')+'” can see this.'));
+    const g=el('div','fields');
+    const fT=field(g,'What It Is', inp('text', c.t||''), 'w4');
+    fT.addEventListener('change', ()=>{ const v=fT.value.trim(); if(!v) return; save({t:v});
+      const e=syTop(); if(e && e.syId===cid){ e.title=v; $('#panel-t').textContent=v; } });
+    const sw=el('div','f w4'); sw.appendChild(el('span',null,'Where It Stands'));
+    sw.appendChild(btnRow([{v:'0',n:'Open'},{v:'1',n:'Done'}], c.done?'1':'0', 'tiny', v=>{ sySetDone(cur(), v==='1'); }));
+    g.appendChild(sw);
+    const fL=field(g,'List', sel2((s.lists||[]).map(L=>({v:L.id,n:L.name})), c.list), 'w2');
+    fL.addEventListener('change', ()=> save({list:fL.value, ord:syNextOrd(s.id, fL.value)}));
+    const fW=field(g,'Who Owns It', sel(syMemberOpts(s), c.who||'', 'Nobody Yet'), 'w2');
+    fW.addEventListener('change', ()=> save({who:fW.value}));
+    const fD=field(g,'Due Date', inp('date', c.due||''), 'w2');
+    fD.addEventListener('change', ()=> save({due:fD.value}));
+    const fN=field(g,'Notes', ta(c.note||'', 'What was said, what to bring up next time', 4), 'w4');
+    fN.addEventListener('change', ()=> save({note:fN.value.trim()}));
+    body.appendChild(g);
+
+    /* steps, each its own field */
+    const st=el('div');
+    st.appendChild(el('h3','sect-t','Steps'));
+    const rows=el('div','systeps');
+    (c.check||[]).forEach((x,i)=>{
+      const r=el('div','systep');
+      const cb=el('input'); cb.type='checkbox'; cb.checked=!!x.done; cb.setAttribute('aria-label','Done');
+      cb.addEventListener('change', ()=>{ const list=(cur().check||[]).slice(); list[i]=Object.assign({}, list[i], {done:cb.checked?1:0}); save({check:list}); });
+      const ti=inp('text', x.t||''); ti.setAttribute('aria-label','Step');
+      ti.addEventListener('change', ()=>{ const list=(cur().check||[]).slice(); list[i]=Object.assign({}, list[i], {t:ti.value.trim()}); save({check:list}); });
+      const rm=el('button','btn ghost sm','Remove'); rm.type='button';
+      rm.addEventListener('click', ()=>{ const list=(cur().check||[]).slice(); list.splice(i,1); save({check:list}).then(()=>syRepaint('card',cid)); });
+      r.appendChild(cb); r.appendChild(ti); r.appendChild(rm); rows.appendChild(r);
+    });
+    const add=inp('text','','Add a step and press Enter…');
+    add.addEventListener('keydown', e=>{ if(e.key!=='Enter') return; const v=add.value.trim(); if(!v) return; e.preventDefault();
+      const list=(cur().check||[]).concat([{id:uid('st'), t:v, done:0}]); save({check:list}).then(()=>{ syRepaint('card',cid);
+        const n=$('#panel-b .systeps + input, #panel-b .syaddstep'); if(n) n.focus(); }); });
+    add.className='syaddstep';
+    st.appendChild(rows); st.appendChild(add);
+    body.appendChild(st);
+
+    body.appendChild(attBlock(c.files||[], list=>{ save({files:list}); },
+      {note:'Only the people in this space see these files.', folder:'attachments'}));
+
+    /* the team board — only by choice, and it says so */
+    const t = c.task ? S.tasks.find(x=>x.id===c.task) : null;
+    const lk=el('div');
+    lk.appendChild(el('h3','sect-t','On the Team Board'));
+    if(t){
+      lk.appendChild(el('p','note','This card is also a task on the team board, where the whole team can see the task (not this card).'));
+      const rr=el('div','rows'); rr.appendChild(taskRow(t)); lk.appendChild(rr);
+      const un=el('button','btn ghost sm','Unlink the Task'); un.type='button'; un.style.marginTop='8px';
+      un.addEventListener('click', ()=> save({task:''}).then(()=>syRepaint('card',cid)));
+      lk.appendChild(un);
+    } else {
+      lk.appendChild(el('p','note','Kept in this space only. Putting it on the board makes a task the whole team can see — the title, owner and date, never these notes.'));
+      const mkb=el('button','btn ghost sm','Put It on the Board'); mkb.type='button';
+      mkb.addEventListener('click', async ()=>{
+        if(!mkb.dataset.c){ mkb.dataset.c='1'; mkb.textContent='Click Again — the Team Will See the Task'; return; }
+        const cc=cur(); const owner=syPersonOf(cc.who);
+        const id=await put('tasks', {t:cc.t, o:(owner&&owner.id)||S.me||'', d:[], r:'', w:'', s:cc.done?'Done':'Not Started', p:'Normal',
+          due:cc.due||'', notes:'', rail:0, ord:(S.tasks.length+1)*10, at:Date.now(), by:S.me||'', src:'sync'});
+        await save({task:id}); syRepaint('card',cid); toast('On the board.');
+      });
+      lk.appendChild(mkb);
+    }
+    body.appendChild(lk);
+
+    const acts=el('div','rowacts');
+    acts.appendChild(el('span','note spacer', c.done && c.doneAt ? 'Done '+fmtD(isoOf(new Date(c.doneAt)),1)+(c.doneBy? ' by '+pname(c.doneBy):'')+'.' : (c.by? 'Added by '+pname(c.by)+'.' : '')));
+    const del=el('button','btn danger sm','Delete'); del.type='button';
+    del.addEventListener('click', ()=>{ if(!del.dataset.c){ del.dataset.c='1'; del.textContent='Click Again to Delete'; return; }
+      const kept=JSON.parse(JSON.stringify(cur())); closePanel(); syDrop('syncitems', cid);
+      undoToast('Card deleted.', ()=> syPut('syncitems', kept)); });
+    acts.appendChild(del); body.appendChild(acts);
+  });
+}
+
+function syListPanel(sid, lid){
+  const s0=syOf(sid); if(!s0) return;
+  const isNew=!lid;
+  syPanel('list', lid||'new', isNew? 'Add a List' : 'List Settings', s0.name||'', body=>{
+    const s=syOf(sid); if(!s) return;
+    const L=(s.lists||[]).find(x=>x.id===lid) || {id:uid('ls'), name:''};
+    const g=el('div','fields');
+    const fN=field(g,'List Name', inp('text', L.name||'', 'e.g. Jonathan’s To Dos, Winter Summit, Parked for Later'), 'w4');
+    body.appendChild(g);
+    const acts=el('div','rowacts');
+    if(!isNew){
+      const lists=s.lists||[], i=lists.findIndex(x=>x.id===lid);
+      const mv=(dir)=>{ const ls=lists.slice(); const j=i+dir; if(j<0||j>=ls.length) return; const t=ls[i]; ls[i]=ls[j]; ls[j]=t;
+        syPut('syncs', Object.assign({}, s, {lists:ls})); closePanel(); };
+      const up=el('button','btn ghost sm','Move Earlier'); up.type='button'; up.disabled=i<=0; up.addEventListener('click', ()=>mv(-1));
+      const dn=el('button','btn ghost sm','Move Later'); dn.type='button'; dn.disabled=i>=lists.length-1; dn.addEventListener('click', ()=>mv(1));
+      acts.appendChild(up); acts.appendChild(dn);
+      const del=el('button','btn danger sm','Delete the List'); del.type='button';
+      const n=syItems(sid).filter(c=>c.list===lid).length;
+      del.disabled = lists.length<=1;
+      del.title = lists.length<=1 ? 'A space keeps at least one list' : '';
+      del.addEventListener('click', ()=>{
+        if(!del.dataset.c){ del.dataset.c='1'; del.textContent= n? 'Click Again — Its '+n+' Cards Move to '+(lists.find(x=>x.id!==lid)||{}).name : 'Click Again to Delete'; return; }
+        const to=lists.find(x=>x.id!==lid);
+        syItems(sid).filter(c=>c.list===lid).forEach(c=> sySaveItem(c, {list:to.id, ord:syNextOrd(sid,to.id)}));
+        syPut('syncs', Object.assign({}, s, {lists:lists.filter(x=>x.id!==lid)})); closePanel();
+      });
+      acts.appendChild(del);
+    }
+    acts.appendChild(el('span','spacer'));
+    const cancel=el('button','btn ghost','Cancel'); cancel.type='button'; cancel.addEventListener('click', closePanel);
+    const ok=el('button','btn', isNew? 'Add the List' : 'Save'); ok.type='button';
+    ok.addEventListener('click', ()=>{
+      const v=fN.value.trim(); if(!v){ fN.focus(); toast('Give the list a name.'); return; }
+      const lists=(s.lists||[]).slice(); const i=lists.findIndex(x=>x.id===L.id);
+      if(i>=0) lists[i]=Object.assign({}, lists[i], {name:v}); else lists.push({id:L.id, name:v});
+      S.openSyncs[sid]=true;
+      syPut('syncs', Object.assign({}, s, {lists:lists})); closePanel();
+    });
+    fN.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); ok.click(); } });
+    acts.appendChild(cancel); acts.appendChild(ok); body.appendChild(acts);
+  });
+}
+
+/* a week's sync: what was said, what was decided, and who is doing what next */
+function syLogPanel(sid, gid){
+  const s0=syOf(sid); if(!s0) return;
+  const isNew=!gid;
+  syPanel('log', gid||'new', isNew? 'Log This Week’s Sync' : 'A Past Sync', s0.name||'', body=>{
+    const s=syOf(sid); if(!s) return;
+    const g0 = gid ? syCard(gid) : null;
+    if(gid && !g0){ body.appendChild(emptyBox('This sync is gone.','Someone in the space may have deleted it.')); return; }
+    const g = g0 || {date:isoOf(today()), notes:'', decisions:'', actions:[]};
+    const f=el('div','fields');
+    const fD=field(f,'Date', inp('date', g.date||isoOf(today())), 'w2');
+    const fN=field(f,'What You Talked About', ta(g.notes||'', 'The topics you covered and what was said', 4), 'w4');
+    const fC=field(f,'What Was Decided', ta(g.decisions||'', 'Anything agreed, so nobody has to remember it', 3), 'w4');
+    body.appendChild(f);
+    if(!isNew){
+      const save=patch=> sySaveItem(syCard(gid)||g, patch);
+      fD.addEventListener('change', ()=> save({date:fD.value}));
+      fN.addEventListener('change', ()=> save({notes:fN.value.trim()}));
+      fC.addEventListener('change', ()=> save({decisions:fC.value.trim()}));
+    }
+    /* done since the sync before, so the conversation starts from what moved */
+    const prev = syItems(sid,'log').filter(x=>x.id!==gid && String(x.date||'')<String(g.date||'9999')).sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0];
+    const from = prev && parseD(prev.date) ? parseD(prev.date).getTime() : 0;
+    const to = parseD(g.date) ? parseD(g.date).getTime()+86400000 : Date.now();
+    const doneSince = syItems(sid).filter(c=> c.done && c.doneAt && c.doneAt>=from && c.doneAt<to);
+    const ds=el('div'); ds.appendChild(el('h3','sect-t', prev? 'Done Since the Last Sync' : 'Done So Far'));
+    if(!doneSince.length) ds.appendChild(el('p','note','Nothing ticked off in that time.'));
+    else { const ul=el('ul','sydone'); doneSince.forEach(c=> ul.appendChild(el('li',null, c.t+(c.who? ' — '+syFirst(c.who):'')))); ds.appendChild(ul); }
+    body.appendChild(ds);
+
+    /* action items become cards */
+    const ai=el('div'); ai.appendChild(el('h3','sect-t','Action Items'));
+    if(!isNew){
+      const made=(g.actions||[]).map(id=>syCard(id)).filter(Boolean);
+      if(!made.length) ai.appendChild(el('p','note','None from this sync.'));
+      made.forEach(c=>{ const b=el('button','lk', c.t+(c.who? ' — '+syFirst(c.who):'')+(c.done?' (done)':'')); b.type='button';
+        b.addEventListener('click', ()=> syCardPanel(c.id)); const w=el('div'); w.appendChild(b); ai.appendChild(w); });
+      body.appendChild(ai);
+      const acts=el('div','rowacts'); acts.appendChild(el('span','spacer'));
+      const del=el('button','btn danger sm','Delete This Sync'); del.type='button';
+      del.addEventListener('click', ()=>{ if(!del.dataset.c){ del.dataset.c='1'; del.textContent='Click Again to Delete'; return; }
+        const kept=JSON.parse(JSON.stringify(syCard(gid))); closePanel(); syDrop('syncitems', gid);
+        undoToast('Sync deleted. Its action items stay as cards.', ()=> syPut('syncitems', kept)); });
+      acts.appendChild(del); body.appendChild(acts);
+      return;
+    }
+    ai.appendChild(el('p','note','Each one becomes a card in the list you pick.'));
+    const rowsBox=el('div','syacts'); ai.appendChild(rowsBox);
+    const rows=[];
+    const lists=s.lists||[];
+    const listFor=who=>{ const fn=syFirst(who).toLowerCase(); const hit=lists.find(L=>String(L.name||'').toLowerCase().indexOf(fn)>=0); return (hit||lists[0]||{}).id||''; };
+    const addRow=()=>{
+      const r=el('div','fields syact');
+      const fT=field(r,'Action Item', inp('text','','What needs doing'), 'w4');
+      const fW=field(r,'Who', sel(syMemberOpts(s), '', 'Nobody Yet'));
+      const fDu=field(r,'Due', inp('date',''));
+      const fL=field(r,'Goes in List', sel2(lists.map(L=>({v:L.id,n:L.name})), lists[0]?lists[0].id:''), 'w2');
+      fW.addEventListener('change', ()=>{ const id=listFor(fW.value); if(id) fL.value=id; });
+      const rm=el('button','btn ghost sm','Remove'); rm.type='button';
+      rm.addEventListener('click', ()=>{ r.remove(); const i=rows.indexOf(o); if(i>=0) rows.splice(i,1); });
+      const rw=el('div','f w4 syrm'); rw.appendChild(rm); r.appendChild(rw);
+      const o={fT,fW,fDu,fL}; rows.push(o); rowsBox.appendChild(r);
+    };
+    addRow();
+    const more=el('button','btn ghost sm','+ Add Another'); more.type='button'; more.addEventListener('click', addRow);
+    ai.appendChild(more);
+    body.appendChild(ai);
+    const acts=el('div','rowacts'); acts.appendChild(el('span','spacer'));
+    const cancel=el('button','btn ghost','Cancel'); cancel.type='button'; cancel.addEventListener('click', closePanel);
+    const ok=el('button','btn','Save the Sync'); ok.type='button';
+    ok.addEventListener('click', async ()=>{
+      const ids=[];
+      for(const o of rows){ const t=o.fT.value.trim(); if(!t) continue;
+        const c=await syPut('syncitems', syNewItem(s, 'card', {t:t, who:o.fW.value, due:o.fDu.value, list:o.fL.value||(lists[0]||{}).id, ord:syNextOrd(s.id, o.fL.value)}));
+        ids.push(c.id); }
+      await syPut('syncitems', syNewItem(s, 'log', {date:fD.value||isoOf(today()), notes:fN.value.trim(), decisions:fC.value.trim(), actions:ids}));
+      S.openSyncs[sid]=true; closePanel();
+      toast(ids.length? 'Logged, with '+ids.length+(ids.length===1?' action item.':' action items.') : 'Logged.');
+    });
+    acts.appendChild(cancel); acts.appendChild(ok); body.appendChild(acts);
+  });
+}
+
+/* who is in it, when it meets, and leaving or deleting */
+function syPeoplePicker(box, chosen, lockMe){
+  const mode=syncMode(), me=syMe();
+  const wrap=el('div','f w4'); wrap.appendChild(el('span',null,'Who Is In It'));
+  const list=el('div','sypeople');
+  S.people.forEach(p=>{
+    const key=syKeyOf(p); const isMe=p.id===S.me;
+    const l=el('label','chkrow'); const cb=el('input'); cb.type='checkbox';
+    cb.checked = isMe || (key && chosen.indexOf(key)>=0);
+    cb.disabled = (isMe && lockMe) || !key;
+    l.appendChild(cb); l.appendChild(avatar(p.id,'xs'));
+    l.appendChild(el('span',null, p.name+(isMe?' (you)':'')+(!key? ' — hasn’t signed in to Team HQ yet':'')));
+    cb.addEventListener('change', ()=>{ const i=chosen.indexOf(key); if(cb.checked && i<0) chosen.push(key); if(!cb.checked && i>=0) chosen.splice(i,1); });
+    list.appendChild(l);
+  });
+  wrap.appendChild(list);
+  if(mode==='shared') wrap.appendChild(el('span','fhint','Someone appears here once they have signed in to Team HQ on resources.mismo.org.'));
+  box.appendChild(wrap);
+  if(chosen.indexOf(me)<0) chosen.push(me);
+}
+function syNewSheet(){
+  const mode=syncMode(), me=syMe();
+  sheet(box=>{
+    box.appendChild(el('h2',null, mode==='shared'? 'Start a Shared Space' : 'Start a Space'));
+    box.appendChild(el('p',null, mode==='shared'
+      ? 'Only the people you pick will see it. You can add someone later in Space Settings.'
+      : 'On the Claude copy a space is just for you.'));
+    const g=el('div','fields');
+    const fN=field(g,'Name of the Space', inp('text','', 'e.g. Jonna and Jonathan Weekly'), 'w4');
+    const chosen=[me];
+    if(mode==='shared') syPeoplePicker(g, chosen, true);
+    let daysPicked=[];
+    const dw=el('div','f w4'); dw.appendChild(el('span',null,'Meets Every'));
+    dw.appendChild(syDayPicker([], v=>{ daysPicked=v; })); dw.appendChild(el('span','fhint','Pick every day you meet. Leave them all off for no set day.'));
+    g.appendChild(dw);
+    box.appendChild(g);
+    const acts=el('div','modal-acts');
+    const cancel=el('button','btn ghost','Cancel'); cancel.type='button'; cancel.addEventListener('click', closeSheet);
+    const go=el('button','btn','Start the Space'); go.type='button';
+    go.addEventListener('click', async ()=>{
+      const members=Array.from(new Set(chosen.filter(Boolean)));
+      const others=members.filter(m=>m!==me);
+      const name=fN.value.trim() || (others.length? [syFirst(me)].concat(others.map(syFirst)).join(' and ')+' Sync' : 'My Sync Up');
+      const lists=[{id:uid('ls'), name:'Topics'}]
+        .concat(members.map(m=>({id:uid('ls'), name:syFirst(m)+'’s To Dos'})))
+        .concat([{id:uid('ls'), name:'Parked for Later'}]);
+      const s=await syPut('syncs', {name:name, members:members, days:daysPicked, lists:lists, by:S.me||'', at:Date.now()});
+      S.openSyncs[s.id]=true; closeSheet(); syRefresh();
+      toast(others.length? 'Started. '+others.map(syFirst).join(' and ')+' will see it in their Sync Ups.' : 'Started.');
+    });
+    acts.appendChild(cancel); acts.appendChild(go); box.appendChild(acts);
+  });
+}
+function sySpacePanel(sid){
+  const s0=syOf(sid); if(!s0) return;
+  syPanel('space', sid, 'Space Settings', s0.name||'', body=>{
+    const s=syOf(sid); if(!s) return;
+    const mode=syncMode(), me=syMe();
+    const g=el('div','fields');
+    const fN=field(g,'Name of the Space', inp('text', s.name||''), 'w4');
+    const chosen=(s.members||[]).slice();
+    if(mode==='shared') syPeoplePicker(g, chosen, true);
+    let daysPicked=syDays(s);
+    const dw=el('div','f w4'); dw.appendChild(el('span',null,'Meets Every'));
+    dw.appendChild(syDayPicker(daysPicked, v=>{ daysPicked=v; })); g.appendChild(dw);
+    body.appendChild(g);
+    const acts=el('div','rowacts');
+    if((s.members||[]).length>1){
+      const leave=el('button','btn ghost sm','Leave This Space'); leave.type='button';
+      leave.addEventListener('click', ()=>{ if(!leave.dataset.c){ leave.dataset.c='1'; leave.textContent='Click Again — You Won’t See It After This'; return; }
+        const left=(s.members||[]).filter(m=>m!==me);
+        syItems(sid).concat(syItems(sid,'log')).forEach(it=> sySaveItem(it, {members:left}));
+        syPut('syncs', Object.assign({}, s, {members:left})).then(()=>{
+          SY.syncs=SY.syncs.filter(x=>x.id!==sid); SY.items=SY.items.filter(x=>x.sync!==sid); syRefresh(); });
+        closePanel(); toast('You left “'+(s.name||'the space')+'.”');
+      });
+      acts.appendChild(leave);
+    }
+    const del=el('button','btn danger sm','Delete This Space'); del.type='button';
+    del.addEventListener('click', ()=>{ if(!del.dataset.c){ del.dataset.c='1'; del.textContent='Click Again — Deletes It for Everyone in It'; return; }
+      syItems(sid).concat(syItems(sid,'log')).forEach(it=> syDrop('syncitems', it.id));
+      syDrop('syncs', sid); closePanel(); toast('Space deleted.'); });
+    acts.appendChild(del);
+    acts.appendChild(el('span','spacer'));
+    const cancel=el('button','btn ghost','Cancel'); cancel.type='button'; cancel.addEventListener('click', closePanel);
+    const ok=el('button','btn','Save'); ok.type='button';
+    ok.addEventListener('click', ()=>{
+      const members=Array.from(new Set(chosen.filter(Boolean)));
+      const changed = JSON.stringify(members.slice().sort())!==JSON.stringify((s.members||[]).slice().sort());
+      syPut('syncs', Object.assign({}, s, {name:fN.value.trim()||s.name, days:daysPicked, day:'', members:members}));
+      if(changed) syItems(sid).concat(syItems(sid,'log')).forEach(it=> sySaveItem(it, {members:members}));
+      closePanel(); toast('Saved.');
+    });
+    acts.appendChild(cancel); acts.appendChild(ok); body.appendChild(acts);
+  });
+}
+/* a refresh that waited for someone to finish typing runs once they leave the field */
+(function(){ const r=document.getElementById('app-syncs'); if(!r) return;
+  r.addEventListener('focusout', ()=>{ setTimeout(()=>{
+    if(S.syDirty && S.tab==='syncs' && !syBusy(r)){ S.syDirty=0; vSyncs(r); } }, 40); }); })();
+setTimeout(()=>{ try{ syEnsureEmail(); }catch(e){} }, 6000);
+window.__sy = SY;
+
+/* ============ MY NOTES (a My Board panel) ============
+   Long-form notes for one person. Kept like a Sync Ups space with only that person in it,
+   so on resources.mismo.org the relay hands them to nobody else, and on the Claude copy
+   they sit in the person's private store. */
+function noteWidget(w, b){
+  syStart();
+  const mode=syncMode();
+  if(mode==='waiting'){ b.appendChild(emptyBox('Your notes open once the save relay keeps them to you.','Perry’s relay update switches this on; nothing on this page needs to change.')); return; }
+  if(mode==='none'){ b.appendChild(emptyBox('Notes need you signed in.','Team HQ has to know whose notes they are.')); return; }
+  const n=syCard(w.k);
+  if(!n){
+    const loaded = SY.mode==='shared' ? SY.syncsSeen : !!SY.priv;
+    b.appendChild(loaded ? emptyBox('This note is gone.','Take the panel off your board, or add a new one.') : el('p','note','Loading your note…'));
+    return;
+  }
+  const wrap=el('div','mynote');
+  const ti=inp('text', n.t||'', 'Title'); ti.className='mynote-t'; ti.setAttribute('aria-label','Title');
+  const tx=el('textarea','mynote-x'); tx.value=n.note||''; tx.placeholder='Write as much as you like. It saves as you go.'; tx.rows=10;
+  tx.setAttribute('aria-label','Note');
+  const st=el('div','mynote-s');
+  const stamp=()=>{ const x=syCard(n.id)||n; st.textContent = x.edited? 'Saved '+relWhen(x.edited)+'. Only you can see this.' : 'Only you can see this.'; };
+  stamp();
+  let tmr=null;
+  const save=()=>{ clearTimeout(tmr); tmr=null; const cur=syCard(n.id)||n;
+    if(cur.t===ti.value.trim() && (cur.note||'')===tx.value) { stamp(); return; }
+    S.noteHold=1; sySaveItem(cur, {t:ti.value.trim(), note:tx.value, edited:Date.now()}).then(()=>{ S.noteHold=0; stamp(); }); };
+  const soon=()=>{ clearTimeout(tmr); st.textContent='Saving…'; tmr=setTimeout(save, 900); };
+  ti.addEventListener('input', soon); tx.addEventListener('input', soon);
+  ti.addEventListener('blur', save); tx.addEventListener('blur', save);
+  wrap.appendChild(ti); wrap.appendChild(tx); wrap.appendChild(st);
+  b.appendChild(wrap);
+}
+async function newNotePanel(L, done){
+  syStart();
+  const mode=syncMode();
+  if(mode!=='shared' && mode!=='private'){ toast(mode==='waiting'? 'Notes open once the save relay keeps them to you.' : 'Notes need you signed in.'); return; }
+  const n=await syPut('syncitems', {kind:'note', sync:'', members:[syMe()], t:'Notes', note:'', at:Date.now(), by:S.me||''});
+  L.push({r:[newPanel({t:'mynote', k:n.id}, L)]}); done();
+}
+
+/* ============ ATTACHMENTS ============
+   Files on a task, a plan item or a Sync Ups card, and the receipt on an expense.
+   Everyone who can see the thing can see, view and download its files, and a download
+   comes back as the file that went in — same name, same format.
+     Claude copy           the artifact's own file store (/_blob/<id>)
+     resources.mismo.org   files in team-hq-data, through the save relay (the door
+                           supplies assets.upload and window.__relayFile)
+*/
+const ATT_TEXT = {csv:'text/csv', md:'text/markdown', json:'application/json', txt:'text/plain'};
+function attExt(name){ const m=/\.([A-Za-z0-9]{1,8})$/.exec(String(name||'')); return m? m[1].toLowerCase() : ''; }
+function attIsImage(a){ return /^image\//.test(a.type||'') || /^(png|jpe?g|gif|webp|heic|svg)$/.test(attExt(a.name)); }
+function attIsPdf(a){ return a.type==='application/pdf' || attExt(a.name)==='pdf'; }
+function attSize(n){ n=+n||0; return n>=1048576? (n/1048576).toFixed(1)+' MB' : n>=1024? Math.round(n/1024)+' KB' : n+' bytes'; }
+
+async function attUpload(file, folder){
+  const a = await getAssets();
+  if(!a) throw {code:'no_assets', message:'Adding files needs edit access to Team HQ.'};
+  let r;
+  if(window.__hqRelay) r = await a.upload(file, {folder: folder||'attachments'});
+  else {
+    const t = ATT_TEXT[attExt(file.name)];
+    r = await a.upload(file, (!file.type || /^text\/|json|ms-excel/.test(file.type)) && t ? {type:t} : undefined);
+  }
+  return {id:r.id, name:file.name||'file', size:file.size||0, type:file.type||'', at:Date.now(), by:S.me||''};
+}
+const attCache = {};
+async function attBlob(id){
+  if(attCache[id]) return attCache[id];
+  let b;
+  if(window.__relayFile) b = await window.__relayFile(id);
+  else { const r = await fetch('/_blob/'+id); if(!r.ok) throw {code:'missing'}; b = await r.blob(); }
+  attCache[id]=b; return b;
+}
+async function attDownload(att){
+  try{
+    const b = await attBlob(att.id);
+    const dl = await claude.use('downloads');
+    if(!dl){ toast('Downloads are not available here.'); return; }
+    await dl.save({filename: att.name || 'file', data: b});
+  }catch(e){
+    const c = e && e.code;
+    if(c==='declined') return;
+    if(c==='rejected_extension' || c==='extension_not_enabled') { toast('The Claude copy can’t hand back that kind of file. It downloads fine on resources.mismo.org.'); return; }
+    toast('That file didn’t download. Try again.');
+  }
+}
+/* a picture or a PDF opens to look at; anything else downloads */
+async function attView(att){
+  if(!attIsImage(att) && !attIsPdf(att)) return attDownload(att);
+  let url;
+  try{ url = URL.createObjectURL(await attBlob(att.id)); }catch(e){ toast('That file couldn’t be opened.'); return; }
+  sheet(box=>{
+    box.classList.add('attsheet');
+    box.appendChild(el('h2',null, att.name||'File'));
+    const v=el('div','attview');
+    if(attIsImage(att)){ const im=el('img'); im.src=url; im.alt=att.name||''; v.appendChild(im); }
+    else { const fr=el('iframe'); fr.src=url; fr.title=att.name||'PDF'; v.appendChild(fr);
+      v.appendChild(el('p','note','If the PDF doesn’t show here, download it to open it.')); }
+    box.appendChild(v);
+    const acts=el('div','modal-acts');
+    const d=el('button','btn ghost','Download'); d.type='button'; d.addEventListener('click', ()=> attDownload(att));
+    const c=el('button','btn','Close'); c.type='button'; c.addEventListener('click', closeSheet);
+    acts.appendChild(d); acts.appendChild(c); box.appendChild(acts);
+  });
+}
+function attIcon(a){
+  const p = attIsImage(a) ? '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5-9 8"/>'
+    : attIsPdf(a) ? '<path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5M9 14h6M9 17h4"/>'
+    : '<path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/>';
+  const s=document.createElementNS('http://www.w3.org/2000/svg','svg'); s.setAttribute('viewBox','0 0 24 24'); s.setAttribute('class','atti'); s.innerHTML=p; return s;
+}
+/* the block that goes in a rail: the files, and a way to add more.
+   onChange(list) is handed the new list to save with the record. */
+function attBlock(list, onChange, opts){
+  opts=opts||{};
+  let files=(list||[]).slice();
+  const w=el('div','attblock');
+  w.appendChild(el('h3','sect-t', opts.title||'Attachments'));
+  if(opts.note) w.appendChild(el('p','note', opts.note));
+  const rows=el('div','attrows'); w.appendChild(rows);
+  const draw=()=>{
+    rows.textContent='';
+    if(!files.length) rows.appendChild(el('div','attnone','No files yet.'));
+    files.forEach((a,i)=>{
+      const r=el('div','attrow');
+      const open=el('button','attopen'); open.type='button'; open.title=attIsImage(a)||attIsPdf(a)? 'Look at it' : 'Download it';
+      open.appendChild(attIcon(a));
+      const tx=el('span','attn'); tx.appendChild(el('span',null,a.name||'File'));
+      tx.appendChild(el('small',null,[attSize(a.size), a.by? pname(a.by):'', a.at? fmtD(isoOf(new Date(a.at))):''].filter(Boolean).join(' · ')));
+      open.appendChild(tx);
+      open.addEventListener('click', ()=> attView(a));
+      r.appendChild(open);
+      const dl=el('button','btn ghost sm','Download'); dl.type='button'; dl.addEventListener('click', ()=> attDownload(a));
+      r.appendChild(dl);
+      const rm=el('button','btn ghost sm attrm','Remove'); rm.type='button';
+      rm.addEventListener('click', ()=>{ if(!rm.dataset.c){ rm.dataset.c='1'; rm.textContent='Click Again'; return; }
+        files=files.filter((x,j)=>j!==i); draw(); onChange(files.slice()); });
+      r.appendChild(rm);
+      rows.appendChild(r);
+    });
+  };
+  draw();
+  const add=el('label','attadd');
+  const fi=el('input'); fi.type='file'; fi.multiple=true;
+  add.appendChild(fi);
+  add.insertAdjacentHTML('beforeend','<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>');
+  const lab=el('span',null,'Add a File'); add.appendChild(lab);
+  add.appendChild(el('small',null, window.__hqRelay? 'Any kind of file, up to 4 MB' : 'Pictures, PDFs and text files on the Claude copy'));
+  const take=async (list)=>{
+    const picked=Array.from(list||[]); if(!picked.length) return;
+    for(const f of picked){
+      lab.textContent='Adding '+f.name+'…';
+      try{ files.push(await attUpload(f, opts.folder)); draw(); onChange(files.slice()); }
+      catch(e){ toast((e && e.message && e.code!=='unsupported_type')? e.message
+        : e && e.code==='unsupported_type' ? 'The Claude copy can’t keep that kind of file. resources.mismo.org can.'
+        : 'That file didn’t upload. Try a smaller one.'); }
+    }
+    lab.textContent='Add a File';
+  };
+  fi.addEventListener('change', ()=>{ take(fi.files); fi.value=''; });
+  add.addEventListener('dragover', e=>{ e.preventDefault(); add.classList.add('over'); });
+  add.addEventListener('dragleave', ()=> add.classList.remove('over'));
+  add.addEventListener('drop', e=>{ e.preventDefault(); add.classList.remove('over'); take(e.dataTransfer && e.dataTransfer.files); });
+  w.appendChild(add);
+  return w;
+}
+
+/* ============ EXPENSES: who sees what ============
+   Each person sees only their own expenses. Jonna and Vanessa see everyone's, because
+   Vanessa enters them into DataBasics. On resources.mismo.org the save relay enforces it
+   (each expense carries its people's sign-in emails in `members`; the relay adds the
+   see-everything list from projects.json). The page applies the same rule to what it shows. */
+const EXP_SEE_ALL = ['jonna','vanessa'];
+function expSeesAll(){ return !!S.me && EXP_SEE_ALL.indexOf(S.me)>=0; }
+function expSeen(x){ if(!S.me) return false; return expSeesAll() || x.who===S.me || x.by===S.me; }
+function expMembers(e){
+  const out=[];
+  [e.who, e.by, S.me].forEach(id=>{ const p=person(id); const em=p && String(p.email||'').toLowerCase(); if(em && out.indexOf(em)<0) out.push(em); });
+  if(window.__hqRelay && window.__hqRelay.myEmail){ const me=String(window.__hqRelay.myEmail()||'').toLowerCase(); if(me && out.indexOf(me)<0) out.push(me); }
+  return out;
+}
+function rcptAtt(e){
+  const ext = /pdf/.test(e.rcptType||'') ? '.pdf' : /png/.test(e.rcptType||'') ? '.png' : '.jpg';
+  return {id:e.asset, name:e.rcptName || ('Receipt - '+(e.name||e.cat||'Expense')+' - '+(e.date||'')+ext), type:e.rcptType||'', size:0};
+}
+/* every receipt in what is on screen, as the files that were attached */
+async function downloadReceipts(){
+  const list=(S.expScope==='todo' ? S.expenses.filter(x=>!x.submitted) : S.expenses).filter(x=>x.asset);
+  if(!list.length){ toast('No receipts attached in this list.'); return; }
+  toast('Downloading '+list.length+(list.length===1?' receipt…':' receipts…'));
+  for(const e of list) await attDownload(rcptAtt(e));
+}
+window.__att = {upload:attUpload, download:attDownload, view:attView, rcpt:(e)=>rcptAtt(e)};
 
 /* ============ rail search sources ============ */
 window.__search = function(t, push, goTab){
