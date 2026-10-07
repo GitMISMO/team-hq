@@ -2280,6 +2280,16 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .mtbar a.btn{text-decoration:none}
 .mtpanel .mt-st.s-now{background:#1f9d63;color:#fff}
 .mtpanel .mt-st.s-soon{background:#e0a82e;color:#2a1d00}
+/* in a narrow panel nothing runs off the edge: names wrap, and the status and Join drop below when there is no room */
+.mtpanel{min-width:0;overflow:hidden}
+.mtpanel .mt-m{min-width:0}
+.mtpanel .mt-i{display:flex;flex-wrap:wrap;align-items:center;column-gap:10px;row-gap:6px;min-width:0;max-width:100%}
+.mtpanel .mt-t{min-width:0;flex:0 0 auto}
+.mtpanel .mt-n{flex:1 1 140px;min-width:0;white-space:normal;overflow-wrap:anywhere;line-height:1.35}
+.mtpanel .mt-st,.mtpanel .mt-j{flex:0 0 auto}
+.mtpanel .mt-st + .mt-j{margin-left:0}
+.mtpanel .mt-tz{white-space:nowrap}
+.mtbar{min-width:0}
 
 /* ---------- post-its you type on ---------- */
 .sticky{cursor:text}
@@ -11767,7 +11777,7 @@ function panelLook(w, L, title){
       const hd=el('div','sethead');
       hd.appendChild(el('h2',null,title));
       if(def.d) hd.appendChild(el('p',null,def.d));
-      hd.appendChild(el('p','setnote','These settings are for this panel only. Anything left on “Use the Board Setting” follows My Board Settings. Nobody else sees your choices.'));
+      hd.appendChild(el('p','setnote','These settings are for this panel only, and nobody else sees them. Anything set to “Same as My Board” follows My Board Settings.'));
       box.appendChild(hd);
       const apply=()=>{ saveMine(); vMine($('#app-mine')); paint(); };
       const here=findPanel(L, w), onRow=here? L[here.ri].r.length : 1;
@@ -11785,10 +11795,18 @@ function panelLook(w, L, title){
             btnRow(START, String(w.c?1:0), 'tiny', v=>{ w.c=v==='1'?1:0; apply(); })));
          }},
         {k:'open', n:'Opening Things', d:'Where something opens when you click it in this panel.', repaint:paint,
-         sum:()=> w.open? nameOf(OPEN_OPTS, w.open) : 'Board Setting · '+nameOf(OPEN_OPTS, bset().opens||'rail'),
+         sum:()=> w.open? 'This Panel · '+nameOf(OPEN_OPTS, w.open) : 'Same as My Board · '+nameOf(OPEN_OPTS, bset().opens||'rail'),
          rows:b=>{
-          b.appendChild(setRow('Open Things In', OPEN_HINT+' The board is set to '+nameOf(OPEN_OPTS, bset().opens||'rail')+'.',
-            openField(w.open||'', v=>{ w.open=v; apply(); }, true)));
+          /* Most panels just follow the board. Only someone who wants this one panel to
+             behave differently sees the choices for it. */
+          const boardName=nameOf(OPEN_OPTS, bset().opens||'rail');
+          b.appendChild(setRow('Open Things In', w.open
+              ? 'This panel has its own setting. Switch back to follow My Board Settings ('+boardName+').'
+              : 'Follows My Board Settings, which open things in the '+boardName.toLowerCase()+'. Change that for every panel in My Board Settings, or give just this panel its own.',
+            btnRow([{v:'',n:'Same as My Board ('+boardName+')'},{v:'own',n:'Its Own Setting'}], w.open?'own':'', 'tiny', v=>{
+              if(v==='own'){ if(!w.open) w.open=bset().opens||'rail'; } else delete w.open; apply(); })));
+          if(w.open) b.appendChild(setRow('This Panel Opens In', OPEN_HINT,
+            openField(w.open, v=>{ w.open=v; apply(); }, false)));
          }},
         {k:'look', n:'Appearance', d:'Its style and color.', repaint:paint,
          sum:()=> nameOf(PANEL_STYLES, w.st||'') + ' · ' + colName,
