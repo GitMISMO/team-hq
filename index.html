@@ -81,7 +81,7 @@
   var MAX_FILE = 940000;              /* the relay takes at most 1,000,000 bytes a save */
   var MAX_RECEIPT = 4 * 1024 * 1024;  /* base64 adds a third; the relay's request limit is about 6 MB */
   var COLLS = ['people', 'rocks', 'tasks', 'dates', 'notes', 'agenda', 'expenses', 'figures', 'nudges',
-    'leads', 'blocks', 'asks', 'plans', 'planitems', 'plankinds', 'datekinds'];
+    'leads', 'blocks', 'asks', 'plans', 'planitems', 'plankinds', 'datekinds', 'myitems'];
 
   /* ---------- browser storage: every tool shares this web address ----------
      Team HQ's own keys (mismo.teamhq.…, hq.rail.off) are filed under
@@ -157,6 +157,35 @@
   /* Reading something this person may not have — the Sponsorship Portal's prospects, or
      the private notes — is not a failure of Team HQ: it reads as empty, quietly. */
   function optional(f) { return f.proj !== PROJECT; }
+  /* ---------- changes not yet saved, kept on this computer ----------
+     If GitHub turns a save down, the change is not thrown away: it stays waiting, and a
+     copy is kept in this browser so closing the tab or reloading does not lose it either.
+     It is put back as soon as the file is read again and goes out with the next save. */
+  var KEEP = 'hq.unsaved';
+  function keepAll() {
+    try {
+      var all = JSON.parse(localStorage.getItem(KEEP) || '{}'), me = myId() || '-';
+      var mine = {};
+      Object.keys(F).forEach(function (k) {
+        var f = F[k];
+        if (f.ro || !f.pending.length) return;
+        mine[k] = f.pending.map(function (op) { return { kind: op.kind, key: op.key, data: op.data }; });
+      });
+      if (Object.keys(mine).length) all[me] = mine; else delete all[me];
+      if (Object.keys(all).length) localStorage.setItem(KEEP, JSON.stringify(all)); else localStorage.removeItem(KEEP);
+    } catch (e) {}
+  }
+  function restoreKept(f) {
+    if (f.ro || f.pending.length || f.restored) return;
+    f.restored = true;
+    try {
+      var all = JSON.parse(localStorage.getItem(KEEP) || '{}'), mine = all[myId() || '-'] || {}, ops = mine[f.k];
+      if (!ops || !ops.length) return;
+      ops.forEach(function (op) { f.pending.push({ kind: op.kind, key: op.key, data: op.data, res: function () {}, rej: function () {} }); });
+      f.view = null;
+      schedule(f, 1500);
+    } catch (e) {}
+  }
   function load(f) {
     if (f.loading) return f.loading;
     f.loading = net('GET', f).then(function (b) {
@@ -177,6 +206,7 @@
       var before = f.loaded ? JSON.stringify(f.server) : null;
       f.server = got.content; f.sha = got.sha; f.loaded = true; f.loadedAt = now(); f.view = null;
       f.loading = null;
+      restoreKept(f);
       if (before !== JSON.stringify(f.server)) notify(f, false);
       return f;
     }, function (e) { f.loading = null; throw e; });
@@ -214,6 +244,7 @@
         if (kind === 'update' && f.loaded && docIn(f, p.key) === null) { rej(err('not-found', 'No document to update: ' + path)); return; }
         var op = { kind: kind, key: p.key, data: data, res: res, rej: rej };
         f.pending.push(op); f.view = null;
+        keepAll();
         notify(f, true);
         schedule(f, FLUSH_MS);
       };
@@ -246,6 +277,8 @@
         return serial(function () { return net('PUT', f, { content: next, sha: f.sha }); }).then(function (b) {
           f.server = next; f.sha = (b && b.sha) || f.sha; f.loadedAt = now();
           f.pending = f.pending.filter(function (op) { return batch.indexOf(op) < 0; }); f.view = null;
+          f.fails = 0;
+          keepAll();
           batch.forEach(function (op) { op.res(); });
           notify(f, false);
           saved();
@@ -261,14 +294,21 @@
       });
     };
     attempt().catch(function (e) {
-      /* a 502 from the relay with TOKEN or GITHUB is a setup problem, not a blip: say so at
-         once rather than retrying quietly forever */
-      var transient = e && (e.code === 'OFFLINE' || e.status === 401 || e.code === 'SIGNED_OUT' ||
-        (e.status >= 500 && e.code !== 'TOKEN' && e.code !== 'GITHUB' && e.code !== 'REJECTED'));
-      if (transient) {
-        /* nothing is lost: the change stays queued and goes out once the relay is back */
+      /* Only a save the relay itself turns down as wrong (REJECTED, TOO_BIG, no access) is
+         taken back. Anything GitHub or the connection refuses - a busy hour, GitHub having
+         trouble, a key or repository that needs fixing - keeps the change, on this computer
+         too, and tries again: quickly at first, then every few minutes. */
+      var keep = e && (e.code === 'OFFLINE' || e.status === 401 || e.code === 'SIGNED_OUT' ||
+        e.code === 'GITHUB' || e.code === 'TOKEN' || e.code === 'CONFIG_UNAVAILABLE' ||
+        (e.status >= 500 && e.code !== 'REJECTED' && e.code !== 'TOO_BIG') || e.status === 429);
+      if (keep) {
         if (e.status === 401 || e.code === 'SIGNED_OUT') f.waitingSignIn = true;
-        else setTimeout(function () { schedule(f, 0); }, RETRY_MS);
+        else {
+          f.fails = (f.fails || 0) + 1;
+          var wait = Math.min(RETRY_MS * Math.pow(2, f.fails - 1), 5 * 60000);
+          f.retryTimer = setTimeout(function () { f.retryTimer = null; schedule(f, 0); }, wait);
+        }
+        keepAll();
         problem(e);
         return;
       }
@@ -278,12 +318,14 @@
       problem(e, true);
     }).then(function () {
       f.flushing = false;
-      if (f.pending.length && !f.waitingSignIn) schedule(f, FLUSH_MS);
+      if (f.pending.length && !f.waitingSignIn && !f.retryTimer) schedule(f, FLUSH_MS);
     });
   }
   function anyPending() { return Object.keys(F).some(function (k) { return F[k].pending.length; }); }
   window.addEventListener('beforeunload', function (e) {
-    if (anyPending()) { e.preventDefault(); e.returnValue = 'Team HQ is still saving.'; return e.returnValue; }
+    /* a change still on its way out warns; one GitHub turned down is already kept on this computer */
+    var inFlight = Object.keys(F).some(function (k) { return F[k].pending.length && !F[k].fails; });
+    if (inFlight) { e.preventDefault(); e.returnValue = 'Team HQ is still saving.'; return e.returnValue; }
   });
 
   /* ---------- snapshots and listeners ---------- */
@@ -554,7 +596,7 @@
     UNKNOWN_PROJECT: 'The save relay doesn’t know Team HQ yet. It needs the team-hq entry in projects.json.',
     NO_ACCESS: 'Your account doesn’t have Team HQ yet. Ask Jonna Critchley to add you.',
     TOKEN: 'The save relay’s GitHub key was refused. It needs the team-hq-data repository added to it.',
-    GITHUB: 'GitHub refused the save. The save relay’s GitHub key most likely doesn’t include the team-hq-data repository yet.',
+    GITHUB: 'GitHub turned the save down.',
     CONFIG_UNAVAILABLE: 'The save relay can’t read its settings right now.',
     OFFLINE: 'Team HQ couldn’t reach the save relay. Check your connection.',
     TOO_BIG: 'This part of Team HQ has grown too big to save in one piece.'
@@ -659,11 +701,33 @@
     clearTimeout(toastT); toastT = setTimeout(function () { toastEl.hidden = true; }, tone === 'bad' ? 9000 : 4000);
   }
   var troubled = false;
+  /* GitHub's own answer, turned into plain words. The relay passes on GitHub's status number
+     and, for saves, GitHub's message. */
+  function githubWhy(e) {
+    var b = (e && e.body) || {}, st = Number(b.status) || 0, msg = String(b.message || '');
+    if (/rate limit|secondary rate/i.test(msg) || st === 429) return 'GitHub’s hourly limit for the shared save key has been used up. It clears within the hour';
+    if (st === 404) return 'GitHub says it can’t find the team-hq-data repository with the save key (code 404). The repository may be empty or missing its main branch, or the key can’t see it';
+    if (st >= 500) return 'GitHub is having trouble right now (code ' + st + ')';
+    if (st === 403) return 'GitHub refused the save key for team-hq-data (code 403' + (msg ? ': ' + msg : '') + ')';
+    return 'GitHub turned the save down' + (st ? ' (code ' + st + (msg ? ': ' + msg : '') + ')' : (msg ? ' (' + msg + ')' : ''));
+  }
+  function whyOf(e) {
+    if (!e) return 'relay error';
+    if (e.code === 'GITHUB') return githubWhy(e);
+    return WHY[e.code] || e.message || e.code || 'relay error';
+  }
   function problem(e, lost) {
     status.lastError = (e && (e.code || e.message)) || 'error';
-    if (lost) { toast('A change didn’t save (' + ((e && (WHY[e.code] || e.message)) || 'relay error') + '). It has been taken back.', 'bad'); return; }
-    troubled = true;
-    toast(e && (e.status === 401 || e.code === 'SIGNED_OUT') ? 'Sign in again to finish saving — nothing is lost.' : 'Not saved yet — trying again. Keep this tab open.', 'bad');
+    status.lastWhy = whyOf(e);
+    status.lastDetail = e && e.body ? JSON.stringify(e.body) : '';
+    try { console.warn('Team HQ save problem', e && e.code, e && e.status, e && e.body); } catch (x) {}
+    if (lost) { toast('A change didn’t save (' + whyOf(e) + '). It has been taken back.', 'bad'); return; }
+    var first = !troubled; troubled = true;
+    if (e && (e.status === 401 || e.code === 'SIGNED_OUT')) { toast('Sign in again to finish saving — nothing is lost.', 'bad'); return; }
+    if (e && e.code === 'OFFLINE') { toast('Not saved yet — no connection. Your changes are kept and will save when it’s back.', 'bad'); return; }
+    /* say it once in full; after that, a short reminder so it is not a wall of red every few seconds */
+    toast(first ? 'Not saved yet. ' + whyOf(e) + '. Your changes are kept on this computer and Team HQ keeps trying.'
+                : 'Still not saved — ' + whyOf(e) + '. Your changes are kept.', 'bad');
   }
   function saved() { if (troubled && !anyPending()) { troubled = false; toast('All changes saved.'); } }
 
@@ -687,7 +751,7 @@
     /* read one file of another tool the person has access to (Meeting Trackers' schedule);
        resolves the file's content, or rejects (e.g. 403 when they have no access to it) */
     readOther: function (proj, name) { return call(proj, '/data/' + encodeURIComponent(name), 'GET').then(function (b) { return (b && b.data) || null; }); },
-    why: function () { return WHY[status.lastError] || status.lastError || ''; },
+    why: function () { return status.lastWhy || WHY[status.lastError] || status.lastError || ''; },
     config: { RELAY_URL: RELAY_URL, PROJECT: PROJECT, PRIVATE: PRIVATE, POLL_MS: POLL_MS } };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hookSession); else hookSession();
@@ -6529,7 +6593,7 @@ const WTYPES = {
   team:      {n:'Where My Team Is Today', d:'Who is reachable today, who is away or travelling, and how loaded each person is.'},
   links:     {n:'My Systems',          d:'Jump straight into Summit HQ, the Financial System and the rest.'},
   mtoday:    {n:'Meeting Trackers: Workgroup Meetings', d:'Which workgroups meet today or this week, when, whether they are on now, and a Join link — straight from Meeting Trackers.'},
-  myprojects:{n:'My Projects',         d:'Your own bigger projects — bigger than a task. Each has a status, target date, its steps and any board tasks that belong to it. Only you can see them.'},
+  myprojects:{n:'My Projects',         d:'Your own bigger projects — bigger than a task. Each has a status, target date, its steps and any board tasks that belong to it.'},
   projects:  {n:'Team Projects List',  d:'Every bigger project in one list — where it stands, who is accountable, how far along and what is due next. Filter to Active, Mine, Next Up or All.'},
   rock:      {n:'One Team Project',        d:'A single team project with all its parts and who is in them.'},
   plan:      {n:'One Plan',            d:'An onboarding plan, handover or checklist — how far along it is, and what is due next.'},
@@ -6543,7 +6607,7 @@ const WTYPES = {
   freebusy:  {n:'Who Is Free',         d:'The next two weeks, person by person \u2014 for picking a day that suits everyone.'},
   planday:   {n:'Plan My Day',         d:'Reads everything on your board and tells you what to do, in what order, and what can wait.'},
   newcerts:  {n:'New Certifications',  d:'Who the Certification Management System has certified lately, newest first.'},
-  mynote:    {n:'My Notes',            d:'A section of long-form notes only you can see. Add as many notes inside it as you like, and as many sections as you like.'},
+  mynote:    {n:'My Notes',            d:'A section of long-form notes on your board. Add as many notes inside it as you like, and as many sections as you like.'},
   numbers:   {n:'Numbers from My Systems', d:'Headline numbers out of the Financial System, certification and the rest.', multi:1}
 };
 const DEF_ROWS = [
@@ -7033,15 +7097,14 @@ function widgetMeter(w){
       return {pct:null, label: td.length? td.length+(td.length===1?' meeting':' meetings')+' today'+(on? ' · '+on+' on now':'') : 'No workgroup meetings today'};
     }
     if(w.t==='myprojects'){
-      try{ syStart(); }catch(e){}
-      const loaded = SY.mode==='shared' ? SY.syncsSeen : !!SY.priv;
-      if(!loaded) return {pct:null, label:'Only you can see these'};
+      try{ myStart(); }catch(e){}
+      if(!MY.seen) return {pct:null, label:'Loading your projects'};
       const all=mpAll(), dn=all.filter(x=>x.st==='Done').length;
       if(!all.length) return {pct:null, label:'No projects yet'};
       return {pct: Math.round(dn/all.length*100), label:(all.length-dn)+' open · '+dn+' done'};
     }
     if(w.t==='mynote' && w.k){
-      try{ syStart(); }catch(e){}
+      try{ myStart(); }catch(e){}
       const n=notesIn(w.k).length;
       return {pct:null, label: n? n+(n===1?' note':' notes') : 'No notes yet'};
     }
@@ -9587,7 +9650,7 @@ function syKeyOf(p){ if(!p) return ''; return window.__hqRelay ? String(p.email|
 function syFirst(key){ const p=syPersonOf(key); return p? p.name.split(' ')[0] : (key==='me'? 'Me' : String(key).split('@')[0]); }
 function syOf(id){ return SY.syncs.find(s=>s.id===id) || null; }
 function syItems(sid, kind){ return SY.items.filter(i=>i.sync===sid && (i.kind||'card')===(kind||'card')).sort((a,b)=>(a.ord||0)-(b.ord||0)); }
-function syCard(id){ return SY.items.find(i=>i.id===id) || null; }
+function syCard(id){ return SY.items.find(i=>i.id===id) || (S.myitems||[]).find(i=>i.id===id) || null; }
 function syMine(){ const me=syMe(); return SY.syncs.filter(s=> (s.members||[]).indexOf(me)>=0)
   .sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''))); }
 
@@ -9611,6 +9674,12 @@ function syStart(){
       SY.priv = {syncs:d.syncs||{}, items:d.items||{}};
       SY.syncs = Object.keys(SY.priv.syncs).map(id=>Object.assign({id}, SY.priv.syncs[id]));
       SY.items = Object.keys(SY.priv.items).map(id=>Object.assign({id}, SY.priv.items[id]));
+      /* move notes and projects kept here before into My Board's own store, same ids */
+      const moving=SY.items.filter(syPersonal);
+      if(moving.length){
+        moving.forEach(it=>{ myPut(Object.assign({}, it, {who:S.me||''})); delete SY.priv.items[it.id]; });
+        SY.items=SY.items.filter(i=>!syPersonal(i)); syPrivSave();
+      }
       syRefresh();
     }).catch(()=>{ SY.priv={syncs:{},items:{}}; syRefresh(); });
   }
@@ -9620,8 +9689,56 @@ function syRefresh(){
   if(S.tab==='mine' && !S.noteHold){ const a=document.activeElement; if(!(a && a.closest && a.closest('.mynote'))){ const r=$('#app-mine'); if(r) vMine(r); } }
 }
 
+/* ============ MY NOTES AND MY PROJECTS: YOUR OWN PANELS ============
+   They belong to one person's board, the way their tasks and post-its do, so they are
+   kept the same way: in the team's own store (collection `myitems`), each one marked
+   with whose it is (`who`). They need nothing from the save relay. Sync Ups spaces are
+   different: those are private between their members and wait for the relay. */
+const MY = { started:false, seen:false };
+function syPersonal(o){ return !!o && !o.sync && (o.kind==='note' || o.kind==='project'); }
+function myItems(){ return (S.myitems||[]).filter(i=> i.who===S.me); }
+function myStart(){
+  if(MY.started) return; MY.started=true;
+  if(!S.myitems) S.myitems=[];
+  if(!S.db){ S.myitems=LS.get('myitems', [])||[]; MY.seen=true; return; }
+  try{
+    S.db.collection('myitems').onSnapshot(snap=>{
+      S.myitems=snap.docs.map(d=>{ let b; try{ b=JSON.parse(JSON.stringify(d.data()||{})); }catch(e){ b={}; } b.id=d.id; return b; });
+      MY.seen=true; syRefresh();
+    }, ()=>{ MY.seen=true; syRefresh(); });
+  }catch(e){ MY.seen=true; }
+  /* notes and projects made before this sat in the person's private Sync Ups store */
+  if(syncMode()==='private') syStart();
+}
+function myPut(obj){
+  obj.id = obj.id || uid('mi');
+  obj.who = obj.who || S.me || '';
+  delete obj.members;
+  const arr=S.myitems||(S.myitems=[]);
+  const i=arr.findIndex(x=>x.id===obj.id); if(i>=0) arr[i]=obj; else arr.push(obj);
+  syRefresh();
+  const body=Object.assign({}, obj); delete body.id;
+  if(!S.db){ LS.set('myitems', arr); return Promise.resolve(obj); }
+  return S.db.collection('myitems').doc(obj.id).set(body).then(()=>obj, ()=>{ toast('That didn’t save. Try again in a moment.'); return obj; });
+}
+function myDrop(id){
+  const arr=S.myitems||[];
+  const i=arr.findIndex(x=>x.id===id); if(i>=0) arr.splice(i,1);
+  syRefresh();
+  if(!S.db){ LS.set('myitems', arr); return Promise.resolve(); }
+  return S.db.collection('myitems').doc(id).delete().catch(()=>toast('That didn’t delete. Try again.'));
+}
+/* signed in, with a name: everything My Notes and My Projects need */
+function myReady(b, what){
+  myStart();
+  if(!S.me){ b.appendChild(emptyBox('Pick your name first.','Team HQ has to know whose '+what+' they are.')); return false; }
+  if(!MY.seen){ b.appendChild(el('p','note','Loading your '+what+'…')); return false; }
+  return true;
+}
+
 /* ---- saving ---- */
 function syPut(col, obj){
+  if(col==='syncitems' && syPersonal(obj)) return myPut(obj);
   obj.id = obj.id || uid(col==='syncs'?'sy':'si');
   const arr0 = col==='syncs' ? SY.syncs : SY.items;
   const i=arr0.findIndex(x=>x.id===obj.id); if(i>=0) arr0[i]=obj; else arr0.push(obj);
@@ -9639,6 +9756,7 @@ function syPut(col, obj){
   return Promise.resolve(obj);
 }
 function syDrop(col, id){
+  if(col==='syncitems' && (S.myitems||[]).some(x=>x.id===id)) return myDrop(id);
   const arr = col==='syncs' ? SY.syncs : SY.items;
   const i=arr.findIndex(x=>x.id===id); if(i>=0) arr.splice(i,1);
   syRefresh();
@@ -10240,25 +10358,20 @@ setTimeout(()=>{ try{ syEnsureEmail(); }catch(e){} }, 6000);
 window.__sy = SY;
 
 /* ============ MY NOTES (a My Board panel) ============
-   Long-form notes for one person. Kept like a Sync Ups space with only that person in it,
-   so on resources.mismo.org the relay hands them to nobody else, and on the Claude copy
-   they sit in the person's private store. */
+   Long-form notes on one person's board, kept with My Projects (see myStart above). */
 function noteWidget(w, b){
-  syStart();
-  const mode=syncMode();
-  if(mode==='waiting'){ b.appendChild(emptyBox('Your notes open once the save relay keeps them to you.','Perry’s relay update switches this on; nothing on this page needs to change.')); return; }
-  if(mode==='none'){ b.appendChild(emptyBox('Notes need you signed in.','Team HQ has to know whose notes they are.')); return; }
+  if(!myReady(b, 'notes')) return;
   const n=syCard(w.k);
   if(!n){
-    const loaded = SY.mode==='shared' ? SY.syncsSeen : !!SY.priv;
-    b.appendChild(loaded ? emptyBox('This note is gone.','Take the panel off your board, or add a new one.') : el('p','note','Loading your notes…'));
+    const pending = syncMode()==='private' && !SY.priv;   /* older notes still on their way over */
+    b.appendChild(pending ? el('p','note','Loading your notes…') : emptyBox('This note is gone.','Take the panel off your board, or add a new one.'));
     return;
   }
   /* A My Notes panel is a section holding any number of notes. Panels made before
      this held one note in the section itself; that note becomes the first one. */
   if(String(n.note||'').trim() && !n.split && !(SY.splitting||(SY.splitting={}))[n.id]){
     SY.splitting[n.id]=1;
-    syPut('syncitems', {kind:'note', in:n.id, sync:'', members:[syMe()], t:(n.t && n.t!=='Notes' && n.t!=='My Notes')? n.t : 'Note',
+    syPut('syncitems', {kind:'note', in:n.id, sync:'', t:(n.t && n.t!=='Notes' && n.t!=='My Notes')? n.t : 'Note',
       note:n.note, at:n.at||Date.now(), edited:n.edited||n.at||Date.now(), by:S.me||''});
     sySaveItem(n, {note:'', split:1});
   }
@@ -10293,11 +10406,11 @@ function noteWidget(w, b){
     });
     wrap.appendChild(ul);
   }
-  wrap.appendChild(el('div','mynote-s', list.length+(list.length===1?' note':' notes')+' · only you can see these.'));
+  wrap.appendChild(el('div','mynote-s', list.length+(list.length===1?' note':' notes')));
   b.appendChild(wrap);
 }
 function notesIn(sec){
-  return SY.items.filter(i=> i.kind==='note' && i.in===sec)
+  return (S.myitems||[]).filter(i=> i.kind==='note' && i.in===sec)
     .sort((a,b)=> (b.edited||b.at||0)-(a.edited||a.at||0));
 }
 /* one note, opened in the right rail; it saves as you type */
@@ -10315,7 +10428,7 @@ function noteEditor(sec, id){
     const tx=el('textarea','mynote-x'); tx.value=cur? cur.note||'' : ''; tx.rows=18;
     tx.placeholder='Write as much as you like. It saves as you go.'; tl.appendChild(tx); wrap.appendChild(tl);
     const st=el('div','mynote-s'); wrap.appendChild(st);
-    const stamp=()=>{ const x=cur && (syCard(cur.id)||cur); st.textContent = x && x.edited? 'Saved '+relWhen(x.edited)+'. Only you can see this.' : 'Only you can see this.'; };
+    const stamp=()=>{ const x=cur && (syCard(cur.id)||cur); st.textContent = x && x.edited? 'Saved '+relWhen(x.edited)+'.' : 'It saves as you type.'; };
     stamp();
     let tmr=null, busy=null;
     const save=async ()=>{ clearTimeout(tmr); tmr=null;
@@ -10324,7 +10437,7 @@ function noteEditor(sec, id){
       if(!cur){
         if(!t && !note.trim()){ stamp(); return; }
         S.noteHold=1;
-        busy=syPut('syncitems', {kind:'note', in:sec, sync:'', members:[syMe()], t:t, note:note, at:Date.now(), edited:Date.now(), by:S.me||''});
+        busy=syPut('syncitems', {kind:'note', in:sec, sync:'', t:t, note:note, at:Date.now(), edited:Date.now(), by:S.me||''});
         cur=await busy; busy=null; S.noteOpen=cur.id; S.noteHold=0; stamp(); return;
       }
       const x=syCard(cur.id)||cur;
@@ -10350,10 +10463,9 @@ function noteEditor(sec, id){
   });
 }
 async function newNotePanel(L, done){
-  syStart();
-  const mode=syncMode();
-  if(mode!=='shared' && mode!=='private'){ toast(mode==='waiting'? 'Notes open once the save relay keeps them to you.' : 'Notes need you signed in.'); return; }
-  const n=await syPut('syncitems', {kind:'note', sync:'', members:[syMe()], t:'My Notes', note:'', split:1, at:Date.now(), by:S.me||''});
+  myStart();
+  if(!S.me){ toast('Pick your name first.'); return; }
+  const n=await syPut('syncitems', {kind:'note', sync:'', t:'My Notes', note:'', split:1, at:Date.now(), by:S.me||''});
   L.push({r:[newPanel({t:'mynote', k:n.id}, L)]}); done();
 }
 window.__notes = {widget:noteWidget, notesIn:notesIn, put:o=>syPut('syncitems',o), card:syCard, me:syMe};
@@ -11294,13 +11406,12 @@ function projectsWidget(w, b){
 /* ============ MY PROJECTS (a My Board panel) ============
    A person's own bigger projects — bigger than a task, smaller than a Team Project.
    Each has a status, priority, dates, what done looks like, its own steps, any board
-   tasks that belong to it, notes and files. Private to the person, kept the same way
-   as My Notes (a one-person item in the Sync Ups store), so on resources.mismo.org the
-   relay hands them to nobody else. */
+   tasks that belong to it, notes and files. A panel on the person's own board, kept
+   with My Notes in the team's store (see myStart in syncs.js) — no relay rule needed. */
 const MP_STAT = ['Not Started','In Progress','On Hold','Done'];
 const MP_PRI = ['High','Normal','Low'];
 const MP_FILTERS = [{v:'open',n:'Open'},{v:'done',n:'Done'},{v:'all',n:'All'}];
-function mpAll(){ const me=syMe(); return SY.items.filter(i=> i.kind==='project' && (i.members||[]).indexOf(me)>=0); }
+function mpAll(){ return myItems().filter(i=> i.kind==='project'); }
 function mpOf(id){ const x=syCard(id); return x && x.kind==='project' ? x : null; }
 function mpProgress(p){
   const steps=(p.steps||[]), tasks=(p.tasks||[]).map(id=> S.tasks.find(t=>t.id===id)).filter(Boolean);
@@ -11315,12 +11426,7 @@ function mpNext(p){
 function mpChip(st){ return 'chip '+(st==='In Progress'?'ch-ip':st==='On Hold'?'ch-soon':st==='Done'?'ch-dn':'ch-ns'); }
 
 function myProjectsWidget(w, b){
-  syStart();
-  const mode=syncMode();
-  if(mode==='waiting'){ b.appendChild(emptyBox('Your projects open once the save relay keeps them to you.','Perry’s relay update switches this on; nothing on this page needs to change.')); return; }
-  if(mode==='none'){ b.appendChild(emptyBox('Projects need you signed in.','Team HQ has to know whose projects they are.')); return; }
-  const loaded = SY.mode==='shared' ? SY.syncsSeen : !!SY.priv;
-  if(!loaded){ b.appendChild(el('p','note','Loading your projects…')); return; }
+  if(!myReady(b, 'projects')) return;
   const f=w.f||'open';
   const top=el('div','mptop');
   top.appendChild(btnRow(MP_FILTERS, f, 'tiny', v=>{ w.f=v; saveMine(); vMine($('#app-mine')); }));
@@ -11334,7 +11440,7 @@ function myProjectsWidget(w, b){
     const qa=el('div','mpadd mpquick');
     const qn=inp('text','', 'New project name, then press Enter'); qn.setAttribute('aria-label','New project name');
     const go=async ()=>{ const v=qn.value.trim(); if(!v){ qn.focus(); return; }
-      const n=await syPut('syncitems', {kind:'project', sync:'', members:[syMe()], name:v, st:'Not Started', pri:'Normal', start:isoOf(today()),
+      const n=await syPut('syncitems', {kind:'project', sync:'', name:v, st:'Not Started', pri:'Normal', start:isoOf(today()),
         due:'', ties:'', goal:'', steps:[], tasks:[], notes:'', files:[], at:Date.now(), edited:Date.now(), by:S.me||''});
       S.mpExp={}; S.mpExp[n.id]=true; vMine($('#app-mine')); };
     qn.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); go(); } });
@@ -11389,7 +11495,6 @@ function myProjectsWidget(w, b){
     });
     frame.appendChild(ul);
   }
-  b.appendChild(el('div','mynote-s', 'Only you can see these.'));
 }
 
 /* one project, in the right rail; everything saves as you go */
@@ -11397,7 +11502,7 @@ function mpEditor(id){
   const cur0 = id? mpOf(id) : null;
   if(id && !cur0) return;
   S.mpOpen=id||'';
-  panel(cur0? (cur0.name||'Untitled Project') : 'New Project', 'My Projects · only you can see this', body=> mpForm(body, id, 'rail'));
+  panel(cur0? (cur0.name||'Untitled Project') : 'New Project', 'My Projects', body=> mpForm(body, id, 'rail'));
 }
 /* the project's fields — in the right rail (mode 'rail') or dropped down under its
    row on the board (mode 'drop', or 'both' with a way into the right rail) */
@@ -11412,7 +11517,7 @@ function mpForm(body, id, mode){
       if(busy) await busy;
       if(!cur && !String(d.name||'').trim()){ stamp(); return; }
       S.noteHold=1;
-      if(!cur){ busy=syPut('syncitems', Object.assign({kind:'project', sync:'', members:[syMe()], at:Date.now(), by:S.me||''}, d, {edited:Date.now()}));
+      if(!cur){ busy=syPut('syncitems', Object.assign({kind:'project', sync:'', at:Date.now(), by:S.me||''}, d, {edited:Date.now()}));
         cur=await busy; S.mpOpen=cur.id; }
       else { busy=sySaveItem(syCard(cur.id)||cur, Object.assign({}, d, {edited:Date.now()})); await busy; }
       busy=null; S.noteHold=0; stamp(); };
@@ -11614,16 +11719,17 @@ document.addEventListener('click', ev=>{
 }, true);
 
 /* a redraw while someone is typing in a drop-down waits until they leave it */
+const MINE_TYPING = '#app-mine .wdrop, #app-mine .mpdrop, #app-mine .mynote-top';
 const VMINE_RAW = vMine;
 vMine = function(root){
   const a=document.activeElement;
-  if(a && a.closest && a.closest('#app-mine .wdrop')){ MINE_PENDING=true; return; }
+  if(a && a.closest && a.closest(MINE_TYPING)){ MINE_PENDING=true; return; }
   MINE_PENDING=false;
   VMINE_RAW(root);
 };
 document.addEventListener('focusout', ()=> setTimeout(()=>{
   if(!MINE_PENDING) return;
-  const a=document.activeElement; if(a && a.closest && a.closest('#app-mine .wdrop')) return;
+  const a=document.activeElement; if(a && a.closest && a.closest(MINE_TYPING)) return;
   MINE_PENDING=false; const r=$('#app-mine'); if(r && S.tab==='mine') VMINE_RAW(r);
 }, 50));
 
