@@ -2383,6 +2383,26 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .toast-x:hover{background:rgba(255,255,255,.16);color:#fff}
 @media (prefers-reduced-motion:reduce){.toast{animation:none}}
 
+/* drag to reorder: post-its and My Notes */
+.dgrip{display:inline-flex;align-items:center;justify-content:center;cursor:grab;touch-action:none;border-radius:4px;color:var(--ink-3)}
+.dgrip svg{width:15px;height:15px;fill:currentColor;stroke:none}
+.dgrip:focus-visible{outline:2px solid var(--c1);outline-offset:1px}
+.dgrip:active{cursor:grabbing}
+.sticky .dgrip{position:absolute;top:1px;left:50%;transform:translateX(-50%) rotate(90deg);width:22px;height:34px;color:rgba(0,0,0,.6);opacity:.3;transition:opacity .12s}
+.sticky .dgrip svg{width:18px;height:18px}
+.sticky:hover .dgrip,.sticky.editing .dgrip,.sticky .dgrip:focus-visible{opacity:1}
+.sticky .dgrip:hover{color:rgba(0,0,0,.75);background:rgba(255,255,255,.4)}
+.mnrow{position:relative;padding-left:32px}
+.mnrow .dgrip{position:absolute;left:6px;top:9px;width:20px;height:24px;opacity:.45}
+.mnrow:hover .dgrip,.mnrow .dgrip:focus-visible{opacity:1}
+.mnrow .dgrip:hover{background:var(--surface-3);color:var(--ink)}
+.sorting .sticky:hover{transform:none}
+.sorting{user-select:none}
+.dragging{opacity:.55;box-shadow:0 0 0 2px var(--c1)!important}
+.sticky.dragging{transform:rotate(-2deg)}
+@media (pointer:coarse){ .sticky .dgrip{opacity:.8;width:34px;height:24px} .mnrow .dgrip{opacity:.8;width:28px;height:30px} .mnrow{padding-left:38px} }
+@media (prefers-reduced-motion:reduce){ .sticky .dgrip{transition:none} .sticky.dragging{transform:none} }
+
 #rs-account{flex:0 0 auto;display:inline-flex;align-items:center}
 #rs-account .rs-who,#rs-account .rs-signin{border-radius:4px}
 </style>
@@ -3823,7 +3843,7 @@ function sortAll(){
   S.rocks.sort((a,b)=>(a.order||99)-(b.order||99) || String(a.name).localeCompare(String(b.name)));
   S.tasks.sort((a,b)=>(a.ord||0)-(b.ord||0));
   S.dates.sort((a,b)=> String(dOf(a)||'9999-99-99').localeCompare(String(dOf(b)||'9999-99-99')));
-  S.notes.sort((a,b)=>(b.at||0)-(a.at||0));
+  S.notes.sort((a,b)=> byOrd(a, b, (b.at||0)-(a.at||0)));
   S.expenses.sort((a,b)=> String(b.date||'').localeCompare(String(a.date||'')));
   S.asks.sort((a,b)=> (b.at||0)-(a.at||0));
   S.blocks.sort((a,b)=> String(a.date||'').localeCompare(String(b.date||'')) || String(a.start||'').localeCompare(String(b.start||'')));
@@ -4024,6 +4044,7 @@ function renderAll(){ render(S.tab); badges(); }
 function render(tab){
   if(!S.ready) return;
   { const a=document.activeElement; if(a && a.closest && a.closest('.sticky.editing')){ S.pendRender=1; return; } }
+  if(S.dragSort){ S.pendRender=1; return; }
   const fn = {today:vToday, mine:vMine, rocks:vRocks, plans:vPlans, dates:vDates, agenda:vAgenda, syncs:vSyncs, expenses:vExpenses}[tab];
   if(fn) fn(document.getElementById('app-'+tab));
 }
@@ -6920,11 +6941,8 @@ function widget(w, ri, ci, L, span){
   cp.setAttribute('d','M9 6l6 6-6 6'); cw.appendChild(cp); fold.appendChild(cw);
   fold.addEventListener('click', e=>{ e.stopPropagation(); if(dragged){ dragged=false; return; }
     w.c = w.c?0:1; saveMine(); vMine($('#app-mine')); });
-  /* the note wall stays open: a wall of jotted notes nobody can see is the one
-     thing worse than no wall at all */
   const omode = openMode(w);
-  if(w.t!=='notes'){ if(omode!=='rail') h.appendChild(fold); }
-  else w.c = 0;
+  if(omode!=='rail') h.appendChild(fold);
 
   const tog=el('button','tog'); tog.type='button';
   tog.title = omode==='drop' ? (w.c? 'Open this panel' : 'Collapse this panel') : 'Open '+title+' in the side panel';
@@ -6936,7 +6954,7 @@ function widget(w, ri, ci, L, span){
   const cnt = named ? null : widgetCount(w);
   if(cnt!=null) tog.appendChild(el('span','cnt', String(cnt)));
   tog.addEventListener('click', ()=>{ if(dragged){ dragged=false; return; }
-    if(openMode(w)==='drop' && w.t!=='notes'){ w.c = w.c?0:1; saveMine(); vMine($('#app-mine')); return; }
+    if(openMode(w)==='drop'){ w.c = w.c?0:1; saveMine(); vMine($('#app-mine')); return; }
     openWidgetPanel(w, title); });
   h.appendChild(tog);
 
@@ -9687,7 +9705,7 @@ function syStart(){
 }
 function syRefresh(){
   if(S.tab==='syncs'){ const r=$('#app-syncs'); if(r) vSyncs(r); }
-  if(S.tab==='mine' && !S.noteHold){ const a=document.activeElement; if(!(a && a.closest && a.closest('.mynote'))){ const r=$('#app-mine'); if(r) vMine(r); } }
+  if(S.tab==='mine' && !S.noteHold && !S.dragSort){ const a=document.activeElement; if(!(a && a.closest && a.closest('.mynote'))){ const r=$('#app-mine'); if(r) vMine(r); } }
 }
 
 /* ============ MY NOTES AND MY PROJECTS: YOUR OWN PANELS ============
@@ -10392,10 +10410,13 @@ function noteWidget(w, b){
     const ul=el('div','mynotes');
     list.forEach(x=>{
       const r=el('button','mnrow'+(S.noteOpen===x.id && panelOpen()?' open':'')); r.type='button';
+      r.dataset.sid=x.id; r.dataset.sec=n.id;
+      r.appendChild(dgrip('Drag to move this note'));
       r.appendChild(el('b',null, x.t || 'Untitled Note'));
       const snip=String(x.note||'').replace(/\s+/g,' ').trim();
       if(snip) r.appendChild(el('span','mnsnip', snip.length>160? snip.slice(0,160)+'…' : snip));
-      r.appendChild(el('small',null, 'Edited '+relWhen(x.edited||x.at)));
+      const tk = x.task && S.tasks.find(t=>t.id===x.task);
+      r.appendChild(el('small',null, 'Edited '+relWhen(x.edited||x.at) + (tk? ' \u00b7 a task on the board' : '')));
       r.addEventListener('click', ()=> noteEditor(n.id, x.id));
       ul.appendChild(r);
     });
@@ -10406,7 +10427,7 @@ function noteWidget(w, b){
 }
 function notesIn(sec){
   return (S.myitems||[]).filter(i=> i.kind==='note' && i.in===sec)
-    .sort((a,b)=> (b.edited||b.at||0)-(a.edited||a.at||0));
+    .sort((a,b)=> byOrd(a, b, (b.edited||b.at||0)-(a.edited||a.at||0)));
 }
 /* one note, opened in the right rail; it saves as you type */
 function noteEditor(sec, id){
@@ -10449,6 +10470,26 @@ function noteEditor(sec, id){
       if(del.dataset.c){ clearTimeout(tmr); syDrop('syncitems', cur.id); S.noteOpen=''; closePanel(); toast('Note deleted.'); }
       else { del.dataset.c='1'; del.textContent='Click Again to Delete'; } });
     acts.appendChild(del); acts.appendChild(el('span','spacer'));
+    /* Make It a Task: the title (or the note's first line) names the task, the note goes
+       into its notes. The note stays here, marked as a task on the board. */
+    const x0=cur && syCard(cur.id), tk0=x0 && x0.task && S.tasks.find(t=>t.id===x0.task);
+    const mk=el('button','btn ghost', tk0? 'Open Its Task' : 'Make It a Task'); mk.type='button';
+    mk.title = tk0? 'This note is already a task on the board: '+tk0.t : 'Turn this note into a task on the board. The note stays here.';
+    mk.addEventListener('click', async ()=>{
+      await save();
+      const x=cur && syCard(cur.id);
+      if(!x || (!String(x.t||'').trim() && !String(x.note||'').trim())){ ti.focus(); toast('Write something first.'); return; }
+      const had=x.task && S.tasks.find(t=>t.id===x.task);
+      if(had){ editTask(had); return; }
+      const lines=String(x.note||'').split(/\n+/);
+      const title=String(x.t||'').trim() || lines.shift().trim();
+      const rest=(String(x.t||'').trim()? String(x.note||'') : lines.join('\n')).trim();
+      S.noteOpen='';
+      editTask({t:title.slice(0,160), o:S.me||'', r:'', w:'', s:'Not Started', p:'Normal', due:'', notes:rest,
+                ord:(S.tasks.length+1)*10, at:Date.now(), src:'mynote'},
+               d=>{ const y=syCard(x.id); if(y && d && d.id) sySaveItem(y, {task:d.id}); });
+    });
+    acts.appendChild(mk);
     const done=el('button','btn','Done'); done.type='button';
     done.addEventListener('click', async ()=>{ await save(); S.noteOpen=''; closePanel(); syRefresh(); });
     acts.appendChild(done);
@@ -12395,7 +12436,8 @@ const STICKY_COLS=['y','b','g','p','o'];
 const STICKY_NAMES={y:'Yellow',b:'Blue',g:'Green',p:'Pink',o:'Orange'};
 function stickySize(tx){ tx.style.height='auto'; tx.style.height=Math.max(72, tx.scrollHeight)+'px'; }
 function noteSticky(n){
-  const c=el('div','sticky '+(n.col||'y')); c.dataset.nid=n.id||'';
+  const c=el('div','sticky '+(n.col||'y')); c.dataset.nid=n.id||''; if(n.id) c.dataset.sid=n.id;
+  c.appendChild(dgrip('Drag to move this post-it'));
   const tx=el('textarea','stx'); tx.value=n.t||''; tx.placeholder='Write anything…';
   tx.setAttribute('aria-label','Post-it note'); tx.rows=3; tx.spellcheck=true;
   c.appendChild(tx);
@@ -12477,6 +12519,102 @@ document.addEventListener('focusout', ()=> setTimeout(()=>{
   const a=document.activeElement; if(a && a.closest && a.closest('.sticky.editing')) return;
   S.pendRender=0; renderAll();
 }, 60));
+
+/* ============ DRAG TO REORDER: POST-ITS AND MY NOTES ============
+   Post-its on the Note Wall and the notes inside a My Notes section can be put in any
+   order: drag one by its grip (the six dots), or focus the grip and use the arrow keys.
+   The order is kept on each item as `ord`. Anything new, with no place yet, goes first,
+   newest first, until it is moved. The Note Wall's order is the team's: everyone sees
+   the wall in the same order. */
+function byOrd(a, b, fallback){
+  const ao=a.ord, bo=b.ord;
+  if(ao==null && bo==null) return fallback;
+  if(ao==null) return -1;
+  if(bo==null) return 1;
+  return ao-bo;
+}
+function dgrip(label){
+  const g=el('span','dgrip'); g.setAttribute('role','button'); g.tabIndex=0;
+  g.setAttribute('aria-label', label||'Drag to reorder'); g.title=(label||'Drag to reorder')+' (or use the arrow keys)';
+  g.innerHTML='<svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>';
+  return g;
+}
+/* the new order of what is on screen, merged into the whole list (the board's Note Wall
+   panel shows only the first eight), then saved where it changed */
+function sortCommit(item){
+  const box=item.parentElement; if(!box) return;
+  const shown=[...box.children].filter(x=>x.dataset && x.dataset.sid).map(x=>x.dataset.sid);
+  if(item.classList.contains('sticky')){
+    const full=S.notes.map(n=>n.id);
+    const at=full.map((id,i)=> shown.indexOf(id)>=0? i : -1).filter(i=>i>=0);
+    at.forEach((pos,k)=>{ full[pos]=shown[k]; });
+    const save=[];
+    full.forEach((id,i)=>{ const n=S.notes.find(x=>x.id===id); if(n && n.ord!==(i+1)*10){ n.ord=(i+1)*10; save.push(n); } });
+    save.forEach(n=> put('notes', Object.assign({}, n)));
+    return;
+  }
+  const sec=item.dataset.sec; if(!sec) return;
+  const full=notesIn(sec).map(n=>n.id);
+  const at=full.map((id,i)=> shown.indexOf(id)>=0? i : -1).filter(i=>i>=0);
+  at.forEach((pos,k)=>{ full[pos]=shown[k]; });
+  full.forEach((id,i)=>{ const n=syCard(id); if(n && n.ord!==(i+1)*10) sySaveItem(n, {ord:(i+1)*10}); });
+}
+(function(){
+  let drag=null;
+  const itemOf=g=> g.closest('[data-sid]');
+  document.addEventListener('pointerdown', e=>{
+    const g=e.target.closest && e.target.closest('.dgrip'); if(!g) return;
+    const item=itemOf(g); if(!item || !item.parentElement) return;
+    e.preventDefault(); e.stopPropagation();
+    drag={g, item, box:item.parentElement, id:e.pointerId, start:[...item.parentElement.children].indexOf(item), moved:false};
+    try{ g.setPointerCapture(e.pointerId); }catch(x){}
+    S.dragSort=1;
+  }, true);
+  document.addEventListener('pointermove', e=>{
+    if(!drag || e.pointerId!==drag.id) return;
+    e.preventDefault();
+    if(!drag.moved){ drag.moved=true; drag.item.classList.add('dragging'); drag.box.classList.add('sorting'); }
+    const over=document.elementFromPoint(e.clientX, e.clientY);
+    const t=over && over.closest && over.closest('[data-sid]');
+    if(!t || t===drag.item || t.parentElement!==drag.box) return;
+    const kids=[...drag.box.children], a=kids.indexOf(drag.item), b=kids.indexOf(t);
+    drag.box.insertBefore(drag.item, a<b? t.nextSibling : t);
+  }, true);
+  const end=e=>{
+    if(!drag || (e && e.pointerId!==drag.id)) return;
+    const d=drag; drag=null;
+    d.item.classList.remove('dragging'); d.box.classList.remove('sorting');
+    S.dragSort=0;
+    const now=[...d.box.children].indexOf(d.item);
+    if(d.moved) d.item.dataset.justDragged='1';
+    if(now!==d.start) sortCommit(d.item);
+    else if(S.pendRender){ S.pendRender=0; renderAll(); }
+  };
+  document.addEventListener('pointerup', end, true);
+  document.addEventListener('pointercancel', end, true);
+  /* the grip never opens the note it sits on */
+  document.addEventListener('click', e=>{
+    const g=e.target.closest && e.target.closest('.dgrip');
+    if(g){ e.preventDefault(); e.stopPropagation(); return; }
+    const it=e.target.closest && e.target.closest('[data-just-dragged]');
+    if(it){ delete it.dataset.justDragged; e.preventDefault(); e.stopPropagation(); }
+  }, true);
+  /* keyboard: arrow keys move it one place */
+  document.addEventListener('keydown', e=>{
+    const g=e.target.closest && e.target.closest('.dgrip'); if(!g) return;
+    const item=itemOf(g); if(!item) return;
+    const back=e.key==='ArrowUp'||e.key==='ArrowLeft', fwd=e.key==='ArrowDown'||e.key==='ArrowRight';
+    if(e.key==='Enter' || e.key===' '){ e.preventDefault(); e.stopPropagation(); return; }
+    if(!back && !fwd) return;
+    e.preventDefault(); e.stopPropagation();
+    const box=item.parentElement, sibs=[...box.children].filter(x=>x.dataset && x.dataset.sid), i=sibs.indexOf(item);
+    const to = back? sibs[i-1] : sibs[i+1]; if(!to) return;
+    box.insertBefore(item, back? to : to.nextSibling);
+    const sid=item.dataset.sid;
+    sortCommit(item);
+    setTimeout(()=>{ const n=document.querySelector('[data-sid="'+sid+'"] .dgrip'); if(n) n.focus(); }, 120);
+  }, true);
+})();
 
 /* ============ rail search sources ============ */
 window.__search = function(t, push, goTab){
