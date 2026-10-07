@@ -4740,7 +4740,6 @@ function vToday(root){
   b.addEventListener('click', ()=> me? setStatus(me) : pickMe());
   right.appendChild(b);
   vhead(root,'Today', new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'}), right);
-  root.appendChild(mtBand());
 
   // headline
   const late = openTasks().filter(t=>{const n=days(t.due); return n!==null && n<0;});
