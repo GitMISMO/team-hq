@@ -2281,6 +2281,21 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .mtpanel .mt-st.s-now{background:#1f9d63;color:#fff}
 .mtpanel .mt-st.s-soon{background:#e0a82e;color:#2a1d00}
 
+/* ---------- post-its you type on ---------- */
+.sticky{cursor:text}
+.sticky .stx{display:block;width:100%;min-height:72px;max-height:none;padding:0;margin:0;border:0;outline:0;resize:none;background:transparent;
+  color:inherit;font:inherit;font-size:13.5px;line-height:1.45;overflow:hidden;field-sizing:content}
+.sticky .stx::placeholder{color:inherit;opacity:.5}
+.sticky.editing{box-shadow:0 0 0 2px var(--c1),2px 4px 14px rgba(6,32,47,.18)}
+.sticky .sfoot{gap:6px}
+.sticky .scol{width:14px;height:14px;border-radius:50%;border:1.5px solid rgba(0,0,0,.35);background:conic-gradient(#fbe27a 0 20%,#a9d8f3 0 40%,#b9e3c6 0 60%,#f7c4d8 0 80%,#ffcf9e 0);cursor:pointer;padding:0;flex:0 0 auto}
+.sticky .smk{margin-left:auto;border:1px solid rgba(0,0,0,.28);background:rgba(255,255,255,.45);color:#1d2a16;border-radius:3px;font:inherit;font-size:10.5px;font-weight:700;padding:1px 7px;cursor:pointer;white-space:nowrap}
+.sticky .smk:hover{background:rgba(255,255,255,.8)}
+.sticky .smk + .sdue{margin-left:4px}
+.sticky .sx{border:0;background:none;color:inherit;font-family:inherit}
+.addpostit{align-self:flex-start}
+.wallhead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+
 #rs-account{flex:0 0 auto;display:inline-flex;align-items:center}
 #rs-account .rs-who,#rs-account .rs-signin{border-radius:4px}
 </style>
@@ -3912,6 +3927,7 @@ function show(tab){
 function renderAll(){ render(S.tab); badges(); }
 function render(tab){
   if(!S.ready) return;
+  { const a=document.activeElement; if(a && a.closest && a.closest('.sticky.editing')){ S.pendRender=1; return; } }
   const fn = {today:vToday, mine:vMine, rocks:vRocks, plans:vPlans, dates:vDates, agenda:vAgenda, syncs:vSyncs, expenses:vExpenses}[tab];
   if(fn) fn(document.getElementById('app-'+tab));
 }
@@ -4812,8 +4828,11 @@ function vToday(root){
   if(S.notes.length){
     const w3=el('div');
     const n3=S.notes.length;
-    w3.appendChild(el('h2','sect-t', n3===1? '1 Note to Review' : n3+' Notes to Review'));
-    w3.appendChild(el('p','note','Things people jotted down that are not tasks yet. Click one to turn it into a task, or click the × to clear it.'));
+    const wh=el('div','wallhead');
+    wh.appendChild(el('h2','sect-t', n3===1? '1 Note to Review' : n3+' Notes to Review'));
+    wh.appendChild(addPostItButton());
+    w3.appendChild(wh);
+    w3.appendChild(el('p','note','Things people jotted down that are not tasks yet. Click a post-it to keep writing on it, Make It a Task when it is ready, or × to clear it.'));
     const g=el('div','stickies'); g.style.marginTop='12px';
     S.notes.forEach(n=> g.appendChild(noteSticky(n)));
     w3.appendChild(g);
@@ -4864,34 +4883,7 @@ function cdBlock(title, all, redraw){
 }
 /* One note on the wall. The × asks once before it clears anything, and what it
    clears can be put straight back from the toast. */
-function noteSticky(n){
-  const c=el('div','sticky '+(n.col||'y'));
-  c.appendChild(el('div',null,n.t));
-  const f=el('div','sfoot');
-  f.appendChild(avatar(n.by,'xs'));
-  f.appendChild(el('span',null,(person(n.by)||{name:'Someone'}).name.split(' ')[0]));
-  const x=el('span','sdue sx','\u00d7'); x.title='Clear this note';
-  let armed=null;
-  x.addEventListener('click', async e=>{
-    e.stopPropagation();
-    if(!x.classList.contains('arm')){
-      x.classList.add('arm'); x.textContent='Clear It?';
-      x.title='Click again to take this note off the wall';
-      armed=setTimeout(()=>{ x.classList.remove('arm'); x.textContent='\u00d7'; x.title='Clear this note'; }, 4000);
-      return;
-    }
-    clearTimeout(armed);
-    const kept=JSON.parse(JSON.stringify(n));
-    await drop('notes', n.id);
-    undoToast('Note cleared.', async ()=>{ await put('notes', kept); });
-  });
-  f.appendChild(x); c.appendChild(f);
-  c.addEventListener('click', ()=>{
-    editTask({t:n.t, o:n.by||S.me||'', r:n.r||'', w:'', s:'Not Started', p:'Normal', due:'', notes:'',
-              ord:(S.tasks.length+1)*10, at:Date.now(), src:'note'}, ()=> drop('notes', n.id));
-  });
-  return c;
-}
+/* noteSticky lives in stickies.js */
 function countdown(d){
   const iso = dOf(d);
   const n = days(iso);
@@ -6510,7 +6502,7 @@ const WTYPES = {
   projects:  {n:'Team Projects List',  d:'Every bigger project in one list — where it stands, who is accountable, how far along and what is due next. Filter to Active, Mine, Next Up or All.'},
   rock:      {n:'One Team Project',        d:'A single team project with all its parts and who is in them.'},
   plan:      {n:'One Plan',            d:'An onboarding plan, handover or checklist — how far along it is, and what is due next.'},
-  notes:     {n:'The Note Wall',       d:'Jotted-down things nobody has turned into tasks yet.'},
+  notes:     {n:'The Note Wall',       d:'Post-its you type on freely — add one, keep writing on it, and Make It a Task when it is ready.'},
   person:    {n:'Someone’s Board', d:'One person’s open work — handy for keeping an eye on the team.'},
   overlap:   {n:'Overlap Check',       d:'Where two people have work in the same part.'},
   calendar:  {n:'The Month',           d:'Key Dates on a calendar, with who is away each day.'},
@@ -6653,6 +6645,16 @@ function vMine(root){
     grid.appendChild(rn);
   });
   root.appendChild(grid);
+  if(B.match && !B.shutMatch) requestAnimationFrame(()=> matchShut(grid));
+}
+function matchShut(grid){
+  grid.querySelectorAll('.wrow').forEach(r=>{
+    const sh=[...r.children].filter(x=> x.classList.contains('shut'));
+    sh.forEach(x=> x.style.minHeight='');
+    if(sh.length<2) return;
+    const m=Math.max.apply(null, sh.map(x=> x.offsetHeight));
+    sh.forEach(x=> x.style.minHeight=m+'px');
+  });
 }
 
 /* ---- the board's own gear ---- */
@@ -6990,6 +6992,29 @@ function widgetMeter(w){
       label: done+' of '+total+' done' + (late? ' \u00b7 '+late+' past due':'')};
   };
   try{
+    if(w.t==='mtoday'){
+      if(!mtAvailable()) return {pct:null, label:'Shows on resources.mismo.org'};
+      if(!MT.sched){ mtLoad(); return {pct:null, label: MT.failed==='access'? 'Needs Meeting Trackers access' : 'Loading the schedule'}; }
+      const now=mtET(), td=mtOn(now), on=td.filter(it=> mtStatus(it, now).k==='now').length;
+      return {pct:null, label: td.length? td.length+(td.length===1?' meeting':' meetings')+' today'+(on? ' · '+on+' on now':'') : 'No workgroup meetings today'};
+    }
+    if(w.t==='myprojects'){
+      try{ syStart(); }catch(e){}
+      const loaded = SY.mode==='shared' ? SY.syncsSeen : !!SY.priv;
+      if(!loaded) return {pct:null, label:'Only you can see these'};
+      const all=mpAll(), dn=all.filter(x=>x.st==='Done').length;
+      if(!all.length) return {pct:null, label:'No projects yet'};
+      return {pct: Math.round(dn/all.length*100), label:(all.length-dn)+' open · '+dn+' done'};
+    }
+    if(w.t==='mynote' && w.k){
+      try{ syStart(); }catch(e){}
+      const n=notesIn(w.k).length;
+      return {pct:null, label: n? n+(n===1?' note':' notes') : 'No notes yet'};
+    }
+    if(w.t==='projects'){
+      const a=S.rocks.filter(r=>r.status==='Active').length, nx=S.rocks.filter(r=>r.status==='Next Up').length;
+      return {pct:null, label: a+' active'+(nx? ' · '+nx+' next up':'')};
+    }
     if(w.t==='mytasks')  return over(doingTasks(me).filter(t=>!t.rail));
     if(w.t==='myrails')  return over(doingTasks(me).filter(t=>t.rail));
     if(w.t==='watching') return over(watchingTasks(me));
@@ -7439,7 +7464,8 @@ function buildWidget(w, b){
     return b.appendChild(ed);
   }
   if(w.t==='notes'){
-    if(!S.notes.length) return b.appendChild(emptyBox('Nothing on the wall.','Click Jot It Down and park something.'));
+    b.appendChild(addPostItButton());
+    if(!S.notes.length) return b.appendChild(emptyBox('Nothing on the wall.','Click Add a Post-It and start typing, or use Jot It Down and Park It.'));
     const g=el('div','stickies');
     S.notes.slice(0,8).forEach(n=> g.appendChild(noteSticky(n)));
     if(S.notes.length>8) g.appendChild(el('div','tcal-help','and '+(S.notes.length-8)+' more on Today'));
@@ -12205,6 +12231,98 @@ function mtWeek(host){
   else host.appendChild(el('span','mt-tz','All times ET'));
   setTimeout(mtTick, 0);
 }
+
+/* ============ POST-ITS ON THE NOTE WALL ============
+   A post-it is somewhere to think, not a form: type on it straight away, come back and
+   add to it, change its color — and only when it is ready, Make It a Task. Notes from
+   Jot It Down (Park It) and post-its added straight onto the wall work the same way.
+   Saves as you type; the page waits to redraw until you click away. */
+const STICKY_COLS=['y','b','g','p','o'];
+const STICKY_NAMES={y:'Yellow',b:'Blue',g:'Green',p:'Pink',o:'Orange'};
+function stickySize(tx){ tx.style.height='auto'; tx.style.height=Math.max(72, tx.scrollHeight)+'px'; }
+function noteSticky(n){
+  const c=el('div','sticky '+(n.col||'y')); c.dataset.nid=n.id||'';
+  const tx=el('textarea','stx'); tx.value=n.t||''; tx.placeholder='Write anything…';
+  tx.setAttribute('aria-label','Post-it note'); tx.rows=3; tx.spellcheck=true;
+  c.appendChild(tx);
+  let tmr=null, last=n.t||'';
+  const save=async ()=>{ clearTimeout(tmr); tmr=null;
+    const v=tx.value; if(v===last) return; last=v;
+    const cur=(S.notes||[]).find(x=>x.id===n.id) || n;
+    await put('notes', Object.assign({}, cur, {t:v, edited:Date.now(), editedBy:S.me||''})); };
+  tx.addEventListener('input', ()=>{ stickySize(tx); clearTimeout(tmr); tmr=setTimeout(save, 1200); });
+  tx.addEventListener('focus', ()=> c.classList.add('editing'));
+  tx.addEventListener('blur', async ()=>{ c.classList.remove('editing');
+    /* a post-it left blank is not worth keeping */
+    if(!tx.value.trim() && n.id){ clearTimeout(tmr); await drop('notes', n.id); return; }
+    await save(); });
+  tx.addEventListener('keydown', e=>{ if(e.key==='Escape'){ e.preventDefault(); tx.blur(); } });
+  requestAnimationFrame(()=> stickySize(tx));
+
+  const f=el('div','sfoot');
+  f.appendChild(avatar(n.by,'xs'));
+  /* color: one click moves to the next */
+  const col=el('button','scol'); col.type='button'; col.title='Change the color'; col.setAttribute('aria-label','Change the color');
+  col.addEventListener('mousedown', e=> e.preventDefault());
+  col.addEventListener('click', async e=>{ e.stopPropagation();
+    const i=STICKY_COLS.indexOf(n.col||'y'), nx=STICKY_COLS[(i+1)%STICKY_COLS.length];
+    STICKY_COLS.forEach(k=> c.classList.remove(k)); c.classList.add(nx); n.col=nx;
+    const cur=(S.notes||[]).find(x=>x.id===n.id) || n;
+    await put('notes', Object.assign({}, cur, {t:tx.value, col:nx})); });
+  f.appendChild(col);
+  const mk=el('button','smk','Make It a Task'); mk.type='button';
+  mk.title='Turn this post-it into a task. It comes off the wall once the task is saved.';
+  mk.addEventListener('mousedown', e=> e.preventDefault());
+  mk.addEventListener('click', async e=>{ e.stopPropagation();
+    const v=tx.value.trim(); if(!v){ tx.focus(); return; }
+    await save();
+    /* the first line is the task; anything after it goes into the notes */
+    const lines=v.split(/\n+/), first=lines.shift().trim().slice(0,160), rest=lines.join('\n').trim();
+    editTask({t:first, o:n.by||S.me||'', r:n.r||'', w:'', s:'Not Started', p:'Normal', due:'', notes:rest,
+              ord:(S.tasks.length+1)*10, at:Date.now(), src:'note'}, ()=> drop('notes', n.id));
+  });
+  f.appendChild(mk);
+  const x=el('button','sdue sx','×'); x.type='button'; x.title='Clear this post-it';
+  x.addEventListener('mousedown', e=> e.preventDefault());
+  let armed=null;
+  x.addEventListener('click', async e=>{
+    e.stopPropagation();
+    if(!x.classList.contains('arm')){
+      x.classList.add('arm'); x.textContent='Clear It?';
+      x.title='Click again to take this post-it off the wall';
+      armed=setTimeout(()=>{ x.classList.remove('arm'); x.textContent='×'; x.title='Clear this post-it'; }, 4000);
+      return;
+    }
+    clearTimeout(armed);
+    const kept=JSON.parse(JSON.stringify(Object.assign({}, n, {t:tx.value})));
+    await drop('notes', n.id);
+    undoToast('Post-it cleared.', async ()=>{ await put('notes', kept); });
+  });
+  f.appendChild(x); c.appendChild(f);
+  /* a click anywhere on the post-it puts you in it */
+  c.addEventListener('click', e=>{ if(e.target.closest('button')) return; tx.focus(); });
+  return c;
+}
+/* a fresh, blank post-it, ready to type on */
+async function addPostIt(){
+  if(!S.me){ toast('Pick your name in the top right corner first.'); return; }
+  const n={t:'', by:S.me, r:'', at:Date.now(), col:STICKY_COLS[Math.floor(Math.random()*STICKY_COLS.length)]};
+  const id=await put('notes', n);
+  setTimeout(()=>{ const t=document.querySelector('.sticky[data-nid="'+id+'"] .stx'); if(t){ t.focus(); t.scrollIntoView({block:'nearest'}); } }, 80);
+}
+function addPostItButton(){
+  const b=el('button','btn ghost sm addpostit'); b.type='button';
+  b.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>';
+  b.appendChild(el('span',null,'Add a Post-It'));
+  b.addEventListener('click', addPostIt);
+  return b;
+}
+/* the page waits to redraw while someone is typing on a post-it */
+document.addEventListener('focusout', ()=> setTimeout(()=>{
+  if(!S.pendRender) return;
+  const a=document.activeElement; if(a && a.closest && a.closest('.sticky.editing')) return;
+  S.pendRender=0; renderAll();
+}, 60));
 
 /* ============ rail search sources ============ */
 window.__search = function(t, push, goTab){
