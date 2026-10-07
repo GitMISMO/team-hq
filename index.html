@@ -2257,6 +2257,7 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .setsheet .sethead .setnote{margin-top:6px;font-size:12px;color:var(--ink-3)}
 .setsheet .modal-acts > :first-child{margin-right:auto}
 .setc .sw{box-shadow:inset 0 0 0 1px var(--border-strong)}
+.setname{width:100%;max-width:360px}
 
 /* ---------- My Board as a notebook ---------- */
 .nb{display:flex;align-items:stretch;border:1px solid var(--border);border-radius:8px;background:var(--surface);box-shadow:var(--shadow);min-height:640px;overflow:hidden}
@@ -10375,20 +10376,14 @@ function noteWidget(w, b){
       note:n.note, at:n.at||Date.now(), edited:n.edited||n.at||Date.now(), by:S.me||''});
     sySaveItem(n, {note:'', split:1});
   }
+  /* the panel's name (its heading) is changed in the panel's gear, under Name */
   const wrap=el('div','mynote');
   const top=el('div','mynote-top');
-  const ti=inp('text', n.t||'', 'Name this section'); ti.className='mynote-t'; ti.setAttribute('aria-label','Section name');
-  let tmr=null;
-  const saveName=()=>{ clearTimeout(tmr); tmr=null; const cur=syCard(n.id)||n; const v=ti.value.trim();
-    if((cur.t||'')===v) return; S.noteHold=1; sySaveItem(cur, {t:v}).then(()=>{ S.noteHold=0; }); };
-  ti.addEventListener('input', ()=>{ clearTimeout(tmr); tmr=setTimeout(saveName, 900); });
-  ti.addEventListener('blur', ()=>{ saveName(); setTimeout(syRefresh, 60); });
-  ti.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); ti.blur(); } });
   const add=el('button','btn sm'); add.type='button';
   add.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>';
   add.appendChild(el('span',null,'Add a Note'));
   add.addEventListener('click', ()=> noteEditor(n.id, null));
-  top.appendChild(ti); top.appendChild(add); wrap.appendChild(top);
+  top.appendChild(add); wrap.appendChild(top);
 
   const list=notesIn(n.id);
   if(!list.length){
@@ -11913,7 +11908,18 @@ function panelLook(w, L, title){
       const here=findPanel(L, w), onRow=here? L[here.ri].r.length : 1;
       const START=[{v:'0',n:'Open'},{v:'1',n:'Collapsed'}];
       const colName=(PANEL_COLORS.find(c=>(c.v||'')===(w.col||''))||{n:'None'}).n;
-      setGroups(box, 'panel', [
+      /* My Notes panels can be named, so several of them read as different sections */
+      const nameGroup = (w.t==='mynote' && w.k && syCard(w.k)) ? [{k:'name', n:'Name', d:'What this panel is called on your board.', repaint:paint,
+         sum:()=> (syCard(w.k)||{}).t || 'My Notes',
+         rows:b=>{
+          const ni=inp('text', (syCard(w.k)||{}).t||'', 'My Notes'); ni.setAttribute('aria-label','Panel name'); ni.className='setname';
+          const keep=()=>{ const cur=syCard(w.k); const v=ni.value.trim()||'My Notes'; if(!cur || (cur.t||'')===v) return;
+            sySaveItem(cur, {t:v}).then(()=>{ vMine($('#app-mine')); const h=box.querySelector('.sethead h2'); if(h) h.textContent=v; }); };
+          ni.addEventListener('change', keep);
+          ni.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); keep(); ni.blur(); } });
+          b.appendChild(setRow('Panel Name', 'Shows as this panel’s heading. Give each My Notes panel its own name to keep different notes apart — Board Prep, Sponsor Calls, Ideas.', ni));
+         }}] : [];
+      setGroups(box, 'panel', nameGroup.concat([
         {k:'size', n:'Size and Place', d:'How much of its row it takes, and whether it starts open.', repaint:paint,
          sum:()=> (w.wide?'Double Share':'Equal Share') + ' · Starts '+(w.c?'Collapsed':'Open'),
          rows:b=>{
@@ -11955,7 +11961,7 @@ function panelLook(w, L, title){
           });
           b.appendChild(setRow('Color', 'The color along its edge. '+colName+' now.', cg));
          }}
-      ]);
+      ]));
       const acts=el('div','modal-acts');
       const off=el('button','btn ghost danger','Take It Off My Board'); off.type='button';
       off.addEventListener('click', ()=>{
