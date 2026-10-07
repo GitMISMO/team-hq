@@ -81,7 +81,7 @@
   var MAX_FILE = 940000;              /* the relay takes at most 1,000,000 bytes a save */
   var MAX_RECEIPT = 4 * 1024 * 1024;  /* base64 adds a third; the relay's request limit is about 6 MB */
   var COLLS = ['people', 'rocks', 'tasks', 'dates', 'notes', 'agenda', 'expenses', 'figures', 'nudges',
-    'leads', 'blocks', 'asks', 'plans', 'planitems', 'plankinds', 'datekinds', 'myitems'];
+    'leads', 'blocks', 'asks', 'plans', 'planitems', 'plankinds', 'datekinds', 'myitems', 'outbox'];
 
   /* ---------- browser storage: every tool shares this web address ----------
      Team HQ's own keys (mismo.teamhq.…, hq.rail.off) are filed under
@@ -5794,7 +5794,9 @@ function setStatus(p){
   panel('Set My Status', d.name, body=>{
     const ef=effStatus(d);
     if(ef.auto){ const cc=el('div','callout warn');
-      cc.innerHTML = ef.k==='off'
+      cc.innerHTML = ef.k==='off' && ef.cycle==='hours'
+        ? '<b>'+esc(ef.note)+' \u2014 you are showing as Off.</b> Pick anything below and it stands for the rest of today. To change your hours, open My Working Hours underneath.'
+        : ef.k==='off'
         ? '<b>'+esc(ef.note)+' \u2014 you are showing as Off.</b> Pick anything below and it stands for today only. To change it for good, open '+esc(cycleName(ef.cycle))+' underneath.'
         : '<b>A key date is setting this right now.</b> '+esc(ef.note)+'. It goes back to what you pick below once that date passes.';
       body.appendChild(cc); }
@@ -5822,6 +5824,16 @@ function setStatus(p){
     body.appendChild(el('p','note','Leave Until blank to keep it until you change it. With a date in it, Team HQ puts you back to Around on its own the day after.'));
     /* Standing rules for the weekend, the holidays and summer Friday afternoons.
        Closed by default: most people set these once and never open them again. */
+    /* working hours: outside them the team sees Off */
+    const hw=workHours(d); let fHs=null, fHe=null, fHz=null;
+    fold(body, 'My Working Hours', hrFmt(hw.s)+'\u2013'+hrFmt(hw.e)+' '+hrTzName(hw.tz), false, fb=>{
+      fb.appendChild(el('p','note','Outside these hours on a working day the team sees you as Off, with when you are back. Pick a status after your day ends and it stands for the rest of that day.'));
+      const g3=el('div','fields');
+      fHs=field(g3,'Start', inp('time', hw.s), 'w1');
+      fHe=field(g3,'End', inp('time', hw.e), 'w1');
+      fHz=field(g3,'Time Zone', sel(HR_TZS, hw.tz), 'w2');
+      fb.appendChild(g3);
+    });
     const rules = {};
     fold(body, 'Weekends, Holidays and Summer Fridays', null, false, fb=>{
       fb.appendChild(el('p','note','What the team should see on the days MISMO is not working. Whatever you pick, you can always take a single day back from this page.'));
@@ -5846,6 +5858,7 @@ function setStatus(p){
       const rr = Object.assign({}, d.offRule||{});
       Object.keys(rules).forEach(k=>{ rr[k]=rules[k].value; });
       d.offRule = rr;
+      if(fHs && fHe && fHz && fHs.value && fHe.value && fHs.value<fHe.value) d.hours={s:fHs.value, e:fHe.value, tz:fHz.value};
       /* they have just answered for themselves, so today's prompt is settled */
       askedToday(true);
       await put('people', d); closePanel(); toast('Saved.');
@@ -13091,10 +13104,57 @@ function sortCommit(item){
   }, true);
 })();
 
+/* ============ WORKING HOURS ============
+   Outside someone's working hours they show as Off ("Done for the day · back at
+   8:00 AM"), not Around. Each person sets their own hours and time zone in Set My
+   Status → My Working Hours; until they do, 8:00 AM–5:00 PM Eastern. A status they pick
+   after their day has ended still stands for the rest of that day, and a Key Date
+   (travel, out of office) still wins. */
+const HR_TZS = [
+  {v:'America/New_York', n:'Eastern'}, {v:'America/Chicago', n:'Central'},
+  {v:'America/Denver', n:'Mountain'}, {v:'America/Phoenix', n:'Arizona'},
+  {v:'America/Los_Angeles', n:'Pacific'}
+];
+const HR_DEF = {s:'08:00', e:'17:00', tz:'America/New_York'};
+const HR_SEED = {jonna:{s:'07:00', e:'15:00', tz:'America/Denver'}};   /* Jonna, Oct 2026 */
+function workHours(p){ return (p && p.hours && p.hours.s) ? p.hours : ((p && HR_SEED[p.id]) || HR_DEF); }
+function hrNowIn(tz){
+  try{
+    const parts=new Intl.DateTimeFormat('en-US',{timeZone:tz, hour:'2-digit', minute:'2-digit', hour12:false, weekday:'short'}).formatToParts(new Date());
+    const g=k=> (parts.find(x=>x.type===k)||{}).value;
+    const h=(+g('hour'))%24, m=+g('minute');
+    return {min:h*60+m, dow:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(g('weekday'))};
+  }catch(e){ const d=new Date(); return {min:d.getHours()*60+d.getMinutes(), dow:d.getDay()}; }
+}
+const hrMin = s=>{ const m=/^(\d{1,2}):(\d{2})/.exec(String(s||'')); return m? (+m[1])*60+(+m[2]) : null; };
+function hrFmt(s){ const m=hrMin(s); if(m==null) return s; const h=Math.floor(m/60), mm=m%60;
+  return ((h%12)||12)+':'+String(mm).padStart(2,'0')+' '+(h<12?'AM':'PM'); }
+function hrTzName(tz){ return (HR_TZS.find(x=>x.v===tz)||{n:''}).n; }
+/* outside this person's hours on a working weekday? */
+function afterHours(p){
+  const h=workHours(p), now=hrNowIn(h.tz), s=hrMin(h.s), e=hrMin(h.e);
+  if(now.dow===0 || now.dow===6 || s==null || e==null) return null;    /* weekends are handled already */
+  if(now.min>=s && now.min<e) return null;
+  const ab={'America/New_York':'ET','America/Chicago':'CT','America/Denver':'MT','America/Phoenix':'AZ','America/Los_Angeles':'PT'}[h.tz]||'';
+  return {before: now.min<s, back: hrFmt(h.s).replace(':00','')+' '+ab};
+}
+const EFF_BASE = effStatus;
+effStatus = function(p){
+  const ef=EFF_BASE(p);
+  if(!p || ef.auto) return ef;                                   /* Key Date, weekend, holiday, half day */
+  if(['around','focus','meeting'].indexOf(ef.k)<0) return ef;     /* traveling, out, off: as they set it */
+  const ah=afterHours(p); if(!ah) return ef;
+  /* a status picked since the day ended stands */
+  if(p.statusAt){ const h=workHours(p), at=new Date(p.statusAt);
+    if(isoOf(at)===isoOf(today())){ const tod=hrNowIn(h.tz), mins=(Date.now()-at.getTime())/60000;
+      if(!ah.before && tod.min - mins >= hrMin(h.e)) return ef; } }
+  return {k:'off', note: ah.before ? 'Starts at '+ah.back : 'Done for the day \u00b7 back '+ah.back, auto:1, cycle:'hours'};
+};
+
 /* ============ OUTLOOK AVAILABILITY (resources.mismo.org only) ============
    A Power Automate flow on each person's account reads their Outlook calendar and saves
-   availability only (start, end, free/busy/out of office, all-day) to
-   team-hq-data/data/cal-<person id>.json. No titles, places or attendees. Team HQ
+   availability (start, end, free/busy/out of office, all-day) and the meeting name — left blank for anything marked Private in Outlook — to
+   team-hq-data/data/cal-<person id>.json. No places, attendees or notes. Team HQ
    reads those files through the relay and shows, on Where My Team Is Today:
      Out of Office in Outlook  -> Out of Office
      Busy or tentative now     -> In a Meeting, until the time it ends
@@ -13128,7 +13188,7 @@ function calEv(x){
   const av=(x.allDay!==undefined? x.allDay : x.isAllDay), all = av===true || String(av).toLowerCase()==='true';
   if(all) return {all:1, show, d0:String(x.s||x.start||'').slice(0,10), d1:String(x.e||x.end||'').slice(0,10)};
   const s=calTime(x.s||x.start), e=calTime(x.e||x.end); if(s==null || e==null) return null;
-  return {all:0, show, s, e};
+  return {all:0, show, s, e, t:String(x.title||x.t||'').trim().slice(0,80)};
 }
 function calHas(pid){ return !!CAL.by[pid]; }
 /* what Outlook says about this person right now */
@@ -13143,7 +13203,9 @@ function calNow(pid){
     let end=Math.max.apply(null, on.map(x=>x.e)), grew=true;
     while(grew){ grew=false; list.forEach(x=>{ if(!x.all && x.s<=end && x.e>end){ end=x.e; grew=true; } }); }
     const t=new Date(end).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-    return {k:'meeting', note:'Until '+t+' · Outlook'};
+    /* the meeting's name, unless it is marked Private in Outlook (the flow leaves those blank) */
+    const nowEv=on.slice().sort((a,b)=>b.s-a.s)[0], nm=(nowEv && nowEv.t) || '';
+    return {k:'meeting', note:(nm? nm+' \u00b7 until ' : 'Until ')+t+' \u00b7 Outlook'};
   }
   return null;
 }
@@ -13174,6 +13236,88 @@ if(calOn()){
   document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) calLoad(); });
 }
 window.__cal = {CAL, calNow, load:calLoad};
+
+/* ============ TEAM HQ INTO OUTLOOK (resources.mismo.org only) ============
+   Time someone sets aside on a task (a `blocks` row) goes onto their Outlook calendar
+   through a Power Automate flow. Power Automate cannot walk Team HQ's own files easily,
+   so Team HQ keeps a plain list per person of what Outlook still has to do:
+
+     team-hq-data/data/outbox.json   docs[<person id>].items = [
+        {key, id, op:'create'|'update'|'remove', ev, title, start, end, body} ]
+       start/end are Eastern wall-clock times, 'YYYY-MM-DDTHH:MM:00'.
+
+   The flow (one per person) reads that list, creates, changes or deletes the Outlook
+   events, and writes what it did to its own file:
+
+     team-hq-data/data/outlook-done-<person id>.json   {done:[{key, id, ev, op}]}
+
+   Team HQ reads those files and marks each block as on the calendar (evId, state
+   'synced'), or deletes it once it has come off. The flow never touches Team HQ's own
+   data, and a `key` changes whenever the block does, so nothing is done twice. */
+const OB = { docs:null, sig:'', started:false, tmr:null };
+function obKey(b, op){ return b.id+'@'+(b.at||0)+'@'+op; }
+function obItem(b){
+  let op=null;
+  if(b.state==='remove'){ if(b.evId) op='remove'; }
+  else if(b.state!=='synced' && b.origin!=='outlook'){ op = b.evId ? 'update' : 'create'; }
+  if(!op) return null;
+  const t=b.task && S.tasks.find(x=>x.id===b.task);
+  const end=b.end || addMins(b.start||'09:00', +(b.mins||60));
+  return { key:obKey(b, op), id:b.id, op:op, ev:b.evId||'',
+    title: b.title || (t && t.t) || 'Focus Time',
+    start: b.date+'T'+(b.start||'09:00')+':00', end: b.date+'T'+end+':00',
+    body: 'Set aside in Team HQ'+(t? ' for the task: '+t.t : '')+'.' };
+}
+function obCompute(){
+  const by={};
+  (S.blocks||[]).forEach(b=>{ const it=obItem(b); if(!it || !b.who) return; (by[b.who]=by[b.who]||[]).push(it); });
+  return by;
+}
+/* keep each person's list in step with their blocks; only writes when it differs */
+function obSync(){
+  if(!calOn() || !OB.docs || !S.db) return;
+  const by=obCompute();
+  const ids=new Set(Object.keys(by).concat(Object.keys(OB.docs)));
+  ids.forEach(pid=>{
+    const items=(by[pid]||[]).sort((a,b)=> a.key.localeCompare(b.key));
+    const cur=((OB.docs[pid]||{}).items)||[];
+    if(JSON.stringify(cur)===JSON.stringify(items)) return;
+    OB.docs[pid]={items:items};
+    try{ S.db.collection('outbox').doc(pid).set({items:items, at:Date.now()}); }catch(e){}
+  });
+}
+/* what the flows report back */
+function obReconcile(pid, done){
+  (done||[]).forEach(d=>{
+    if(!d || !d.id) return;
+    const b=(S.blocks||[]).find(x=>x.id===d.id); if(!b) return;
+    const it=obItem(b); if(!it || it.key!==d.key) return;      /* changed again since: wait */
+    if(d.op==='remove') drop('blocks', b.id);
+    else if(d.ev) put('blocks', Object.assign({}, b, {evId:d.ev, state:'synced'}));
+  });
+}
+function obReadDone(){
+  if(!calOn()) return;
+  const proj=(window.__hqRelay.config && window.__hqRelay.config.PROJECT) || 'team-hq';
+  S.people.forEach(p=> window.__hqRelay.readOther(proj, 'outlook-done-'+p.id)
+    .then(d=>{ if(d && Array.isArray(d.done) && d.done.length) obReconcile(p.id, d.done); }, ()=>{}));
+}
+function obStart(){
+  if(OB.started || !calOn() || !S.db) return;
+  OB.started=true;
+  try{
+    S.db.collection('outbox').onSnapshot(snap=>{
+      const docs={}; snap.docs.forEach(d=>{ docs[d.id]=JSON.parse(JSON.stringify(d.data()||{})); });
+      OB.docs=docs; obSync();
+    }, ()=>{});
+  }catch(e){}
+  /* blocks change from anywhere (this page, a teammate); check every 20 seconds */
+  setInterval(()=>{ const sig=JSON.stringify((S.blocks||[]).map(b=>[b.id,b.at,b.state,b.evId])); if(sig!==OB.sig){ OB.sig=sig; obSync(); } }, 20000);
+  setTimeout(obReadDone, 4000);
+  setInterval(()=>{ if(!document.hidden) obReadDone(); }, 3*60000);
+}
+if(calOn()) setTimeout(obStart, 3000);
+window.__ob = {compute:obCompute, sync:obSync, reconcile:obReconcile, readDone:obReadDone, OB:OB};
 
 /* ============ rail search sources ============ */
 window.__search = function(t, push, goTab){
