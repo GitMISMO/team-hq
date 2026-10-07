@@ -2178,6 +2178,67 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .pjfoot{margin-top:8px;display:flex;justify-content:flex-end}
 @media(max-width:560px){.pjrow{flex-wrap:wrap}.pjs{width:100%;align-items:flex-start;min-width:0}.pjc{justify-content:flex-start}}
 
+/* ---------- Add a Panel: the gallery (big pop-up, list left, live preview right) ---------- */
+#sheet-box.pgx{max-width:min(1180px,96vw);width:96vw;height:min(860px,90vh);max-height:90vh;display:flex;flex-direction:column;padding:18px 20px;overflow:hidden}
+.pgxhead{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px;flex:0 0 auto}
+.pgxhead h2{margin:0}
+.pgxhead p{margin:4px 0 0;color:var(--ink-2);font-size:13px}
+.pgxclose{border:1px solid var(--border);background:var(--surface);color:var(--ink-2);border-radius:6px;width:34px;height:34px;font-size:20px;line-height:1;cursor:pointer;flex:0 0 auto}
+.pgxclose:hover{background:var(--surface-2);color:var(--ink)}
+.pgxgrid{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:18px;flex:1 1 auto;min-height:0}
+.pgxleft{display:flex;flex-direction:column;min-height:0;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);padding:12px}
+.pgxleft .pgfind{width:100%;margin:0 0 10px}
+.pgxcats{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.pgxcat{border:1px solid var(--border-strong);background:var(--surface);color:var(--ink-2);border-radius:4px;padding:5px 10px;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.pgxcat:hover{color:var(--ink);border-color:var(--border-strong)}
+.pgxcat[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
+.pgxlist{overflow:auto;min-height:0;flex:1 1 auto;margin:0 -4px;padding:0 4px}
+.pgxsec{margin-bottom:12px}
+.pgxsech{position:sticky;top:0;background:var(--surface-2);padding:6px 2px 6px;z-index:1}
+.pgxsech b{display:block;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+.pgxsech small{display:block;font-size:11.5px;color:var(--ink-3);line-height:1.35;margin-top:2px}
+.pgxrow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1px solid transparent;background:var(--surface);color:var(--ink);border-radius:6px;padding:9px 11px;margin-top:6px;font:inherit;cursor:pointer;box-shadow:0 0 0 1px var(--border)}
+.pgxrow:hover,.pgxrow:focus-visible{box-shadow:0 0 0 1px var(--border-strong)}
+.pgxrow.sel{box-shadow:0 0 0 2px var(--c1);background:var(--info-soft)}
+.pgxrt{flex:1 1 auto;min-width:0}
+.pgxrt b{display:block;font-size:13.5px;font-weight:700}
+.pgxrt small{display:block;font-size:12px;color:var(--ink-2);line-height:1.4;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pgxon{flex:0 0 auto;font-size:10.5px;font-weight:700;color:var(--good);background:color-mix(in srgb,var(--good) 14%,transparent);border-radius:3px;padding:2px 7px;white-space:nowrap}
+.pgxask{margin-top:14px;padding:12px;border:1px dashed var(--border-strong);border-radius:6px;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.pgxask b{font-size:13px}
+.pgxask small{font-size:12px;color:var(--ink-2);line-height:1.4}
+.pgxright{display:flex;flex-direction:column;min-height:0;min-width:0}
+.pgxtop{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex:0 0 auto}
+.pgxtt{min-width:0}
+.pgxgrp{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--c1)}
+.pgxtt h3{margin:3px 0 4px;font-size:20px;font-weight:700;color:var(--ink)}
+.pgxtt p{margin:0;font-size:13.5px;color:var(--ink-2);line-height:1.5;max-width:62ch}
+.pgxacts{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;flex:0 0 auto}
+.pgxlbl{margin:16px 0 8px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);flex:0 0 auto}
+.pgxframe{flex:1 1 auto;min-height:0;overflow:hidden;border-radius:10px;background:var(--ground,var(--surface-2));padding:16px;position:relative;
+  background-image:radial-gradient(color-mix(in srgb,var(--ink-3) 22%,transparent) 1px,transparent 1px);background-size:16px 16px}
+.pgxframe::after{content:"";position:absolute;left:0;right:0;bottom:0;height:46px;background:linear-gradient(transparent,var(--ground,var(--surface-2)));pointer-events:none}
+.pgxframe .widget.pgpv{max-width:640px;margin:0 auto;pointer-events:none;grid-column:auto}
+.pgxempty{margin:auto;color:var(--ink-3);font-size:14px;text-align:center;padding:40px}
+@media(max-width:900px){
+  #sheet-box.pgx{height:auto;max-height:92vh;overflow:auto;display:block}
+  .pgxgrid{grid-template-columns:1fr;display:flex;flex-direction:column}
+  .pgxleft{max-height:none}
+  .pgxlist{overflow:visible}
+  .pgxframe{min-height:260px;max-height:420px}
+  .pgxtop{flex-direction:column}
+  .pgxacts{justify-content:flex-start}
+}
+.pgx .modal-acts > :first-child{margin-right:auto}
+.pgxback{display:none;align-self:flex-start;margin-bottom:10px}
+@media(max-width:900px){
+  .pgxback{display:inline-flex}
+  .pgxgrid:not(.detail) .pgxright{display:none}
+  .pgxgrid.detail .pgxleft{display:none}
+}
+:root[data-theme="dark"] .pgxcat[aria-pressed="true"]{background:var(--sky);border-color:var(--sky);color:var(--navy-deep)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .pgxcat[aria-pressed="true"]{background:var(--sky);border-color:var(--sky);color:var(--navy-deep)}}
+
 /* ---------- my projects ---------- */
 .mptop{display:flex;align-items:center;gap:8px;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap}
 .mprow.open{background:var(--info-soft)}
@@ -2258,6 +2319,71 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .setsheet .modal-acts > :first-child{margin-right:auto}
 .setc .sw{box-shadow:inset 0 0 0 1px var(--border-strong)}
 .setname{width:100%;max-width:360px}
+
+/* ---------- settings: groups left, settings middle, what it does right ---------- */
+#sheet-box.setsheet{max-width:min(1120px,96vw);width:96vw}
+.setx{display:grid;grid-template-columns:200px minmax(0,1fr) 300px;gap:18px;align-items:start}
+.setnav{display:flex;flex-direction:column;gap:6px;position:sticky;top:0}
+.setnb{display:block;width:100%;text-align:left;border:1px solid var(--border);background:var(--surface);color:var(--ink);border-radius:6px;padding:10px 12px;font:inherit;cursor:pointer}
+.setnb b{display:block;font-size:13.5px;font-weight:700}
+.setnb small{display:block;font-size:11.5px;color:var(--ink-3);margin-top:2px;line-height:1.35}
+.setnb:hover{border-color:var(--border-strong)}
+.setnb.on{border-color:var(--c1);box-shadow:inset 3px 0 0 var(--c1);background:var(--info-soft)}
+.setnb.on small{color:var(--c1)}
+.setmain{border:1px solid var(--border);border-radius:8px;background:var(--surface);min-width:0}
+.setmh{padding:14px 16px 10px;border-bottom:1px solid var(--border)}
+.setmh h3{margin:0;font-size:15px;font-weight:700;color:var(--ink)}
+.setmh p{margin:3px 0 0;font-size:12.5px;color:var(--ink-2)}
+.setx .setbody{border-top:0}
+.setx .setrow{grid-template-columns:minmax(0,1fr);gap:10px;padding:14px 16px}
+.setx .setrow:hover{background:var(--surface-2)}
+.setpv{position:sticky;top:0;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);padding:14px;min-width:0}
+.setpvk{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+.setpv h4{margin:4px 0 10px;font-size:14px;font-weight:700;color:var(--ink)}
+.setpv p{margin:8px 0 0;font-size:12.5px;line-height:1.5;color:var(--ink-2)}
+.setpv .setpvnow{font-size:11.5px;color:var(--ink-3)}
+.setpvv{margin-top:12px;display:inline-block;font-size:12px;font-weight:700;border-radius:3px;padding:2px 8px}
+.setpvv.now{color:var(--good);background:color-mix(in srgb,var(--good) 14%,transparent)}
+.setpvv.if{color:var(--c1);background:var(--info-soft)}
+/* the little board picture */
+.mk{position:relative;height:168px;border:1px solid var(--border);border-radius:8px;background:var(--ground,var(--surface));overflow:hidden}
+.mk i{position:absolute;display:block;box-sizing:border-box;font-style:normal}
+.mk .mk-band{left:0;right:0;top:0;height:18%;background:#0d314c}
+.mk .mk-tl{top:28%;height:44%;width:20%;border-radius:2px;background:rgba(255,255,255,.14)}
+.mk .mk-p{background:var(--surface);border:1px solid var(--border-strong);border-radius:4px;overflow:hidden;transition:all .2s}
+.mk .mk-hd{left:8%;top:6px;width:42%;height:5px;border-radius:3px;background:var(--ink-3);opacity:.7}
+.mk .mk-hd.txt{height:auto;width:auto;background:none;opacity:1;top:3px;font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--c1);white-space:nowrap}
+.mk .mk-ln{left:8%;height:4px;border-radius:2px;background:var(--border-strong);opacity:.8}
+.mk .mk-p.me{border-color:var(--c1);box-shadow:0 0 0 2px color-mix(in srgb,var(--c1) 35%,transparent)}
+.mk .mk-p.shut{background:var(--surface-2)}
+.mk .mk-p.shut.tall{border-style:dashed}
+.mk .mk-p.bold .mk-hd{background:var(--c1)}
+.mk .mk-p.bold::after{content:"";position:absolute;left:8%;right:8%;top:14px;height:3px;border-radius:2px;background:linear-gradient(90deg,var(--c1) 0 60%,var(--border) 60%)}
+.mk .mk-row{left:6%;right:6%;height:9px;border-radius:2px;background:var(--surface-2);border:1px solid var(--border)}
+.mk .mk-row.on{border-color:var(--c1)}
+.mk .mk-drop{left:6%;right:6%;height:32px;border-radius:3px;background:var(--info-soft);border:1px solid var(--c1)}
+.mk .mk-go{right:4px;top:4px;font-size:10px;font-weight:700;color:var(--c1)}
+.mk .mk-rail{right:0;top:0;bottom:0;width:34%;background:var(--surface);border-left:2px solid var(--c1);box-shadow:-6px 0 14px rgba(6,32,47,.18)}
+.mk .mk-rail.ghost{border-left:2px dashed var(--border-strong);box-shadow:none;background:transparent;width:30%}
+.mk .mk-pages{left:0;top:0;bottom:0;width:20%;background:var(--surface);border-right:1px solid var(--border-strong)}
+.mk .mk-pg{position:relative!important;margin:10px 12% 0;height:6px;border-radius:3px;background:var(--border-strong)}
+.mk .mk-pg.on{background:var(--c1)}
+.mk .mk-tabs{top:3%;right:2%;height:12%;display:flex!important;gap:4px;align-items:flex-end}
+.mk .mk-tab{position:relative!important;width:46px;height:100%;border-radius:4px 4px 0 0;background:var(--surface);border:1px solid var(--border-strong);border-bottom:0}
+.mk .mk-tab.on{border-color:var(--c1)}
+.mk .mk-canvas{right:2%;bottom:3%;border-radius:4px;background-image:radial-gradient(color-mix(in srgb,var(--ink-3) 35%,transparent) 1px,transparent 1px);background-size:10px 10px}
+.mk .hl{outline:2px solid var(--c1);outline-offset:-1px;animation:mkpulse 1.6s ease-in-out infinite}
+@keyframes mkpulse{50%{outline-color:color-mix(in srgb,var(--c1) 35%,transparent)}}
+@media (prefers-reduced-motion:reduce){ .mk .hl{animation:none} .mk .mk-p{transition:none} }
+@media(max-width:980px){
+  .setx{grid-template-columns:minmax(0,1fr)}
+  .setnav{flex-direction:row;overflow-x:auto;position:static;padding-bottom:2px}
+  .setnb{flex:0 0 auto;width:auto}
+  .setnb small{display:none}
+  .setpv{position:static}
+}
+@media(max-width:980px){ .setnav{order:1} .setpv{order:2} .setmain{order:3} .mk{height:140px} }
+#sheet-box.setsheet{min-height:min(600px,86vh)}
 
 /* ---------- My Board as a notebook ---------- */
 .nb{display:flex;align-items:stretch;border:1px solid var(--border);border-radius:8px;background:var(--surface);box-shadow:var(--shadow);min-height:640px;overflow:hidden}
@@ -2370,6 +2496,16 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .sticky .sx{border:0;background:none;color:inherit;font-family:inherit}
 .addpostit{align-self:flex-start}
 .wallhead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.nwtop{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;margin-bottom:12px}
+/* Team Meeting: who is away and why */
+.mtaway{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.mtaway-r{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;padding-top:8px;border-top:1px solid rgba(255,255,255,.14)}
+.mtaway-w{min-width:0}
+.mtaway-a{display:flex;flex-wrap:wrap;gap:6px}
+.hl-occ .mtaway .btn.ghost{color:#fff;border-color:rgba(255,255,255,.45);background:transparent}
+.hl-occ .mtaway .btn.ghost:hover{background:rgba(255,255,255,.12)}
+.hl-occ .mtaway .btn:not(.ghost){background:var(--sky);color:var(--navy);border-color:var(--sky)}
+.calline{margin-top:8px;font-size:12.5px}
 
 /* ---------- messages: a small note in the bottom-left corner of the page, never over the
    right-hand panel or the middle of the work ---------- */
@@ -2388,8 +2524,8 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .dgrip svg{width:15px;height:15px;fill:currentColor;stroke:none}
 .dgrip:focus-visible{outline:2px solid var(--c1);outline-offset:1px}
 .dgrip:active{cursor:grabbing}
-.sticky .dgrip{position:absolute;top:1px;left:50%;transform:translateX(-50%) rotate(90deg);width:22px;height:34px;color:rgba(0,0,0,.6);opacity:.3;transition:opacity .12s}
-.sticky .dgrip svg{width:18px;height:18px}
+.sticky .dgrip{position:absolute;top:-7px;left:50%;transform:translateX(-50%) rotate(90deg);width:22px;height:34px;color:rgba(0,0,0,.6);opacity:.3;transition:opacity .12s}
+.sticky .dgrip svg{width:17px;height:17px}
 .sticky:hover .dgrip,.sticky.editing .dgrip,.sticky .dgrip:focus-visible{opacity:1}
 .sticky .dgrip:hover{color:rgba(0,0,0,.75);background:rgba(255,255,255,.4)}
 .mnrow{position:relative;padding-left:32px}
@@ -3343,7 +3479,53 @@ function rawNextRec(r, after){
   return '';
 }
 /* the effective date of a key date: computed for recurring ones, stored for the rest */
-function dOf(x){ return (x && x.rec && x.rec.f) ? nextRec(x.rec) : (x? x.d : ''); }
+function dOf(x){ if(x && x.rec && x.rec.f){ const c=recCurrent(x.rec); return c? c.on : ''; } return x? x.d : ''; }
+/* How long one occurrence of a repeating date lasts: the end set for that one occurrence
+   (Just This One \u2192 Ends On), else the series' length in days (rec.len). '' = one day. */
+function recSpan(r, key, start){
+  const ov=((r && r.over)||{})[key]||{};
+  if(ov.e && ov.e>=start) return ov.e;
+  const len=+((r && r.len)||1);
+  if(len>1){ const d=parseD(start); if(!d) return ''; d.setDate(d.getDate()+len-1); return isoOf(d); }
+  return '';
+}
+function recMaxLen(r){
+  let L=+((r && r.len)||1); const ov=(r && r.over)||{};
+  for(const k in ov){ const o=ov[k]; if(o && o.e){ const a=parseD(o.on||k), b=parseD(o.e);
+    if(a && b){ const n=Math.round((b-a)/86400000)+1; if(n>L) L=n; } } }
+  return Math.min(L, 60);
+}
+/* the occurrence still running today, or else the next one: {key, on} */
+function recCurrent(r){
+  if(!r || !r.f) return null;
+  const L=recMaxLen(r);
+  if(L<=1){ const key=nextKey(r); return key? {key:key, on:(((r.over||{})[key])||{}).on||key} : null; }
+  const t=isoOf(today()), from=today(); from.setDate(from.getDate()-L);
+  let after=isoOf(from);
+  for(let i=0;i<8;i++){
+    const key=nextKey(r, after); if(!key) return null;
+    const on=(((r.over||{})[key])||{}).on||key;
+    if((recSpan(r, key, on)||on) >= t) return {key:key, on:on};
+    after=key;
+  }
+  return null;
+}
+/* the last day of a date: a one-off's Ends, or the running/next occurrence's end */
+function spanEnd(x){
+  if(!x) return '';
+  if(x.rec && x.rec.f){
+    if(x._occ) return recSpan(x.rec, x._occ, x._on||x._occ);
+    const c=recCurrent(x.rec); return c? recSpan(x.rec, c.key, c.on) : '';
+  }
+  return x.e||'';
+}
+/* approximate, unless this year's occurrence has been given its real dates */
+function approxNow(x){
+  if(!x || !x.approx) return false;
+  if(x._occ) return !(x._pinned);
+  if(x.rec && x.rec.f){ const c=recCurrent(x.rec); const ov=c && (x.rec.over||{})[c.key]; if(ov && (ov.on || ov.e)) return false; }
+  return true;
+}
 function recLabel(r){
   if(!r || !r.f) return '';
   if(r.f==='w'){
@@ -3556,9 +3738,9 @@ function inThisMonth(iso){ const d=parseD(iso), t=today();
 function dateLabel(x){
   if(typeof x==='string') x={d:x};        /* callers hand it a bare ISO date too */
   const iso=dOf(x); if(!iso) return 'No date set';
-  if(x.approx){ const d=parseD(iso); if(!d) return 'No date set';
+  if(approxNow(x)){ const d=parseD(iso); if(!d) return 'No date set';
     return 'Around '+d.toLocaleDateString('en-US',{month:'long',year:'numeric'}); }
-  return fmtRange(iso, x.e);
+  return fmtRange(iso, spanEnd(x));
 }
 function dueChip(s){
   const n = days(s); if(n===null) return null;
@@ -3619,6 +3801,16 @@ function undoToast(msg, onUndo){
   clearTimeout(toast._t);
   toast._t=setTimeout(()=>{ t.hidden=true; t.textContent=''; }, 6000);
 }
+/* every open task past its due date, oldest first, in the right rail; each opens the task */
+function lateRail(){
+  const late=openTasks().filter(t=>{ const n=days(t.due); return n!==null && n<0; })
+    .sort((a,b)=> String(a.due).localeCompare(String(b.due)));
+  panel(late.length? late.length+' Past Due' : 'Nothing Past Due', 'Anyone\u2019s, any project \u00b7 oldest first', body=>{
+    if(!late.length){ body.appendChild(emptyBox('Nothing is past due.','Every open task is on time.')); return; }
+    body.appendChild(el('p','note','Click a task to open it and change its date, who has it, or mark it done.'));
+    const r=el('div','rows'); late.forEach(t=> r.appendChild(taskRow(t))); body.appendChild(r);
+  });
+}
 function openTasks(){ return S.tasks.filter(t=>t.s!=='Done'); }
 /* Accountable is t.o. Working it is t.d (a list). With nobody named in t.d the
    accountable person is doing it themselves, so they are the doer too. */
@@ -3678,9 +3870,9 @@ function expenseGaps(id){
   S.dates.forEach(x=>{
     if(TRAVEL_KINDS.indexOf(x.k)<0) return;
     if((x.who||[]).indexOf(id)<0) return;
-    if(x.approx) return;
+    if(approxNow(x)) return;
     const a=parseD(dOf(x)); if(!a) return;
-    const b=parseD(x.e)||a;
+    const b=parseD(spanEnd(x))||a;
     if(b>=t) return;                                   /* not back yet */
     /* A closed fiscal year is closed. Expenses are submitted and the books are
        shut, so nobody gets chased in October about a trip they took in August.
@@ -3709,10 +3901,10 @@ function awayOn(pid, d){
     const x=S.dates[i];
     if(AWAY_KINDS.indexOf(x.k)<0) continue;
     if((x.who||[]).indexOf(pid)<0) continue;
-    if(x.approx) continue;
+    if(approxNow(x)) continue;
     const a=parseD(dOf(x)); if(!a) continue;
-    const b=parseD(x.e)||a;
-    if(d>=a && d<=b) return {k: OOO_KINDS.indexOf(x.k)>=0 ? 'out' : 'travel', t:x.t, loc:x.loc||''};
+    const b=parseD(spanEnd(x))||a;
+    if(d>=a && d<=b) return {k: OOO_KINDS.indexOf(x.k)>=0 ? 'out' : 'travel', t:x.t, loc:x.loc||'', x:x};
   }
   return null;
 }
@@ -3755,7 +3947,9 @@ function occOf(x, iso){
   const ov = x.rec && x.rec.over && x.rec.over[iso];
   const c = Object.assign({}, x, {_occ: iso, _base: x.id, _on: iso});
   if(ov){ occFields().forEach(k=>{ if(ov[k]!==undefined) c[k]=ov[k]; });
-    c._changed=1; if(ov.on){ c._on=ov.on; c._moved=1; } }
+    c._changed=1; if(ov.on){ c._on=ov.on; c._moved=1; }
+    if(ov.on || ov.e){ c._pinned=1; c.approx=0; } }
+  c.e = recSpan(x.rec, iso, c._on) || '';
   return c;
 }
 function hasOcc(x, iso){ return !!(x.rec && x.rec.over && x.rec.over[iso]); }
@@ -3773,17 +3967,24 @@ function datesOn(d){
        that happens to span one still shows on its working days. */
     if(hol && x.k==='Out of Office') return;
     if(x.rec && x.rec.f){
-      /* one that was moved onto this day */
-      const from=movedTo(x, iso);
-      if(from){ out.push(occOf(x, from)); return; }
-      /* its usual day — unless this one was moved off it */
-      if(recOn(x.rec, d)){
-        const ov=(x.rec.over||{})[iso];
-        if(ov && ov.on && ov.on!==iso) return;
-        /* a series whose day is set each year stays off the grid until the
-           year in question has actually been pinned down */
-        if(x.approx && !ov) return;
-        out.push(occOf(x, iso));
+      /* an occurrence starting today, or one that started up to its length ago and is
+         still running (MBA Annual, the 11th to the 14th) */
+      const L=recMaxLen(x.rec);
+      for(let k=0;k<L;k++){
+        const day=new Date(d); day.setDate(day.getDate()-k); const di=isoOf(day);
+        /* one that was moved onto that day */
+        let key=movedTo(x, di);
+        if(!key){
+          if(!recOn(x.rec, day)) continue;
+          const ov=(x.rec.over||{})[di];
+          if(ov && ov.on && ov.on!==di) continue;           /* moved off its usual day */
+          /* a series whose day is set each year stays off the grid until the
+             year in question has actually been pinned down */
+          if(x.approx && !ov) continue;
+          key=di;
+        }
+        const c=occOf(x, key);
+        if(k===0 || (c.e && c.e>=iso)){ out.push(c); break; }
       }
       return;
     }
@@ -3801,9 +4002,9 @@ function effStatus(p){
     const x=S.dates[i];
     if(AWAY_KINDS.indexOf(x.k)<0) continue;
     if(!(x.who||[]).length || (x.who||[]).indexOf(p.id)<0) continue;
-    if(x.approx) continue;
+    if(approxNow(x)) continue;
     const a=parseD(dOf(x)); if(!a) continue;
-    const b=parseD(x.e)||a;
+    const b=parseD(spanEnd(x))||a;
     if(t>=a && t<=b) return {k: OOO_KINDS.indexOf(x.k)>=0 ? 'out' : 'travel',
       note:x.t+(x.loc? ' · '+x.loc : ''), auto:1};
   }
@@ -4172,7 +4373,7 @@ function dayGrid(val, onPick){
 function btnRow(opts, val, cls, onPick){
   const w=el('div','btnrow'+(cls?' '+cls:'')); const all=[];
   opts.forEach(o=>{
-    const b=el('button',null,o.n); b.type='button'; if(o.t) b.title=o.t;
+    const b=el('button',null,o.n); b.type='button'; if(o.t) b.title=o.t; b.dataset.v=String(o.v);
     b.setAttribute('aria-pressed', String(String(o.v)===String(val)));
     b.addEventListener('click', ()=>{ w.dataset.val=String(o.v);
       all.forEach(x=>x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true');
@@ -4582,7 +4783,7 @@ function dictateHint(){
 function capture(presetRock){
   sheet(box=>{
     box.appendChild(el('h2','', 'Jot It Down'));
-    box.appendChild(el('p',null,'Write it the way you would on a sticky note. Put it straight on a board, or park it on the note wall and deal with it later.'));
+    box.appendChild(el('p',null,'Write it the way you would on a sticky note. Put it on a board as a post-it, or park it on the team\u2019s note wall. Have the details already? Use Add a Task instead.'));
     const ta=el('textarea','cap-in'); ta.placeholder='Type it here…'; box.appendChild(ta);
 
     const mrow=el('div','rowflex'); mrow.style.marginTop='12px';
@@ -4635,21 +4836,20 @@ function capture(presetRock){
     });
 
     const g=el('div','fields'); g.style.marginTop='14px';
-    const fO=field(g,'Accountable', sel(peopleOpts(), S.me||'', 'Unassigned'), 'w2');
+    const fO=field(g,'Whose Board', sel(peopleOpts(), S.me||'', 'Nobody Yet'), 'w2');
     const fR=field(g,'Team Project', sel(S.rocks.map(r=>({v:r.id,n:r.name})), presetRock||'', 'Not Linked'), 'w2');
     box.appendChild(g);
 
     const acts=el('div','modal-acts');
     const cancel=el('button','btn ghost','Cancel'); cancel.type='button'; cancel.addEventListener('click',closeSheet);
     const park=el('button','btn ghost','Park It'); park.type='button';
-    park.title='Keeps it as a note on the wall. No owner, no date, no pressure.';
+    park.title='Puts it on the team\u2019s note wall. No owner, no date, no pressure.';
     const mk=el('button','btn','Put It on My Board'); mk.type='button';
     /* say where it is going, so the button is the answer rather than a riddle */
     const mkLabel = ()=>{
       const v=fO.value;
-      mk.textContent = !v ? 'Make It a Task'
-        : v===S.me ? 'Put It on My Board'
-        : 'Put It on '+pname(v).split(' ')[0]+'\u2019s Board';
+      mk.hidden = !v;
+      mk.textContent = v===S.me ? 'Put It on My Board' : v ? 'Put It on '+pname(v).split(' ')[0]+'\u2019s Board' : '';
     };
     fO.addEventListener('change', mkLabel); mkLabel();
     park.addEventListener('click', async ()=>{
@@ -4657,24 +4857,16 @@ function capture(presetRock){
       await put('notes', {t:v, by:S.me||'', r:fR.value||'', at:Date.now(), col:['y','b','g','p','o'][Math.floor(Math.random()*5)]});
       closeSheet(); toast('Parked on the note wall.');
     });
-    /* One press puts it on the board and nothing else. Filling in a due date or
-       a part is a click on the task afterwards, not a form in the way. */
-    const save = async (open)=>{
+    /* One press puts it on that person's board as a post-it, ready to keep writing on
+       and to Make It a Task when it is ready. */
+    mk.addEventListener('click', async ()=>{
       const v=ta.value.trim(); if(!v){ ta.focus(); return; }
-      const t={t:v, o:fO.value, r:fR.value, w:'', s:'Not Started', p:'Normal', due:'', notes:'',
-               rail:0, ord:(S.tasks.length+1)*10, at:Date.now(), by:S.me||'', src:'note'};
+      if(!fO.value) return park.click();
+      await put('notes', {t:v, by:S.me||'', board:fO.value, r:fR.value||'', at:Date.now(), col:STICKY_COLS[Math.floor(Math.random()*STICKY_COLS.length)]});
       closeSheet();
-      const id = await put('tasks', t); t.id=id;
-      if(open){ editTask(t); return; }
-      toast(!fO.value ? 'Added, unassigned.'
-        : fO.value===S.me ? 'On your board.'
-        : 'On '+pname(fO.value).split(' ')[0]+'\u2019s board.');
-    };
-    mk.addEventListener('click', ()=> save(false));
-    const more=el('button','btn ghost','Add Detail First'); more.type='button';
-    more.title='Opens the task so you can set a due date, a part and who else is hands-on';
-    more.addEventListener('click', ()=> save(true));
-    acts.appendChild(cancel); acts.appendChild(park); acts.appendChild(more); acts.appendChild(mk);
+      toast(fO.value===S.me ? 'On your board as a post-it.' : 'On '+pname(fO.value).split(' ')[0]+'\u2019s board as a post-it.');
+    });
+    acts.appendChild(cancel); acts.appendChild(park); acts.appendChild(mk);
     box.appendChild(acts);
   });
 }
@@ -4899,7 +5091,7 @@ function vToday(root){
   tl.appendChild(mk(openTasks().length,'Open Tasks',
     'everyone\u2019s, across all '+S.rocks.length+' team projects','',()=>show('rocks')));
   tl.appendChild(mk(late.length,'Past Due',
-    late.length? 'anyone\u2019s, any project' : 'nobody is late', late.length?'bad':'', ()=>show('rocks')));
+    late.length? 'anyone\u2019s, any project' : 'nobody is late', late.length?'bad':'', ()=>lateRail()));
   tl.appendChild(mk(ovl.length,'Possible Overlaps', ovl.length?'two people, one part':'nothing doubled up', ovl.length?'warn':'', ()=>show('rocks')));
   tl.appendChild(mk(nAct,'Active Projects', 'of '+S.rocks.length+' team projects', '', ()=>show('rocks')));
   tl.appendChild(mk(trav.length,'Traveling', trav.length? trav.map(p=>p.name.split(' ')[0]).join(', ') : 'nobody is away', trav.length?'warn':'', ()=>show('dates')));
@@ -4930,7 +5122,9 @@ function vToday(root){
   w2.appendChild(sh);
   const strip=el('div','strip');
   S.people.forEach(p=> strip.appendChild(personCard(p)));
-  w2.appendChild(strip); root.appendChild(w2);
+  w2.appendChild(strip);
+  { const cl=calLine(); if(cl) w2.appendChild(cl); }
+  root.appendChild(w2);
 
   /* Your own work lives on My Board. Today is the team view — it used to
      repeat your task list here, which meant two places to keep an eye on. */
@@ -4942,16 +5136,16 @@ function vToday(root){
   }
 
   // note wall — always open, the same shape as Counting Down above it
-  if(S.notes.length){
+  if(wallNotes().length){
     const w3=el('div');
-    const n3=S.notes.length;
+    const n3=wallNotes().length;
     const wh=el('div','wallhead');
     wh.appendChild(el('h2','sect-t', n3===1? '1 Note to Review' : n3+' Notes to Review'));
     wh.appendChild(addPostItButton());
     w3.appendChild(wh);
     w3.appendChild(el('p','note','Things people jotted down that are not tasks yet. Click a post-it to keep writing on it, Make It a Task when it is ready, or × to clear it.'));
     const g=el('div','stickies'); g.style.marginTop='12px';
-    S.notes.forEach(n=> g.appendChild(noteSticky(n)));
+    wallNotes().forEach(n=> g.appendChild(noteSticky(n)));
     w3.appendChild(g);
     root.appendChild(w3);
   }
@@ -5009,14 +5203,15 @@ function countdown(d){
   c.appendChild(el('div','kk', d.k));
   const nn=el('div','nn');
   if(n===null){ nn.textContent='No Date'; }
-  else if(n<0 && d.approx && inThisMonth(iso)){ nn.textContent='This Month'; }
+  else if(n<0 && approxNow(d) && inThisMonth(iso)){ nn.textContent='This Month'; }
+  else if(n<0 && spanEnd(d) && spanEnd(d)>=isoOf(today())){ nn.textContent='On Now'; }
   else if(n<0) { nn.textContent='Passed'; }
   else if(n===0){ nn.textContent='Today'; }
-  else { nn.appendChild(document.createTextNode((d.approx?'≈':'')+String(n)));
+  else { nn.appendChild(document.createTextNode((approxNow(d)?'≈':'')+String(n)));
     nn.appendChild(el('small',null, n===1?'day to go':'days to go')); }
   c.appendChild(nn);
   c.appendChild(el('div','tt', d.t));
-  c.appendChild(el('div','dd', (d._on? fmtD(d._on,0) : dateLabel(d))
+  c.appendChild(el('div','dd', (d._on? fmtRange(d._on, spanEnd(d)) : dateLabel(d))
     + (d.time? ' · '+d.time : '') + (d.loc? ' · '+d.loc : '')));
   if(d.rec && d.rec.f){
     const r=el('div','recchip');
@@ -5770,7 +5965,7 @@ function dateDupes(){
     if((a.nodupe||[]).indexOf(b.id)>=0 || (b.nodupe||[]).indexOf(a.id)>=0) continue;
     const a1=parseD(dOf(a)), b1=parseD(dOf(b));
     if(!a1||!b1) continue;
-    const a2=parseD(a.e)||a1, b2=parseD(b.e)||b1;
+    const a2=parseD(spanEnd(a))||a1, b2=parseD(spanEnd(b))||b1;
     const overlaps = a1<=b2 && b1<=a2;
     const near = Math.abs((a1-b1)/86400000) <= 3;
     if(!overlaps && !near) continue;
@@ -6307,7 +6502,7 @@ function dateRow(d){
   const h=el('button','rh2'); h.type='button';
   const t=el('span','t'); t.appendChild(document.createTextNode(d.t));
   const sm=el('small');
-  sm.textContent = (d._on? fmtD(d._on,1) : dateLabel(d))
+  sm.textContent = (d._on? fmtRange(d._on, spanEnd(d)) : dateLabel(d))
     + (d.time? ' · '+d.time : '')
     + (d.loc? ' · '+d.loc : '')
     + (d.rec && d.rec.f ? ' · '+recLabel(d.rec) : '')
@@ -6319,10 +6514,11 @@ function dateRow(d){
   kc.appendChild(i); kc.appendChild(document.createTextNode(d.k)); r.appendChild(kc);
   const n=days(dOf(d));
   if(n!==null && n>=0){ const c=el('span','chip '+(n<=7?'ch-od':n<=30?'ch-soon':'ch-ns'));
-    c.textContent = n===0?'Today': (d.approx?'≈':'')+n+(n===1?' day':' days'); r.appendChild(c); }
+    c.textContent = n===0?'Today': (approxNow(d)?'≈':'')+n+(n===1?' day':' days'); r.appendChild(c); }
   (d.who||[]).slice(0,4).forEach(id=>r.appendChild(avatar(id,'xs')));
   h.appendChild(r);
-  if(d._moved) r.insertBefore(el('span','chip ch-warn','Moved'), r.firstChild);
+  if(d._pinned && d.e) r.insertBefore(el('span','chip ch-ns','Dates Set'), r.firstChild);
+  else if(d._moved) r.insertBefore(el('span','chip ch-warn','Moved'), r.firstChild);
   else if(d._changed) r.insertBefore(el('span','chip ch-warn','Changed This Time'), r.firstChild);
   h.addEventListener('click', ()=> openDate(d));
   row.appendChild(h);
@@ -6360,10 +6556,11 @@ function editOccurrence(base, iso){
     pw.appendChild(fP); g.appendChild(pw);
     const fTm=field(g,'Time', inp('text', cur('time')||'', 'e.g. 11:00 AM \u2013 1:00 PM Eastern'), 'w2');
     const fL=field(g,'Where', inp('text', cur('loc')||'', 'City or Venue'), 'w2');
-    const fMv=field(g,'Move It To', inp('date', ov.on||iso), 'w2');
+    const fMv=field(g,'Starts On', inp('date', ov.on||iso), 'w2');
+    const fEn=field(g,'Ends On (Optional)', inp('date', ov.e||recSpan(base.rec, iso, ov.on||iso)||''), 'w2');
     const fN=field(g,'Note', ta(cur('note')||'', 'Anything worth knowing about this one', 3), 'w4');
     body.appendChild(g);
-    const mvn=el('p','note','Leave the date as it is unless this one occurrence moved. The rest of the series keeps its usual day either way.');
+    const mvn=el('p','note','Change the dates only if this one is on different days \u2014 for several days, set Ends On too (MBA Annual, the 11th to the 14th). The rest of the series keeps its usual days either way.');
     body.appendChild(mvn);
 
     body.appendChild(el('h3','sect-t','Who Is Involved'));
@@ -6413,6 +6610,11 @@ function editOccurrence(base, iso){
         if(a!==b) diff[k]=next[k];
       });
       if(fMv.value && fMv.value!==iso) diff.on=fMv.value;
+      const st0=fMv.value||iso, usual=recSpan(Object.assign({}, base.rec, {over:{}}), iso, st0);
+      if(fEn.value && fEn.value>st0 && fEn.value!==usual) diff.e=fEn.value;
+      if(fEn.value && fEn.value<st0){ fEn.focus(); toast('Ends On has to be on or after Starts On.'); return; }
+      /* giving an approximate date its real days pins it down for this year */
+      if(base.approx && !diff.on && !diff.e && fMv.value===iso && ov.on===undefined && fEn.value && fEn.value!==usual) diff.e=fEn.value;
       const rec=JSON.parse(JSON.stringify(base.rec));
       rec.over=rec.over||{};
       if(Object.keys(diff).length) rec.over[iso]=diff; else delete rec.over[iso];
@@ -6420,6 +6622,7 @@ function editOccurrence(base, iso){
       await put('dates', Object.assign({}, base, {rec:rec}));
       closePanel(); renderAll();
       toast(!Object.keys(diff).length ? 'Nothing different \u2014 left as it was.'
+        : diff.e ? 'Set to '+fmtRange(diff.on||iso, diff.e)+', this time only.'
         : diff.on ? 'Moved to '+fmtD(diff.on)+', this time only.'
         : 'Changed for '+fmtD(iso)+' only.');
     });
@@ -6468,6 +6671,7 @@ function editDate(d0){
       n:n===1?'Every week':n===2?'Every other week':'Every '+n+' weeks'})),
       String((d.rec&&d.rec.every)||2), null, ()=>sync()), 'w4');
     const fUntil = field(recG,'Stop Repeating After (Optional)', inp('date', (d.rec&&d.rec.until)||''), 'w2');
+    const fLen = field(recG,'How Long Each One Lasts', sel(Array.from({length:14},(_,i)=>({v:String(i+1), n:(i+1)+(i?' Days':' Day')})), String((d.rec&&d.rec.len)||1)), 'w2');
     body.appendChild(recG);
 
     /* occurrences: cancel one without touching the rest, and put one back */
@@ -6486,15 +6690,15 @@ function editDate(d0){
       soon.forEach(iso=>{
         const row=el('div','occrow'+(skips.has(iso)?' off':''));
         const o=over[iso]||null;
-        const nm=el('span','on', fmtD(o && o.on ? o.on : iso, 1));
+        const nm=el('span','on', fmtRange(o && o.on ? o.on : iso, recSpan(Object.assign({}, r, {over:over}), iso, o && o.on ? o.on : iso)));
         const bits=[]; if(o && o.t) bits.push(o.t); if(o && o.time) bits.push(o.time);
         if(o && o.on) bits.push('moved from '+fmtD(iso));
         if(bits.length) nm.appendChild(el('small',null,bits.join(' \u00b7 ')));
         row.appendChild(nm);
-        if(o && !skips.has(iso)) row.appendChild(el('span','chip ch-warn', o.on?'Moved':'Changed'));
+        if(o && !skips.has(iso)) row.appendChild(el('span','chip ch-warn', (o.on||o.e)?'Dates Set':'Changed'));
         if(!isNew && !skips.has(iso)){
           const c=el('button','btn sm ghost','Change'); c.type='button';
-          c.title='Rename or re-tag this one occurrence';
+          c.title='Change the dates, name or people for this one occurrence';
           c.addEventListener('click',()=> editOccurrence(S.dates.find(y=>y.id===d.id), iso));
           row.appendChild(c);
         }
@@ -6537,6 +6741,7 @@ function editDate(d0){
       if(f==='q')  r={f:f, months:Array.from(monSel).sort((a,b)=>a-b), day:+gv(fDay)};
       if(!r) return null;
       const u=fUntil.value; if(u) r.until=u;
+      const ln=+fLen.value; if(ln>1) r.len=ln;
       const sk=[...skips].sort(); if(sk.length) r.skip=sk;
       /* per-occurrence changes survive an edit to the series */
       if(d.rec && d.rec.over && Object.keys(d.rec.over).length) r.over=d.rec.over;
@@ -6562,7 +6767,7 @@ function editDate(d0){
         prev.textContent = fD.value? (n===0?'That is today.': n>0? 'That is '+n+(n===1?' day':' days')+' from now.' : 'That has already passed.') : 'Pick a date, or set it to repeat.';
         prev.hidden=false; }
     }
-    [fRep,fD,fUntil,fFrom].forEach(x=> x.addEventListener('change', ()=>{ drawOcc(); sync(); }));
+    [fRep,fD,fUntil,fFrom,fLen].forEach(x=> x.addEventListener('change', ()=>{ drawOcc(); sync(); }));
     drawOcc(); sync();
 
     body.appendChild(el('h3','sect-t','Who Is Involved'));
@@ -6619,7 +6824,7 @@ const WTYPES = {
   projects:  {n:'Team Projects List',  d:'Every bigger project in one list — where it stands, who is accountable, how far along and what is due next. Filter to Active, Mine, Next Up or All.'},
   rock:      {n:'One Team Project',        d:'A single team project with all its parts and who is in them.'},
   plan:      {n:'One Plan',            d:'An onboarding plan, handover or checklist — how far along it is, and what is due next.'},
-  notes:     {n:'The Note Wall',       d:'Post-its you type on freely — add one, keep writing on it, and Make It a Task when it is ready.'},
+  notes:     {n:'The Note Wall',       d:'Post-its on your board and the team\u2019s note wall. Type on them freely, drag them into any order, and Make It a Task when one is ready.'},
   person:    {n:'Someone’s Board', d:'One person’s open work — handy for keeping an eye on the team.'},
   overlap:   {n:'Overlap Check',       d:'Where two people have work in the same part.'},
   calendar:  {n:'The Month',           d:'Key Dates on a calendar, with who is away each day.'},
@@ -6947,9 +7152,7 @@ function widget(w, ri, ci, L, span){
   const tog=el('button','tog'); tog.type='button';
   tog.title = omode==='drop' ? (w.c? 'Open this panel' : 'Collapse this panel') : 'Open '+title+' in the side panel';
   if(omode==='drop') tog.setAttribute('aria-expanded', w.c?'false':'true');
-  /* the note wall says the number in words, so it does not also need a badge */
-  const named = (w.t==='notes' && S.notes.length);
-  if(named) title = S.notes.length+(S.notes.length===1?' Note to Review':' Notes to Review');
+  const named = false;
   tog.appendChild(el('h3',null,title));
   const cnt = named ? null : widgetCount(w);
   if(cnt!=null) tog.appendChild(el('span','cnt', String(cnt)));
@@ -7087,7 +7290,7 @@ function widgetCount(w){
     if(w.t==='newcerts') return newCerts(certWin(w)).length;
     if(w.t==='planday')  return null;
     if(w.t==='numbers')  return (w.k || []).map(figure).filter(Boolean).length;
-    if(w.t==='notes')    return S.notes.length;
+    if(w.t==='notes')    return panelNotes(w).length;
     if(w.t==='overlap')  return overlaps().length;
     if(w.t==='person' && w.k) return person(w.k)? doingTasks(w.k).filter(t=>t.s!=='Done').length : null;
     if(w.t==='rock' && w.k)   return rock(w.k)? S.tasks.filter(t=>t.r===w.k && t.s!=='Done').length : null;
@@ -7172,9 +7375,8 @@ function widgetMeter(w){
     }
     if(w.t==='overlap'){ const n=overlaps().length;
       return {pct:null, label: n? n+(n===1?' part two people are both in':' parts two people are both in') : 'No overlaps'}; }
-    if(w.t==='notes'){ const n=S.notes.length;
-      return {pct:null, label: n? 'There '+(n===1?'is 1 note':'are '+n+' notes')+' on the wall to be looked at'
-        : 'Nothing on the wall'}; }
+    if(w.t==='notes'){ const n=panelNotes(w).length, f=NOTE_FILTERS.find(x=>x.v===(w.nf||'all'));
+      return {pct:null, label: (n? n+(n===1?' post-it':' post-its') : 'No post-its')+' \u00b7 '+f.n}; }
     if(w.t==='team'){
       const t3=today();
       if(offDay(t3)){ const h=holidayOn(t3);
@@ -7579,14 +7781,7 @@ function buildWidget(w, b){
     ed.style.alignSelf='flex-start'; ed.addEventListener('click', pickL);
     return b.appendChild(ed);
   }
-  if(w.t==='notes'){
-    b.appendChild(addPostItButton());
-    if(!S.notes.length) return b.appendChild(emptyBox('Nothing on the wall.','Click Add a Post-It and start typing, or use Jot It Down and Park It.'));
-    const g=el('div','stickies');
-    S.notes.slice(0,8).forEach(n=> g.appendChild(noteSticky(n)));
-    if(S.notes.length>8) g.appendChild(el('div','tcal-help','and '+(S.notes.length-8)+' more on Today'));
-    return b.appendChild(g);
-  }
+  if(w.t==='notes') return noteWallPanel(w, b);
   if(w.t==='person'){
     const p=person(w.k); if(!p) return b.appendChild(emptyBox('This panel has lost its person.','Take it off your board and add it again to choose someone.'));
     const ts=myTasks(p.id).filter(t=>t.s!=='Done');
@@ -7955,9 +8150,50 @@ function mtgSeries(n){ const out=[]; let x=nextMtg();
 function mtgClash(iso){
   const d=parseD(iso); if(!d) return null;
   const h=holidayOn(d); if(h) return {kind:'holiday', t:h.t};
-  const away=S.people.filter(p=>awayOn(p.id,d));
-  if(away.length>=3) return {kind:'away', t:away.length+' people are away'};
+  const away=mtgAway(iso);
+  if(away.length>=3) return {kind:'away', t:away.length+' people are away', away:away};
   return null;
+}
+/* who is away for a team meeting, and the Key Date that says so. Someone confirmed
+   as back for that meeting (the Key Date's `mtgOk` lists the meeting dates) counts
+   as there; the Key Date itself is left as it is. */
+function mtgAway(iso){
+  const d=parseD(iso); if(!d) return [];
+  const out=[];
+  S.people.forEach(p=>{ const a=awayOn(p.id, d); if(!a || a.holiday) return;
+    if(a.x && (a.x.mtgOk||[]).indexOf(iso)>=0) return;
+    out.push({p:p, a:a}); });
+  return out;
+}
+/* the people behind "Thin on the ground", grouped by the Key Date that has them away */
+function mtgAwayList(away, iso, root){
+  const box=el('div','mtaway');
+  const groups=[];
+  away.forEach(o=>{ const id=o.a.x? o.a.x.id : ''; let g=groups.find(x=>x.id===id); if(!g){ g={id:id, x:o.a.x, t:o.a.t, ppl:[]}; groups.push(g); } g.ppl.push(o.p); });
+  groups.forEach(g=>{
+    const r=el('div','mtaway-r');
+    const who=el('span','mtaway-w');
+    who.appendChild(el('b',null, g.t || 'Away'));
+    who.appendChild(document.createTextNode(' \u00b7 '+g.ppl.map(p=>p.name.split(' ')[0]).join(', ')));
+    r.appendChild(who);
+    if(g.x){
+      const op=el('button','btn ghost sm','Open the Key Date'); op.type='button';
+      op.title='Change its dates or who is on it';
+      op.addEventListener('click', ()=> openDate(g.x));
+      const ok=el('button','btn sm','They\u2019ll Be Back for This One'); ok.type='button';
+      ok.title='Counts them as at this meeting. The Key Date stays as it is.';
+      ok.addEventListener('click', async ()=>{
+        const cur=S.dates.find(x=>x.id===g.x.id) || g.x;
+        const list=(cur.mtgOk||[]).filter(x=>x!==iso).concat([iso]);
+        await put('dates', Object.assign({}, cur, {mtgOk:list}));
+        toast('Counted as back for the '+fmtD(iso)+' meeting.');
+        vAgenda(root);
+      });
+      const acts=el('span','mtaway-a'); acts.appendChild(op); acts.appendChild(ok); r.appendChild(acts);
+    }
+    box.appendChild(r);
+  });
+  return box;
 }
 function agendaFor(iso){ return (S.agenda||[]).filter(x=>x.mtg===iso); }
 const AG_KINDS = ['Discuss','Decide','Heads Up','Round the Table'];
@@ -8014,6 +8250,7 @@ function vAgenda(root){
     tx.appendChild(document.createTextNode(clash.kind==='holiday'
       ? ' The office is shut that day — this one will need moving.'
       : ' '+clash.t+' that day.'));
+    if(clash.away) tx.appendChild(mtgAwayList(clash.away, sel, root));
     r.appendChild(tx); c.appendChild(r); hl.appendChild(c); }
 
   const tl=el('div','tiles');
@@ -11276,107 +11513,173 @@ function panelAvailable(k){
   return true;
 }
 
+/* ============ ADD A PANEL: THE PANEL GALLERY ============
+   A big pop-up. On the left, every panel grouped by what it is for, with a search.
+   Point at one (or tap it) and the right side shows it — the real panel, drawn with
+   your own data, the way it will look on your board — with what it is for and one
+   button to add it. */
+function pgPreviewOf(k){
+  const w={t:k, id:'preview', c:0};
+  if(k==='rock'){ const r=S.rocks.find(x=>x.status==='Active') || S.rocks[0]; if(r) w.k=r.id; }
+  if(k==='person'){ const p=S.people.find(x=>x.id!==S.me) || S.people[0]; if(p) w.k=p.id; }
+  if(k==='plan'){ const p=(S.plans||[])[0]; if(p) w.k=p.id; }
+  const def=WTYPES[k]||{n:'Panel'};
+  let title=def.n;
+  if(k==='rock' && w.k && rock(w.k)) title=rock(w.k).name;
+  if(k==='person' && w.k && person(w.k)) title=person(w.k).name.split(' ')[0]+'’s Board';
+  if(k==='plan' && w.k && planOf(w.k)) title=planOf(w.k).title;
+  const n=el('div','widget pgpv'+(bset().style==='bold'?' bold':''));
+  n.style.setProperty('--pc','var(--c1)');
+  const h=el('header'); h.appendChild(el('h3',null,title)); n.appendChild(h);
+  const b=el('div','wbody');
+  if(k==='mynote'){
+    /* a new notes section starts empty, so show what one looks like in use */
+    const add=el('span','btn sm'); add.textContent='+ Add a Note'; b.appendChild(add);
+    const ul=el('div','mynotes'); ul.style.marginTop='12px';
+    [['Board Prep','Budget first, then the certification numbers.','Edited today'],['Sponsor Calls','Ask about the Spring package and logo deadline.','Edited 2 days ago']]
+      .forEach(x=>{ const r=el('div','mnrow'); r.appendChild(el('b',null,x[0])); r.appendChild(el('span','mnsnip',x[1])); r.appendChild(el('small',null,x[2])); ul.appendChild(r); });
+    b.appendChild(ul);
+    b.appendChild(el('p','note','An example. Yours starts empty.'));
+  } else {
+    try{ buildWidget(w, b); }catch(e){ b.appendChild(el('p','note','This one shows once it is on your board.')); }
+  }
+  n.appendChild(b);
+  return n;
+}
 function addWidget(L){
   if(!S.pgOpen) S.pgOpen={};
   sheet(box=>{
-    box.classList.add('pgsheet');
-    box.appendChild(el('h2',null,'Your Panels'));
+    box.classList.add('pgsheet','pgx');
     const allOf = k => { const out=[]; eachPanel(L,(w)=>{ if(w.t===k) out.push(w); }); return out; };
     let onCount=0; eachPanel(L,()=>{ onCount++; });
-    box.appendChild(el('p',null, onCount+(onCount===1?' panel is':' panels are')+' on your board. Pick a group to see what it holds, or search. Drag a panel by its header to move it around.'));
+    const hd=el('div','pgxhead');
+    const ht=el('div');
+    ht.appendChild(el('h2',null,'Add a Panel'));
+    ht.appendChild(el('p',null, 'Point at a panel to see it with your own data. '+onCount+(onCount===1?' panel is':' panels are')+' on your board now.'));
+    hd.appendChild(ht);
+    const x=el('button','pgxclose','\u00d7'); x.type='button'; x.title='Close'; x.setAttribute('aria-label','Close'); x.addEventListener('click', closeSheet);
+    hd.appendChild(x);
+    box.appendChild(hd);
 
-    const find=inp('search', S.pgFind||'', 'Search the panels — tasks, dates, notes, projects…');
+    const grid=el('div','pgxgrid'); box.appendChild(grid);
+    const left=el('div','pgxleft'), right=el('div','pgxright');
+    right.setAttribute('aria-live','polite');
+    grid.appendChild(left); grid.appendChild(right);
+
+    const find=inp('search', S.pgFind||'', 'Search — tasks, dates, notes, projects…');
     find.className='pgfind'; find.setAttribute('aria-label','Search the panels');
-    box.appendChild(find);
-    const groupsW=el('div','pgroups'); box.appendChild(groupsW);
+    left.appendChild(find);
+    const known=[]; PANEL_GROUPS.forEach(g=> known.push.apply(known, g.items));
+    const extra=Object.keys(WTYPES).filter(k=> known.indexOf(k)<0);
+    const groups=PANEL_GROUPS.concat(extra.length? [{k:'other', n:'Everything Else', d:'Panels that do not fit the groups above.', items:extra}] : []);
+    const cats=el('div','pgxcats'); left.appendChild(cats);
+    const list=el('div','pgxlist'); left.appendChild(list);
+    let cat=S.pgCat||'all', pick=S.pgPick||'';
+    const groupOf=k=> groups.find(g=> g.items.indexOf(k)>=0);
 
-    const redraw = ()=>{ closeSheet(); vMine($('#app-mine')); };
-    const rowFor = (k)=>{
-      const t=WTYPES[k], on=allOf(k), several=PANEL_SEVERAL.indexOf(k)>=0;
-      const r=el('div','prow'+(on.length?' is-on':''));
-      const txt=el('div','wrt');
-      const nm=el('b',null,t.n);
-      if(on.length) nm.appendChild(el('span','pgon', several? on.length+' on your board' : 'On your board'));
-      txt.appendChild(nm);
-      txt.appendChild(el('small',null, t.d + (several? ' Add one for each you want to follow.' : '')));
-      r.appendChild(txt);
-      const acts=el('div','wra');
+    const redrawBoard=()=>{ saveMine(); vMine($('#app-mine')); };
+    const showRight=(k)=>{
+      right.textContent='';
+      if(!k || !WTYPES[k]){
+        right.appendChild(el('div','pgxempty','Point at a panel on the left to see what it looks like.'));
+        return;
+      }
+      const t=WTYPES[k], on=allOf(k), several=PANEL_SEVERAL.indexOf(k)>=0, g=groupOf(k);
+      /* on a phone the preview takes the whole pop-up, with a way back to the list */
+      const back=el('button','btn ghost sm pgxback','\u2190 All Panels'); back.type='button';
+      back.addEventListener('click', ()=>{ grid.classList.remove('detail'); box.scrollTop=0; });
+      right.appendChild(back);
+      const top=el('div','pgxtop');
+      const tt=el('div','pgxtt');
+      if(g) tt.appendChild(el('span','pgxgrp', g.n));
+      tt.appendChild(el('h3',null,t.n));
+      tt.appendChild(el('p',null, t.d + (several? ' You can add one for each you want to follow.' : '')));
+      top.appendChild(tt);
+      const acts=el('div','pgxacts');
       if(on.length && !several && !t.multi){
-        const w0=on[0];
-        acts.appendChild(btnRow([{v:'0',n:'Open'},{v:'1',n:'Collapsed'}], String(w0.c?1:0), 'tiny', v=>{
-          on.forEach(w=>{ w.c = v==='1'?1:0; }); saveMine(); vMine($('#app-mine'));
-        }));
+        acts.appendChild(el('span','chip ch-dn','On Your Board'));
         const off=el('button','btn ghost sm','Take It Off'); off.type='button';
         off.addEventListener('click', ()=>{
           for(let ri=L.length-1; ri>=0; ri--){
             for(let ci=L[ri].r.length-1; ci>=0; ci--) if(L[ri].r[ci].t===k) L[ri].r.splice(ci,1);
             if(!L[ri].r.length) L.splice(ri,1);
           }
-          saveMine(); redraw();
+          redrawBoard(); paintList(); showRight(k); toast(t.n+' is off your board.');
         });
         acts.appendChild(off);
       } else {
-        const add=el('button','btn sm', on.length? 'Add Another' : 'Add It'); add.type='button';
+        if(on.length) acts.appendChild(el('span','chip ch-dn', on.length+' on your board'));
+        const add=el('button','btn', on.length? 'Add Another' : 'Add It to My Board'); add.type='button';
         add.addEventListener('click', ()=> pickExtra(k, t, L));
         acts.appendChild(add);
       }
-      r.appendChild(acts);
-      return r;
+      top.appendChild(acts);
+      right.appendChild(top);
+      right.appendChild(el('div','pgxlbl', several && k!=='mynote' ? 'Preview — You Pick Which One When You Add It' : 'Preview With Your Data'));
+      const frame=el('div','pgxframe');
+      frame.setAttribute('inert',''); frame.setAttribute('aria-hidden','true');
+      frame.appendChild(pgPreviewOf(k));
+      right.appendChild(frame);
     };
-
-    const known=[]; PANEL_GROUPS.forEach(g=> known.push.apply(known, g.items));
-    const extra=Object.keys(WTYPES).filter(k=> known.indexOf(k)<0);
-    const groups=PANEL_GROUPS.concat(extra.length? [{k:'other', n:'Everything Else', d:'Panels that do not fit the groups above.', items:extra}] : []);
-
-    const paint=()=>{
-      groupsW.textContent='';
+    const paintList=()=>{
+      cats.textContent=''; list.textContent='';
       const q=norm(find.value||''); S.pgFind=find.value||'';
+      const visible=k=> panelAvailable(k) && (!q || norm(WTYPES[k].n+' '+WTYPES[k].d+' '+((groupOf(k)||{}).n||'')).indexOf(q)>=0);
+      [{k:'all',n:'All'}].concat(groups).forEach(g=>{
+        const n = g.k==='all' ? groups.reduce((a,x)=>a+x.items.filter(visible).length,0) : g.items.filter(visible).length;
+        if(g.k!=='all' && !n) return;
+        const b=el('button','pgxcat'); b.type='button'; b.textContent=g.n;
+        b.setAttribute('aria-pressed', String(cat===g.k));
+        b.addEventListener('click', ()=>{ cat=g.k; S.pgCat=cat; paintList(); });
+        cats.appendChild(b);
+      });
       let shown=0;
       groups.forEach(g=>{
-        const items=g.items.filter(panelAvailable).filter(k=>{
-          if(!q) return true; const t=WTYPES[k];
-          return norm(t.n+' '+t.d+' '+g.n).indexOf(q)>=0;
+        if(cat!=='all' && g.k!==cat) return;
+        const items=g.items.filter(visible); if(!items.length) return;
+        const sec=el('div','pgxsec');
+        const sh=el('div','pgxsech'); sh.appendChild(el('b',null,g.n)); sh.appendChild(el('small',null,g.d));
+        sec.appendChild(sh);
+        items.forEach(k=>{
+          shown++;
+          const t=WTYPES[k], on=allOf(k).length;
+          const r=el('button','pgxrow'+(k===pick?' sel':'')); r.type='button'; r.dataset.k=k;
+          const tx=el('span','pgxrt'); tx.appendChild(el('b',null,t.n));
+          tx.appendChild(el('small',null,t.d));
+          r.appendChild(tx);
+          if(on) r.appendChild(el('span','pgxon', PANEL_SEVERAL.indexOf(k)>=0? on+' on' : 'On'));
+          const choose=()=>{ if(pick===k) return; pick=k; S.pgPick=k;
+            list.querySelectorAll('.pgxrow.sel').forEach(x=>x.classList.remove('sel')); r.classList.add('sel'); showRight(k); };
+          r.addEventListener('mouseenter', choose);
+          r.addEventListener('focus', choose);
+          r.addEventListener('click', ()=>{ choose(); if(window.innerWidth<900){ grid.classList.add('detail'); box.scrollTop=0; } });
+          sec.appendChild(r);
         });
-        if(!items.length) return;
-        shown+=items.length;
-        const onIn=items.filter(k=> allOf(k).length).length;
-        const open = q? true : !!S.pgOpen[g.k];
-        const sec=el('section','pgroup'+(open?' open':''));
-        const h=el('button','pgh'); h.type='button'; h.setAttribute('aria-expanded', String(open));
-        h.innerHTML='<svg class="cv" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
-        const tx=el('span','pght');
-        tx.appendChild(el('b',null,g.n));
-        tx.appendChild(el('small',null,g.d));
-        h.appendChild(tx);
-        h.appendChild(el('span','pgct', onIn? onIn+' of '+items.length+' on' : items.length+(items.length===1?' panel':' panels')));
-        h.addEventListener('click', ()=>{ if(q) return; S.pgOpen[g.k]=!open; paint(); });
-        sec.appendChild(h);
-        if(open){ const list=el('div','wlist'); items.forEach(k=> list.appendChild(rowFor(k))); sec.appendChild(list); }
-        groupsW.appendChild(sec);
+        list.appendChild(sec);
       });
-      if(!shown) groupsW.appendChild(el('p','note','No panel matches that. Try another word, or ask for it below.'));
+      if(!shown) list.appendChild(el('p','note','No panel matches that. Try another word, or ask for it below.'));
+      /* the gap in the list is the moment to ask for what is missing */
+      const miss=el('div','pgxask');
+      miss.appendChild(el('b',null,'Not Here?'));
+      miss.appendChild(el('small',null,'Ask for a panel or a number that does not exist yet. It goes to '
+        +(person(ASK_OWNER)? person(ASK_OWNER).name.split(' ')[0] : 'whoever looks after Team HQ')+'.'));
+      const mb=el('button','btn ghost sm','Ask for It'); mb.type='button';
+      mb.addEventListener('click', ()=>{ closeSheet(); askSheet({kind:'panel', t:'', why:''}); });
+      miss.appendChild(mb); list.appendChild(miss);
     };
-    find.addEventListener('input', paint);
-    paint();
-
-    /* the gap in the list is the moment to ask for what is missing */
-    const miss=el('div','prow askrow');
-    const mtx=el('div','wrt');
-    mtx.appendChild(el('b',null,'Not Here?'));
-    mtx.appendChild(el('small',null,'Ask for a panel or a number that does not exist yet. It goes to '
-      +(person(ASK_OWNER)? person(ASK_OWNER).name.split(' ')[0] : 'whoever looks after Team HQ')+'.'));
-    miss.appendChild(mtx);
-    const ma=el('div','wra');
-    const mb=el('button','btn sm','Ask for It'); mb.type='button';
-    mb.addEventListener('click', ()=>{ closeSheet(); askSheet({kind:'panel', t:'', why:''}); });
-    ma.appendChild(mb); miss.appendChild(ma);
-    box.appendChild(miss);
+    find.addEventListener('input', ()=>{ paintList(); });
+    paintList();
+    if(!pick || !WTYPES[pick]){ const first=list.querySelector('.pgxrow'); pick = first? first.dataset.k : ''; if(first) first.classList.add('sel'); }
+    showRight(pick);
 
     const acts=el('div','modal-acts');
     const reset=el('button','btn ghost','Reset to the Default Board'); reset.type='button';
-    reset.addEventListener('click', ()=>{ S.layout=null; saveMine(); closeSheet(); vMine($('#app-mine')); toast('Board reset.'); });
+    reset.title='Puts the starting set of panels back. Click twice.';
+    reset.addEventListener('click', ()=>{ if(!reset.dataset.c){ reset.dataset.c='1'; reset.textContent='Click Again to Reset'; return; }
+      S.layout=null; saveMine(); closeSheet(); vMine($('#app-mine')); toast('Board reset.'); });
     const cl=el('button','btn','Done'); cl.type='button'; cl.addEventListener('click',closeSheet);
     if(!nbOn()) acts.appendChild(reset); acts.appendChild(cl); box.appendChild(acts);
+    setTimeout(()=>{ if(window.innerWidth>900) find.focus(); }, 60);
   });
 }
 
@@ -11805,6 +12108,125 @@ function openField(cur, onPick, withBoard){
    and close (closed to start, each showing what it is set to now), and inside each
    group one row per setting — the name and a line on what it does on the left, the
    choice on the right. */
+/* ---------- what each setting does, shown beside it ----------
+   Every setting row can carry `pv` ({k, cur}). Pointing at the row shows what it does
+   now; pointing at one of its choices shows what that choice would do — a small
+   picture of the board and a sentence — before anything is clicked. */
+const PV_INFO = {
+  arr:    {t:'Arrange My Board As', n:{board:'Board', notebook:'Notebook'},
+           say:{board:'Panels sit in rows down the page. Drag a panel by its heading to move it to another row.',
+                notebook:'Works like OneNote: pages down the side, tabs across the top, and you drag panels anywhere on a tab and size them by the corner.'}},
+  nbSide: {t:'Pages Down the Side', n:{'1':'On','0':'Off'},
+           say:{'1':'A list of your pages runs down the left. Click one to switch pages; drag to reorder.', '0':'The page list is hidden for more room. Your other pages are kept.'}},
+  nbTop:  {t:'Tabs Across the Top', n:{'1':'On','0':'Off'},
+           say:{'1':'Each page has tabs across the top, like sections in OneNote.', '0':'The tabs are hidden. The other tabs are kept.'}},
+  match:  {t:'Panels Side by Side', n:{'1':'Match Their Heights','0':'Each Its Own Height'},
+           say:{'1':'Panels on the same row line up to the tallest one, so the row reads as a neat block.', '0':'Each panel is only as tall as what is in it, so a short list stays short.'}},
+  shut:   {t:'Collapsed Panels', n:{'1':'Stay Short','0':'Match the Row'},
+           say:{'1':'A collapsed panel shrinks to just its heading, and opening the panel beside it never stretches it.', '0':'A collapsed panel keeps the full height of its row, so the row keeps its shape.'}},
+  opens:  {t:'Open Things In', n:{drop:'Drop Down', rail:'Right Rail', both:'Both'},
+           say:{drop:'Click a task, note or project and it opens right under the row you clicked. Click the row again to close it. The arrow on each panel folds it.',
+                rail:'Click a task, note or project and it opens in the panel on the right side of the page. Clicking a panel’s heading opens the whole panel there too.',
+                both:'It opens under the row you clicked, with a button to move it into the right-side panel when you want more room.'}},
+  style:  {t:'Style for New Panels', n:{plain:'Plain', bold:'Bold'},
+           say:{plain:'A quiet card with a plain heading.', bold:'A colored edge across the top and, under the heading, a bar showing how much of the work inside is done.'}},
+  autocol:{t:'Color New Panels Automatically', n:{'1':'On','0':'Off'},
+           say:{'1':'Each panel you add gets a color no other panel on your board is using.', '0':'New panels come in without a color. You can still color any panel in its gear.'}},
+  colors: {t:'Panel Colors', n:{rand:'Randomize Every Panel', clear:'Clear Every Color'},
+           say:{rand:'Shuffles a different color onto every panel on your board.', clear:'Takes the color off every panel.'}},
+  band:   {t:'Show the Top Band', n:{'1':'Show','0':'Hide'},
+           say:{'1':'The navy band across the top of your board, with your counts in it.', '0':'No band. Your panels start right at the top for more room.'}},
+  tiles:  {t:'What It Counts', n:{}, say:{}},
+  name:   {t:'Panel Name', n:{}, say:{}},
+  share:  {t:'Share of Its Row', n:{'':'An Equal Share','1':'A Double Share'},
+           say:{'':'This panel is the same width as the others on its row.', '1':'This panel is twice as wide as the others on its row.'}},
+  start:  {t:'When the Board Opens', n:{'0':'Open','1':'Collapsed'},
+           say:{'0':'This panel is open when you come to your board.', '1':'This panel is folded down to just its heading. Open it whenever you need it.'}},
+  popen:  {t:'Open Things In', n:{'':'Same as My Board', own:'Its Own Setting'},
+           say:{'':'This panel follows My Board Settings, like every other panel.', own:'This panel opens things its own way, whatever the board is set to.'}},
+  pstyle: {t:'Style', n:{'':'Plain', bold:'Bold'},
+           say:{'':'A quiet card with a plain heading.', bold:'A colored edge across the top and a bar under the heading showing how much of the work inside is done.'}},
+  pcolor: {t:'Color', n:{}, say:{}}
+};
+/* a small picture of a board; `me` marks the panel the setting is about */
+function pvMock(k, v, ctx){
+  ctx=ctx||{};
+  const P=(x,y,w,h,cls,rows,extra)=>{
+    let inner='<i class="mk-hd"></i>';
+    for(let i=0;i<(rows||0);i++) inner+='<i class="mk-ln" style="top:'+(16+i*9)+'px;width:'+(70-((i*13)%30))+'%"></i>';
+    return '<i class="mk-p '+(cls||'')+'" style="left:'+x+'%;top:'+y+'%;width:'+w+'%;height:'+h+'%;'+(extra||'')+'">'+inner+'</i>';
+  };
+  const band=(hl)=>'<i class="mk-band'+(hl?' hl':'')+'"><i class="mk-tl" style="left:4%"></i><i class="mk-tl" style="left:28%"></i><i class="mk-tl" style="left:52%"></i><i class="mk-tl" style="left:76%"></i></i>';
+  const nb=(side,top,hlS,hlT)=>{
+    const L=side?22:2;
+    let h='';
+    if(side) h+='<i class="mk-pages'+(hlS?' hl':'')+'"><i class="mk-pg on"></i><i class="mk-pg"></i><i class="mk-pg"></i></i>';
+    if(top) h+='<i class="mk-tabs'+(hlT?' hl':'')+'" style="left:'+L+'%"><i class="mk-tab on"></i><i class="mk-tab"></i><i class="mk-tab"></i></i>';
+    h+='<i class="mk-canvas" style="left:'+L+'%;top:'+(top?20:4)+'%"></i>';
+    const ox=L+3, w=100-L;
+    h+=P(ox, top?28:12, w*0.40, 38, '', 2)+P(ox+w*0.48, top?36:20, w*0.38, 30, '', 2)+P(ox+w*0.1, top?72:58, w*0.5, 22, '', 1);
+    return h;
+  };
+  let h='';
+  const col=ctx.col? 'border-top:3px solid var(--'+ctx.col+');' : '';
+  switch(k){
+    case 'arr': h = v==='notebook' ? nb(1,1) : band()+P(3,24,46,34,'',2)+P(51,24,46,34,'',2)+P(3,63,94,31,'',2); break;
+    case 'nbSide': h = nb(v==='1', 1, v==='1', 0); break;
+    case 'nbTop': h = nb(1, v==='1', 0, v==='1'); break;
+    case 'match': h = band()+ (v==='1' ? P(3,24,30,70,'me',3)+P(35,24,30,70,'me',5)+P(67,24,30,70,'me',2)
+                                        : P(3,24,30,46,'me',3)+P(35,24,30,70,'me',5)+P(67,24,30,34,'me',2)); break;
+    case 'shut': h = band()+ (v==='1' ? P(3,24,46,10,'me shut',0)+P(51,24,46,70,'',5)
+                                       : P(3,24,46,70,'me shut tall',0)+P(51,24,46,70,'',5)); break;
+    case 'opens': case 'popen2': {
+      const m=v||'rail';
+      if(m==='rail') h = band()+P(3,24,58,70,'',4)+'<i class="mk-rail hl"><i class="mk-hd"></i><i class="mk-ln" style="top:18px;width:70%"></i><i class="mk-ln" style="top:27px;width:55%"></i><i class="mk-ln" style="top:36px;width:62%"></i></i>';
+      else h = band()+'<i class="mk-p" style="left:3%;top:24%;width:'+(m==='both'?58:94)+'%;height:70%"><i class="mk-hd"></i><i class="mk-row" style="top:16px"></i><i class="mk-row on" style="top:28px"></i><i class="mk-drop hl" style="top:40px">'+(m==='both'?'<i class="mk-go">→</i>':'')+'</i><i class="mk-row" style="top:76px"></i></i>'
+            + (m==='both' ? '<i class="mk-rail ghost"></i>' : '');
+      break; }
+    case 'style': case 'pstyle': {
+      const bold = v==='bold';
+      h = band()+P(3,24,46,70,(k==='pstyle'?'me ':'')+(bold?'bold':''),3,bold?'border-top:3px solid var(--c1);':'')+P(51,24,46,70,(k==='style'&&bold?'bold':''),3,(k==='style'&&bold)?'border-top:3px solid var(--c3);':''); break; }
+    case 'autocol': case 'colors': {
+      const on = (v==='1'||v==='rand'); const cs=['c1','c2','c3','c5'];
+      h = band()+[[3,24],[51,24],[3,61],[51,61]].map((p,i)=>P(p[0],p[1],46,33,'me',2,on?'border-top:3px solid var(--'+cs[i]+');':'')).join(''); break; }
+    case 'band': h = (v==='1'? band(1) : '') + (v==='1' ? P(3,24,46,70,'',3)+P(51,24,46,70,'',3) : P(3,6,46,88,'me',5)+P(51,6,46,88,'me',5)); break;
+    case 'tiles': h = band(1)+P(3,24,46,70,'',3)+P(51,24,46,70,'',3); break;
+    case 'share': h = band()+ (v==='1' ? P(3,24,62,70,'me',4,col)+P(67,24,30,70,'',3) : P(3,24,46,70,'me',4,col)+P(51,24,46,70,'',3)); break;
+    case 'start': h = band()+ (v==='1' ? P(3,24,46,10,'me shut',0,col)+P(51,24,46,70,'',4) : P(3,24,46,70,'me',4,col)+P(51,24,46,70,'',4)); break;
+    case 'popen': return pvMock('opens', v==='own' ? (ctx.own||'rail') : (ctx.board||'rail'), ctx);
+    case 'pcolor': h = band()+P(3,24,46,70,'me',4, v? 'border-top:3px solid var(--'+v+');' : '')+P(51,24,46,70,'',4); break;
+    case 'name': h = band()+P(3,24,46,70,'me named',3)+P(51,24,46,70,'',3); break;
+    default: h = band()+P(3,24,46,70,'',3)+P(51,24,46,70,'',3);
+  }
+  const m=el('div','mk'); m.innerHTML=h;
+  if(k==='name'){ const lab=m.querySelector('.named .mk-hd'); if(lab){ lab.classList.add('txt'); lab.textContent=ctx.name||'My Notes'; } }
+  return m;
+}
+/* the preview pane for one sheet */
+function pvPane(){
+  const pane=el('aside','setpv');
+  pane.setAttribute('aria-live','polite');
+  let rowDef=null;
+  pane.show=(pv, v)=>{
+    if(!pv) return;
+    const info=PV_INFO[pv.k]||{t:pv.t||'', n:{}, say:{}};
+    const val = (v===undefined || v===null) ? pv.cur : v;
+    pane.textContent='';
+    pane.appendChild(el('div','setpvk','What This Does'));
+    pane.appendChild(el('h4',null, pv.t || info.t));
+    pane.appendChild(pvMock(pv.k, val, pv.ctx));
+    const nm = (pv.names && pv.names[val]) || info.n[val] || '';
+    const say = (pv.say && pv.say[val]) || info.say[val] || pv.desc || '';
+    const isNow = String(val)===String(pv.cur);
+    if(nm) pane.appendChild(el('div','setpvv'+(isNow?' now':' if'), isNow? 'Now: '+nm : 'If You Pick: '+nm));
+    if(say) pane.appendChild(el('p',null, say));
+    if(!isNow){ const cn=(pv.names && pv.names[pv.cur]) || info.n[pv.cur]; if(cn) pane.appendChild(el('p','setpvnow','It is set to '+cn+' now. Nothing changes until you click.')); }
+  };
+  pane.rest=()=>{ if(rowDef) pane.show(rowDef); };
+  pane.setDefault=(pv)=>{ rowDef=pv; pane.show(pv); };
+  return pane;
+}
+let PV_PANE=null;
 function setRow(label, desc, control, opts){
   opts=opts||{};
   const r=el('div','setrow'+(opts.off?' off':''));
@@ -11815,26 +12237,49 @@ function setRow(label, desc, control, opts){
   const c=el('div','setc'); if(control) c.appendChild(control);
   if(opts.after) c.appendChild(opts.after);
   r.appendChild(c);
+  if(opts.pv){
+    const pv=Object.assign({t:label, desc:desc}, opts.pv);
+    r._pv=pv;
+    const showRow=()=>{ if(PV_PANE) PV_PANE.show(pv); };
+    r.addEventListener('mouseenter', showRow);
+    r.addEventListener('focusin', e=>{ const b=e.target.closest && e.target.closest('[data-v]'); if(!b) showRow(); });
+    r.querySelectorAll('[data-v]').forEach(b=>{
+      const showOpt=()=>{ if(PV_PANE) PV_PANE.show(pv, b.dataset.v); };
+      b.addEventListener('mouseenter', showOpt);
+      b.addEventListener('focus', showOpt);
+      b.addEventListener('mouseleave', showRow);
+    });
+  }
   return r;
 }
+/* Settings are grouped like the sections of a settings page: the groups down the
+   left, the chosen group's settings in the middle, and what the setting under the
+   pointer does on the right. */
 function setGroups(box, key, groups){
-  if(!S.setOpen) S.setOpen={};
-  const wrap=el('div','setgroups');
+  if(!S.setTab) S.setTab={};
+  let cur=S.setTab[key];
+  if(!groups.some(g=>g.k===cur)) cur=groups[0].k;
+  const wrap=el('div','setx');
+  const nav=el('nav','setnav'); nav.setAttribute('aria-label','Settings groups');
+  const main=el('div','setmain');
+  const pane=pvPane(); PV_PANE=pane;
   groups.forEach(g=>{
-    const k=key+':'+g.k, open=!!S.setOpen[k];
-    const sec=el('section','setgrp'+(open?' open':''));
-    const h=el('button','setgh'); h.type='button'; h.setAttribute('aria-expanded', String(open));
-    h.innerHTML='<svg class="cv" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
-    const t=el('span','setght'); t.appendChild(el('b',null,g.n));
-    if(g.d) t.appendChild(el('small',null,g.d));
-    h.appendChild(t);
-    h.appendChild(el('span','setsum', g.sum()));
-    h.addEventListener('click', ()=>{ S.setOpen[k]=!open; g.repaint(); });
-    sec.appendChild(h);
-    if(open){ const body=el('div','setbody'); g.rows(body); sec.appendChild(body); }
-    wrap.appendChild(sec);
+    const b=el('button','setnb'+(g.k===cur?' on':'')); b.type='button';
+    b.setAttribute('aria-pressed', String(g.k===cur));
+    b.appendChild(el('b',null,g.n));
+    b.appendChild(el('small',null,g.sum()));
+    b.addEventListener('click', ()=>{ S.setTab[key]=g.k; g.repaint(); });
+    nav.appendChild(b);
   });
+  const g=groups.find(x=>x.k===cur);
+  const gh=el('div','setmh'); gh.appendChild(el('h3',null,g.n)); if(g.d) gh.appendChild(el('p',null,g.d));
+  main.appendChild(gh);
+  const body=el('div','setbody'); g.rows(body); main.appendChild(body);
+  main.addEventListener('mouseleave', ()=> pane.rest());
+  wrap.appendChild(nav); wrap.appendChild(main); wrap.appendChild(pane);
   box.appendChild(wrap);
+  const first=[...body.querySelectorAll('.setrow')].find(r=>r._pv);
+  if(first) pane.setDefault(first._pv); else { pane.appendChild(el('div','setpvk','What This Does')); pane.appendChild(el('p',null,'Point at a setting to see what it does.')); }
 }
 const nameOf=(opts,v)=> (opts.find(o=>String(o.v)===String(v))||{}).n || '';
 
@@ -11861,22 +12306,22 @@ function boardSettings(L){
          rows:b=>{
           const ARR=[{v:'board',n:'Board'},{v:'notebook',n:'Notebook'}];
           b.appendChild(setRow('Arrange My Board As', 'Board lays panels out in rows. Notebook works like OneNote: pages down the side, tabs across the top, and panels wherever you drag them.',
-            btnRow(ARR, nbOn()?'notebook':'board', 'tiny', v=>{ if(v==='notebook') nbEnsure(); B.arr=v; apply(); })));
+            btnRow(ARR, nbOn()?'notebook':'board', 'tiny', v=>{ if(v==='notebook') nbEnsure(); B.arr=v; apply(); }), {pv:{k:'arr', cur:nbOn()?'notebook':'board'}}));
           if(nbOn()){
             b.appendChild(setRow('Pages Down the Side', 'A list of pages on the left. Turning it off hides the other pages but keeps them.',
-              btnRow(ONOFF, nbSide()?'1':'0', 'tiny', v=>{ B.nbSide=v==='1'?1:0; apply(); })));
+              btnRow(ONOFF, nbSide()?'1':'0', 'tiny', v=>{ B.nbSide=v==='1'?1:0; apply(); }), {pv:{k:'nbSide', cur:nbSide()?'1':'0'}}));
             b.appendChild(setRow('Tabs Across the Top', 'Tabs within each page. Turning it off hides the other tabs but keeps them.',
-              btnRow(ONOFF, nbTop()?'1':'0', 'tiny', v=>{ B.nbTop=v==='1'?1:0; apply(); })));
+              btnRow(ONOFF, nbTop()?'1':'0', 'tiny', v=>{ B.nbTop=v==='1'?1:0; apply(); }), {pv:{k:'nbTop', cur:nbTop()?'1':'0'}}));
           }
           b.appendChild(setRow('Panels Side by Side', nbOn()? 'Only for the Board layout. In a notebook, size each panel by dragging its corner.' : 'Line every panel on a row up to the tallest one, or let each be as tall as what is in it.',
-            btnRow(HEIGHTS, String(B.match?1:0), 'tiny', v=>{ B.match=v==='1'?1:0; apply(); }), {off:nbOn()}));
+            btnRow(HEIGHTS, String(B.match?1:0), 'tiny', v=>{ B.match=v==='1'?1:0; apply(); }), {off:nbOn(), pv:{k:'match', cur:String(B.match?1:0)}}));
           b.appendChild(setRow('Collapsed Panels', B.match? 'A collapsed panel shrinks to just its heading, so opening the panel beside it never stretches it. Match the Row keeps it as tall as its row instead.' : 'Only applies when panels match their heights.',
-            btnRow(SHUT, B.shutMatch?'0':'1', 'tiny', v=>{ B.shutMatch=v==='0'?1:0; apply(); }), {off:!B.match || nbOn()}));
+            btnRow(SHUT, B.shutMatch?'0':'1', 'tiny', v=>{ B.shutMatch=v==='0'?1:0; apply(); }), {off:!B.match || nbOn(), pv:{k:'shut', cur:B.shutMatch?'0':'1'}}));
          }},
         {k:'open', n:'Opening Things', d:'Where a task, note or project opens when you click it.', repaint:paint,
          sum:()=> nameOf(OPEN_OPTS, B.opens||'rail'),
          rows:b=>{
-          b.appendChild(setRow('Open Things In', OPEN_HINT, openField(B.opens||'rail', v=>{ B.opens=v; apply(); }, false)));
+          b.appendChild(setRow('Open Things In', 'Where a task, note or project opens when you click it, and how a panel opens and closes. Point at a choice to see it.', openField(B.opens||'rail', v=>{ B.opens=v; apply(); }, false), {pv:{k:'opens', cur:B.opens||'rail'}}));
          }},
         {k:'look', n:'Appearance', d:'How new panels look, and colors across the board.', repaint:paint,
          sum:()=> nameOf(STY, B.style) + (B.autocol?' · Auto Color':''),
@@ -11885,26 +12330,26 @@ function boardSettings(L){
           all.addEventListener('click', ()=>{ eachPanel(L, w=>{ if(B.style==='bold') w.st='bold'; else delete w.st; });
             saveMine(); vMine($('#app-mine')); toast(B.style==='bold'?'Every panel is now bold.':'Every panel is now plain.'); });
           b.appendChild(setRow('Style for New Panels', 'Bold adds a strip across the top showing how much of the work inside is done.',
-            btnRow(STY, B.style, 'tiny', v=>{ B.style=(v==='bold')?'bold':'plain'; apply(); }), {after:all}));
+            btnRow(STY, B.style, 'tiny', v=>{ B.style=(v==='bold')?'bold':'plain'; apply(); }), {after:all, pv:{k:'style', cur:B.style==='bold'?'bold':'plain'}}));
           b.appendChild(setRow('Color New Panels Automatically', 'Give each panel you add a color nobody else on the board is using.',
-            btnRow(ONOFF, String(B.autocol?1:0), 'tiny', v=>{ B.autocol=v==='1'?1:0; apply(); })));
+            btnRow(ONOFF, String(B.autocol?1:0), 'tiny', v=>{ B.autocol=v==='1'?1:0; apply(); }), {pv:{k:'autocol', cur:String(B.autocol?1:0)}}));
           const cr=el('div','setbtns');
-          const rnd=el('button','btn ghost sm','Randomize Every Panel'); rnd.type='button';
+          const rnd=el('button','btn ghost sm','Randomize Every Panel'); rnd.type='button'; rnd.dataset.v='rand';
           rnd.addEventListener('click', ()=>{
             const pool=PANEL_COLORS.filter(c=>c.v).map(c=>c.v);
             for(let i=pool.length-1;i>0;i--){ const k=Math.floor(Math.random()*(i+1)); const t=pool[i]; pool[i]=pool[k]; pool[k]=t; }
             let i=0; eachPanel(L, w=>{ w.col=pool[i % pool.length]; i++; });
             saveMine(); vMine($('#app-mine')); toast('Colors shuffled.'); });
-          const clr=el('button','btn ghost sm','Clear Every Color'); clr.type='button';
+          const clr=el('button','btn ghost sm','Clear Every Color'); clr.type='button'; clr.dataset.v='clear';
           clr.addEventListener('click', ()=>{ eachPanel(L, w=>{ w.col=''; }); saveMine(); vMine($('#app-mine')); toast('Colors cleared.'); });
           cr.appendChild(rnd); cr.appendChild(clr);
-          b.appendChild(setRow('Panel Colors', 'Shuffle colors across every panel, or take them all off.', cr));
+          b.appendChild(setRow('Panel Colors', 'Shuffle colors across every panel, or take them all off.', cr, {pv:{k:'colors', cur:''}}));
          }},
         {k:'band', n:'Top Band', d:'The counts across the navy band at the top of your board.', repaint:paint,
          sum:()=> B.noBand? 'Hidden' : B.tiles.length+' of 4 Chosen',
          rows:b=>{
           b.appendChild(setRow('Show the Top Band', 'Hide it for more room on your board. Your counts come back when you turn it on.',
-            btnRow([{v:'1',n:'Show'},{v:'0',n:'Hide'}], B.noBand?'0':'1', 'tiny', v=>{ B.noBand=v==='0'?1:0; apply(); })));
+            btnRow([{v:'1',n:'Show'},{v:'0',n:'Hide'}], B.noBand?'0':'1', 'tiny', v=>{ B.noBand=v==='0'?1:0; apply(); }), {pv:{k:'band', cur:B.noBand?'0':'1'}}));
           const tg=el('div','pills setpills');
           HEAD_TILES.forEach(t=>{
             const on=B.tiles.indexOf(t.v)>=0;
@@ -11918,7 +12363,7 @@ function boardSettings(L){
               apply(); });
             tg.appendChild(bb);
           });
-          b.appendChild(setRow('What It Counts', 'Pick up to four. They show in the order you pick them.', tg, {off:!!B.noBand}));
+          b.appendChild(setRow('What It Counts', 'Pick up to four. They show in the order you pick them.', tg, {off:!!B.noBand, pv:{k:'tiles', cur:'x', desc:'The four counts in the navy band at the top of your board. Pick up to four; they show in the order you pick them.'}}));
          }}
       ]);
       const acts=el('div','modal-acts');
@@ -11958,7 +12403,7 @@ function panelLook(w, L, title){
             sySaveItem(cur, {t:v}).then(()=>{ vMine($('#app-mine')); const h=box.querySelector('.sethead h2'); if(h) h.textContent=v; }); };
           ni.addEventListener('change', keep);
           ni.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); keep(); ni.blur(); } });
-          b.appendChild(setRow('Panel Name', 'Shows as this panel’s heading. Give each My Notes panel its own name to keep different notes apart — Board Prep, Sponsor Calls, Ideas.', ni));
+          b.appendChild(setRow('Panel Name', 'Shows as this panel’s heading. Give each My Notes panel its own name to keep different notes apart — Board Prep, Sponsor Calls, Ideas.', ni, {pv:{k:'name', cur:'x', ctx:{name:(syCard(w.k)||{}).t||'My Notes'}, desc:'The name shows as this panel\u2019s heading on your board.'}}));
          }}] : [];
       setGroups(box, 'panel', nameGroup.concat([
         {k:'size', n:'Size and Place', d:'How much of its row it takes, and whether it starts open.', repaint:paint,
@@ -11967,9 +12412,9 @@ function panelLook(w, L, title){
           b.appendChild(setRow(nbOn()? 'Size' : 'Share of Its Row', nbOn()? 'In a notebook, drag the panel\u2019s bottom-right corner to size it, and its heading to move it.' : onRow>1
               ? 'Shares this row with '+(onRow-1)+(onRow===2?' other panel':' other panels')+'. A double share makes it twice as wide as the rest.'
               : 'On a row of its own, so it runs the full width. Drag another panel onto this row to split it.',
-            btnRow(PANEL_SHARE, w.wide?'1':'', 'tiny', v=>{ w.wide=v?1:0; apply(); }), {off:onRow<2 || nbOn()}));
+            btnRow(PANEL_SHARE, w.wide?'1':'', 'tiny', v=>{ w.wide=v?1:0; apply(); }), {off:onRow<2 || nbOn(), pv:{k:'share', cur:w.wide?'1':'', ctx:{col:w.col}}}));
           b.appendChild(setRow('When the Board Opens', 'Start this panel open, or collapsed to its heading.',
-            btnRow(START, String(w.c?1:0), 'tiny', v=>{ w.c=v==='1'?1:0; apply(); })));
+            btnRow(START, String(w.c?1:0), 'tiny', v=>{ w.c=v==='1'?1:0; apply(); }), {pv:{k:'start', cur:String(w.c?1:0), ctx:{col:w.col}}}));
          }},
         {k:'open', n:'Opening Things', d:'Where something opens when you click it in this panel.', repaint:paint,
          sum:()=> w.open? 'This Panel · '+nameOf(OPEN_OPTS, w.open) : 'Same as My Board · '+nameOf(OPEN_OPTS, bset().opens||'rail'),
@@ -11981,9 +12426,10 @@ function panelLook(w, L, title){
               ? 'This panel has its own setting. Switch back to follow My Board Settings ('+boardName+').'
               : 'Follows My Board Settings, which open things in the '+boardName.toLowerCase()+'. Change that for every panel in My Board Settings, or give just this panel its own.',
             btnRow([{v:'',n:'Same as My Board ('+boardName+')'},{v:'own',n:'Its Own Setting'}], w.open?'own':'', 'tiny', v=>{
-              if(v==='own'){ if(!w.open) w.open=bset().opens||'rail'; } else delete w.open; apply(); })));
-          if(w.open) b.appendChild(setRow('This Panel Opens In', OPEN_HINT,
-            openField(w.open, v=>{ w.open=v; apply(); }, false)));
+              if(v==='own'){ if(!w.open) w.open=bset().opens||'rail'; } else delete w.open; apply(); }),
+            {pv:{k:'popen', cur:w.open?'own':'', names:{'':'Same as My Board ('+boardName+')', own:'Its Own Setting'}, ctx:{board:bset().opens||'rail', own:w.open||bset().opens||'rail'}}}));
+          if(w.open) b.appendChild(setRow('This Panel Opens In', 'Only this panel. Point at a choice to see it.',
+            openField(w.open, v=>{ w.open=v; apply(); }, false), {pv:{k:'opens', cur:w.open, t:'This Panel Opens In'}}));
          }},
         {k:'look', n:'Appearance', d:'Its style and color.', repaint:paint,
          sum:()=> nameOf(PANEL_STYLES, w.st||'') + ' · ' + colName,
@@ -11992,15 +12438,16 @@ function panelLook(w, L, title){
           all.addEventListener('click', ()=>{ const v=w.st||''; eachPanel(L, x=>{ x.st=v; }); saveMine(); vMine($('#app-mine'));
             toast('Every panel is now '+(v==='bold'?'bold':'plain')+'.'); });
           b.appendChild(setRow('Style', 'Plain is the quiet card. Bold adds a colored top edge and, under the heading, how far along the work inside is.',
-            btnRow(PANEL_STYLES, w.st||'', 'tiny', v=>{ w.st=v; apply(); }), {after:all}));
+            btnRow(PANEL_STYLES, w.st||'', 'tiny', v=>{ w.st=v; apply(); }), {after:all, pv:{k:'pstyle', cur:w.st||''}}));
           const cg=el('div','swatches');
           PANEL_COLORS.forEach(c=>{
-            const s=el('button','sw'+((w.col||'')===c.v?' on':'')); s.type='button'; s.title=c.n; s.setAttribute('aria-label',c.n);
+            const s=el('button','sw'+((w.col||'')===c.v?' on':'')); s.type='button'; s.title=c.n; s.setAttribute('aria-label',c.n); s.dataset.v=c.v;
             if(c.v) s.style.setProperty('--pc','var(--'+c.v+')'); else s.classList.add('none');
             s.addEventListener('click', ()=>{ w.col=c.v; apply(); });
             cg.appendChild(s);
           });
-          b.appendChild(setRow('Color', 'The color along its edge. '+colName+' now.', cg));
+          const cnames={}; PANEL_COLORS.forEach(c=>{ cnames[c.v]=c.n; });
+          b.appendChild(setRow('Color', 'The color along its edge. '+colName+' now.', cg, {pv:{k:'pcolor', cur:w.col||'', names:cnames, desc:'The color along the top edge of this panel, so you can find it at a glance.'}}));
          }}
       ]));
       const acts=el('div','modal-acts');
@@ -12433,6 +12880,32 @@ function mtWeek(host){
    Jot It Down (Park It) and post-its added straight onto the wall work the same way.
    Saves as you type; the page waits to redraw until you click away. */
 const STICKY_COLS=['y','b','g','p','o'];
+/* Where a post-it lives. Parked from Jot It Down (or added on Today) it is on the
+   team's note wall. Put on someone's board, it carries `board` (their person id) and
+   shows on that person's My Board, not on the team wall. */
+function wallNotes(){ return S.notes.filter(n=> !n.board); }
+function boardNotes(who){ return S.notes.filter(n=> n.board && n.board===who); }
+const NOTE_FILTERS=[{v:'all',n:'Both'},{v:'mine',n:'My Board'},{v:'team',n:'Team Wall'}];
+function panelNotes(w){
+  const f=(w && w.nf) || 'all';
+  if(f==='mine') return boardNotes(S.me);
+  if(f==='team') return wallNotes();
+  return S.notes.filter(n=> !n.board || n.board===S.me);
+}
+/* the Note Wall panel on My Board */
+function noteWallPanel(w, b){
+  const f=w.nf||'all';
+  const top=el('div','nwtop');
+  top.appendChild(btnRow(NOTE_FILTERS, f, 'tiny', v=>{ w.nf=v; saveMine(); vMine($('#app-mine')); }));
+  top.appendChild(addPostItButton(f==='team'? '' : S.me));
+  b.appendChild(top);
+  const list=panelNotes(w);
+  if(!list.length) return b.appendChild(emptyBox(f==='team'? 'Nothing on the team wall.' : 'No post-its here yet.',
+    'Click Add a Post-It and start typing, or use Jot It Down.'));
+  const g=el('div','stickies');
+  list.forEach(n=> g.appendChild(noteSticky(n)));
+  b.appendChild(g);
+}
 const STICKY_NAMES={y:'Yellow',b:'Blue',g:'Green',p:'Pink',o:'Orange'};
 function stickySize(tx){ tx.style.height='auto'; tx.style.height=Math.max(72, tx.scrollHeight)+'px'; }
 function noteSticky(n){
@@ -12474,7 +12947,7 @@ function noteSticky(n){
     await save();
     /* the first line is the task; anything after it goes into the notes */
     const lines=v.split(/\n+/), first=lines.shift().trim().slice(0,160), rest=lines.join('\n').trim();
-    editTask({t:first, o:n.by||S.me||'', r:n.r||'', w:'', s:'Not Started', p:'Normal', due:'', notes:rest,
+    editTask({t:first, o:n.board||n.by||S.me||'', r:n.r||'', w:'', s:'Not Started', p:'Normal', due:'', notes:rest,
               ord:(S.tasks.length+1)*10, at:Date.now(), src:'note'}, ()=> drop('notes', n.id));
   });
   f.appendChild(mk);
@@ -12500,17 +12973,19 @@ function noteSticky(n){
   return c;
 }
 /* a fresh, blank post-it, ready to type on */
-async function addPostIt(){
+async function addPostIt(board){
   if(!S.me){ toast('Pick your name in the top right corner first.'); return; }
   const n={t:'', by:S.me, r:'', at:Date.now(), col:STICKY_COLS[Math.floor(Math.random()*STICKY_COLS.length)]};
+  if(board) n.board=board;
   const id=await put('notes', n);
   setTimeout(()=>{ const t=document.querySelector('.sticky[data-nid="'+id+'"] .stx'); if(t){ t.focus(); t.scrollIntoView({block:'nearest'}); } }, 80);
 }
-function addPostItButton(){
+function addPostItButton(board){
   const b=el('button','btn ghost sm addpostit'); b.type='button';
   b.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>';
   b.appendChild(el('span',null,'Add a Post-It'));
-  b.addEventListener('click', addPostIt);
+  b.title = board? 'A new post-it on your board' : 'A new post-it on the team\u2019s note wall';
+  b.addEventListener('click', ()=> addPostIt(board||''));
   return b;
 }
 /* the page waits to redraw while someone is typing on a post-it */
@@ -12615,6 +13090,90 @@ function sortCommit(item){
     setTimeout(()=>{ const n=document.querySelector('[data-sid="'+sid+'"] .dgrip'); if(n) n.focus(); }, 120);
   }, true);
 })();
+
+/* ============ OUTLOOK AVAILABILITY (resources.mismo.org only) ============
+   A Power Automate flow on each person's account reads their Outlook calendar and saves
+   availability only (start, end, free/busy/out of office, all-day) to
+   team-hq-data/data/cal-<person id>.json. No titles, places or attendees. Team HQ
+   reads those files through the relay and shows, on Where My Team Is Today:
+     Out of Office in Outlook  -> Out of Office
+     Busy or tentative now     -> In a Meeting, until the time it ends
+   A Key Date (travel, out of office) and a status someone set today both still win. */
+const CAL = { by:{}, at:0, busy:false, tried:false };
+function calOn(){ return !!(window.__hqRelay && window.__hqRelay.readOther); }
+function calLoad(force){
+  if(!calOn() || CAL.busy) return;
+  if(!force && CAL.at && Date.now()-CAL.at < 10*60000) return;
+  CAL.busy=true;
+  const proj=(window.__hqRelay.config && window.__hqRelay.config.PROJECT) || 'team-hq';
+  Promise.all(S.people.map(p=> window.__hqRelay.readOther(proj, 'cal-'+p.id)
+      .then(d=>[p.id, d], ()=>[p.id, null])))
+    .then(list=>{
+      const by={};
+      list.forEach(([id,d])=>{ if(d && Array.isArray(d.ev)) by[id]=d.ev.map(calEv).filter(Boolean); });
+      CAL.by=by; CAL.at=Date.now(); CAL.busy=false; CAL.tried=true;
+      if(S.tab==='today') render('today');
+    }, ()=>{ CAL.busy=false; CAL.tried=true; });
+}
+/* times from Outlook arrive in UTC, sometimes without the Z */
+function calTime(v){
+  let s=String(v||'').trim(); if(!s) return null;
+  if(!/[zZ]|[+-]\d\d:?\d\d$/.test(s)) s+='Z';
+  const t=Date.parse(s); return isNaN(t)? null : t;
+}
+function calEv(x){
+  if(!x) return null;
+  const show=String(x.show||x.showAs||'').toLowerCase();
+  if(!show || show==='free' || show==='workingelsewhere') return null;
+  const av=(x.allDay!==undefined? x.allDay : x.isAllDay), all = av===true || String(av).toLowerCase()==='true';
+  if(all) return {all:1, show, d0:String(x.s||x.start||'').slice(0,10), d1:String(x.e||x.end||'').slice(0,10)};
+  const s=calTime(x.s||x.start), e=calTime(x.e||x.end); if(s==null || e==null) return null;
+  return {all:0, show, s, e};
+}
+function calHas(pid){ return !!CAL.by[pid]; }
+/* what Outlook says about this person right now */
+function calNow(pid){
+  const list=CAL.by[pid]; if(!list) return null;
+  const now=Date.now(), iso=isoOf(today());
+  if(list.some(x=> x.all && x.show==='oof' && iso>=x.d0 && iso<x.d1)) return {k:'out', note:'Out of Office in Outlook'};
+  const on=list.filter(x=> !x.all && x.s<=now && now<x.e);
+  if(on.some(x=> x.show==='oof')) return {k:'out', note:'Out of Office in Outlook'};
+  if(on.length){
+    /* back-to-back meetings read as one stretch */
+    let end=Math.max.apply(null, on.map(x=>x.e)), grew=true;
+    while(grew){ grew=false; list.forEach(x=>{ if(!x.all && x.s<=end && x.e>end){ end=x.e; grew=true; } }); }
+    const t=new Date(end).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    return {k:'meeting', note:'Until '+t+' · Outlook'};
+  }
+  return null;
+}
+const EFF_RAW = effStatus;
+effStatus = function(p){
+  const ef=EFF_RAW(p);
+  if(!p || !calHas(p.id)) return ef;
+  if(ef.auto && ef.k!=='off') return ef;                                 /* a Key Date says travel or out */
+  const setToday = p.statusAt && p.statusAt.slice(0,10)===isoOf(today());
+  if(setToday && ef.k!=='around') return ef;                             /* they chose something today */
+  const c=calNow(p.id); if(!c) return ef;
+  if(ef.k==='off' && c.k==='meeting') return ef;                         /* a meeting on a day off: leave Off */
+  return {k:c.k, note:c.note, auto:0, cal:1};
+};
+/* a line under Where My Team Is Today, so it is plain whose Outlook is connected */
+function calLine(){
+  if(!calOn() || !CAL.tried) return null;
+  const on=S.people.filter(p=> calHas(p.id));
+  const line=el('p','note calline');
+  line.textContent = on.length
+    ? 'Outlook connected for '+on.map(p=>p.name.split(' ')[0]).join(', ')+'. Meetings and out of office there show here by themselves.'
+    : 'No one’s Outlook is connected yet.';
+  return line;
+}
+if(calOn()){
+  setTimeout(()=> calLoad(true), 2500);
+  setInterval(()=>{ if(!document.hidden) calLoad(); if(S.tab==='today' && !document.hidden) render('today'); }, 5*60000);
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) calLoad(); });
+}
+window.__cal = {CAL, calNow, load:calLoad};
 
 /* ============ rail search sources ============ */
 window.__search = function(t, push, goTab){
