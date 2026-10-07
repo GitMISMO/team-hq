@@ -1341,7 +1341,7 @@ body.dragging-now *{cursor:grabbing!important}
 .wrow{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px;align-items:start}
 /* "Match Their Heights": panels side by side line up, but a folded one stays short */
 .wrows.matched .wrow{align-items:stretch}
-.wrows.matched.shutshort .wrow > .widget.shut{align-self:start}
+.wrows.matched:not(.shutmatch) .wrow > .widget.shut{align-self:start}
 .bgear{padding:0;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;
   background:none;border:0;border-radius:6px;color:var(--ink-3);cursor:pointer}
 .bgear:hover{background:var(--surface-2);color:var(--ink)}
@@ -6645,7 +6645,7 @@ function vMine(root){
 
   const L=layout();
   const B=bset();
-  const grid=el('div','wrows'+(B.match?' matched':'')+(B.shutShort?' shutshort':''));
+  const grid=el('div','wrows'+(B.match?' matched':'')+(B.shutMatch?' shutmatch':''));
   L.forEach((row,ri)=>{
     const rn=el('div','wrow'); rn.dataset.r=String(ri);
     const spans=rowSpans(row);
@@ -11649,7 +11649,7 @@ function boardSettings(L){
       box.appendChild(hd);
       const apply=()=>{ saveMine(); vMine($('#app-mine')); paint(); };
       const HEIGHTS=[{v:'1',n:'Match Their Heights'},{v:'0',n:'Each Its Own Height'}];
-      const SHUT=[{v:'0',n:'Match the Row'},{v:'1',n:'Stay Short'}];
+      const SHUT=[{v:'1',n:'Stay Short'},{v:'0',n:'Match the Row'}];
       const STY=[{v:'plain',n:'Plain'},{v:'bold',n:'Bold'}];
       const ONOFF=[{v:'1',n:'On'},{v:'0',n:'Off'}];
       setGroups(box, 'board', [
@@ -11668,8 +11668,8 @@ function boardSettings(L){
           }
           b.appendChild(setRow('Panels Side by Side', nbOn()? 'Only for the Board layout. In a notebook, size each panel by dragging its corner.' : 'Line every panel on a row up to the tallest one, or let each be as tall as what is in it.',
             btnRow(HEIGHTS, String(B.match?1:0), 'tiny', v=>{ B.match=v==='1'?1:0; apply(); }), {off:nbOn()}));
-          b.appendChild(setRow('Collapsed Panels', B.match? 'Keep a collapsed panel the same height as its row, or shrink it to just its heading.' : 'Only applies when panels match their heights.',
-            btnRow(SHUT, String(B.shutShort?1:0), 'tiny', v=>{ B.shutShort=v==='1'?1:0; apply(); }), {off:!B.match || nbOn()}));
+          b.appendChild(setRow('Collapsed Panels', B.match? 'A collapsed panel shrinks to just its heading, so opening the panel beside it never stretches it. Match the Row keeps it as tall as its row instead.' : 'Only applies when panels match their heights.',
+            btnRow(SHUT, B.shutMatch?'0':'1', 'tiny', v=>{ B.shutMatch=v==='0'?1:0; apply(); }), {off:!B.match || nbOn()}));
          }},
         {k:'open', n:'Opening Things', d:'Where a task, note or project opens when you click it.', repaint:paint,
          sum:()=> nameOf(OPEN_OPTS, B.opens||'rail'),
