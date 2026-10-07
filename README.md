@@ -19,7 +19,9 @@ which only people given the *Team HQ Private Notes* tool can read.
   `team-hq-data`, so there is history and rollback.
 - Sign-in and who can open what come from `/assets/session.js` and the admin panel's
   People & Access (Edit / View / No access).
-- Ask and Plan My Day need Claude, so they are only in the Claude copy.
+- Ask, Plan My Day and receipt reading go through the relay's ask route (MISMO's
+  Anthropic API key stays in the relay). They switch on by themselves once that route is live;
+  until then receipts are still saved, just not read.
 
 ## Updating the page
 

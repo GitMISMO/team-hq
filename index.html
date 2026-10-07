@@ -2080,6 +2080,55 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .f > span .fromrcpt{font-style:normal;font-weight:600;font-size:10.5px;margin-left:7px;padding:0 6px;border-radius:3px;background:var(--info-soft);color:var(--c1);letter-spacing:0}
 @media(max-width:900px){.exphead .exptile:first-child{grid-column:span 2}}
 
+/* ---------- choosing panels ---------- */
+.pgfind{width:100%;margin:2px 0 12px;padding:9px 12px;border:1px solid var(--border-strong);border-radius:4px;background:var(--surface);color:var(--ink);font:inherit;font-size:13.5px}
+.pgroups{display:flex;flex-direction:column;gap:8px}
+.pgroup{border:1px solid var(--border);border-radius:6px;background:var(--surface);overflow:hidden}
+.pgh{display:flex;align-items:center;gap:10px;width:100%;padding:11px 13px;border:0;background:none;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.pgh:hover{background:var(--surface-2)}
+.pgh .cv{width:15px;height:15px;flex:0 0 auto;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform .15s;color:var(--ink-3)}
+.pgroup.open .pgh .cv{transform:rotate(90deg)}
+.pght{flex:1 1 auto;min-width:0}
+.pght b{display:block;font-size:14px;font-weight:700}
+.pght small{display:block;font-size:12px;color:var(--ink-2);line-height:1.4;margin-top:2px}
+.pgct{flex:0 0 auto;font-size:11.5px;font-weight:600;color:var(--ink-3);white-space:nowrap}
+.pgroup .wlist{padding:0 10px 10px}
+.prow .wrt .pgon{display:inline-block;margin-left:8px;padding:0 6px;border-radius:3px;font-size:10.5px;font-weight:700;background:var(--info-soft);color:var(--c1);vertical-align:1px}
+/* ---------- team projects list panel ---------- */
+.pjbar{margin-bottom:8px}
+.pjlist{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.pjrow{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:10px 12px 10px 14px;border:0;border-top:1px solid var(--border);background:var(--surface);color:var(--ink);font:inherit;cursor:pointer;position:relative}
+.pjrow:first-child{border-top:0}
+.pjrow::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--rc)}
+.pjrow:hover{background:var(--info-soft)}
+.pjm{flex:1 1 auto;min-width:0}
+.pjm b{display:block;font-size:13.5px;font-weight:700}
+.pjm small{display:block;font-size:12px;color:var(--ink-2);margin-top:2px;line-height:1.4}
+.pjs{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:5px;min-width:110px}
+.pjc{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+.pjp{display:flex;align-items:center;gap:7px;width:120px}
+.pjp small{font-size:11px;color:var(--ink-3);white-space:nowrap}
+.pjfoot{margin-top:8px;display:flex;justify-content:flex-end}
+@media(max-width:560px){.pjrow{flex-wrap:wrap}.pjs{width:100%;align-items:flex-start;min-width:0}.pjc{justify-content:flex-start}}
+
+/* ---------- my projects ---------- */
+.mptop{display:flex;align-items:center;gap:8px;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap}
+.mprow.open{background:var(--info-soft)}
+.mpedit{gap:12px}
+.mpprog{display:flex;align-items:center;gap:9px}
+.mpprog small{font-size:12px;color:var(--ink-2);white-space:nowrap}
+.mpsteps{display:flex;flex-direction:column;gap:6px}
+.mpstep{display:grid;grid-template-columns:auto 1fr 150px auto;gap:8px;align-items:center}
+.mpstep input[type=checkbox]{width:17px;height:17px;accent-color:var(--c1)}
+.mpstep.done input[type=text]{text-decoration:line-through;color:var(--ink-3)}
+.mpadd{display:flex;gap:8px;align-items:center}
+.mpadd input,.mpadd select{flex:1 1 auto;min-width:0}
+.mptasks{display:flex;flex-direction:column;gap:6px}
+.mptask{display:flex;gap:8px;align-items:center}
+.mptaskb{flex:1 1 auto;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 11px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--ink);font:inherit;font-size:13px;text-align:left;cursor:pointer}
+.mptaskb:hover{background:var(--info-soft)}
+@media(max-width:560px){.mpstep{grid-template-columns:auto 1fr;}.mpstep input[type=date]{grid-column:2}.mpstep .btn{grid-column:2;justify-self:end}}
+
 #rs-account{flex:0 0 auto;display:inline-flex;align-items:center}
 #rs-account .rs-who,#rs-account .rs-signin{border-radius:4px}
 </style>
@@ -6301,6 +6350,8 @@ const WTYPES = {
   countdown: {n:'Countdowns',          d:'The pinned dates with days to go.'},
   team:      {n:'Where My Team Is Today', d:'Who is reachable today, who is away or travelling, and how loaded each person is.'},
   links:     {n:'My Systems',          d:'Jump straight into Summit HQ, the Financial System and the rest.'},
+  myprojects:{n:'My Projects',         d:'Your own bigger projects — bigger than a task. Each has a status, target date, its steps and any board tasks that belong to it. Only you can see them.'},
+  projects:  {n:'Team Projects List',  d:'Every bigger project in one list — where it stands, who is accountable, how far along and what is due next. Filter to Active, Mine, Next Up or All.'},
   rock:      {n:'One Team Project',        d:'A single team project with all its parts and who is in them.'},
   plan:      {n:'One Plan',            d:'An onboarding plan, handover or checklist — how far along it is, and what is due next.'},
   notes:     {n:'The Note Wall',       d:'Jotted-down things nobody has turned into tasks yet.'},
@@ -7390,6 +7441,8 @@ function buildWidget(w, b){
   }
   if(w.t==='plan') return planWidget(w, b);
   if(w.t==='mynote') return noteWidget(w, b);
+  if(w.t==='projects') return projectsWidget(w, b);
+  if(w.t==='myprojects') return myProjectsWidget(w, b);
   b.appendChild(emptyBox('This panel is no longer available.','Take it off your board.'));
 }
 
@@ -7399,91 +7452,7 @@ function newPanel(p, L){
   if(!p.st && B.style==='bold') p.st='bold';
   return p;
 }
-function addWidget(L){
-  sheet(box=>{
-    box.appendChild(el('h2',null,'Your Panels'));
-    box.appendChild(el('p',null,'Switch a panel on or off, and say whether it should start open or collapsed. Drag a panel by its header to move it around.'));
-    const g=el('div','wlist');
-
-      const redraw = ()=>{ closeSheet(); vMine($('#app-mine')); };
-    const allOf = k => { const out=[]; eachPanel(L,(w)=>{ if(w.t===k) out.push(w); }); return out; };
-    const rowFor = (k, t)=>{
-      const on = allOf(k);
-      const r=el('div','prow'+(on.length?' is-on':''));
-      const txt=el('div','wrt');
-      txt.appendChild(el('b',null,t.n));
-      txt.appendChild(el('small',null,t.d));
-      r.appendChild(txt);
-      const acts=el('div','wra');
-
-      if(on.length && !t.multi){
-        /* already on the board — choose how it starts */
-        const w0 = on[0];
-        acts.appendChild(btnRow([{v:'0',n:'Open'},{v:'1',n:'Collapsed'}], String(w0.c?1:0), 'tiny', v=>{
-          on.forEach(w=>{ w.c = v==='1'?1:0; }); saveMine(); vMine($('#app-mine'));
-        }));
-        const off=el('button','btn ghost sm','Take It Off'); off.type='button';
-        off.addEventListener('click', ()=>{
-          for(let ri=L.length-1; ri>=0; ri--){
-            for(let ci=L[ri].r.length-1; ci>=0; ci--) if(L[ri].r[ci].t===k) L[ri].r.splice(ci,1);
-            if(!L[ri].r.length) L.splice(ri,1);
-          }
-          saveMine(); redraw();
-        });
-        acts.appendChild(off);
-      } else {
-        const add=el('button','btn sm','Add It'); add.type='button';
-        add.addEventListener('click', ()=> pickExtra(k, t, L));
-        acts.appendChild(add);
-      }
-      r.appendChild(acts);
-      return r;
-    };
-
-    const onBoard = [];
-    eachPanel(L,(w)=>{ if(WTYPES[w.t] && onBoard.indexOf(w.t)<0) onBoard.push(w.t); });
-    const rest = Object.keys(WTYPES).filter(k=> onBoard.indexOf(k)<0 && (k!=='planday' || !window.__hqRelay || window.__hqRelay.askReady()));
-    onBoard.concat(rest).forEach(k=>{
-      const t=WTYPES[k];
-      /* these can sit on the board more than once, so they always offer Add It */
-      if(k==='rock' || k==='person' || k==='plan' || k==='mynote'){
-        const mine = allOf(k);
-        const r=el('div','prow'+(mine.length?' is-on':''));
-        const txt=el('div','wrt');
-        txt.appendChild(el('b',null,t.n));
-        txt.appendChild(el('small',null, mine.length? (mine.length+' on your board · '+t.d) : t.d));
-        r.appendChild(txt);
-        const acts=el('div','wra');
-        const add=el('button','btn sm','Add It'); add.type='button';
-        add.addEventListener('click', ()=> pickExtra(k, t, L));
-        acts.appendChild(add);
-        r.appendChild(acts); g.appendChild(r); return;
-      }
-      g.appendChild(rowFor(k, t));
-    });
-    box.appendChild(g);
-
-    /* the gap in the list is the moment to ask for what is missing */
-    const miss=el('div','prow askrow');
-    const mtx=el('div','wrt');
-    mtx.appendChild(el('b',null,'Not Here?'));
-    mtx.appendChild(el('small',null,'Ask for a panel or a number that does not exist yet. It goes to '
-      +(person(ASK_OWNER)? person(ASK_OWNER).name.split(' ')[0] : 'whoever looks after Team HQ')+'.'));
-    miss.appendChild(mtx);
-    const ma=el('div','wra');
-    const mb=el('button','btn sm','Ask for It'); mb.type='button';
-    mb.addEventListener('click', ()=>{ closeSheet(); askSheet({kind:'panel', t:'', why:''}); });
-    ma.appendChild(mb); miss.appendChild(ma);
-    box.appendChild(miss);
-
-    const acts=el('div','modal-acts');
-    const reset=el('button','btn ghost','Reset to the Default Board'); reset.type='button';
-    reset.addEventListener('click', ()=>{ S.layout=null; saveMine(); closeSheet(); vMine($('#app-mine')); toast('Board reset.'); });
-    const cl=el('button','btn','Done'); cl.type='button'; cl.addEventListener('click',closeSheet);
-    acts.appendChild(reset); acts.appendChild(cl); box.appendChild(acts);
-  });
-}
-
+/* addWidget lives in panels.js */
 /* a few panels need you to say which one before they go on */
 function pickExtra(k, t, L){
   const done = ()=>{ saveMine(); closeSheet(); vMine($('#app-mine')); };
@@ -11042,6 +11011,406 @@ function editExp(e0, tripName){
     acts.appendChild(cancel); acts.appendChild(save); body.appendChild(acts);
   });
 }
+
+/* ============ MY BOARD: CHOOSING PANELS ============
+   The panel list is grouped by what a panel is FOR, each group saying in one line when
+   you would want it, with a search across all of them. Groups are closed by default and
+   say how many of their panels are already on your board. */
+const PANEL_GROUPS = [
+  {k:'work',     n:'My Work',             d:'What is on your own plate — your tasks, what is due, and your standing jobs.',
+   items:['mytasks','myprojects','duesoon','taskcal','watching','myrails','planday']},
+  {k:'projects', n:'Projects and Plans',  d:'The bigger efforts: how each one is going, what is next, and where work is doubling up.',
+   items:['projects','rock','plan','overlap']},
+  {k:'team',     n:'The Team',            d:'Who is around, who is free, and what everyone else has on.',
+   items:['team','freebusy','dueteam','person']},
+  {k:'dates',    n:'Dates',               d:'What is coming up and when.',
+   items:['countdown','calendar']},
+  {k:'notes',    n:'Notes and Ideas',     d:'Places to write things down before they turn into tasks.',
+   items:['mynote','notes','asks']},
+  {k:'numbers',  n:'Numbers and Systems', d:'Figures and lists from MISMO’s other systems, and the way into each one.',
+   items:['numbers','newcerts','sponsors','links']}
+];
+/* these can go on the board more than once (one per project, person, plan or section) */
+const PANEL_SEVERAL = ['rock','person','plan','mynote'];
+function panelAvailable(k){
+  if(!WTYPES[k]) return false;
+  /* Plan My Day needs Claude; on resources.mismo.org it waits for the relay's ask route */
+  if(k==='planday' && window.__hqRelay && !window.__hqRelay.askReady()) return false;
+  return true;
+}
+
+function addWidget(L){
+  if(!S.pgOpen) S.pgOpen={};
+  sheet(box=>{
+    box.classList.add('pgsheet');
+    box.appendChild(el('h2',null,'Your Panels'));
+    const allOf = k => { const out=[]; eachPanel(L,(w)=>{ if(w.t===k) out.push(w); }); return out; };
+    let onCount=0; eachPanel(L,()=>{ onCount++; });
+    box.appendChild(el('p',null, onCount+(onCount===1?' panel is':' panels are')+' on your board. Pick a group to see what it holds, or search. Drag a panel by its header to move it around.'));
+
+    const find=inp('search', S.pgFind||'', 'Search the panels — tasks, dates, notes, projects…');
+    find.className='pgfind'; find.setAttribute('aria-label','Search the panels');
+    box.appendChild(find);
+    const groupsW=el('div','pgroups'); box.appendChild(groupsW);
+
+    const redraw = ()=>{ closeSheet(); vMine($('#app-mine')); };
+    const rowFor = (k)=>{
+      const t=WTYPES[k], on=allOf(k), several=PANEL_SEVERAL.indexOf(k)>=0;
+      const r=el('div','prow'+(on.length?' is-on':''));
+      const txt=el('div','wrt');
+      const nm=el('b',null,t.n);
+      if(on.length) nm.appendChild(el('span','pgon', several? on.length+' on your board' : 'On your board'));
+      txt.appendChild(nm);
+      txt.appendChild(el('small',null, t.d + (several? ' Add one for each you want to follow.' : '')));
+      r.appendChild(txt);
+      const acts=el('div','wra');
+      if(on.length && !several && !t.multi){
+        const w0=on[0];
+        acts.appendChild(btnRow([{v:'0',n:'Open'},{v:'1',n:'Collapsed'}], String(w0.c?1:0), 'tiny', v=>{
+          on.forEach(w=>{ w.c = v==='1'?1:0; }); saveMine(); vMine($('#app-mine'));
+        }));
+        const off=el('button','btn ghost sm','Take It Off'); off.type='button';
+        off.addEventListener('click', ()=>{
+          for(let ri=L.length-1; ri>=0; ri--){
+            for(let ci=L[ri].r.length-1; ci>=0; ci--) if(L[ri].r[ci].t===k) L[ri].r.splice(ci,1);
+            if(!L[ri].r.length) L.splice(ri,1);
+          }
+          saveMine(); redraw();
+        });
+        acts.appendChild(off);
+      } else {
+        const add=el('button','btn sm', on.length? 'Add Another' : 'Add It'); add.type='button';
+        add.addEventListener('click', ()=> pickExtra(k, t, L));
+        acts.appendChild(add);
+      }
+      r.appendChild(acts);
+      return r;
+    };
+
+    const known=[]; PANEL_GROUPS.forEach(g=> known.push.apply(known, g.items));
+    const extra=Object.keys(WTYPES).filter(k=> known.indexOf(k)<0);
+    const groups=PANEL_GROUPS.concat(extra.length? [{k:'other', n:'Everything Else', d:'Panels that do not fit the groups above.', items:extra}] : []);
+
+    const paint=()=>{
+      groupsW.textContent='';
+      const q=norm(find.value||''); S.pgFind=find.value||'';
+      let shown=0;
+      groups.forEach(g=>{
+        const items=g.items.filter(panelAvailable).filter(k=>{
+          if(!q) return true; const t=WTYPES[k];
+          return norm(t.n+' '+t.d+' '+g.n).indexOf(q)>=0;
+        });
+        if(!items.length) return;
+        shown+=items.length;
+        const onIn=items.filter(k=> allOf(k).length).length;
+        const open = q? true : !!S.pgOpen[g.k];
+        const sec=el('section','pgroup'+(open?' open':''));
+        const h=el('button','pgh'); h.type='button'; h.setAttribute('aria-expanded', String(open));
+        h.innerHTML='<svg class="cv" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
+        const tx=el('span','pght');
+        tx.appendChild(el('b',null,g.n));
+        tx.appendChild(el('small',null,g.d));
+        h.appendChild(tx);
+        h.appendChild(el('span','pgct', onIn? onIn+' of '+items.length+' on' : items.length+(items.length===1?' panel':' panels')));
+        h.addEventListener('click', ()=>{ if(q) return; S.pgOpen[g.k]=!open; paint(); });
+        sec.appendChild(h);
+        if(open){ const list=el('div','wlist'); items.forEach(k=> list.appendChild(rowFor(k))); sec.appendChild(list); }
+        groupsW.appendChild(sec);
+      });
+      if(!shown) groupsW.appendChild(el('p','note','No panel matches that. Try another word, or ask for it below.'));
+    };
+    find.addEventListener('input', paint);
+    paint();
+
+    /* the gap in the list is the moment to ask for what is missing */
+    const miss=el('div','prow askrow');
+    const mtx=el('div','wrt');
+    mtx.appendChild(el('b',null,'Not Here?'));
+    mtx.appendChild(el('small',null,'Ask for a panel or a number that does not exist yet. It goes to '
+      +(person(ASK_OWNER)? person(ASK_OWNER).name.split(' ')[0] : 'whoever looks after Team HQ')+'.'));
+    miss.appendChild(mtx);
+    const ma=el('div','wra');
+    const mb=el('button','btn sm','Ask for It'); mb.type='button';
+    mb.addEventListener('click', ()=>{ closeSheet(); askSheet({kind:'panel', t:'', why:''}); });
+    ma.appendChild(mb); miss.appendChild(ma);
+    box.appendChild(miss);
+
+    const acts=el('div','modal-acts');
+    const reset=el('button','btn ghost','Reset to the Default Board'); reset.type='button';
+    reset.addEventListener('click', ()=>{ S.layout=null; saveMine(); closeSheet(); vMine($('#app-mine')); toast('Board reset.'); });
+    const cl=el('button','btn','Done'); cl.type='button'; cl.addEventListener('click',closeSheet);
+    acts.appendChild(reset); acts.appendChild(cl); box.appendChild(acts);
+  });
+}
+
+/* ============ TEAM PROJECTS LIST (a My Board panel) ============
+   Every bigger effort in one list: where it stands, who is accountable, how far along,
+   and what is due next. A click opens the project in the right rail. */
+const PJ_FILTERS = [{v:'active',n:'Active'},{v:'mine',n:'Mine'},{v:'next',n:'Next Up'},{v:'all',n:'All'}];
+function pjOrder(s){ const i=RSTAT.indexOf(s); return i<0? 9 : i; }
+function projectsWidget(w, b){
+  const f=w.f||'active';
+  const bar=el('div','pjbar');
+  bar.appendChild(btnRow(PJ_FILTERS, f, 'tiny', v=>{ w.f=v; saveMine(); vMine($('#app-mine')); }));
+  b.appendChild(bar);
+  const me=S.me;
+  const tasksOf=r=> S.tasks.filter(t=>t.r===r.id);
+  let list=S.rocks.slice();
+  if(f==='active') list=list.filter(r=>r.status==='Active');
+  else if(f==='next') list=list.filter(r=>r.status==='Next Up');
+  else if(f==='mine') list=list.filter(r=> r.status!=='Done' && r.status!=='Not Pursuing' &&
+    (r.lead===me || r.whose===me || tasksOf(r).some(t=> t.s!=='Done' && (t.o===me || isDoing(t,me)))));
+  const late=r=> tasksOf(r).filter(t=>{ if(t.s==='Done') return false; const n=days(t.due); return n!==null && n<0; }).length;
+  list.sort((a,c)=> pjOrder(a.status)-pjOrder(c.status) || late(c)-late(a) || String(a.name||'').localeCompare(String(c.name||'')));
+  if(!list.length){
+    b.appendChild(emptyBox(f==='mine'? 'Nothing of yours here.' : 'No team projects in this list.',
+      f==='mine'? 'Projects you lead or have open work in show up here.' : 'Try another filter, or add one on the Team Projects tab.'));
+  } else {
+    const dupWs={}; overlaps().filter(o=>o.kind==='ws').forEach(o=>dupWs[o.rock+'||'+o.ws]=1);
+    const ul=el('div','pjlist');
+    list.forEach(r=>{
+      const ts=tasksOf(r), all=ts.length, dn=ts.filter(t=>t.s==='Done').length, lt=late(r);
+      const nxt=ts.filter(t=>t.s!=='Done' && t.due).sort((a,c)=> String(a.due).localeCompare(String(c.due)))[0];
+      const row=el('button','pjrow'); row.type='button';
+      row.style.setProperty('--rc', PCOL[(r.color||0)%PCOL.length]);
+      const main=el('span','pjm');
+      main.appendChild(el('b',null, r.name||'Untitled Project'));
+      const bits=[];
+      if(r.lead) bits.push(pname(r.lead).split(' ')[0]+' accountable');
+      const np=(r.ws||[]).length; if(np) bits.push(np+(np===1?' part':' parts'));
+      if(nxt) bits.push('next: '+nxt.t+' · '+fmtD(nxt.due));
+      main.appendChild(el('small',null, bits.join(' · ') || 'No work on it yet'));
+      row.appendChild(main);
+      const side=el('span','pjs');
+      const chips=el('span','pjc');
+      if(f==='all' || f==='mine') chips.appendChild(el('span','chip '+(r.status==='Active'?'ch-ip':r.status==='Next Up'?'ch-soon':r.status==='Done'?'ch-dn':'ch-out'), r.status));
+      if(lt) chips.appendChild(el('span','chip ch-od', lt+' late'));
+      if(chips.children.length) side.appendChild(chips);
+      const pg=el('span','pjp');
+      pg.appendChild(el('small',null, all? dn+' of '+all+' done' : 'no tasks'));
+      const pb=el('span','pbar'); const bi=el('i'); bi.style.width=(all? Math.round(dn/all*100):0)+'%'; pb.appendChild(bi);
+      pg.appendChild(pb); side.appendChild(pg);
+      row.appendChild(side);
+      row.addEventListener('click', ()=> rockPanel(r, dupWs));
+      ul.appendChild(row);
+    });
+    b.appendChild(ul);
+  }
+  const foot=el('div','pjfoot');
+  const go=el('button','btn ghost sm','Open Team Projects'); go.type='button';
+  go.addEventListener('click', ()=> show('rocks'));
+  foot.appendChild(go); b.appendChild(foot);
+}
+
+/* ============ MY PROJECTS (a My Board panel) ============
+   A person's own bigger projects — bigger than a task, smaller than a Team Project.
+   Each has a status, priority, dates, what done looks like, its own steps, any board
+   tasks that belong to it, notes and files. Private to the person, kept the same way
+   as My Notes (a one-person item in the Sync Ups store), so on resources.mismo.org the
+   relay hands them to nobody else. */
+const MP_STAT = ['Not Started','In Progress','On Hold','Done'];
+const MP_PRI = ['High','Normal','Low'];
+const MP_FILTERS = [{v:'open',n:'Open'},{v:'done',n:'Done'},{v:'all',n:'All'}];
+function mpAll(){ const me=syMe(); return SY.items.filter(i=> i.kind==='project' && (i.members||[]).indexOf(me)>=0); }
+function mpOf(id){ const x=syCard(id); return x && x.kind==='project' ? x : null; }
+function mpProgress(p){
+  const steps=(p.steps||[]), tasks=(p.tasks||[]).map(id=> S.tasks.find(t=>t.id===id)).filter(Boolean);
+  const all=steps.length+tasks.length, dn=steps.filter(s=>s.done).length+tasks.filter(t=>t.s==='Done').length;
+  return {all, dn};
+}
+function mpNext(p){
+  const s=(p.steps||[]).filter(x=>!x.done);
+  s.sort((a,b)=> String(a.due||'9999').localeCompare(String(b.due||'9999')));
+  return s[0] || null;
+}
+function mpChip(st){ return 'chip '+(st==='In Progress'?'ch-ip':st==='On Hold'?'ch-soon':st==='Done'?'ch-dn':'ch-ns'); }
+
+function myProjectsWidget(w, b){
+  syStart();
+  const mode=syncMode();
+  if(mode==='waiting'){ b.appendChild(emptyBox('Your projects open once the save relay keeps them to you.','Perry’s relay update switches this on; nothing on this page needs to change.')); return; }
+  if(mode==='none'){ b.appendChild(emptyBox('Projects need you signed in.','Team HQ has to know whose projects they are.')); return; }
+  const loaded = SY.mode==='shared' ? SY.syncsSeen : !!SY.priv;
+  if(!loaded){ b.appendChild(el('p','note','Loading your projects…')); return; }
+  const f=w.f||'open';
+  const top=el('div','mptop');
+  top.appendChild(btnRow(MP_FILTERS, f, 'tiny', v=>{ w.f=v; saveMine(); vMine($('#app-mine')); }));
+  const add=el('button','btn sm'); add.type='button';
+  add.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>';
+  add.appendChild(el('span',null,'Add a Project'));
+  add.addEventListener('click', ()=> mpEditor(null));
+  top.appendChild(add);
+  b.appendChild(top);
+
+  let list=mpAll();
+  if(f==='open') list=list.filter(p=>p.st!=='Done'); else if(f==='done') list=list.filter(p=>p.st==='Done');
+  const ord={'In Progress':0,'Not Started':1,'On Hold':2,'Done':3};
+  list.sort((a,c)=> (ord[a.st]??1)-(ord[c.st]??1) || MP_PRI.indexOf(a.pri||'Normal')-MP_PRI.indexOf(c.pri||'Normal')
+    || String(a.due||'9999').localeCompare(String(c.due||'9999')) || String(a.name||'').localeCompare(String(c.name||'')));
+  if(!list.length){
+    b.appendChild(emptyBox(f==='done'? 'Nothing finished yet.' : 'No projects here yet.',
+      f==='done'? 'Projects you mark Done show up here.' : 'Add one for anything bigger than a task — a process to write, a system to set up, a report to build.'));
+  } else {
+    const ul=el('div','pjlist');
+    list.forEach(p=>{
+      const pr=mpProgress(p), nx=mpNext(p), n=days(p.due);
+      const row=el('button','pjrow mprow'+(S.mpOpen===p.id && panelOpen()?' open':'')); row.type='button';
+      row.style.setProperty('--rc', p.pri==='High'? 'var(--bad)' : p.pri==='Low'? 'var(--border-strong)' : 'var(--c1)');
+      const main=el('span','pjm');
+      main.appendChild(el('b',null, p.name||'Untitled Project'));
+      const bits=[];
+      if(p.due) bits.push('target '+fmtD(p.due));
+      if(nx) bits.push('next: '+(nx.t||'a step')+(nx.due? ' · '+fmtD(nx.due):''));
+      if(p.ties && rock(p.ties)) bits.push('part of '+rock(p.ties).name);
+      main.appendChild(el('small',null, bits.join(' · ') || (p.goal? p.goal : 'No steps yet')));
+      row.appendChild(main);
+      const side=el('span','pjs');
+      const chips=el('span','pjc');
+      chips.appendChild(el('span', mpChip(p.st||'Not Started'), p.st||'Not Started'));
+      if(p.st!=='Done' && n!==null && n<0) chips.appendChild(el('span','chip ch-od','Past target'));
+      else if(p.pri==='High' && p.st!=='Done') chips.appendChild(el('span','chip ch-hi','High'));
+      side.appendChild(chips);
+      const pg=el('span','pjp');
+      pg.appendChild(el('small',null, pr.all? pr.dn+' of '+pr.all+' done' : 'no steps'));
+      const pb=el('span','pbar'); const bi=el('i'); bi.style.width=(pr.all? Math.round(pr.dn/pr.all*100):0)+'%'; pb.appendChild(bi);
+      pg.appendChild(pb); side.appendChild(pg);
+      row.appendChild(side);
+      row.addEventListener('click', ()=> mpEditor(p.id));
+      ul.appendChild(row);
+    });
+    b.appendChild(ul);
+  }
+  b.appendChild(el('div','mynote-s', 'Only you can see these.'));
+}
+
+/* one project, in the right rail; everything saves as you go */
+function mpEditor(id){
+  let cur = id? mpOf(id) : null;
+  if(id && !cur) return;
+  S.mpOpen=id||'';
+  const d = cur? JSON.parse(JSON.stringify(cur)) : {name:'', st:'Not Started', pri:'Normal', start:isoOf(today()), due:'', ties:'', goal:'', steps:[], tasks:[], notes:'', files:[]};
+  panel(cur? (d.name||'Untitled Project') : 'New Project', 'My Projects · only you can see this', body=>{
+    const wrap=el('div','mynote mpedit');
+    const st=el('div','mynote-s');
+    let tmr=null, busy=null;
+    const stamp=()=>{ const x=cur && (syCard(cur.id)||cur); st.textContent = x && x.edited? 'Saved '+relWhen(x.edited)+'.' : (cur? '' : 'Give it a name and it saves by itself.'); };
+    const save=async ()=>{ clearTimeout(tmr); tmr=null;
+      if(busy) await busy;
+      if(!cur && !String(d.name||'').trim()){ stamp(); return; }
+      S.noteHold=1;
+      if(!cur){ busy=syPut('syncitems', Object.assign({kind:'project', sync:'', members:[syMe()], at:Date.now(), by:S.me||''}, d, {edited:Date.now()}));
+        cur=await busy; S.mpOpen=cur.id; }
+      else { busy=sySaveItem(syCard(cur.id)||cur, Object.assign({}, d, {edited:Date.now()})); await busy; }
+      busy=null; S.noteHold=0; stamp(); };
+    const soon=()=>{ clearTimeout(tmr); st.textContent='Saving…'; tmr=setTimeout(save, 800); };
+    const now=()=>{ save(); };
+
+    const g=el('div','fields');
+    const fN=field(g,'Project Name', inp('text', d.name, 'What is the project?'), 'w4');
+    fN.addEventListener('input', ()=>{ d.name=fN.value.trim(); soon(); });
+    wrap.appendChild(g);
+
+    const g2=el('div','fields');
+    const sw=el('div','f w2'); sw.appendChild(el('span',null,'Where It Stands'));
+    sw.appendChild(btnRow(MP_STAT.map(x=>({v:x,n:x})), d.st, '', v=>{ d.st=v; now(); })); g2.appendChild(sw);
+    const pw=el('div','f w2'); pw.appendChild(el('span',null,'Priority'));
+    pw.appendChild(btnRow(MP_PRI.map(x=>({v:x,n:x})), d.pri||'Normal', '', v=>{ d.pri=v; now(); })); g2.appendChild(pw);
+    const fS=field(g2,'Start Date', inp('date', d.start||''));
+    const fD=field(g2,'Target Date', inp('date', d.due||''));
+    fS.addEventListener('change', ()=>{ d.start=fS.value; now(); });
+    fD.addEventListener('change', ()=>{ d.due=fD.value; now(); });
+    const fT=field(g2,'Part of a Team Project?', sel(S.rocks.map(r=>({v:r.id,n:r.name})), d.ties||'', 'No — just mine'), 'w2');
+    fT.addEventListener('change', ()=>{ d.ties=fT.value; now(); });
+    const fG=field(g2,'What Done Looks Like', inp('text', d.goal||'', 'One line — how you will know it is finished'), 'w4');
+    fG.addEventListener('input', ()=>{ d.goal=fG.value.trim(); soon(); });
+    wrap.appendChild(g2);
+
+    /* steps: each its own row */
+    wrap.appendChild(el('h3','sect-t','Steps'));
+    const stepsW=el('div','mpsteps'); wrap.appendChild(stepsW);
+    const paintSteps=()=>{
+      stepsW.textContent='';
+      if(!d.steps.length) stepsW.appendChild(el('p','note','No steps yet. Break it into the pieces you will actually do.'));
+      d.steps.forEach((s,i)=>{
+        const r=el('div','mpstep'+(s.done?' done':''));
+        const cb=el('input'); cb.type='checkbox'; cb.checked=!!s.done; cb.setAttribute('aria-label','Done');
+        cb.addEventListener('change', ()=>{ s.done=cb.checked?1:0; r.classList.toggle('done', !!s.done); now(); paintProg(); });
+        const tx=inp('text', s.t||'', 'Step'); tx.setAttribute('aria-label','Step');
+        tx.addEventListener('input', ()=>{ s.t=tx.value; soon(); });
+        const du=inp('date', s.due||''); du.setAttribute('aria-label','Due');
+        du.addEventListener('change', ()=>{ s.due=du.value; now(); });
+        const rm=el('button','btn ghost sm','Remove'); rm.type='button';
+        rm.addEventListener('click', ()=>{ if(!rm.dataset.c){ rm.dataset.c='1'; rm.textContent='Click Again'; return; }
+          d.steps.splice(i,1); now(); paintSteps(); paintProg(); });
+        r.appendChild(cb); r.appendChild(tx); r.appendChild(du); r.appendChild(rm);
+        stepsW.appendChild(r);
+      });
+    };
+    const addRow=el('div','mpadd');
+    const ns=inp('text','', 'Add a step and press Enter'); ns.setAttribute('aria-label','New step');
+    const nb=el('button','btn ghost sm','Add the Step'); nb.type='button';
+    const addStep=()=>{ const v=ns.value.trim(); if(!v) return; d.steps.push({id:uid('st'), t:v, done:0, due:''}); ns.value=''; now(); paintSteps(); paintProg(); ns.focus(); };
+    ns.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addStep(); } });
+    nb.addEventListener('click', addStep);
+    addRow.appendChild(ns); addRow.appendChild(nb); wrap.appendChild(addRow);
+
+    /* board tasks that belong to it — their status comes from the board */
+    wrap.appendChild(el('h3','sect-t','Tasks from Your Board'));
+    const tW=el('div','mptasks'); wrap.appendChild(tW);
+    const paintTasks=()=>{
+      tW.textContent='';
+      const linked=(d.tasks||[]).map(x=> S.tasks.find(t=>t.id===x)).filter(Boolean);
+      if(!linked.length) tW.appendChild(el('p','note','None linked. Link a task from your board and its progress counts here.'));
+      linked.forEach(t=>{
+        const r=el('div','mptask');
+        const o=el('button','mptaskb'); o.type='button';
+        o.appendChild(el('span',null,t.t)); o.appendChild(el('span', 'chip '+(t.s==='Done'?'ch-dn':t.s==='In Progress'?'ch-ip':'ch-ns'), t.s||'Not Started'));
+        o.addEventListener('click', ()=> editTask(t));
+        const un=el('button','btn ghost sm','Unlink'); un.type='button';
+        un.addEventListener('click', ()=>{ d.tasks=d.tasks.filter(x=>x!==t.id); now(); paintTasks(); paintProg(); });
+        r.appendChild(o); r.appendChild(un); tW.appendChild(r);
+      });
+      const mine=myTasks(S.me).filter(t=> t.s!=='Done' && (d.tasks||[]).indexOf(t.id)<0);
+      if(mine.length){
+        const lr=el('div','mpadd');
+        const sl=sel(mine.map(t=>({v:t.id, n:t.t})), '', 'Pick one of your tasks');
+        const lb=el('button','btn ghost sm','Link It'); lb.type='button';
+        lb.addEventListener('click', ()=>{ if(!sl.value) return; d.tasks=(d.tasks||[]).concat([sl.value]); now(); paintTasks(); paintProg(); });
+        lr.appendChild(sl); lr.appendChild(lb); tW.appendChild(lr);
+      }
+    };
+
+    const fNo=el('label','f w4'); fNo.appendChild(el('span',null,'Notes'));
+    const tx=el('textarea','mynote-x'); tx.rows=6; tx.value=d.notes||''; tx.placeholder='Anything about the project — decisions, contacts, where things are.';
+    tx.addEventListener('input', ()=>{ d.notes=tx.value; soon(); });
+    fNo.appendChild(tx);
+
+    const prog=el('div','mpprog');
+    const paintProg=()=>{ prog.textContent=''; const pr=mpProgress(d);
+      prog.appendChild(el('small',null, pr.all? pr.dn+' of '+pr.all+' done' : 'No steps or tasks yet'));
+      const pb=el('span','pbar'); const bi=el('i'); bi.style.width=(pr.all? Math.round(pr.dn/pr.all*100):0)+'%'; pb.appendChild(bi); prog.appendChild(pb); };
+    wrap.insertBefore(prog, wrap.children[1]);
+    paintSteps(); paintTasks(); paintProg();
+    const g3=el('div','fields'); g3.appendChild(fNo); wrap.appendChild(g3);
+    wrap.appendChild(attBlock(d.files||[], list=>{ d.files=list; now(); }, {title:'Files', folder:'attachments'}));
+
+    wrap.appendChild(st); stamp();
+    const acts=el('div','rowacts');
+    const del=el('button','btn danger','Delete This Project'); del.type='button';
+    del.addEventListener('click', ()=>{
+      if(!cur){ closePanel(); return; }
+      if(del.dataset.c){ clearTimeout(tmr); syDrop('syncitems', cur.id); S.mpOpen=''; closePanel(); toast('Project deleted.'); }
+      else { del.dataset.c='1'; del.textContent='Click Again to Delete'; } });
+    acts.appendChild(del); acts.appendChild(el('span','spacer'));
+    const done=el('button','btn','Back to My Board'); done.type='button';
+    done.addEventListener('click', async ()=>{ await save(); S.mpOpen=''; closePanel(); syRefresh(); });
+    acts.appendChild(done); wrap.appendChild(acts);
+    wrap.addEventListener('focusout', ()=> setTimeout(()=>{ if(!wrap.contains(document.activeElement)) save().then(()=> syRefresh()); }, 60));
+    body.appendChild(wrap);
+    if(!cur) setTimeout(()=> fN.focus(), 80);
+  });
+}
+window.__mp = {all:mpAll, editor:mpEditor};
 
 /* ============ rail search sources ============ */
 window.__search = function(t, push, goTab){
