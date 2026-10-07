@@ -684,6 +684,9 @@
     syncMode: function () { return syncShared === true ? 'shared' : 'waiting'; },
     myEmail: function () { return myId(); },
     canPrivate: function () { var rs = RS(); return !!(rs && rs.role(PRIVATE)); }, poll: function () { poll(true); }, pending: anyPending, status: status,
+    /* read one file of another tool the person has access to (Meeting Trackers' schedule);
+       resolves the file's content, or rejects (e.g. 403 when they have no access to it) */
+    readOther: function (proj, name) { return call(proj, '/data/' + encodeURIComponent(name), 'GET').then(function (b) { return (b && b.data) || null; }); },
     why: function () { return WHY[status.lastError] || status.lastError || ''; },
     config: { RELAY_URL: RELAY_URL, PROJECT: PROJECT, PRIVATE: PRIVATE, POLL_MS: POLL_MS } };
 
@@ -1338,7 +1341,7 @@ body.dragging-now *{cursor:grabbing!important}
 .wrow{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px;align-items:start}
 /* "Match Their Heights": panels side by side line up, but a folded one stays short */
 .wrows.matched .wrow{align-items:stretch}
-.wrows.matched .wrow > .widget.shut{align-self:start}
+.wrows.matched.shutshort .wrow > .widget.shut{align-self:start}
 .bgear{padding:0;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;
   background:none;border:0;border-radius:6px;color:var(--ink-3);cursor:pointer}
 .bgear:hover{background:var(--surface-2);color:var(--ink)}
@@ -2128,6 +2131,155 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .mptaskb{flex:1 1 auto;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 11px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--ink);font:inherit;font-size:13px;text-align:left;cursor:pointer}
 .mptaskb:hover{background:var(--info-soft)}
 @media(max-width:560px){.mpstep{grid-template-columns:auto 1fr;}.mpstep input[type=date]{grid-column:2}.mpstep .btn{grid-column:2;justify-self:end}}
+/* every row the same height, and the list in a box that is always the same size */
+.mpframe{display:flex;flex-direction:column}
+.mplist{flex:0 0 auto}
+.mprow{height:64px;flex-wrap:nowrap!important}
+.mprow .pjm b,.mprow .pjm small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mprow .pjs{width:132px;min-width:0}
+.mprow .pjc{flex-wrap:nowrap}
+.mprow .pjp{width:100%}
+.mprow.exp{background:var(--info-soft)}
+.mprow[aria-expanded]::after{content:"";width:8px;height:8px;border-right:2px solid var(--ink-3);border-bottom:2px solid var(--ink-3);transform:rotate(45deg);margin:0 2px 4px 2px;flex:0 0 auto;transition:transform .15s}
+.mprow.exp::after{transform:rotate(-135deg);margin-bottom:-4px}
+.mpdrop{padding:12px 14px 14px;border-top:1px solid var(--border);background:var(--surface-2)}
+.mpinline .mynote-x{min-height:120px}
+.mpquick{margin-bottom:8px}
+@media(max-width:560px){.mprow .pjs{width:96px}.mprow .pjc .chip:nth-child(2){display:none}}
+
+/* ---------- drop-downs on My Board ---------- */
+.wdrop{border:1px solid var(--border);border-left:3px solid var(--c1);border-radius:0 6px 6px 0;background:var(--surface-2);margin:2px 0 8px;padding:12px 14px}
+.wdrop .wdropb{padding:0;display:flex;flex-direction:column;gap:12px;background:none}
+.wdropbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.wdropbar b{font-size:13px;font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dropped, .dropped > .rh2{background:var(--info-soft)}
+
+/* ---------- settings sheets (board and panel) ---------- */
+#sheet-box.setsheet{max-width:760px}
+.setsheet .sethead{margin-bottom:14px}
+.setsheet .sethead h2{margin:0 0 4px}
+.setsheet .sethead p{margin:0;color:var(--ink-2);font-size:13px;line-height:1.5}
+.setgroups{display:flex;flex-direction:column;gap:8px}
+.setgrp{border:1px solid var(--border);border-radius:6px;background:var(--surface);overflow:hidden}
+.setgh{display:flex;align-items:center;gap:10px;width:100%;padding:12px 14px;border:0;background:none;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.setgh:hover{background:var(--surface-2)}
+.setgh .cv{width:15px;height:15px;flex:0 0 auto;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;color:var(--ink-3);transition:transform .15s}
+.setgrp.open .setgh .cv{transform:rotate(90deg)}
+.setght{flex:1 1 auto;min-width:0}
+.setght b{display:block;font-size:14px;font-weight:700}
+.setght small{display:block;font-size:12px;color:var(--ink-2);margin-top:2px;line-height:1.4}
+.setsum{flex:0 1 auto;max-width:45%;font-size:11.5px;font-weight:600;color:var(--c1);background:var(--info-soft);border-radius:3px;padding:2px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.setbody{border-top:1px solid var(--border)}
+.setrow{display:grid;grid-template-columns:minmax(0,250px) minmax(0,1fr);gap:24px;align-items:start;padding:14px 16px 14px 39px;border-top:1px solid var(--border)}
+.setrow:first-child{border-top:0}
+.setrow.off .setl b{color:var(--ink-3)}
+.setrow.off .setc{opacity:.5;pointer-events:none}
+.setl b{display:block;font-size:13.5px;font-weight:700;color:var(--ink)}
+.setl small{display:block;font-size:12px;color:var(--ink-2);margin-top:3px;line-height:1.45}
+.setc{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-width:0;padding-top:1px}
+.setc .btnrow{flex-wrap:wrap}
+.setbtns{display:flex;gap:8px;flex-wrap:wrap}
+.setpills{flex-wrap:wrap}
+.setc .swatches{flex-wrap:wrap}
+.setabout{margin:14px 2px 0;font-size:12.5px;color:var(--ink-2);line-height:1.5}
+.setabout b{color:var(--ink)}
+@media(max-width:620px){
+  .setrow{grid-template-columns:1fr;gap:10px;padding:12px 14px}
+  .setc{align-items:flex-start}
+  .setc .btnrow,.setbtns,.setpills,.setc .swatches{justify-content:flex-start}
+  .setsum{display:none}
+}
+
+.setsheet .sethead .setnote{margin-top:6px;font-size:12px;color:var(--ink-3)}
+.setsheet .modal-acts > :first-child{margin-right:auto}
+.setc .sw{box-shadow:inset 0 0 0 1px var(--border-strong)}
+
+/* ---------- My Board as a notebook ---------- */
+.nb{display:flex;align-items:stretch;border:1px solid var(--border);border-radius:8px;background:var(--surface);box-shadow:var(--shadow);min-height:640px;overflow:hidden}
+.nbpages{flex:0 0 210px;display:flex;flex-direction:column;gap:2px;padding:12px 8px;background:var(--surface-2);border-right:1px solid var(--border)}
+.nbmain{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
+.nbtabs{display:flex;align-items:flex-end;gap:2px;padding:10px 12px 0;background:var(--surface-2);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:thin}
+.nbt{display:flex;align-items:center;gap:7px;min-width:0;padding:8px 10px;border-radius:5px;cursor:pointer;font-size:13px;font-weight:600;color:var(--ink-2);user-select:none;-webkit-user-select:none;position:relative;outline-offset:-2px}
+.nbt:hover{background:var(--surface-3);color:var(--ink)}
+.nbt .nbn{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1 1 auto}
+.nbt .nbc{flex:0 0 auto;font-size:10.5px;font-weight:700;color:var(--ink-3);background:var(--surface-3);border-radius:8px;padding:0 6px;line-height:1.6}
+.nbpages .nbt.on{background:var(--surface);color:var(--ink);font-weight:700;box-shadow:inset 3px 0 0 var(--c1),0 1px 2px rgba(6,32,47,.08)}
+.nbtabs .nbt{flex:0 0 auto;max-width:240px;border:1px solid transparent;border-bottom:0;border-radius:6px 6px 0 0;margin-bottom:-1px;padding:8px 12px}
+.nbtabs .nbt.on{background:var(--surface);border-color:var(--border);color:var(--ink);font-weight:700;box-shadow:inset 0 3px 0 var(--c1)}
+.nbx{display:inline-flex;gap:2px;flex:0 0 auto}
+.nbi{width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:4px;background:none;color:var(--ink-3);cursor:pointer;padding:0}
+.nbi:hover{background:var(--info-soft);color:var(--c1)}
+.nbi svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.nbin{font:inherit;font-size:13px;font-weight:600;padding:3px 6px;border:1px solid var(--c1);border-radius:4px;background:var(--surface);color:var(--ink);min-width:0;width:100%}
+.nbt.dragging{opacity:.45}
+.nbt.over{box-shadow:inset 0 0 0 2px var(--c1)}
+.nbt.droptarget{background:var(--info-soft);color:var(--c1);box-shadow:inset 0 0 0 2px var(--c1)}
+.nbadd{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;border:1px dashed var(--border-strong);border-radius:5px;background:none;color:var(--ink-2);font:inherit;font-size:12.5px;font-weight:600;padding:6px 10px;cursor:pointer;margin:6px 2px 0}
+.nbtabs .nbadd{margin:0 0 6px 6px}
+.nbadd:hover{border-color:var(--c1);color:var(--c1);background:var(--info-soft)}
+.nbadd svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+.nbcanvas{position:relative;flex:1 1 auto;margin:14px 16px 16px;min-height:560px;border-radius:6px;
+  background-color:var(--surface);background-image:radial-gradient(var(--border) 1px, transparent 1.2px);background-size:24px 24px;background-position:12px 12px}
+.nbcanvas > .nbp{margin:0}
+.nbp{transition:box-shadow .15s}
+.nbp.fixedh .wbody{overflow:auto;flex:1 1 auto}
+.nbp.nbmoving{box-shadow:0 16px 36px rgba(6,32,47,.28);transition:none}
+.nbp > header{cursor:grab}
+.nbp.nbmoving > header{cursor:grabbing}
+.nbsize{position:absolute;right:0;bottom:0;width:18px;height:18px;cursor:nwse-resize;z-index:2;
+  background:linear-gradient(135deg, transparent 50%, var(--border-strong) 50%, var(--border-strong) 58%, transparent 58%, transparent 70%, var(--border-strong) 70%, var(--border-strong) 78%, transparent 78%)}
+.nbempty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px}
+.nbcanvas.nbstack{display:block;padding:12px;margin:0;background-image:none;min-height:0;flex:0 0 auto}
+.nbcanvas.nbstack > .nbp{margin:0 0 12px;flex:none}
+.nbcanvas.nbstack .nbempty{position:static}
+@media(max-width:760px){
+  .nb{flex-direction:column;min-height:0}
+  .nbpages{flex:0 0 auto;flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--border);padding:8px}
+  .nbpages .nbt{flex:0 0 auto;max-width:200px}
+  .nbpages .nbt.on{box-shadow:inset 0 -3px 0 var(--c1)}
+  .nbpages .nbadd{margin:0 0 0 4px}
+}
+
+/* ---------- today's workgroup meetings ---------- */
+.mtband{display:flex;align-items:center;gap:18px;flex-wrap:wrap;background:var(--navy);color:#fff;border:1px solid var(--navy-deep);border-radius:8px;padding:11px 16px;margin:0 0 16px}
+.mtband[hidden]{display:none}
+.mt-l{display:flex;flex-direction:column;gap:1px;flex:0 0 auto;padding-right:16px;border-right:1px solid rgba(116,191,235,.3)}
+.mt-eb{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--sky)}
+.mt-l b{font-size:14px;font-weight:700;white-space:nowrap}
+.mt-m{display:flex;flex-wrap:wrap;gap:8px;align-items:center;flex:1 1 auto;min-width:0}
+.mt-i{display:inline-flex;align-items:center;gap:8px;min-width:0;border-radius:5px;padding:5px 6px 5px 10px;font-size:12.5px;
+  background:rgba(255,255,255,.07);border:1px solid rgba(116,191,235,.28)}
+.mt-i.now{background:rgba(116,191,235,.18);border-color:var(--sky)}
+.mt-i.done{opacity:.55}
+.mt-t{font-weight:700;color:var(--sky);font-variant-numeric:tabular-nums;white-space:nowrap}
+.mt-n{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px}
+.mt-st{font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:3px;background:rgba(255,255,255,.14);white-space:nowrap}
+.mt-st.s-now{background:#1f9d63;color:#fff}
+.mt-st.s-soon{background:#e0a82e;color:#2a1d00}
+.mt-j{flex:0 0 auto;font-size:12px;font-weight:700;text-decoration:none;padding:3px 11px;border-radius:4px;background:var(--sky);color:var(--navy-deep)}
+.mt-j:hover{filter:brightness(1.07)}
+.mt-tz{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.6);margin-left:2px}
+.mt-none{font-size:13px;color:rgba(255,255,255,.88)}
+.mt-none b{color:#fff}
+/* the same feed inside a My Board panel */
+.mtpanel .mt-m{flex-direction:column;align-items:stretch;gap:6px}
+.mtpanel .mt-i{background:var(--surface-2);border-color:var(--border);color:var(--ink);padding:7px 8px 7px 11px}
+.mtpanel .mt-i.now{background:var(--info-soft);border-color:var(--c1)}
+.mtpanel .mt-t{color:var(--c1);min-width:88px}
+.mtpanel .mt-n{flex:1 1 auto;max-width:none}
+.mtpanel .mt-st{background:var(--surface-3);color:var(--ink-2)}
+.mtpanel .mt-j{background:var(--c1);color:#fff}
+.mtpanel .mt-tz{color:var(--ink-3);align-self:flex-end}
+.mtpanel .mt-none{color:var(--ink-2)}
+.mtpanel .mt-none b{color:var(--ink)}
+@media(max-width:620px){.mt-l{border-right:0;padding-right:0}.mt-n{max-width:180px}}
+.mtbar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.mt-day + .mt-day{margin-top:12px}
+.mt-dh{font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+.mtpanel .mt-tz{display:block;text-align:right;margin-top:6px}
+.mtbar a.btn{text-decoration:none}
+.mtpanel .mt-st.s-now{background:#1f9d63;color:#fff}
+.mtpanel .mt-st.s-soon{background:#e0a82e;color:#2a1d00}
 
 #rs-account{flex:0 0 auto;display:inline-flex;align-items:center}
 #rs-account .rs-who,#rs-account .rs-signin{border-radius:4px}
@@ -3611,6 +3763,7 @@ async function boot(){
     S.layout = LS.get('layout', null);
     S.view = LS.get('view', S.view);
     S.bset = LS.get('bset', null);
+    S.nb = LS.get('nb', null);
     S.ready = true; sortAll(); renderAll();
     return;
   }
@@ -3623,6 +3776,7 @@ async function boot(){
         /* snapshots come back frozen — clone before anything mutates them */
         S.layout = d.layout ? JSON.parse(JSON.stringify(d.layout)) : null;
         S.bset = d.bset ? JSON.parse(JSON.stringify(d.bset)) : null;
+        S.nb = d.nb ? JSON.parse(JSON.stringify(d.nb)) : null;
         if(d.me && !S.me){ S.me=d.me; LS.set('me',S.me); }
         if(d.view) S.view=d.view;
       }
@@ -3631,6 +3785,7 @@ async function boot(){
   if(!S.layout) S.layout = LS.get('layout', null);
   if(!S.view) S.view = LS.get('view', 'rows');
   if(!S.bset) S.bset = LS.get('bset', null);
+  if(!S.nb) S.nb = LS.get('nb', null);
 
   let first = COLS.length;
   COLS.forEach(c=>{
@@ -3736,11 +3891,11 @@ async function drop(col, id){
 }
 let layoutTmr=null;
 function saveMine(){
-  LS.set('layout', S.layout); LS.set('me', S.me); LS.set('bset', S.bset); LS.set('view', S.view);
+  LS.set('layout', S.layout); LS.set('me', S.me); LS.set('bset', S.bset); LS.set('view', S.view); LS.set('nb', S.nb||null);
   if(localOnly || !S.db || !S.uid) return;
   clearTimeout(layoutTmr);
   layoutTmr = setTimeout(()=>{
-    try{ S.db.doc('data/users/'+S.uid+'/profile').set({layout:S.layout||null, bset:S.bset||null, me:S.me||null, view:S.view}); }catch(e){}
+    try{ S.db.doc('data/users/'+S.uid+'/profile').set({layout:S.layout||null, bset:S.bset||null, me:S.me||null, view:S.view, nb:S.nb||null}); }catch(e){}
   }, 500);
 }
 
@@ -3838,7 +3993,7 @@ document.addEventListener('keydown', e=>{
 
 /* ============ sheet (modal) ============ */
 function sheet(build){
-  const m=$('#sheet'), box=$('#sheet-box'); box.textContent='';
+  const m=$('#sheet'), box=$('#sheet-box'); box.textContent=''; box.className='modal-box';
   build(box);
   /* the dialog is named by its own first heading, so screen readers announce it */
   const h=box.querySelector('h2'); if(h) h.id='sheet-t';
@@ -4585,6 +4740,7 @@ function vToday(root){
   b.addEventListener('click', ()=> me? setStatus(me) : pickMe());
   right.appendChild(b);
   vhead(root,'Today', new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'}), right);
+  root.appendChild(mtBand());
 
   // headline
   const late = openTasks().filter(t=>{const n=days(t.due); return n!==null && n<0;});
@@ -6350,6 +6506,7 @@ const WTYPES = {
   countdown: {n:'Countdowns',          d:'The pinned dates with days to go.'},
   team:      {n:'Where My Team Is Today', d:'Who is reachable today, who is away or travelling, and how loaded each person is.'},
   links:     {n:'My Systems',          d:'Jump straight into Summit HQ, the Financial System and the rest.'},
+  mtoday:    {n:'Meeting Trackers: Workgroup Meetings', d:'Which workgroups meet today or this week, when, whether they are on now, and a Join link — straight from Meeting Trackers.'},
   myprojects:{n:'My Projects',         d:'Your own bigger projects — bigger than a task. Each has a status, target date, its steps and any board tasks that belong to it. Only you can see them.'},
   projects:  {n:'Team Projects List',  d:'Every bigger project in one list — where it stands, who is accountable, how far along and what is due next. Filter to Active, Mine, Next Up or All.'},
   rock:      {n:'One Team Project',        d:'A single team project with all its parts and who is in them.'},
@@ -6475,7 +6632,7 @@ function vMine(root){
   bg.innerHTML='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
   bg.addEventListener('click', ()=> boardSettings(layout()));
   right.appendChild(bg);
-  vhead(root,'My Board', me? 'Drag a panel by its header to move it. Drop it on a row to join that row, above or below to start a new one.' : 'Pick your name up top and this becomes yours.', right);
+  vhead(root,'My Board', me? (nbOn()? 'Drag a panel by its heading to put it anywhere, and by its corner to size it. Drop it on a page or tab to move it there.' : 'Drag a panel by its header to move it. Drop it on a row to join that row, above or below to start a new one.') : 'Pick your name up top and this becomes yours.', right);
 
   if(!me){
     const bx=el('div','box'); bx.style.textAlign='center'; bx.style.padding='40px 20px';
@@ -6484,11 +6641,12 @@ function vMine(root){
     b2.addEventListener('click', pickMe); bx.appendChild(b2);
     root.appendChild(bx); return;
   }
-  root.appendChild(myHeadline(me));
+  if(!bset().noBand) root.appendChild(myHeadline(me));
+  if(nbOn()){ nbView(root); return; }
 
   const L=layout();
   const B=bset();
-  const grid=el('div','wrows'+(B.match?' matched':''));
+  const grid=el('div','wrows'+(B.match?' matched':'')+(B.shutShort?' shutshort':''));
   L.forEach((row,ri)=>{
     const rn=el('div','wrow'); rn.dataset.r=String(ri);
     const spans=rowSpans(row);
@@ -6499,79 +6657,7 @@ function vMine(root){
 }
 
 /* ---- the board's own gear ---- */
-function boardSettings(L){
-  const B=bset();
-  sheet(box=>{
-    box.appendChild(el('h2',null,'My Board Settings'));
-    box.appendChild(el('p',null,'These set the whole board. A panel\u2019s own settings still win, so one panel can differ.'));
-    const fs=el('div','fields');
-
-    const mf=el('label','f w2'); mf.appendChild(el('span',null,'Panels Side by Side'));
-    mf.appendChild(btnRow([{v:'1',n:'Match Their Heights'},{v:'0',n:'Each Its Own Height'}], String(B.match?1:0), 'tiny', v=>{
-      B.match = v==='1'?1:0; saveMine(); vMine($('#app-mine')); }));
-    mf.appendChild(el('small','hint','A collapsed panel always stays short, whichever you pick.'));
-    fs.appendChild(mf);
-
-    const cf=el('label','f w2'); cf.appendChild(el('span',null,'Color'));
-    const cr=el('div','rowflex'); cr.style.flexWrap='wrap'; cr.style.gap='8px';
-    const rnd=el('button','btn sm','Randomize Every Panel'); rnd.type='button';
-    rnd.addEventListener('click', ()=>{
-      const pool=PANEL_COLORS.filter(c=>c.v).map(c=>c.v);
-      for(let i=pool.length-1;i>0;i--){ const k=Math.floor(Math.random()*(i+1)); const t=pool[i]; pool[i]=pool[k]; pool[k]=t; }
-      let i=0; eachPanel(L, w=>{ w.col = pool[i % pool.length]; i++; });
-      saveMine(); vMine($('#app-mine')); toast('Colors shuffled.');
-    });
-    const clr=el('button','btn ghost sm','Clear Them All'); clr.type='button';
-    clr.addEventListener('click', ()=>{ eachPanel(L, w=>{ w.col=''; }); saveMine(); vMine($('#app-mine')); toast('Colors cleared.'); });
-    cr.appendChild(rnd); cr.appendChild(clr);
-    cf.appendChild(cr);
-    const ac=el('label','chkrow'); const cb=inp('checkbox'); cb.checked=!!B.autocol;
-    cb.addEventListener('change', ()=>{ B.autocol = cb.checked?1:0; saveMine(); });
-    ac.appendChild(cb); ac.appendChild(el('span',null,'Give a new panel a color automatically'));
-    cf.appendChild(ac);
-    fs.appendChild(cf);
-
-    const sf=el('label','f w2'); sf.appendChild(el('span',null,'How a New Panel Looks'));
-    sf.appendChild(btnRow([{v:'plain',n:'Plain'},{v:'bold',n:'Bold'}], B.style, 'tiny', v=>{
-      B.style = (v==='bold')?'bold':'plain'; saveMine(); closeSheet(); boardSettings(L); }));
-    const sr=el('div','rowflex'); sr.style.marginTop='8px';
-    const sa=el('button','btn ghost sm','Change Every Panel to This'); sa.type='button';
-    sa.addEventListener('click', ()=>{
-      eachPanel(L, w=>{ if(B.style==='bold') w.st='bold'; else delete w.st; });
-      saveMine(); vMine($('#app-mine')); toast(B.style==='bold'?'All bold.':'All plain.');
-    });
-    sr.appendChild(sa); sf.appendChild(sr);
-    sf.appendChild(el('small','hint','Bold adds a strip across the top showing how much of the work inside is done.'));
-    fs.appendChild(sf);
-
-    const tf=el('label','f w2'); tf.appendChild(el('span',null,'What the Top Band Counts'));
-    const tg=el('div','pills');
-    HEAD_TILES.forEach(t=>{
-      const on = B.tiles.indexOf(t.v)>=0;
-      const bb=el('button','pill',t.n); bb.type='button';
-      bb.setAttribute('aria-pressed', String(on));
-      if(!on && B.tiles.length>=4){ bb.disabled=true; bb.title='Take one off first \u2014 four is all that fits.'; }
-      bb.addEventListener('click', ()=>{
-        const k=B.tiles.indexOf(t.v);
-        if(k>=0){ if(B.tiles.length<=1) { toast('Keep at least one.'); return; } B.tiles.splice(k,1); }
-        else { if(B.tiles.length>=4){ return; } B.tiles.push(t.v); }
-        saveMine(); vMine($('#app-mine')); closeSheet(); boardSettings(L);
-      });
-      tg.appendChild(bb);
-    });
-    tf.appendChild(tg);
-    tf.appendChild(el('small','hint','Four at a time. Take one off and the rest become available again \u2014 they show in the order you pick them.'));
-    fs.appendChild(tf);
-
-    box.appendChild(fs);
-    const acts=el('div','modal-acts');
-    const rs=el('button','btn ghost','Reset to the Default Board'); rs.type='button';
-    rs.addEventListener('click', ()=>{ S.bset = JSON.parse(JSON.stringify(BSET_DEF)); saveMine(); closeSheet(); vMine($('#app-mine')); });
-    const dn=el('button','btn','Done'); dn.type='button'; dn.addEventListener('click', closeSheet);
-    acts.appendChild(rs); acts.appendChild(dn); box.appendChild(acts);
-  });
-}
-
+/* boardSettings lives in settings.js */
 /* the navy band, the same shape as the one on Today but about you */
 function myHeadline(me){
   const L=loadOf(me.id);
@@ -6777,7 +6863,7 @@ function widget(w, ri, ci, L, span){
     }
   }
   if(w.c) n.classList.add('shut');
-  else { const b=el('div','wbody'); buildWidget(w, b); n.appendChild(b); }
+  else { const b=el('div','wbody'); buildWidget(w, b); n.appendChild(b); wireDrops(w, b); }
 
   dragHandle(h, {
     ignore: '.wacts',
@@ -6849,64 +6935,7 @@ function widget(w, ri, ci, L, span){
 }
 
 /* one sheet for everything about how a panel looks */
-function panelLook(w, L, title){
-  const def = WTYPES[w.t] || {};
-  sheet(box=>{
-    box.appendChild(el('h2',null, title));
-    box.appendChild(el('p',null,'How this panel looks on your board. Nobody else sees your choices.'));
-    const fs=el('div','fields');
-
-    const here = findPanel(L, w);
-    const onRow = here ? L[here.ri].r.length : 1;
-    const wf=el('label','f w2'); wf.appendChild(el('span',null,'Share of Its Row'));
-    wf.appendChild(btnRow(PANEL_SHARE, w.wide? '1':'', 'tiny', v=>{
-      w.wide = v? 1 : 0; saveMine(); vMine($('#app-mine')); }));
-    wf.appendChild(el('small','hint', onRow>1
-      ? 'Sharing this row with '+(onRow-1)+(onRow===2?' other panel.':' other panels.')+' A double share makes it twice as wide as the rest.'
-      : 'On a row of its own, so it runs the full width. Drag another panel onto this row to split it.'));
-    fs.appendChild(wf);
-
-    const cf=el('label','f w2'); cf.appendChild(el('span',null,'Color'));
-    const cg=el('div','swatches');
-    PANEL_COLORS.forEach(c=>{
-      const b=el('button','sw'+((w.col||'')===c.v?' on':'')); b.type='button'; b.title=c.n;
-      if(c.v) b.style.setProperty('--pc','var(--'+c.v+')'); else b.classList.add('none');
-      b.addEventListener('click', ()=>{ w.col=c.v; saveMine(); vMine($('#app-mine'));
-        cg.querySelectorAll('.sw').forEach(x=>x.classList.remove('on')); b.classList.add('on'); });
-      cg.appendChild(b);
-    });
-    cf.appendChild(cg); fs.appendChild(cf);
-
-    const sf=el('label','f w2'); sf.appendChild(el('span',null,'Style'));
-    sf.appendChild(btnRow(PANEL_STYLES, w.st||'', 'tiny', v=>{
-      w.st=v; saveMine(); vMine($('#app-mine')); applyLbl(); }));
-    const allb=el('button','btn ghost sm','Use This Style on Every Panel'); allb.type='button';
-    allb.style.marginTop='8px'; allb.style.alignSelf='flex-start';
-    allb.addEventListener('click', ()=>{
-      const v=w.st||'';
-      eachPanel(L, x=>{ x.st = v; });
-      saveMine(); vMine($('#app-mine'));
-      toast('Every panel is now '+(v==='bold'?'bold':'plain')+'.');
-    });
-    const applyLbl=()=>{ allb.textContent = 'Use '+((w.st||'')==='bold'?'Bold':'Plain')+' on Every Panel'; };
-    applyLbl();
-    sf.appendChild(allb);
-    sf.appendChild(el('small','hint','Plain is the quiet card. Bold adds a colored top edge and, under the heading, how far along what is inside actually is \u2014 so you can read the panel without opening it.'));
-    fs.appendChild(sf);
-
-    box.appendChild(fs);
-    const acts=el('div','modal-acts');
-    const off=el('button','btn ghost danger','Take It Off My Board'); off.type='button';
-    off.addEventListener('click', ()=>{
-      const at=findPanel(L, w);
-      if(at){ L[at.ri].r.splice(at.ci,1); if(!L[at.ri].r.length) L.splice(at.ri,1); }
-      saveMine(); closeSheet(); vMine($('#app-mine'));
-    });
-    const done=el('button','btn','Done'); done.type='button'; done.addEventListener('click', closeSheet);
-    acts.appendChild(off); acts.appendChild(done); box.appendChild(acts);
-  });
-}
-
+/* panelLook lives in settings.js */
 /* the number on a collapsed panel, so a shut one still tells you something */
 /* One panel, opened on its own in the right rail. It is the same body the board
    draws, just given the whole width — and it redraws itself when something in it
@@ -7142,7 +7171,7 @@ function buildWidget(w, b){
               + (p.w? ' \u00b7 '+fmtNum(f,p.w)+' written off as bad debt, counted on neither side':'')
             : '';
           note.hidden = !p;
-          w.sel[f.id]=cur; S.layout=layout(); saveMine();
+          w.sel[f.id]=cur; if(!nbOn()) S.layout=layout(); saveMine();
         };
         const mode=el('select'); mode.className='figmode';
         FIG_MODES.forEach(m=>{ const o=el('option',null,m.n); o.value=m.v;
@@ -7443,6 +7472,7 @@ function buildWidget(w, b){
   if(w.t==='mynote') return noteWidget(w, b);
   if(w.t==='projects') return projectsWidget(w, b);
   if(w.t==='myprojects') return myProjectsWidget(w, b);
+  if(w.t==='mtoday') return mtPanel(w, b);
   b.appendChild(emptyBox('This panel is no longer available.','Take it off your board.'));
 }
 
@@ -11023,8 +11053,8 @@ const PANEL_GROUPS = [
    items:['projects','rock','plan','overlap']},
   {k:'team',     n:'The Team',            d:'Who is around, who is free, and what everyone else has on.',
    items:['team','freebusy','dueteam','person']},
-  {k:'dates',    n:'Dates',               d:'What is coming up and when.',
-   items:['countdown','calendar']},
+  {k:'dates',    n:'Dates and Meetings',  d:'What is coming up and when, including today\u2019s workgroup meetings.',
+   items:['mtoday','countdown','calendar']},
   {k:'notes',    n:'Notes and Ideas',     d:'Places to write things down before they turn into tasks.',
    items:['mynote','notes','asks']},
   {k:'numbers',  n:'Numbers and Systems', d:'Figures and lists from MISMO’s other systems, and the way into each one.',
@@ -11139,7 +11169,7 @@ function addWidget(L){
     const reset=el('button','btn ghost','Reset to the Default Board'); reset.type='button';
     reset.addEventListener('click', ()=>{ S.layout=null; saveMine(); closeSheet(); vMine($('#app-mine')); toast('Board reset.'); });
     const cl=el('button','btn','Done'); cl.type='button'; cl.addEventListener('click',closeSheet);
-    acts.appendChild(reset); acts.appendChild(cl); box.appendChild(acts);
+    if(!nbOn()) acts.appendChild(reset); acts.appendChild(cl); box.appendChild(acts);
   });
 }
 
@@ -11238,20 +11268,32 @@ function myProjectsWidget(w, b){
   const add=el('button','btn sm'); add.type='button';
   add.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>';
   add.appendChild(el('span',null,'Add a Project'));
-  add.addEventListener('click', ()=> mpEditor(null));
-  top.appendChild(add);
-  b.appendChild(top);
+  const how=openMode(w);
+  if(how==='rail'){ add.addEventListener('click', ()=> mpEditor(null)); top.appendChild(add); b.appendChild(top); }
+  else {
+    b.appendChild(top);
+    const qa=el('div','mpadd mpquick');
+    const qn=inp('text','', 'New project name, then press Enter'); qn.setAttribute('aria-label','New project name');
+    const go=async ()=>{ const v=qn.value.trim(); if(!v){ qn.focus(); return; }
+      const n=await syPut('syncitems', {kind:'project', sync:'', members:[syMe()], name:v, st:'Not Started', pri:'Normal', start:isoOf(today()),
+        due:'', ties:'', goal:'', steps:[], tasks:[], notes:'', files:[], at:Date.now(), edited:Date.now(), by:S.me||''});
+      S.mpExp={}; S.mpExp[n.id]=true; vMine($('#app-mine')); };
+    qn.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); go(); } });
+    add.addEventListener('click', go);
+    qa.appendChild(qn); qa.appendChild(add); b.appendChild(qa);
+  }
 
   let list=mpAll();
   if(f==='open') list=list.filter(p=>p.st!=='Done'); else if(f==='done') list=list.filter(p=>p.st==='Done');
   const ord={'In Progress':0,'Not Started':1,'On Hold':2,'Done':3};
   list.sort((a,c)=> (ord[a.st]??1)-(ord[c.st]??1) || MP_PRI.indexOf(a.pri||'Normal')-MP_PRI.indexOf(c.pri||'Normal')
     || String(a.due||'9999').localeCompare(String(c.due||'9999')) || String(a.name||'').localeCompare(String(c.name||'')));
+  const frame=el('div','mpframe'); b.appendChild(frame);
   if(!list.length){
-    b.appendChild(emptyBox(f==='done'? 'Nothing finished yet.' : 'No projects here yet.',
+    frame.appendChild(emptyBox(f==='done'? 'Nothing finished yet.' : 'No projects here yet.',
       f==='done'? 'Projects you mark Done show up here.' : 'Add one for anything bigger than a task — a process to write, a system to set up, a report to build.'));
   } else {
-    const ul=el('div','pjlist');
+    const ul=el('div','pjlist mplist');
     list.forEach(p=>{
       const pr=mpProgress(p), nx=mpNext(p), n=days(p.due);
       const row=el('button','pjrow mprow'+(S.mpOpen===p.id && panelOpen()?' open':'')); row.type='button';
@@ -11275,22 +11317,35 @@ function myProjectsWidget(w, b){
       const pb=el('span','pbar'); const bi=el('i'); bi.style.width=(pr.all? Math.round(pr.dn/pr.all*100):0)+'%'; pb.appendChild(bi);
       pg.appendChild(pb); side.appendChild(pg);
       row.appendChild(side);
-      row.addEventListener('click', ()=> mpEditor(p.id));
-      ul.appendChild(row);
+      const how=openMode(w);
+      if(how==='rail'){ row.addEventListener('click', ()=> mpEditor(p.id)); ul.appendChild(row); }
+      else {
+        if(!S.mpExp) S.mpExp={};
+        const isOpen=!!S.mpExp[p.id];
+        row.classList.toggle('exp', isOpen); row.setAttribute('aria-expanded', String(isOpen));
+        row.addEventListener('click', ()=>{ S.mpExp[p.id]=!isOpen; vMine($('#app-mine')); });
+        ul.appendChild(row);
+        if(isOpen){ const box=el('div','mpdrop'); mpForm(box, p.id, how); ul.appendChild(box); }
+      }
     });
-    b.appendChild(ul);
+    frame.appendChild(ul);
   }
   b.appendChild(el('div','mynote-s', 'Only you can see these.'));
 }
 
 /* one project, in the right rail; everything saves as you go */
 function mpEditor(id){
-  let cur = id? mpOf(id) : null;
-  if(id && !cur) return;
+  const cur0 = id? mpOf(id) : null;
+  if(id && !cur0) return;
   S.mpOpen=id||'';
-  const d = cur? JSON.parse(JSON.stringify(cur)) : {name:'', st:'Not Started', pri:'Normal', start:isoOf(today()), due:'', ties:'', goal:'', steps:[], tasks:[], notes:'', files:[]};
-  panel(cur? (d.name||'Untitled Project') : 'New Project', 'My Projects · only you can see this', body=>{
-    const wrap=el('div','mynote mpedit');
+  panel(cur0? (cur0.name||'Untitled Project') : 'New Project', 'My Projects · only you can see this', body=> mpForm(body, id, 'rail'));
+}
+/* the project's fields — in the right rail (mode 'rail') or dropped down under its
+   row on the board (mode 'drop', or 'both' with a way into the right rail) */
+function mpForm(body, id, mode){
+    let cur = id? mpOf(id) : null;
+    const d = cur? JSON.parse(JSON.stringify(cur)) : {name:'', st:'Not Started', pri:'Normal', start:isoOf(today()), due:'', ties:'', goal:'', steps:[], tasks:[], notes:'', files:[]};
+    const wrap=el('div','mynote mpedit'+(mode==='rail'?'':' mpinline'));
     const st=el('div','mynote-s');
     let tmr=null, busy=null;
     const stamp=()=>{ const x=cur && (syCard(cur.id)||cur); st.textContent = x && x.edited? 'Saved '+relWhen(x.edited)+'.' : (cur? '' : 'Give it a name and it saves by itself.'); };
@@ -11398,19 +11453,759 @@ function mpEditor(id){
     const acts=el('div','rowacts');
     const del=el('button','btn danger','Delete This Project'); del.type='button';
     del.addEventListener('click', ()=>{
-      if(!cur){ closePanel(); return; }
-      if(del.dataset.c){ clearTimeout(tmr); syDrop('syncitems', cur.id); S.mpOpen=''; closePanel(); toast('Project deleted.'); }
+      if(!cur){ if(mode==='rail') closePanel(); return; }
+      if(del.dataset.c){ clearTimeout(tmr); syDrop('syncitems', cur.id);
+        if(mode==='rail'){ S.mpOpen=''; closePanel(); } else if(S.mpExp) delete S.mpExp[cur.id];
+        toast('Project deleted.'); }
       else { del.dataset.c='1'; del.textContent='Click Again to Delete'; } });
     acts.appendChild(del); acts.appendChild(el('span','spacer'));
-    const done=el('button','btn','Back to My Board'); done.type='button';
-    done.addEventListener('click', async ()=>{ await save(); S.mpOpen=''; closePanel(); syRefresh(); });
-    acts.appendChild(done); wrap.appendChild(acts);
+    if(mode==='rail'){
+      const done=el('button','btn','Back to My Board'); done.type='button';
+      done.addEventListener('click', async ()=>{ await save(); S.mpOpen=''; closePanel(); syRefresh(); });
+      acts.appendChild(done);
+    } else if(mode==='both'){
+      const big=el('button','btn ghost','Open in the Right Rail'); big.type='button';
+      big.addEventListener('click', async ()=>{ await save(); if(cur) mpEditor(cur.id); });
+      acts.appendChild(big);
+    }
+    wrap.appendChild(acts);
     wrap.addEventListener('focusout', ()=> setTimeout(()=>{ if(!wrap.contains(document.activeElement)) save().then(()=> syRefresh()); }, 60));
     body.appendChild(wrap);
     if(!cur) setTimeout(()=> fN.focus(), 80);
-  });
 }
 window.__mp = {all:mpAll, editor:mpEditor};
+
+/* ============ MY BOARD: WHERE THINGS OPEN ============
+   Anything you click on My Board can open in the right rail, drop down right under the
+   row you clicked, or both (drops down, with a button into the rail for more room).
+   The board sets it for every panel (board gear); a panel can set its own (panel gear),
+   which wins.
+
+   It works for every panel without each one being rewritten: a click inside a panel
+   marks where it came from, and when that click would open the right rail the same
+   content is drawn under the row instead. The rail's own content is built to be drawn
+   again at any time, so the drop-down is the very same editor. */
+const OPEN_OPTS = [{v:'drop',n:'Drop Down'},{v:'rail',n:'Right Rail'},{v:'both',n:'Both'}];
+const OPEN_HINT = 'Drop Down opens what you click right under its row. Right Rail opens it in the side panel. Both drops it down, with a button to open it in the side panel when you want more room.';
+function openMode(w){ const v=(w && w.open) || (bset().opens) || 'rail'; return OPEN_OPTS.some(o=>o.v===v)? v : 'rail'; }
+
+const ROW_SEL = '.row, .pjrow, .mnrow, .pirow, .exprow, .syc';
+let DROP_CTX = null;      /* the click being handled, while it runs */
+let CUR_DROP = null;      /* the drop-down the person is working in */
+let MINE_PENDING = false; /* a board redraw that waited for someone to finish typing */
+const OPEN_DROPS = {};    /* panel key -> {key, e, mode} so a redraw puts it back */
+
+function wKey(w){ return w.t+'|'+(w.k||'')+'|'+(w.id||''); }
+function rowKeyOf(r){ const b=r.querySelector('b, strong, .t, h4'); return String((b||r).textContent||'').trim().slice(0,80); }
+function rowFor(target, body){
+  const r = target.closest(ROW_SEL);
+  if(r && body.contains(r)) return r;
+  let x=target; while(x && x.parentElement!==body) x=x.parentElement;
+  return x || null;
+}
+function dropAfter(row, e, mode, wk, rk){
+  const d=el('div','wdrop'+(mode==='both'?' both':''));
+  d.dataset.wk=wk; d.dataset.rk=rk;
+  if(mode==='both'){
+    const bar=el('div','wdropbar');
+    bar.appendChild(el('b',null, e.title||''));
+    const big=el('button','btn ghost sm','Open in the Right Rail'); big.type='button';
+    big.addEventListener('click', ev=>{ ev.stopPropagation(); closeDrop(d, true); PSTACK=[e]; DRAW_RAIL(); });
+    bar.appendChild(big); d.appendChild(bar);
+  }
+  const inner=el('div','wdropb pb'); d.appendChild(inner);
+  try{ e.build(inner); }catch(err){ inner.appendChild(el('p','note','This could not open here. Try the right rail.')); }
+  row.classList.add('dropped');
+  row.insertAdjacentElement('afterend', d);
+  return d;
+}
+function closeDrop(d, quiet){
+  if(!d) return;
+  const prev=d.previousElementSibling; if(prev) prev.classList.remove('dropped');
+  delete OPEN_DROPS[d.dataset.wk];
+  if(CUR_DROP===d) CUR_DROP=null;
+  d.remove();
+  if(MINE_PENDING && !quiet){ MINE_PENDING=false; const r=$('#app-mine'); if(r && S.tab==='mine') vMine(r); }
+}
+
+/* the rail, as it was: used when a click should open there after all */
+const DRAW_RAIL = drawPanel;
+drawPanel = function(){
+  const ctx=DROP_CTX;
+  if(ctx && (ctx.mode==='drop' || ctx.mode==='both') && PSTACK.length===1 && !PSTACK[0].wpanel){
+    const e=PSTACK.pop(); DROP_CTX=null;
+    const old=ctx.body.querySelector('.wdrop'); if(old) closeDrop(old, true);
+    const d=dropAfter(ctx.row, e, ctx.mode, ctx.wk, ctx.rk);
+    OPEN_DROPS[ctx.wk]={key:ctx.rk, e:e, mode:ctx.mode};
+    CUR_DROP=d;
+    setTimeout(()=>{ const f=d.querySelector('.wdropb input:not([type=checkbox]),.wdropb textarea'); if(f && window.innerWidth>800 && !f.value) f.focus(); }, 80);
+    return;
+  }
+  return DRAW_RAIL();
+};
+/* "close" from inside a drop-down closes the drop-down, not the rail */
+const CLOSE_RAIL = closePanel;
+closePanel = function(){
+  if(CUR_DROP && document.body.contains(CUR_DROP) && !panelOpen()){ closeDrop(CUR_DROP); return; }
+  return CLOSE_RAIL();
+};
+document.addEventListener('click', ev=>{
+  const d=ev.target.closest && ev.target.closest('.wdrop');
+  CUR_DROP = d || null;
+}, true);
+
+/* a redraw while someone is typing in a drop-down waits until they leave it */
+const VMINE_RAW = vMine;
+vMine = function(root){
+  const a=document.activeElement;
+  if(a && a.closest && a.closest('#app-mine .wdrop')){ MINE_PENDING=true; return; }
+  MINE_PENDING=false;
+  VMINE_RAW(root);
+};
+document.addEventListener('focusout', ()=> setTimeout(()=>{
+  if(!MINE_PENDING) return;
+  const a=document.activeElement; if(a && a.closest && a.closest('#app-mine .wdrop')) return;
+  MINE_PENDING=false; const r=$('#app-mine'); if(r && S.tab==='mine') VMINE_RAW(r);
+}, 50));
+
+/* called for every panel body on the board */
+function wireDrops(w, body){
+  if(w.t==='myprojects') return;              /* it draws its own drop-downs */
+  const wk=wKey(w);
+  body.addEventListener('click', ev=>{
+    if(!body.closest('#app-mine')) return;    /* a panel opened whole in the rail */
+    const mode=openMode(w);
+    if(mode==='rail') return;
+    if(ev.target.closest('.wdrop')) return;   /* clicks inside a drop-down behave normally */
+    const row=rowFor(ev.target, body); if(!row) return;
+    const nx=row.nextElementSibling;
+    if(nx && nx.classList.contains('wdrop')){  /* clicking the row again closes it */
+      if(ev.target.closest('input,select,textarea,label')) return;
+      ev.stopPropagation(); ev.preventDefault(); closeDrop(nx); return; }
+    DROP_CTX={mode:mode, row:row, body:body, wk:wk, rk:rowKeyOf(row)};
+    setTimeout(()=>{ DROP_CTX=null; }, 0);
+  }, true);
+  /* put back a drop-down that was open before the board redrew */
+  const o=OPEN_DROPS[wk];
+  if(o && openMode(w)===o.mode){
+    const rows=[...body.querySelectorAll(ROW_SEL)];
+    const r=rows.find(x=> rowKeyOf(x)===o.key);
+    if(r){ const d=dropAfter(r, o.e, o.mode, wk, o.key); if(CUR_DROP && !document.body.contains(CUR_DROP)) CUR_DROP=d; }
+    else delete OPEN_DROPS[wk];
+  } else if(o) delete OPEN_DROPS[wk];
+}
+function openField(cur, onPick, withBoard){
+  const opts = withBoard? [{v:'',n:'Use the Board Setting'}].concat(OPEN_OPTS) : OPEN_OPTS;
+  return btnRow(opts, cur, 'tiny', onPick);
+}
+
+/* ============ MY BOARD: SETTINGS SHEETS ============
+   The board's settings and each panel's settings share one layout: groups that open
+   and close (closed to start, each showing what it is set to now), and inside each
+   group one row per setting — the name and a line on what it does on the left, the
+   choice on the right. */
+function setRow(label, desc, control, opts){
+  opts=opts||{};
+  const r=el('div','setrow'+(opts.off?' off':''));
+  const l=el('div','setl');
+  l.appendChild(el('b',null,label));
+  if(desc) l.appendChild(el('small',null,desc));
+  r.appendChild(l);
+  const c=el('div','setc'); if(control) c.appendChild(control);
+  if(opts.after) c.appendChild(opts.after);
+  r.appendChild(c);
+  return r;
+}
+function setGroups(box, key, groups){
+  if(!S.setOpen) S.setOpen={};
+  const wrap=el('div','setgroups');
+  groups.forEach(g=>{
+    const k=key+':'+g.k, open=!!S.setOpen[k];
+    const sec=el('section','setgrp'+(open?' open':''));
+    const h=el('button','setgh'); h.type='button'; h.setAttribute('aria-expanded', String(open));
+    h.innerHTML='<svg class="cv" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
+    const t=el('span','setght'); t.appendChild(el('b',null,g.n));
+    if(g.d) t.appendChild(el('small',null,g.d));
+    h.appendChild(t);
+    h.appendChild(el('span','setsum', g.sum()));
+    h.addEventListener('click', ()=>{ S.setOpen[k]=!open; g.repaint(); });
+    sec.appendChild(h);
+    if(open){ const body=el('div','setbody'); g.rows(body); sec.appendChild(body); }
+    wrap.appendChild(sec);
+  });
+  box.appendChild(wrap);
+}
+const nameOf=(opts,v)=> (opts.find(o=>String(o.v)===String(v))||{}).n || '';
+
+/* ---------- the board ---------- */
+function boardSettings(L){
+  const B=bset();
+  sheet(box=>{
+    box.classList.add('setsheet');
+    const paint=()=>{
+      box.textContent='';
+      const hd=el('div','sethead');
+      hd.appendChild(el('h2',null,'My Board Settings'));
+      hd.appendChild(el('p',null,'These apply to every panel on your board. A panel’s own settings, in its gear, take priority over these.'));
+      box.appendChild(hd);
+      const apply=()=>{ saveMine(); vMine($('#app-mine')); paint(); };
+      const HEIGHTS=[{v:'1',n:'Match Their Heights'},{v:'0',n:'Each Its Own Height'}];
+      const SHUT=[{v:'0',n:'Match the Row'},{v:'1',n:'Stay Short'}];
+      const STY=[{v:'plain',n:'Plain'},{v:'bold',n:'Bold'}];
+      const ONOFF=[{v:'1',n:'On'},{v:'0',n:'Off'}];
+      setGroups(box, 'board', [
+        {k:'layout', n:'Layout', d:'Rows of panels, or a notebook with pages and tabs.', repaint:paint,
+         sum:()=> nbOn()? 'Notebook'+(nbSide()&&nbTop()?' · Pages and Tabs':nbSide()?' · Pages':nbTop()?' · Tabs':'')
+                        : 'Board · '+(B.match? 'Heights Matched' : 'Each Its Own Height'),
+         rows:b=>{
+          const ARR=[{v:'board',n:'Board'},{v:'notebook',n:'Notebook'}];
+          b.appendChild(setRow('Arrange My Board As', 'Board lays panels out in rows. Notebook works like OneNote: pages down the side, tabs across the top, and panels wherever you drag them.',
+            btnRow(ARR, nbOn()?'notebook':'board', 'tiny', v=>{ if(v==='notebook') nbEnsure(); B.arr=v; apply(); })));
+          if(nbOn()){
+            b.appendChild(setRow('Pages Down the Side', 'A list of pages on the left. Turning it off hides the other pages but keeps them.',
+              btnRow(ONOFF, nbSide()?'1':'0', 'tiny', v=>{ B.nbSide=v==='1'?1:0; apply(); })));
+            b.appendChild(setRow('Tabs Across the Top', 'Tabs within each page. Turning it off hides the other tabs but keeps them.',
+              btnRow(ONOFF, nbTop()?'1':'0', 'tiny', v=>{ B.nbTop=v==='1'?1:0; apply(); })));
+          }
+          b.appendChild(setRow('Panels Side by Side', nbOn()? 'Only for the Board layout. In a notebook, size each panel by dragging its corner.' : 'Line every panel on a row up to the tallest one, or let each be as tall as what is in it.',
+            btnRow(HEIGHTS, String(B.match?1:0), 'tiny', v=>{ B.match=v==='1'?1:0; apply(); }), {off:nbOn()}));
+          b.appendChild(setRow('Collapsed Panels', B.match? 'Keep a collapsed panel the same height as its row, or shrink it to just its heading.' : 'Only applies when panels match their heights.',
+            btnRow(SHUT, String(B.shutShort?1:0), 'tiny', v=>{ B.shutShort=v==='1'?1:0; apply(); }), {off:!B.match || nbOn()}));
+         }},
+        {k:'open', n:'Opening Things', d:'Where a task, note or project opens when you click it.', repaint:paint,
+         sum:()=> nameOf(OPEN_OPTS, B.opens||'rail'),
+         rows:b=>{
+          b.appendChild(setRow('Open Things In', OPEN_HINT, openField(B.opens||'rail', v=>{ B.opens=v; apply(); }, false)));
+         }},
+        {k:'look', n:'Appearance', d:'How new panels look, and colors across the board.', repaint:paint,
+         sum:()=> nameOf(STY, B.style) + (B.autocol?' · Auto Color':''),
+         rows:b=>{
+          const all=el('button','btn ghost sm','Apply to Every Panel'); all.type='button';
+          all.addEventListener('click', ()=>{ eachPanel(L, w=>{ if(B.style==='bold') w.st='bold'; else delete w.st; });
+            saveMine(); vMine($('#app-mine')); toast(B.style==='bold'?'Every panel is now bold.':'Every panel is now plain.'); });
+          b.appendChild(setRow('Style for New Panels', 'Bold adds a strip across the top showing how much of the work inside is done.',
+            btnRow(STY, B.style, 'tiny', v=>{ B.style=(v==='bold')?'bold':'plain'; apply(); }), {after:all}));
+          b.appendChild(setRow('Color New Panels Automatically', 'Give each panel you add a color nobody else on the board is using.',
+            btnRow(ONOFF, String(B.autocol?1:0), 'tiny', v=>{ B.autocol=v==='1'?1:0; apply(); })));
+          const cr=el('div','setbtns');
+          const rnd=el('button','btn ghost sm','Randomize Every Panel'); rnd.type='button';
+          rnd.addEventListener('click', ()=>{
+            const pool=PANEL_COLORS.filter(c=>c.v).map(c=>c.v);
+            for(let i=pool.length-1;i>0;i--){ const k=Math.floor(Math.random()*(i+1)); const t=pool[i]; pool[i]=pool[k]; pool[k]=t; }
+            let i=0; eachPanel(L, w=>{ w.col=pool[i % pool.length]; i++; });
+            saveMine(); vMine($('#app-mine')); toast('Colors shuffled.'); });
+          const clr=el('button','btn ghost sm','Clear Every Color'); clr.type='button';
+          clr.addEventListener('click', ()=>{ eachPanel(L, w=>{ w.col=''; }); saveMine(); vMine($('#app-mine')); toast('Colors cleared.'); });
+          cr.appendChild(rnd); cr.appendChild(clr);
+          b.appendChild(setRow('Panel Colors', 'Shuffle colors across every panel, or take them all off.', cr));
+         }},
+        {k:'band', n:'Top Band', d:'The counts across the navy band at the top of your board.', repaint:paint,
+         sum:()=> B.noBand? 'Hidden' : B.tiles.length+' of 4 Chosen',
+         rows:b=>{
+          b.appendChild(setRow('Show the Top Band', 'Hide it for more room on your board. Your counts come back when you turn it on.',
+            btnRow([{v:'1',n:'Show'},{v:'0',n:'Hide'}], B.noBand?'0':'1', 'tiny', v=>{ B.noBand=v==='0'?1:0; apply(); })));
+          const tg=el('div','pills setpills');
+          HEAD_TILES.forEach(t=>{
+            const on=B.tiles.indexOf(t.v)>=0;
+            const bb=el('button','pill',t.n); bb.type='button';
+            bb.setAttribute('aria-pressed', String(on));
+            if(!on && B.tiles.length>=4){ bb.disabled=true; bb.title='Take one off first — four is all that fits.'; }
+            bb.addEventListener('click', ()=>{
+              const k=B.tiles.indexOf(t.v);
+              if(k>=0){ if(B.tiles.length<=1){ toast('Keep at least one.'); return; } B.tiles.splice(k,1); }
+              else { if(B.tiles.length>=4) return; B.tiles.push(t.v); }
+              apply(); });
+            tg.appendChild(bb);
+          });
+          b.appendChild(setRow('What It Counts', 'Pick up to four. They show in the order you pick them.', tg, {off:!!B.noBand}));
+         }}
+      ]);
+      const acts=el('div','modal-acts');
+      const rs=el('button','btn ghost','Reset These Settings'); rs.type='button';
+      rs.title='Put the board settings back to how they started. Your panels stay where they are.';
+      rs.addEventListener('click', ()=>{ if(!rs.dataset.c){ rs.dataset.c='1'; rs.textContent='Click Again to Reset'; return; }
+        S.bset=JSON.parse(JSON.stringify(BSET_DEF)); saveMine(); closeSheet(); vMine($('#app-mine')); toast('Board settings reset.'); });
+      const dn=el('button','btn','Done'); dn.type='button'; dn.addEventListener('click', closeSheet);
+      acts.appendChild(rs); acts.appendChild(dn); box.appendChild(acts);
+    };
+    paint();
+  });
+}
+
+/* ---------- one panel ---------- */
+function panelLook(w, L, title){
+  const def=WTYPES[w.t]||{};
+  sheet(box=>{
+    box.classList.add('setsheet');
+    const paint=()=>{
+      box.textContent='';
+      const hd=el('div','sethead');
+      hd.appendChild(el('h2',null,title));
+      if(def.d) hd.appendChild(el('p',null,def.d));
+      hd.appendChild(el('p','setnote','These settings are for this panel only. Anything left on “Use the Board Setting” follows My Board Settings. Nobody else sees your choices.'));
+      box.appendChild(hd);
+      const apply=()=>{ saveMine(); vMine($('#app-mine')); paint(); };
+      const here=findPanel(L, w), onRow=here? L[here.ri].r.length : 1;
+      const START=[{v:'0',n:'Open'},{v:'1',n:'Collapsed'}];
+      const colName=(PANEL_COLORS.find(c=>(c.v||'')===(w.col||''))||{n:'None'}).n;
+      setGroups(box, 'panel', [
+        {k:'size', n:'Size and Place', d:'How much of its row it takes, and whether it starts open.', repaint:paint,
+         sum:()=> (w.wide?'Double Share':'Equal Share') + ' · Starts '+(w.c?'Collapsed':'Open'),
+         rows:b=>{
+          b.appendChild(setRow(nbOn()? 'Size' : 'Share of Its Row', nbOn()? 'In a notebook, drag the panel\u2019s bottom-right corner to size it, and its heading to move it.' : onRow>1
+              ? 'Shares this row with '+(onRow-1)+(onRow===2?' other panel':' other panels')+'. A double share makes it twice as wide as the rest.'
+              : 'On a row of its own, so it runs the full width. Drag another panel onto this row to split it.',
+            btnRow(PANEL_SHARE, w.wide?'1':'', 'tiny', v=>{ w.wide=v?1:0; apply(); }), {off:onRow<2 || nbOn()}));
+          b.appendChild(setRow('When the Board Opens', 'Start this panel open, or collapsed to its heading.',
+            btnRow(START, String(w.c?1:0), 'tiny', v=>{ w.c=v==='1'?1:0; apply(); })));
+         }},
+        {k:'open', n:'Opening Things', d:'Where something opens when you click it in this panel.', repaint:paint,
+         sum:()=> w.open? nameOf(OPEN_OPTS, w.open) : 'Board Setting · '+nameOf(OPEN_OPTS, bset().opens||'rail'),
+         rows:b=>{
+          b.appendChild(setRow('Open Things In', OPEN_HINT+' The board is set to '+nameOf(OPEN_OPTS, bset().opens||'rail')+'.',
+            openField(w.open||'', v=>{ w.open=v; apply(); }, true)));
+         }},
+        {k:'look', n:'Appearance', d:'Its style and color.', repaint:paint,
+         sum:()=> nameOf(PANEL_STYLES, w.st||'') + ' · ' + colName,
+         rows:b=>{
+          const all=el('button','btn ghost sm','Use on Every Panel'); all.type='button';
+          all.addEventListener('click', ()=>{ const v=w.st||''; eachPanel(L, x=>{ x.st=v; }); saveMine(); vMine($('#app-mine'));
+            toast('Every panel is now '+(v==='bold'?'bold':'plain')+'.'); });
+          b.appendChild(setRow('Style', 'Plain is the quiet card. Bold adds a colored top edge and, under the heading, how far along the work inside is.',
+            btnRow(PANEL_STYLES, w.st||'', 'tiny', v=>{ w.st=v; apply(); }), {after:all}));
+          const cg=el('div','swatches');
+          PANEL_COLORS.forEach(c=>{
+            const s=el('button','sw'+((w.col||'')===c.v?' on':'')); s.type='button'; s.title=c.n; s.setAttribute('aria-label',c.n);
+            if(c.v) s.style.setProperty('--pc','var(--'+c.v+')'); else s.classList.add('none');
+            s.addEventListener('click', ()=>{ w.col=c.v; apply(); });
+            cg.appendChild(s);
+          });
+          b.appendChild(setRow('Color', 'The color along its edge. '+colName+' now.', cg));
+         }}
+      ]);
+      const acts=el('div','modal-acts');
+      const off=el('button','btn ghost danger','Take It Off My Board'); off.type='button';
+      off.addEventListener('click', ()=>{
+        const at=findPanel(L, w);
+        if(at){ L[at.ri].r.splice(at.ci,1); if(!L[at.ri].r.length) L.splice(at.ri,1); }
+        saveMine(); closeSheet(); vMine($('#app-mine')); });
+      const dn=el('button','btn','Done'); dn.type='button'; dn.addEventListener('click', closeSheet);
+      acts.appendChild(off); acts.appendChild(dn); box.appendChild(acts);
+    };
+    paint();
+  });
+}
+
+/* ============ MY BOARD AS A NOTEBOOK ============
+   For people used to OneNote: instead of rows, the board is a notebook. Pages run down
+   the side, tabs run across the top of each page (either or both), and each tab is an
+   open canvas where panels go wherever you drag them and are as big as you make them.
+   Pages and tabs are named, renamed and reordered by the person; a panel dragged onto a
+   page or a tab moves there. On a phone the canvas becomes one column in the same order.
+
+   Kept with the person's board (S.nb), next to the rows layout, so switching between
+   Board and Notebook never loses either. Positions: x and width as a share of the
+   canvas width (so it fits any screen), y and height in pixels. */
+function nbOn(){ return bset().arr==='notebook'; }
+function nbSide(){ return bset().nbSide!==0; }
+function nbTop(){ return bset().nbTop!==0; }
+function nbId(p){ return p+Math.random().toString(36).slice(2,9); }
+function nbFromBoard(){
+  /* the rows as they are now, laid out the same way on the canvas */
+  const rows=(LAYOUT_ROWS()||[]), out=[]; let y=0;
+  const domRows=[...document.querySelectorAll('#app-mine .wrow')];
+  rows.forEach((row,ri)=>{
+    const spans=rowSpans(row); let x=0;
+    const hgt=domRows[ri]? Math.min(720, Math.round(domRows[ri].getBoundingClientRect().height)) : 420;
+    row.r.forEach((w,ci)=>{ const p=JSON.parse(JSON.stringify(w));
+      p.nbx=+(x/12*100).toFixed(2); p.nbw=+((spans[ci]/12*100)-1.6).toFixed(2); p.nby=y; p.nbh=hgt>80? hgt : null;
+      out.push({r:[p]}); x+=spans[ci]; });
+    y+=hgt+16;
+  });
+  return out;
+}
+function nbEnsure(){
+  if(S.nb && Array.isArray(S.nb.pages) && S.nb.pages.length) return S.nb;
+  S.nb={pages:[{id:nbId('pg'), n:'My Board', tabs:[{id:nbId('tb'), n:'Main', L:nbFromBoard()}]}], cp:'', ct:{}};
+  return S.nb;
+}
+function nbPage(){ const N=nbEnsure(); const pg=(nbSide() && N.pages.find(p=>p.id===N.cp)) || N.pages[0];
+  if(!pg.tabs || !pg.tabs.length) pg.tabs=[{id:nbId('tb'), n:'Main', L:[]}]; return pg; }
+function nbTab(){ const N=nbEnsure(), pg=nbPage(); return (nbTop() && pg.tabs.find(t=>t.id===N.ct[pg.id])) || pg.tabs[0]; }
+function nbL(){ const t=nbTab(); if(!Array.isArray(t.L)) t.L=[];
+  t.L=t.L.filter(r=> r && Array.isArray(r.r) && r.r.length).map(r=>({r:r.r.filter(w=> w && WTYPES[w.t])})).filter(r=>r.r.length);
+  return t.L; }
+
+/* Board mode keeps using the rows; notebook mode hands the current tab to everything
+   that works on "the board" (Add a Panel, the gears, taking a panel off). */
+const LAYOUT_ROWS = layout;
+layout = function(){ return nbOn()? nbL() : LAYOUT_ROWS(); };
+
+/* ---- the view ---- */
+function nbView(root){
+  const N=nbEnsure(), pg=nbPage(), tb=nbTab();
+  const nb=el('div','nb'+(nbSide()?' side':'')+(nbTop()?' top':''));
+  if(nbSide()) nb.appendChild(nbStrip('page', N.pages, pg.id, id=>{ N.cp=id; }, ()=>{
+    const p={id:nbId('pg'), n:'New Page', tabs:[{id:nbId('tb'), n:'Main', L:[]}]}; N.pages.push(p); N.cp=p.id; return p.id; },
+    (id)=>{ N.pages=N.pages.filter(p=>p.id!==id); if(N.cp===id) N.cp=N.pages[0].id; }, (from,to)=>{ nbMove(N.pages, from, to); }));
+  const main=el('div','nbmain');
+  if(nbTop()) main.appendChild(nbStrip('tab', pg.tabs, tb.id, id=>{ N.ct[pg.id]=id; }, ()=>{
+    const t={id:nbId('tb'), n:'New Tab', L:[]}; pg.tabs.push(t); N.ct[pg.id]=t.id; return t.id; },
+    (id)=>{ pg.tabs=pg.tabs.filter(t=>t.id!==id); if(N.ct[pg.id]===id) N.ct[pg.id]=pg.tabs[0].id; }, (from,to)=>{ nbMove(pg.tabs, from, to); }));
+  main.appendChild(nbCanvas(tb));
+  nb.appendChild(main);
+  root.appendChild(nb);
+}
+function nbMove(arr, fromId, toId){
+  const a=arr.findIndex(x=>x.id===fromId), b=arr.findIndex(x=>x.id===toId); if(a<0||b<0||a===b) return;
+  const [it]=arr.splice(a,1); arr.splice(b,0,it);
+}
+/* a strip of pages (down the side) or tabs (across the top) */
+function nbStrip(kind, items, curId, onPick, onAdd, onDel, onMove){
+  const word = kind==='page'? 'Page' : 'Tab';
+  const strip=el('div', kind==='page'? 'nbpages' : 'nbtabs');
+  strip.setAttribute('role','tablist'); strip.setAttribute('aria-label', kind==='page'? 'Pages' : 'Tabs');
+  const redraw=()=>{ saveMine(); vMine($('#app-mine')); };
+  items.forEach(it=>{
+    const on=it.id===curId;
+    const b=el('div','nbt'+(on?' on':'')); b.dataset.id=it.id; b.dataset.kind=kind;
+    b.setAttribute('role','tab'); b.setAttribute('aria-selected', String(on)); b.tabIndex=0;
+    b.draggable=true;
+    const nm=el('span','nbn', it.n||('Untitled '+word)); b.appendChild(nm);
+    const cnt=kind==='page'? (it.tabs||[]).reduce((a,t)=>a+((t.L||[]).length),0) : (it.L||[]).length;
+    if(cnt) b.appendChild(el('span','nbc', String(cnt)));
+    b.addEventListener('click', e=>{ if(e.target.closest('.nbx, input')) return; if(!on){ onPick(it.id); redraw(); } });
+    b.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.target.closest('input')){ if(!on){ onPick(it.id); redraw(); } else nbRename(b, it, redraw); } });
+    b.addEventListener('dblclick', e=>{ e.preventDefault(); nbRename(b, it, redraw); });
+    if(on){
+      const acts=el('span','nbx');
+      const rn=el('button','nbi'); rn.type='button'; rn.title='Rename this '+word.toLowerCase(); rn.setAttribute('aria-label','Rename '+(it.n||word));
+      rn.innerHTML='<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>';
+      rn.addEventListener('click', e=>{ e.stopPropagation(); nbRename(b, it, redraw); });
+      acts.appendChild(rn);
+      if(items.length>1){
+        const dl=el('button','nbi'); dl.type='button'; dl.title='Delete this '+word.toLowerCase(); dl.setAttribute('aria-label','Delete '+(it.n||word));
+        dl.innerHTML='<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+        dl.addEventListener('click', e=>{ e.stopPropagation(); nbConfirmDelete(kind, it, ()=>{ onDel(it.id); redraw(); }); });
+        acts.appendChild(dl);
+      }
+      b.appendChild(acts);
+    }
+    /* reorder by dragging */
+    b.addEventListener('dragstart', e=>{ if(e.target.closest('input')){ e.preventDefault(); return; } NB_DRAG={kind:kind, id:it.id}; b.classList.add('dragging');
+      try{ e.dataTransfer.setData('text/plain', it.id); e.dataTransfer.effectAllowed='move'; }catch(x){} });
+    b.addEventListener('dragend', ()=>{ NB_DRAG=null; b.classList.remove('dragging'); strip.querySelectorAll('.over').forEach(x=>x.classList.remove('over')); });
+    b.addEventListener('dragover', e=>{ if(NB_DRAG && NB_DRAG.kind===kind && NB_DRAG.id!==it.id){ e.preventDefault(); b.classList.add('over'); } });
+    b.addEventListener('dragleave', ()=> b.classList.remove('over'));
+    b.addEventListener('drop', e=>{ e.preventDefault(); b.classList.remove('over'); if(NB_DRAG && NB_DRAG.kind===kind){ onMove(NB_DRAG.id, it.id); NB_DRAG=null; redraw(); } });
+    strip.appendChild(b);
+  });
+  const add=el('button','nbadd'); add.type='button';
+  add.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>';
+  add.appendChild(el('span',null,'Add a '+word));
+  add.addEventListener('click', ()=>{ const id=onAdd(); saveMine(); vMine($('#app-mine'));
+    const nb2=document.querySelector('#app-mine .nbt[data-id="'+id+'"]'); if(nb2){ const it=items.find(x=>x.id===id); if(it) nbRename(nb2, it, ()=>{ saveMine(); vMine($('#app-mine')); }); } });
+  strip.appendChild(add);
+  return strip;
+}
+let NB_DRAG=null;
+function nbRename(btn, it, done){
+  const nm=btn.querySelector('.nbn'); if(!nm || btn.querySelector('input')) return;
+  const i=inp('text', it.n||'', 'Name'); i.className='nbin'; i.setAttribute('aria-label','Name');
+  nm.replaceWith(i); i.focus(); i.select();
+  let fin=false;
+  const end=(keep)=>{ if(fin) return; fin=true; if(keep){ const v=i.value.trim(); if(v) it.n=v.slice(0,60); } done(); };
+  i.addEventListener('keydown', e=>{ e.stopPropagation(); if(e.key==='Enter'){ e.preventDefault(); end(true); } if(e.key==='Escape'){ e.preventDefault(); end(false); } });
+  i.addEventListener('blur', ()=> end(true));
+  i.addEventListener('click', e=> e.stopPropagation());
+}
+function nbConfirmDelete(kind, it, go){
+  const n=kind==='page'? (it.tabs||[]).reduce((a,t)=>a+((t.L||[]).length),0) : (it.L||[]).length;
+  sheet(box=>{
+    box.appendChild(el('h2',null,'Delete “'+(it.n||'Untitled')+'”?'));
+    box.appendChild(el('p',null, n? 'The '+n+(n===1?' panel':' panels')+' on this '+kind+' come off your board with it. What is inside them — tasks, notes, projects — is not deleted.' : 'This '+kind+' is empty.'));
+    const acts=el('div','modal-acts');
+    const c=el('button','btn ghost','Cancel'); c.type='button'; c.addEventListener('click', closeSheet);
+    const d=el('button','btn danger','Delete the '+(kind==='page'?'Page':'Tab')); d.type='button'; d.addEventListener('click', ()=>{ closeSheet(); go(); });
+    acts.appendChild(c); acts.appendChild(d); box.appendChild(acts);
+  });
+}
+
+/* ---- the canvas ---- */
+function nbStack(){ return window.innerWidth<760; }
+function nbCanvas(tb){
+  const L=nbL();
+  const cv=el('div','nbcanvas'+(nbStack()?' nbstack':''));
+  if(!L.length){
+    const e=el('div','nbempty');
+    e.appendChild(emptyBox('Nothing on this '+(nbTop()?'tab':'page')+' yet.','Click Add a Panel to put something here, or drag a panel onto this '+(nbTop()?'tab':'page')+' from another one.'));
+    cv.appendChild(e); return cv;
+  }
+  /* new panels go below everything else */
+  let bottom=0; L.forEach(r=>{ const w=r.r[0]; if(w.nby!=null) bottom=Math.max(bottom, w.nby+(w.nbh||360)); });
+  let maxZ=0;
+  L.forEach(r=>{ const w=r.r[0]; if(w.nbx==null || w.nby==null){ w.nbx=1; w.nbw=w.nbw||48; w.nby=bottom? bottom+16 : 0; bottom=w.nby+(w.nbh||360); saveMine(); } maxZ=Math.max(maxZ, w.z||0); });
+  const order=L.map((r,ri)=>({w:r.r[0], ri})).sort((a,b)=> nbStack()? (a.w.nby-b.w.nby)||(a.w.nbx-b.w.nbx) : 0);
+  order.forEach(({w,ri})=>{
+    const n=widget(w, ri, 0, L, 12);
+    n.classList.add('nbp');
+    if(!nbStack()){
+      n.style.gridColumn=''; n.style.position='absolute';
+      n.style.left=w.nbx+'%'; n.style.top=w.nby+'px'; n.style.width=w.nbw+'%';
+      if(w.nbh && !w.c){ n.style.height=w.nbh+'px'; n.classList.add('fixedh'); }
+      n.style.zIndex=String(w.z||1);
+      const sz=el('div','nbsize'); sz.title='Drag to resize — double-click to fit what is inside';
+      n.appendChild(sz);
+      nbDrag(n, w, cv, L, ()=>++maxZ);
+      nbResize(sz, n, w, cv);
+    }
+    cv.appendChild(n);
+  });
+  if(!nbStack()) requestAnimationFrame(()=> nbFit(cv));
+  return cv;
+}
+function nbFit(cv){
+  let h=0; cv.querySelectorAll('.nbp').forEach(p=>{ h=Math.max(h, p.offsetTop+p.offsetHeight); });
+  cv.style.height=Math.max(560, h+160)+'px';
+}
+function nbDrag(n, w, cv, L, nextZ){
+  n.addEventListener('pointerdown', e=>{
+    const h=e.target.closest('header'); if(!h || !n.contains(h)) return;
+    if(e.pointerType==='mouse' && e.button!==0) return;
+    e.stopPropagation();                       /* the rows board's drag stays out of it */
+    if(e.target.closest('button,a,input,select,textarea') && !e.target.closest('.grip')) { /* a click on a control */ }
+    w.z=nextZ(); n.style.zIndex=String(w.z);
+    const sx=e.clientX, sy=e.clientY, ox=n.offsetLeft, oy=n.offsetTop, W=cv.clientWidth;
+    let moving=false, target=null;
+    const mv=ev=>{
+      const dx=ev.clientX-sx, dy=ev.clientY-sy;
+      if(!moving && Math.hypot(dx,dy)<5) return;
+      if(!moving){ moving=true; n.classList.add('nbmoving'); try{ n.setPointerCapture(e.pointerId); }catch(x){} }
+      ev.preventDefault();
+      const nx=Math.max(0, Math.min(W-60, ox+dx)), ny=Math.max(0, oy+dy);
+      n.style.left=(nx/W*100)+'%'; n.style.top=ny+'px';
+      const under=document.elementsFromPoint(ev.clientX, ev.clientY).find(x=> x.classList && x.classList.contains('nbt'));
+      if(target && target!==under) target.classList.remove('droptarget');
+      target = under && !under.classList.contains('on') ? under : null;
+      if(target) target.classList.add('droptarget');
+    };
+    const up=ev=>{
+      document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up);
+      if(!moving){ saveMine(); return; }
+      n.classList.remove('nbmoving');
+      const swallow=c=>{ c.stopPropagation(); c.preventDefault(); document.removeEventListener('click', swallow, true); };
+      document.addEventListener('click', swallow, true); setTimeout(()=> document.removeEventListener('click', swallow, true), 300);
+      if(target){ target.classList.remove('droptarget'); nbSendTo(w, L, target.dataset.kind, target.dataset.id); return; }
+      w.nbx=+(n.offsetLeft/W*100).toFixed(2); w.nby=Math.round(n.offsetTop/8)*8;
+      n.style.left=w.nbx+'%'; n.style.top=w.nby+'px';
+      saveMine(); nbFit(cv);
+    };
+    document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
+  }, true);
+}
+function nbResize(handle, n, w, cv){
+  handle.addEventListener('pointerdown', e=>{
+    e.stopPropagation(); e.preventDefault();
+    const sx=e.clientX, sy=e.clientY, ow=n.offsetWidth, oh=n.offsetHeight, W=cv.clientWidth;
+    n.classList.add('nbmoving');
+    const mv=ev=>{ ev.preventDefault(); const nw=Math.max(240, Math.min(W-n.offsetLeft, ow+ev.clientX-sx)), nh=Math.max(120, oh+ev.clientY-sy);
+      n.style.width=(nw/W*100)+'%'; n.style.height=nh+'px'; n.classList.add('fixedh'); };
+    const up=()=>{ document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); n.classList.remove('nbmoving');
+      w.nbw=+(n.offsetWidth/W*100).toFixed(2); w.nbh=Math.round(n.offsetHeight/8)*8; saveMine(); nbFit(cv); };
+    document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
+  });
+  handle.addEventListener('dblclick', e=>{ e.stopPropagation(); w.nbh=null; saveMine(); vMine($('#app-mine')); });
+}
+/* a panel dropped on another page or tab moves there */
+function nbSendTo(w, L, kind, id){
+  const N=nbEnsure();
+  let dest=null, label='';
+  if(kind==='tab'){ const pg=nbPage(); dest=pg.tabs.find(t=>t.id===id); label=dest && dest.n; }
+  else { const pg=N.pages.find(p=>p.id===id); if(pg){ dest=(pg.tabs.find(t=>t.id===N.ct[pg.id]) || pg.tabs[0]); label=pg.n; } }
+  if(!dest) return;
+  const at=findPanel(L, w); if(at){ L[at.ri].r.splice(at.ci,1); if(!L[at.ri].r.length) L.splice(at.ri,1); }
+  if(!Array.isArray(dest.L)) dest.L=[];
+  let bottom=0; dest.L.forEach(r=>{ const p=r.r[0]; if(p && p.nby!=null) bottom=Math.max(bottom, p.nby+(p.nbh||360)+16); });
+  w.nbx=1; w.nby=bottom;
+  dest.L.push({r:[w]});
+  saveMine(); vMine($('#app-mine'));
+  toast('Moved to '+(label||'that '+kind)+'.');
+}
+window.addEventListener('resize', ()=>{ if(!nbOn() || S.tab!=='mine') return; clearTimeout(nbOn._t); nbOn._t=setTimeout(()=>{ const r=$('#app-mine'); if(r) vMine(r); }, 250); });
+
+/* ============ TODAY'S WORKGROUP MEETINGS ============
+   The same "today" feed as Meeting Trackers: which workgroups meet today, when (Eastern
+   time, as the schedule is kept), whether they are on now, and a Join link to the room.
+   Logging attendance stays in Meeting Trackers.
+
+   It reads Meeting Trackers' own schedule through the save relay, so it shows only on
+   resources.mismo.org and only to people who have access to Meeting Trackers. The
+   schedule is kept in this browser for the day so the band appears at once. */
+const MT = {sched:null, names:{}, archived:{}, loading:false, failed:'', at:0};
+const MT_DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MT_MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const mtKey=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+function mtET(){
+  try{
+    const pr=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).formatToParts(new Date());
+    const g=t=>+(pr.find(x=>x.type===t)||{}).value;
+    return new Date(g('year'),g('month')-1,g('day'),g('hour'),g('minute'));
+  }catch(e){ return new Date(); }
+}
+function mtOne(part,fb){ const m=String(part||'').match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?/i); if(!m) return null;
+  let h=+m[1]; const mi=+(m[2]||0); const ap=(m[3]||fb||'').toUpperCase();
+  if(ap==='PM'&&h<12) h+=12; if(ap==='AM'&&h===12) h=0; if(!ap&&h<8) h+=12; return h*60+mi; }
+function mtSpanText(t){ const str=String(t||'').trim(); if(!str) return null;
+  const parts=str.split(/[–—-]/).map(x=>x.trim()).filter(Boolean);
+  const ap=p=>((String(p).match(/(AM|PM)/i)||[])[1]||'').toUpperCase();
+  if(parts.length<2){ const a=mtOne(parts[0]); return a==null?null:[a,a+60]; }
+  const a2=ap(parts[0]), b2=ap(parts[1]); let st=mtOne(parts[0],a2||b2), en=mtOne(parts[1],b2||a2);
+  if(st==null||en==null) return null; if(st>=en) st-=720; if(st<0) st+=720; return [st,en]; }
+function mtHM(x){ const m=String(x||'').match(/^(\d{1,2}):(\d{2})$/); return m?(+m[1])*60+(+m[2]):null; }
+function mtSpan(it){ const a=mtHM(it.st), b=mtHM(it.en); return (a!=null&&b!=null)? [a,b] : mtSpanText(it.time); }
+function mtClock(m){ let h=Math.floor(m/60), mi=m%60; const ap=h>=12?'PM':'AM'; h=h%12; if(h===0) h=12; return h+(mi?':'+String(mi).padStart(2,'0'):'')+ap; }
+function mtTime(it){ const sp=mtSpan(it); if(!sp) return it.time||''; const a=mtClock(sp[0]), b=mtClock(sp[1]);
+  return (a.slice(-2)===b.slice(-2)? a.slice(0,-2) : a)+'–'+b; }
+function mtMeets(rule,d){ if(!rule||rule.dow!==d.getDay()) return false; if(rule.weeks==='*') return true;
+  return (rule.weeks||[]).indexOf(Math.floor((d.getDate()-1)/7)+1)>=0; }
+function mtOn(d){
+  const out=[]; const S2=MT.sched||{};
+  Object.keys(S2).forEach(gk=>{ const sc=S2[gk];
+    if(sc.status && String(sc.status).toLowerCase()!=='active') return;
+    if(MT.archived[gk]) return;
+    if(mtMeets(sc.rule,d)) out.push(Object.assign({gk:gk},sc)); });
+  return out.sort((a,b)=>((mtSpan(a)||[9999])[0]-(mtSpan(b)||[9999])[0]) || String(a.gk).localeCompare(String(b.gk)));
+}
+function mtStatus(it,now){ const sp=mtSpan(it); if(!sp) return {k:'na',t:''};
+  const m=now.getHours()*60+now.getMinutes();
+  if(m>=sp[1]) return {k:'done',t:'Done'}; if(m>=sp[0]) return {k:'now',t:'On Now'};
+  const d=sp[0]-m; if(d<=90) return {k:'soon',t:d<=1?'Starting':'in '+(d>=60? Math.floor(d/60)+'h'+(d%60?' '+(d%60)+'m':'') : d+' min')};
+  return {k:'later',t:''}; }
+function mtName(gk){ return MT.names[gk] || gk; }
+
+/* ---- loading ---- */
+function mtUngz(b64){
+  if(typeof DecompressionStream!=='function') return Promise.reject(new Error('NO_GZIP'));
+  const bin=atob(b64), b=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) b[i]=bin.charCodeAt(i);
+  return new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream('gzip'))).text().then(t=>JSON.parse(t));
+}
+function mtAvailable(){ return !!(window.__hqRelay && window.__hqRelay.readOther); }
+function mtCacheGet(){ try{ const c=JSON.parse(localStorage.getItem('mtsched')||'null'); return c && c.sched ? c : null; }catch(e){ return null; } }
+function mtCacheSet(){ try{ localStorage.setItem('mtsched', JSON.stringify({sched:MT.sched, names:MT.names, archived:MT.archived, at:MT.at})); }catch(e){} }
+(function(){ const c=mtCacheGet(); if(c && mtAvailable()){ MT.sched=c.sched; MT.names=c.names||{}; MT.archived=c.archived||{}; MT.at=c.at||0; } })();
+async function mtLoad(force){
+  if(!mtAvailable() || MT.loading) return;
+  if(!force && MT.at && Date.now()-MT.at < 20*60*1000) return;
+  MT.loading=true;
+  try{
+    const R=window.__hqRelay;
+    const base=await R.readOther('meeting-trackers','baseline');
+    let B=base && base.doc;
+    if(B && B.z) B=await mtUngz(B.z);
+    const sched={}, names={}, archived={};
+    if(B){
+      (B.groups||[]).forEach(g=>{ const k=mtKey(g[0]); names[k]=g[0]; if(g[2]) archived[k]=1; });
+      Object.keys(B.sched||{}).forEach(k=>{ sched[k]=Object.assign({}, B.sched[k]); });
+    }
+    /* what the facilitators have changed since: groups and the schedule */
+    const over=async name=>{ try{ const f=await R.readOther('meeting-trackers', name); return (f && f.docs) || {}; }catch(e){ return {}; } };
+    const gd=await over('groups');
+    Object.keys(gd).forEach(id=>{ const items=(gd[id]||{}).items||{}; Object.keys(items).forEach(k0=>{ const d=items[k0]||{}; const k=k0||mtKey(d.name);
+      if(d.name) names[k]=d.name; if(d.archived!=null){ if(d.archived) archived[k]=1; else delete archived[k]; } }); });
+    const sd=await over('sched');
+    Object.keys(sd).forEach(id=>{ const items=(sd[id]||{}).items||{}; Object.keys(items).forEach(k=>{ const d=items[k]||{};
+      if(d.removed){ delete sched[k]; return; } sched[k]=Object.assign({}, sched[k]||{}, d); }); });
+    MT.sched=sched; MT.names=names; MT.archived=archived; MT.at=Date.now(); MT.failed='';
+    mtCacheSet();
+  }catch(e){
+    MT.failed = (e && (e.status===403 || e.code==='NO_ACCESS')) ? 'access' : 'error';
+    if(MT.failed==='access'){ MT.sched=null; try{ localStorage.removeItem('mtsched'); }catch(x){} }
+  }
+  MT.loading=false;
+  mtRepaint();
+}
+
+/* ---- drawing ---- */
+const MT_TICK=[];
+function mtChip(it, live){
+  const w=el('div','mt-i');
+  const t=mtTime(it); if(t) w.appendChild(el('span','mt-t', t));
+  const nm=el('span','mt-n', mtName(it.gk)); nm.title=mtName(it.gk)+(it.fac? ' — '+it.fac : '');
+  w.appendChild(nm);
+  if(live){ const st=el('span','mt-st'); st.hidden=true; w.appendChild(st); w.__st=st; w.__it=it; MT_TICK.push(w); }
+  if(it.zoom && /^https?:/i.test(it.zoom)){
+    const a=el('a','mt-j','Join'); a.href=it.zoom; a.target='_blank'; a.rel='noopener noreferrer';
+    a.title='Open the meeting room for '+mtName(it.gk); w.appendChild(a); }
+  return w;
+}
+function mtTick(){
+  const now=mtET();
+  for(let i=MT_TICK.length-1;i>=0;i--) if(!MT_TICK[i].isConnected && MT_TICK[i].__drawn) MT_TICK.splice(i,1);
+  MT_TICK.forEach(w=>{ if(!w.isConnected) return; w.__drawn=1; const st=mtStatus(w.__it, now);
+    w.classList.toggle('now', st.k==='now'); w.classList.toggle('done', st.k==='done');
+    w.__st.textContent=st.t; w.__st.className='mt-st'+(st.k==='now'?' s-now':st.k==='soon'?' s-soon':''); w.__st.hidden=!st.t; });
+}
+setInterval(mtTick, 30000);
+/* the band (Today tab) or the panel body (My Board) */
+function mtFeed(host, opts){
+  opts=opts||{};
+  host.textContent='';
+  if(!mtAvailable()){ if(opts.panel) host.appendChild(emptyBox('Workgroup meetings show on resources.mismo.org.','They come from Meeting Trackers, which this copy cannot reach.')); else host.hidden=true; return; }
+  if(MT.failed==='access' && !MT.sched){ if(opts.panel) host.appendChild(emptyBox('You don’t have access to Meeting Trackers.','Ask for it in the admin panel and today’s workgroup meetings show here.')); else host.hidden=true; return; }
+  if(!MT.sched){ if(opts.panel) host.appendChild(el('p','note','Loading today’s workgroup meetings…')); else host.hidden=true; mtLoad(); return; }
+  host.hidden=false;
+  if(opts.week){ mtWeek(host); mtLoad(); return; }
+  const now=mtET(), today=mtOn(now);
+  if(!opts.panel){
+    const l=el('div','mt-l'); l.appendChild(el('span','mt-eb','Workgroups Today'));
+    l.appendChild(el('b',null, MT_DAYS[now.getDay()]+', '+MT_MON[now.getMonth()]+' '+now.getDate()));
+    host.appendChild(l);
+  }
+  const mid=el('div','mt-m');
+  if(today.length){
+    today.forEach(it=> mid.appendChild(mtChip(it, true)));
+    mid.appendChild(el('span','mt-tz','All times ET'));
+  } else {
+    let nx=null, nd=null;
+    for(let i=1;i<=14;i++){ const d=new Date(now.getTime()); d.setDate(d.getDate()+i); const h=mtOn(d); if(h.length){ nx=h; nd=d; break; } }
+    const nn=el('div','mt-none');
+    if(nx){ nn.appendChild(document.createTextNode('No workgroup meetings today. Next up ')); nn.appendChild(el('b',null, MT_DAYS[nd.getDay()]+', '+MT_MON[nd.getMonth()]+' '+nd.getDate()));
+      nn.appendChild(document.createTextNode(' — '+nx.slice(0,3).map(x=>mtName(x.gk)).join(', ')+(nx.length>3?' and '+(nx.length-3)+' more':'')+'.')); }
+    else nn.textContent='No workgroup meetings scheduled in the next two weeks.';
+    mid.appendChild(nn);
+  }
+  host.appendChild(mid);
+  setTimeout(mtTick, 0);
+  mtLoad();
+}
+function mtRepaint(){
+  const band=document.getElementById('mtband'); if(band) mtFeed(band);
+  document.querySelectorAll('.mtpanel').forEach(p=> mtFeed(p, {panel:1, week:p.dataset.view==='week'}));
+}
+function mtBand(){ const h=el('div','mtband'); h.id='mtband'; mtFeed(h); return h; }
+function mtPanel(w, b){
+  const bar=el('div','mtbar');
+  bar.appendChild(btnRow([{v:'today',n:'Today'},{v:'week',n:'This Week'}], w.mtv||'today', 'tiny', v=>{ w.mtv=v; saveMine(); vMine($('#app-mine')); }));
+  const go=el('a','btn ghost sm','Open Meeting Trackers'); go.href='/meeting-trackers/'; go.target='_blank'; go.rel='noopener';
+  if(mtAvailable()) bar.appendChild(go);
+  b.appendChild(bar);
+  const h=el('div','mtpanel'); h.dataset.view=w.mtv||'today'; b.appendChild(h); mtFeed(h, {panel:1, week:(w.mtv==='week')});
+}
+/* the week ahead, day by day: today and the next six days that have meetings */
+function mtWeek(host){
+  const now=mtET(); let any=false;
+  for(let i=0;i<7;i++){
+    const d=new Date(now.getTime()); d.setDate(d.getDate()+i);
+    const list=mtOn(d); if(!list.length) continue; any=true;
+    const day=el('div','mt-day');
+    day.appendChild(el('div','mt-dh', (i===0?'Today \u00b7 ':i===1?'Tomorrow \u00b7 ':'')+MT_DAYS[d.getDay()]+', '+MT_MON[d.getMonth()].slice(0,3)+' '+d.getDate()));
+    const m=el('div','mt-m'); list.forEach(it=> m.appendChild(mtChip(it, i===0))); day.appendChild(m);
+    host.appendChild(day);
+  }
+  if(!any) host.appendChild(el('div','mt-none','No workgroup meetings scheduled in the next seven days.'));
+  else host.appendChild(el('span','mt-tz','All times ET'));
+  setTimeout(mtTick, 0);
+}
 
 /* ============ rail search sources ============ */
 window.__search = function(t, push, goTab){
