@@ -2306,6 +2306,18 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .addpostit{align-self:flex-start}
 .wallhead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 
+/* ---------- messages: a small note in the bottom-left corner of the page, never over the
+   right-hand panel or the middle of the work ---------- */
+.toast{left:var(--toast-left,16px);right:auto;transform:none;bottom:calc(18px + env(safe-area-inset-bottom,0px));
+  max-width:min(400px, calc(100vw - var(--toast-left,16px) - 16px));padding:8px 10px 8px 14px;font-size:12.5px;line-height:1.4;
+  box-shadow:0 6px 20px rgba(6,32,47,.28);border-radius:6px;gap:10px;animation:toastin .16s ease-out}
+@keyframes toastin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.toast-undo{padding:2px 9px;font-size:12px}
+.toast-x{flex:0 0 auto;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:4px;
+  background:none;color:rgba(255,255,255,.75);font:inherit;font-size:15px;line-height:1;cursor:pointer;padding:0}
+.toast-x:hover{background:rgba(255,255,255,.16);color:#fff}
+@media (prefers-reduced-motion:reduce){.toast{animation:none}}
+
 #rs-account{flex:0 0 auto;display:inline-flex;align-items:center}
 #rs-account .rs-who,#rs-account .rs-signin{border-radius:4px}
 </style>
@@ -3495,8 +3507,13 @@ function avatar(id, size){
   a.title = p? p.name : 'Unassigned';
   return a;
 }
+function toastSpot(t){
+  /* just inside the page, to the right of the left-hand menu */
+  try{ const m=document.getElementById('main'); const x=m? Math.max(16, Math.round(m.getBoundingClientRect().left)+16) : 16;
+    t.style.setProperty('--toast-left', x+'px'); }catch(e){}
+}
 function toast(msg){
-  const t=$('#toast'); if(!t) return; t.textContent=msg; t.hidden=false;
+  const t=$('#toast'); if(!t) return; t.textContent=msg; toastSpot(t); t.hidden=false;
   clearTimeout(toast._t); toast._t=setTimeout(()=>{ t.hidden=true; }, 2800);
 }
 /* The same toast, with a way back. Deleting something small should not need a
@@ -3509,9 +3526,13 @@ function undoToast(msg, onUndo){
   b.addEventListener('click', async ()=>{ clearTimeout(toast._t); t.hidden=true;
     await onUndo(); toast('Put back.'); });
   t.appendChild(b);
+  const x=el('button','toast-x','×'); x.type='button'; x.title='Dismiss'; x.setAttribute('aria-label','Dismiss');
+  x.addEventListener('click', ()=>{ clearTimeout(toast._t); t.hidden=true; t.textContent=''; });
+  t.appendChild(x);
+  toastSpot(t);
   t.hidden=false;
   clearTimeout(toast._t);
-  toast._t=setTimeout(()=>{ t.hidden=true; t.textContent=''; }, 8000);
+  toast._t=setTimeout(()=>{ t.hidden=true; t.textContent=''; }, 6000);
 }
 function openTasks(){ return S.tasks.filter(t=>t.s!=='Done'); }
 /* Accountable is t.o. Working it is t.d (a list). With nobody named in t.d the
@@ -6836,11 +6857,13 @@ function widget(w, ri, ci, L, span){
     w.c = w.c?0:1; saveMine(); vMine($('#app-mine')); });
   /* the note wall stays open: a wall of jotted notes nobody can see is the one
      thing worse than no wall at all */
-  if(w.t!=='notes') h.appendChild(fold);
+  const omode = openMode(w);
+  if(w.t!=='notes'){ if(omode!=='rail') h.appendChild(fold); }
   else w.c = 0;
 
   const tog=el('button','tog'); tog.type='button';
-  tog.title = 'Open '+title+' in the side panel';
+  tog.title = omode==='drop' ? (w.c? 'Open this panel' : 'Collapse this panel') : 'Open '+title+' in the side panel';
+  if(omode==='drop') tog.setAttribute('aria-expanded', w.c?'false':'true');
   /* the note wall says the number in words, so it does not also need a badge */
   const named = (w.t==='notes' && S.notes.length);
   if(named) title = S.notes.length+(S.notes.length===1?' Note to Review':' Notes to Review');
@@ -6848,6 +6871,7 @@ function widget(w, ri, ci, L, span){
   const cnt = named ? null : widgetCount(w);
   if(cnt!=null) tog.appendChild(el('span','cnt', String(cnt)));
   tog.addEventListener('click', ()=>{ if(dragged){ dragged=false; return; }
+    if(openMode(w)==='drop' && w.t!=='notes'){ w.c = w.c?0:1; saveMine(); vMine($('#app-mine')); return; }
     openWidgetPanel(w, title); });
   h.appendChild(tog);
 
@@ -11521,7 +11545,7 @@ window.__mp = {all:mpAll, editor:mpEditor};
    content is drawn under the row instead. The rail's own content is built to be drawn
    again at any time, so the drop-down is the very same editor. */
 const OPEN_OPTS = [{v:'drop',n:'Drop Down'},{v:'rail',n:'Right Rail'},{v:'both',n:'Both'}];
-const OPEN_HINT = 'Drop Down opens what you click right under its row. Right Rail opens it in the side panel. Both drops it down, with a button to open it in the side panel when you want more room.';
+const OPEN_HINT = 'Drop Down: a panel opens and closes right where it is, and what you click inside it opens under its row. Right Rail: clicking a panel or anything in it opens it in the side panel. Both: open and close in place, with the side panel one click away.';
 function openMode(w){ const v=(w && w.open) || (bset().opens) || 'rail'; return OPEN_OPTS.some(o=>o.v===v)? v : 'rail'; }
 
 const ROW_SEL = '.row, .pjrow, .mnrow, .pirow, .exprow, .syc';
