@@ -13107,7 +13107,7 @@ function sortCommit(item){
 /* ============ WORKING HOURS ============
    Outside someone's working hours they show as Off ("Done for the day · back at
    8:00 AM"), not Around. Each person sets their own hours and time zone in Set My
-   Status → My Working Hours; until they do, 8:00 AM–5:00 PM Eastern. A status they pick
+   Status → My Working Hours; until they do, MISMO's 9:00 AM–5:00 PM Eastern. A status they pick
    after their day has ended still stands for the rest of that day, and a Key Date
    (travel, out of office) still wins. */
 const HR_TZS = [
@@ -13115,8 +13115,8 @@ const HR_TZS = [
   {v:'America/Denver', n:'Mountain'}, {v:'America/Phoenix', n:'Arizona'},
   {v:'America/Los_Angeles', n:'Pacific'}
 ];
-const HR_DEF = {s:'08:00', e:'17:00', tz:'America/New_York'};
-const HR_SEED = {jonna:{s:'07:00', e:'15:00', tz:'America/Denver'}};   /* Jonna, Oct 2026 */
+const HR_DEF = {s:'09:00', e:'17:00', tz:'America/New_York'};   /* MISMO's hours */
+const HR_SEED = {};
 function workHours(p){ return (p && p.hours && p.hours.s) ? p.hours : ((p && HR_SEED[p.id]) || HR_DEF); }
 function hrNowIn(tz){
   try{
