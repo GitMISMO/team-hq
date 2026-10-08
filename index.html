@@ -2425,6 +2425,9 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 }
 @media(max-width:980px){ .setnav{order:1} .setpv{order:2} .setmain{order:3} .mk{height:140px} }
 #sheet-box.setsheet{min-height:min(600px,86vh)}
+/* Show Tasks As: cards and sticky notes in the little board picture */
+.mk .mk-card{position:absolute;width:42%;height:28px;border:1px solid var(--border-strong);border-radius:3px;background:var(--surface)}
+.mk .mk-stk{position:absolute;width:42%;height:28px;border-radius:2px;background:#fde68a;box-shadow:0 1px 2px rgba(0,0,0,.18)}
 
 /* ---------- My Board as a notebook ---------- */
 .nb{display:flex;align-items:stretch;border:1px solid var(--border);border-radius:8px;background:var(--surface);box-shadow:var(--shadow);min-height:640px;overflow:hidden}
@@ -2680,6 +2683,70 @@ html{scrollbar-color:var(--border-strong) var(--ground)}
 .hq.rail::-webkit-scrollbar-track{background:#0a2639}
 .hq.rail::-webkit-scrollbar-thumb{background:#35709e; border-color:#0a2639}
 .hq.rail::-webkit-scrollbar-thumb:hover{background:#4a8cbe}
+
+/* Find a Time (Who Is Free) */
+.ft{display:flex;flex-direction:column;gap:12px}
+.ftform{display:flex;flex-direction:column;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px}
+.ftrow{display:flex;flex-direction:column;gap:6px;min-width:0}
+.ftrow.two{flex-direction:row;flex-wrap:wrap;gap:14px 28px}
+.ftrow.two > div{display:flex;flex-direction:column;gap:6px;min-width:0}
+.ftl{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.ftppl{display:flex;flex-wrap:wrap;gap:6px}
+.ftp{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--border);background:var(--surface);color:var(--ink);border-radius:6px;padding:4px 10px 4px 5px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;min-height:34px}
+.ftp small{font-size:10.5px;font-weight:500;color:var(--ink-3)}
+.ftp:hover{background:var(--surface-2)}
+.ftp.on{background:color-mix(in srgb,var(--c1) 14%,var(--surface));border-color:var(--c1);box-shadow:inset 0 0 0 1px var(--c1)}
+.ftp:focus-visible{outline:2px solid var(--c1);outline-offset:1px}
+.ftsubj{max-width:520px;width:100%}
+.ftsay{margin:2px 0 0;font-size:14px;line-height:1.5;color:var(--ink)}
+.ftsay b{font-weight:700}
+.ftnote{margin:-6px 0 0}
+.ftdays{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:8px;background:var(--surface);overflow:hidden}
+.ftday{display:grid;grid-template-columns:150px 1fr;gap:6px 16px;padding:12px 16px;border-top:1px solid var(--rule)}
+.ftday:first-child{border-top:0}
+.ftday.none{background:var(--surface-2)}
+.ftdh{display:flex;flex-direction:column;gap:2px;padding-top:1px}
+.ftdh b{font-size:13.5px;font-weight:700;color:var(--ink)}
+.ftdh small{font-size:11px;color:var(--warn,#b45309);font-weight:600}
+.ftday.none .ftdh b{color:var(--ink-2)}
+.ftdm{display:flex;flex-direction:column;gap:8px;min-width:0}
+.ftwhy{font-size:12.5px;color:var(--ink-3);padding-top:1px}
+.ftbar{position:relative;height:10px;border-radius:3px;background:var(--surface-3);overflow:hidden}
+.ftbar i{position:absolute;top:0;bottom:0}
+.ftbar .ftb{background:var(--ink-3);opacity:.55}
+.ftbar .ftb.hq{background:var(--c5,#7c3aed);opacity:.55}
+.ftbar .ftf{background:var(--good);opacity:.85}
+.ftslots{display:flex;flex-wrap:wrap;gap:6px}
+.ftslot{display:inline-flex;flex-direction:column;align-items:flex-start;gap:0;border:1px solid color-mix(in srgb,var(--good) 45%,var(--border));background:color-mix(in srgb,var(--good) 10%,var(--surface));color:var(--ink);border-radius:6px;padding:5px 10px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;line-height:1.3}
+.ftslot small{font-size:10.5px;font-weight:500;color:var(--ink-3)}
+.ftslot:hover{background:color-mix(in srgb,var(--good) 18%,var(--surface))}
+.ftslot.on{border-color:var(--c1);box-shadow:inset 0 0 0 1px var(--c1);background:color-mix(in srgb,var(--c1) 10%,var(--surface))}
+.ftslot:focus-visible{outline:2px solid var(--c1);outline-offset:1px}
+.ftpick{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;border:1px solid var(--border);background:var(--surface-2);border-radius:7px;padding:10px 12px}
+.ftpick .ftl{margin-right:-4px}
+.ftsel{min-width:200px;max-width:100%}
+.ftacts{display:flex;flex-wrap:wrap;gap:8px}
+.ftbook{display:inline-flex;align-items:center;gap:6px;text-decoration:none}
+.ftbook svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.ftpick .note{flex:1 1 100%;margin:0}
+.ftopen{margin-bottom:10px}
+@media(max-width:620px){ .ftday{grid-template-columns:1fr;gap:6px} .ftform{padding:12px} .ftsel{min-width:0;flex:1 1 100%} }
+/* Who Is Free grid: how booked each day is in Outlook */
+.fcell{position:relative;overflow:hidden}
+.fcell .fbk{position:absolute;left:0;right:0;bottom:0;background:color-mix(in srgb,var(--ink-3) 70%,transparent);pointer-events:none}
+.flegend i.bk{background:linear-gradient(to top,color-mix(in srgb,var(--ink-3) 70%,transparent) 55%,color-mix(in srgb,var(--good) 20%,var(--surface-3)) 55%)}
+/* My Board and Today: the navy band carries the controls */
+.headline .hltop{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.headline .hltop .hl-date{flex:1 1 auto}
+.headline .hltop .stbtn{margin-left:0!important;min-height:30px;border-radius:6px;padding:0 10px;font-size:12.5px}
+.hlbtn{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:0 12px;border-radius:6px;border:1px solid rgba(116,191,235,.35);background:rgba(255,255,255,.1);color:#fff;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
+.hlbtn:hover{background:rgba(255,255,255,.2)}
+.hlbtn:focus-visible{outline:2px solid var(--sky);outline-offset:1px}
+.hlbtn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.hlbtn.icon{width:30px;padding:0;justify-content:center}
+.hlbtn.icon svg{width:16px;height:16px;stroke-width:1.7}
+.boardbar{display:flex;justify-content:flex-end;align-items:center;gap:8px}
+.pgxhelp{margin:6px 0 0;font-size:12.5px;color:var(--ink-3)}
 
 #rs-account{flex:0 0 auto;display:inline-flex;align-items:center}
 #rs-account .rs-who,#rs-account .rs-signin{border-radius:4px}
@@ -5195,7 +5262,11 @@ function viewSwitch(){
   });
   return w;
 }
-function taskHolder(list, laneCls){
+function taskHolder(list, laneCls, view){
+  const v0=S.view; if(view) S.view=view;
+  try{ return taskHolder0(list, laneCls); } finally { S.view=v0; }
+}
+function taskHolder0(list, laneCls){
   if(S.view==='rows'){ const r=el('div','rows'); list.forEach(t=>r.appendChild(taskRow(t))); return r; }
   if(S.view==='cards'){ const r=el('div','tcards'); list.forEach(t=>r.appendChild(taskCard(t))); return r; }
   const r=el('div','stickies'); list.forEach(t=>r.appendChild(taskSticky(t))); return r;
@@ -5205,13 +5276,6 @@ function taskHolder(list, laneCls){
 function vToday(root){
   root.textContent='';
   const me = person(S.me);
-  const right=el('div','rowflex');
-  const b=el('button','btn ghost'); b.type='button';
-  b.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 2.6l9 5.2v8.4l-9 5.2-9-5.2V7.8z"/></svg>';
-  b.appendChild(el('span',null,'Set My Status'));
-  b.addEventListener('click', ()=> me? setStatus(me) : pickMe());
-  right.appendChild(b);
-  vhead(root,'Today', new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'}), right);
 
   // headline
   const late = openTasks().filter(t=>{const n=days(t.due); return n!==null && n<0;});
@@ -5219,7 +5283,7 @@ function vToday(root){
   const trav = S.people.filter(p=>effStatus(p).k==='travel');
   const ovl = overlaps();
   const hl=el('div','headline');
-  hl.appendChild(el('div','hl-date','Where the Team Stands'));
+  hl.appendChild(el('div','hl-date','Where the Team Stands \u00b7 '+new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})));
   const say=el('div','hl-say');
   const first = me? me.name.split(' ')[0] : 'Team';
   if(late.length){ say.innerHTML = first+', the team has <em class="hl-late">'+late.length+(late.length===1?' task':' tasks')+' past due</em> and '+week.length+' more landing this week.'; }
@@ -6556,18 +6620,29 @@ function freeGrid(days2){
         (c.wk? 'Weekend' : a? (a.holiday? 'MISMO holiday: '+a.t
                               : (a.k==='out'?'Out of Office':'Traveling')+': '+a.t)
                          : 'Nothing Booked');
+      /* how much of their working day Outlook has booked */
+      if(!c.wk && !a && typeof calHas==='function' && calOn() && calHas(p.id)){
+        const iso=isoOf(c.d), h=workHours(p), df=dfTzDiff(h.tz, iso);
+        const ws=hrMin(h.s)-df, we=hrMin(h.e)-df, bz=dfBusy(p.id, iso).filter(x=> x.e>ws && x.s<we);
+        const fr=dfFree(bz, ws, we).reduce((t,f)=> t+(f.e-f.s), 0), share=Math.max(0, Math.min(1, 1-fr/Math.max(60, we-ws)));
+        if(share>0){ const k=el('i','fbk'); k.style.height=Math.round(share*100)+'%'; cell.appendChild(k); }
+        const n=bz.filter(x=>!x.hq && !x.oof).length, hm=m=>{ const hh=Math.floor(m/60), mm=m%60; return hh? hh+'h'+(mm?' '+mm+'m':'') : mm+'m'; };
+        cell.title = p.name+' \u00b7 '+fmtD(iso,1)+' \u2014 '+(n? n+(n===1?' meeting':' meetings') : 'No meetings')+', '+hm(fr)+' free in Outlook';
+      }
       cell.addEventListener('click', ()=> dayPanel(c.d, datesOn(c.d)));
       g.appendChild(cell);
     });
   });
   w.appendChild(g);
   const lg=el('div','flegend');
-  [['ok','Nothing Booked'],['trav','Traveling'],['out','Out of Office'],['wk','Weekend']].forEach(([k,n2])=>{
+  [['ok','Nothing Booked'],['bk','Shaded by How Booked in Outlook'],['trav','Traveling'],['out','Out of Office'],['wk','Weekend']].forEach(([k,n2])=>{
     const s2=el('span'); const i=el('i'); i.className=k; s2.appendChild(i);
     s2.appendChild(document.createTextNode(n2)); lg.appendChild(s2); });
   w.appendChild(lg);
   const note=el('p','note'); note.style.marginTop='10px';
-  note.textContent='This reads Key Dates only \u2014 travel, summits, out-of-office and holidays. It does not know about meetings, which stay in Outlook until the calendars are hooked up.';
+  const conn = (typeof calOn==='function' && calOn())? S.people.filter(p=> calHas(p.id)) : null;
+  note.textContent = !conn ? 'Here this reads Key Dates only \u2014 travel, summits, out of office and holidays. On resources.mismo.org it also shades each day by how booked Outlook is.'
+    : 'Key Dates, plus Outlook meetings for '+(conn.length? conn.map(p=>p.name.split(' ')[0]).join(', ') : 'nobody yet')+'. Point at a day for the count. To find a time for a meeting, use Find a Time.';
   w.appendChild(note);
   return w;
 }
@@ -6608,7 +6683,9 @@ function vDates(root){
   }
   if(mode==='free'){
     const w=el('div');
-    w.appendChild(el('h2','sect-t','Who Is Free, the Next Two Weeks'));
+    w.appendChild(el('h2','sect-t','Find a Time'));
+    findTime(w);
+    const h2=el('h2','sect-t','Who Is Free, the Next Two Weeks'); h2.style.marginTop='26px'; w.appendChild(h2);
     w.appendChild(freeGrid(14));
     root.appendChild(w);
     return;
@@ -7119,9 +7196,9 @@ function vMine(root){
   if(PSTACK.length && PSTACK[PSTACK.length-1].wpanel) setTimeout(drawPanel, 0);
   root.textContent='';
   const me=person(S.me);
-  const right=el('div','rowflex');
-  right.appendChild(viewSwitch());
-  const L0=layout();
+  /* Add a Panel and the board's gear sit in the navy band (myHeadline); with the band
+     hidden they get a slim bar of their own. The help line lives in Add a Panel. */
+  const right=el('div','boardbar');
   const ab=el('button','btn ghost'); ab.type='button'; ab.textContent='Add a Panel';
   ab.addEventListener('click', ()=> addWidget(layout()));
   right.appendChild(ab);
@@ -7130,7 +7207,6 @@ function vMine(root){
   bg.innerHTML='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
   bg.addEventListener('click', ()=> boardSettings(layout()));
   right.appendChild(bg);
-  vhead(root,'My Board', me? (nbOn()? 'Drag a panel by its heading to put it anywhere, and by its corner to size it. Drop it on a page or tab to move it there.' : 'Drag a panel by its header to move it. Drop it on a row to join that row, above or below to start a new one.') : 'Pick your name up top and this becomes yours.', right);
 
   if(!me){
     const bx=el('div','box'); bx.style.textAlign='center'; bx.style.padding='40px 20px';
@@ -7139,7 +7215,7 @@ function vMine(root){
     b2.addEventListener('click', pickMe); bx.appendChild(b2);
     root.appendChild(bx); return;
   }
-  if(!bset().noBand) root.appendChild(myHeadline(me));
+  if(!bset().noBand) root.appendChild(myHeadline(me)); else root.appendChild(right);
   if(nbOn()){ nbView(root); return; }
 
   const L=layout();
@@ -7177,7 +7253,7 @@ function myHeadline(me){
   const ef = effStatus(me);
 
   const hl=el('div','headline');
-  const top=el('div','rowflex');
+  const top=el('div','hltop');
   top.appendChild(el('div','hl-date', greet+', '+me.name.split(' ')[0]));
   const st=el('button','chip stbtn'); st.type='button';
   st.title='Set My Status';
@@ -7190,6 +7266,15 @@ function myHeadline(me){
   pp.setAttribute('d','M6 9l6 6 6-6'); pen.appendChild(pp); st.appendChild(pen);
   st.addEventListener('click', ()=> setStatus(me));
   top.appendChild(st);
+  const ab=el('button','hlbtn'); ab.type='button';
+  ab.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>';
+  ab.appendChild(el('span',null,'Add a Panel'));
+  ab.addEventListener('click', ()=> addWidget(layout()));
+  top.appendChild(ab);
+  const bg=el('button','hlbtn icon'); bg.type='button'; bg.title='My Board Settings'; bg.setAttribute('aria-label','My Board Settings');
+  bg.innerHTML='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
+  bg.addEventListener('click', ()=> boardSettings(layout()));
+  top.appendChild(bg);
   hl.appendChild(top);
 
   const say=el('div','hl-say');
@@ -7617,7 +7702,7 @@ function buildWidget(w, b){
   };
   const rows = list => {
     if(!list.length){ const e=EMPTY[w.t]||['Nothing here.','']; b.appendChild(emptyBox(e[0], e[1])); return; }
-    b.appendChild(taskHolder(list));
+    b.appendChild(taskHolder(list, null, w.view||S.view));
   };
   if(w.t==='watching'){
     /* This one fills itself: a task lands here when you are the accountable
@@ -7628,7 +7713,7 @@ function buildWidget(w, b){
       b.appendChild(emptyBox('Nothing to watch.',
         'A task shows up here when you are accountable for it but somebody else is doing it. Hand one of yours over and it moves here on its own.'));
     } else {
-      b.appendChild(taskHolder(list));
+      b.appendChild(taskHolder(list, null, w.view||S.view));
     }
     const ho=el('button','btn'+(list.length?' ghost sm':' sm'),'Hand Something Over'); ho.type='button';
     ho.style.alignSelf='flex-start';
@@ -7835,7 +7920,9 @@ function buildWidget(w, b){
     b.appendChild(bar);
     return b.appendChild(taskCal(S.me, m));
   }
-  if(w.t==='freebusy') return b.appendChild(freeGrid(14));
+  if(w.t==='freebusy'){ const fb=el('button','btn sm ftopen'); fb.type='button';
+    fb.innerHTML='<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>'; fb.appendChild(el('span',null,'Find a Time'));
+    fb.addEventListener('click', findTimePanel); b.appendChild(fb); return b.appendChild(freeGrid(14)); }
   if(w.t==='planday'){
     if(!S.me) return b.appendChild(emptyBox('Team HQ does not know who you are yet.','Pick your name up top and this becomes yours.'));
     const fresh = w.plan && w.plan.at && new Date(w.plan.at).toDateString()===new Date().toDateString();
@@ -11841,6 +11928,9 @@ function addWidget(L){
     const ht=el('div');
     ht.appendChild(el('h2',null,'Add a Panel'));
     ht.appendChild(el('p',null, 'Point at a panel to see it with your own data. '+onCount+(onCount===1?' panel is':' panels are')+' on your board now.'));
+    /* the help line that used to sit under the My Board title */
+    ht.appendChild(el('p','pgxhelp', nbOn()? 'On your board, drag a panel by its heading to put it anywhere, and by its corner to size it. Drop it on a page or tab to move it there.'
+      : 'On your board, drag a panel by its header to move it. Drop it on a row to join that row, or above or below a row to start a new one.'));
     hd.appendChild(ht);
     const x=el('button','pgxclose','\u00d7'); x.type='button'; x.title='Close'; x.setAttribute('aria-label','Close'); x.addEventListener('click', closeSheet);
     hd.appendChild(x);
@@ -12447,8 +12537,15 @@ const PV_INFO = {
            say:{'':'This panel follows My Board Settings, like every other panel.', own:'This panel opens things its own way, whatever the board is set to.'}},
   pstyle: {t:'Style', n:{'':'Plain', bold:'Bold'},
            say:{'':'A quiet card with a plain heading.', bold:'A colored edge across the top and a bar under the heading showing how much of the work inside is done.'}},
-  pcolor: {t:'Color', n:{}, say:{}}
+  pcolor: {t:'Color', n:{}, say:{}},
+  tview:  {t:'Show Tasks As', n:{rows:'Rows', cards:'Cards', stickies:'Sticky Notes'},
+           say:{rows:'One task per line — the most on screen at once.', cards:'Each task a small card with its project, people and due date.', stickies:'Each task a sticky note, like a wall of post-its.'}},
+  ptview: {t:'Show Tasks As', n:{'':'Same as My Board', rows:'Rows', cards:'Cards', stickies:'Sticky Notes'},
+           say:{'':'This panel follows My Board Settings.', rows:'One task per line in this panel.', cards:'Each task a small card in this panel.', stickies:'Each task a sticky note in this panel.'}}
 };
+/* the panels that list tasks, so they can show them as rows, cards or sticky notes */
+const TASK_PANELS=['mytasks','myrails','watching','duesoon','dueteam','person'];
+const TVIEW_OPTS=[{v:'rows',n:'Rows'},{v:'cards',n:'Cards'},{v:'stickies',n:'Sticky Notes'}];
 /* a small picture of a board; `me` marks the panel the setting is about */
 function pvMock(k, v, ctx){
   ctx=ctx||{};
@@ -12497,6 +12594,13 @@ function pvMock(k, v, ctx){
     case 'popen': return pvMock('opens', v==='own' ? (ctx.own||'rail') : (ctx.board||'rail'), ctx);
     case 'pcolor': h = band()+P(3,24,46,70,'me',4, v? 'border-top:3px solid var(--'+v+');' : '')+P(51,24,46,70,'',4); break;
     case 'name': h = band()+P(3,24,46,70,'me named',3)+P(51,24,46,70,'',3); break;
+    case 'tview': case 'ptview': {
+      const m = v || ctx.board || 'rows';
+      const inner = m==='rows' ? [0,1,2,3,4].map(i=>'<i class="mk-ln" style="top:'+(16+i*10)+'px;width:'+(80-((i*11)%25))+'%"></i>').join('')
+        : m==='cards' ? [[6,16],[52,16],[6,52],[52,52]].map(q=>'<i class="mk-card" style="left:'+q[0]+'%;top:'+q[1]+'px"></i>').join('')
+        : [[6,16],[52,16],[6,52],[52,52]].map((q,i)=>'<i class="mk-stk" style="left:'+q[0]+'%;top:'+q[1]+'px;transform:rotate('+(i%2?2:-2)+'deg)"></i>').join('');
+      h = band()+'<i class="mk-p me" style="left:3%;top:24%;width:58%;height:70%"><i class="mk-hd"></i>'+inner+'</i>'+P(63,24,34,70,'',3);
+      break; }
     default: h = band()+P(3,24,46,70,'',3)+P(51,24,46,70,'',3);
   }
   const m=el('div','mk'); m.innerHTML=h;
@@ -12646,6 +12750,12 @@ function boardSettings(L){
           cr.appendChild(rnd); cr.appendChild(clr);
           b.appendChild(setRow('Panel Colors', 'Shuffle colors across every panel, or take them all off.', cr, {pv:{k:'colors', cur:''}}));
          }},
+        {k:'tasks', n:'Tasks', d:'How tasks look in the panels that list them. A panel can have its own, in its gear.', repaint:paint,
+         sum:()=> nameOf(TVIEW_OPTS, S.view||'rows'),
+         rows:b=>{
+          b.appendChild(setRow('Show Tasks As', 'Rows fit the most on screen; cards and sticky notes show more about each task. Panels set their own way keep it.',
+            btnRow(TVIEW_OPTS, S.view||'rows', 'tiny', v=>{ S.view=v; apply(); }), {pv:{k:'tview', cur:S.view||'rows'}}));
+         }},
         {k:'band', n:'Top Band', d:'The counts across the navy band at the top of your board.', repaint:paint,
          sum:()=> B.noBand? 'Hidden' : B.tiles.length+' of 4 Chosen',
          rows:b=>{
@@ -12707,7 +12817,15 @@ function panelLook(w, L, title){
           b.appendChild(setRow('Panel Name', 'Shows as this panel’s heading. Give each My Notes panel its own name to keep different notes apart — Board Prep, Sponsor Calls, Ideas.', ni, {pv:{k:'name', cur:'x', ctx:{name:(syCard(w.k)||{}).t||'My Notes'}, desc:'The name shows as this panel\u2019s heading on your board.'}}));
          }}] : [];
       const partsGroup = SYS[w.t] ? [sysSettingsGroup(w, apply, paint)] : [];
-      setGroups(box, 'panel', nameGroup.concat(partsGroup).concat([
+      const bv=nameOf(TVIEW_OPTS, S.view||'rows');
+      const tasksGroup = TASK_PANELS.indexOf(w.t)>=0 ? [{k:'tasks', n:'Tasks', d:'How the tasks in this panel look.', repaint:paint,
+         sum:()=> w.view? nameOf(TVIEW_OPTS, w.view) : 'Same as My Board · '+bv,
+         rows:b=>{
+          b.appendChild(setRow('Show Tasks As', w.view? 'This panel has its own. Pick Same as My Board to follow My Board Settings ('+bv+').' : 'Follows My Board Settings ('+bv+'). Pick another to change just this panel.',
+            btnRow([{v:'',n:'Same as My Board'}].concat(TVIEW_OPTS), w.view||'', 'tiny', v=>{ if(v) w.view=v; else delete w.view; apply(); }),
+            {pv:{k:'ptview', cur:w.view||'', ctx:{board:S.view||'rows'}}}));
+         }}] : [];
+      setGroups(box, 'panel', nameGroup.concat(partsGroup).concat(tasksGroup).concat([
         {k:'size', n:'Size and Place', d:'How much of its row it takes, and whether it starts open.', repaint:paint,
          sum:()=> (w.wide?'Double Share':'Equal Share') + ' · Starts '+(w.c?'Collapsed':'Open'),
          rows:b=>{
@@ -14536,6 +14654,195 @@ function sysSettingsGroup(w, apply, repaint){
 }
 /* the Meeting Trackers panel and its tick list want the figures ready, so read them early */
 if(typeof mtAvailable==='function' && mtAvailable()) setTimeout(()=>{ try{ mtLoad(); }catch(e){} }, 2500);
+
+/* ============ FIND A TIME (Who Is Free) ============
+   Jonna, Oct 8: now that Outlook is connected, Who Is Free should answer "I need 30
+   minutes with these two people — when can we meet?". Pick the people, how long, and
+   how far ahead; every working day lists the stretches where all of them are free:
+   inside everyone's working hours (each in their own time zone), around their Outlook
+   meetings and Team HQ time set aside, skipping MISMO holidays, weekends, anyone away
+   in Key Dates or out of office in Outlook, and stopping at 1 PM Eastern on a summer
+   half-day Friday. Click a stretch to pick a start time and open the invitation in
+   Outlook with everyone on it. Times are worked out in Eastern (as dayfree.js does) and
+   shown in the viewer's own time, with Eastern beside them when that differs. */
+const FT = {who:null, len:30, span:10, subj:''};
+const FT_LENS=[{v:15,n:'15 Min'},{v:30,n:'30 Min'},{v:45,n:'45 Min'},{v:60,n:'1 Hour'},{v:90,n:'1½ Hours'},{v:120,n:'2 Hours'}];
+const FT_SPANS=[{v:5,n:'Next 5 Working Days'},{v:10,n:'Next 2 Weeks'},{v:20,n:'Next 4 Weeks'}];
+const ftFirst = id=>{ const p=person(id); return p? p.name.split(' ')[0] : id; };
+function ftNames(ids){ const n=ids.map(ftFirst); return n.length<=1? (n[0]||'') : n.slice(0,-1).join(', ')+' and '+n[n.length-1]; }
+/* the working days from today, as far as Outlook reaches (31 days) */
+function ftDays(n){
+  const out=[], t=today();
+  for(let i=0; i<31 && out.length<n; i++){
+    const d=new Date(t.getFullYear(), t.getMonth(), t.getDate()+i);
+    const w=d.getDay(); if(w===0 || w===6) continue;
+    out.push(d);
+  }
+  return out;
+}
+/* minutes past midnight Eastern on a day -> the moment in time */
+function ftUTC(iso, m){
+  const noon=Date.parse(iso+'T16:00:00Z'), behind=16*60 - dfParts(noon, DF_TZ).min;
+  return Date.parse(iso+'T00:00:00Z') + (m+behind)*60000;
+}
+/* one day for a set of people: why it is out, or the open stretches */
+function ftDay(d, ids, len){
+  const iso=isoOf(d);
+  const hol=holidayOn(d); if(hol) return {iso, d, why:'MISMO holiday: '+hol.t};
+  let ws=0, we=24*60; const busy=[];
+  for(const id of ids){
+    const p=person(id); if(!p) continue;
+    const a=awayOn(id, d);
+    if(a) return {iso, d, why: ftFirst(id)+' is '+(a.k==='out'? 'out of office' : 'traveling')+(a.t? ' ('+a.t+')' : '')};
+    const h=workHours(p), diff=dfTzDiff(h.tz, iso);
+    ws=Math.max(ws, hrMin(h.s)-diff); we=Math.min(we, hrMin(h.e)-diff);
+    const b=dfBusy(id, iso);
+    if(b.some(x=> x.oof && x.s<=hrMin(h.s)-diff && x.e>=hrMin(h.e)-diff)) return {iso, d, why: ftFirst(id)+' is out of office in Outlook'};
+    b.forEach(x=> busy.push(Object.assign({who:id}, x)));
+  }
+  if(isHalfFriday(d)) we=Math.min(we, 13*60);
+  if(iso===isoOf(today())){ const now=dfParts(Date.now()).min; ws=Math.max(ws, Math.ceil(now/15)*15); }
+  if(we-ws<len) return {iso, d, ws, we, busy, free:[], short: iso===isoOf(today())? 'Nothing left today' : we<=ws? 'Their working hours don’t overlap' : 'No gap long enough'};
+  busy.sort((a,b)=> a.s-b.s);
+  const free=dfFree(busy, ws, we).filter(f=> f.e-f.s>=len);
+  return {iso, d, ws, we, busy, free};
+}
+/* a teammate's address: the one Team HQ has from their sign-in, or MISMO's pattern
+   (first initial + last name @mismo.org) */
+function ftEmail(id){ const p=person(id); if(!p) return '';
+  if(p.email) return String(p.email).toLowerCase();
+  const w=String(p.name||'').trim().split(/\s+/); if(w.length<2) return '';
+  return (w[0][0]+w[w.length-1]).toLowerCase().replace(/[^a-z]/g,'')+'@mismo.org'; }
+function ftOutlook(ids, iso, s, len, subj){
+  const em=ids.filter(id=> id!==S.me).map(ftEmail).filter(Boolean);
+  const q=new URLSearchParams({path:'/calendar/action/compose', rru:'addevent',
+    startdt:new Date(ftUTC(iso, s)).toISOString(), enddt:new Date(ftUTC(iso, s+len)).toISOString(), subject:subj||''});
+  if(em.length) q.set('to', em.join(','));
+  return 'https://outlook.office.com/calendar/0/deeplink/compose?'+q.toString();
+}
+const ftDate = iso=> parseD(iso).toLocaleDateString('en-US',{weekday:'short', month:'short', day:'numeric'});
+function ftWhen(iso, s, e){ return ftDate(iso)+', '+dfDualRange(s, e, iso); }
+const FT_LENTXT={15:'15-minute',30:'30-minute',45:'45-minute',60:'1-hour',90:'90-minute',120:'2-hour'};
+
+function findTime(root){
+  if(!FT.who) FT.who = S.me ? [S.me] : [];
+  FT.who = FT.who.filter(id=> person(id));
+  const box=el('div','ft');
+  root.appendChild(box);
+  let openAt='';
+  const paint=()=>{
+    box.textContent='';
+    const f=el('div','ftform');
+    /* who */
+    const wr=el('div','ftrow');
+    wr.appendChild(el('label','ftl','Who Needs to Be There'));
+    const ppl=el('div','ftppl');
+    S.people.forEach(p=>{
+      const on=FT.who.indexOf(p.id)>=0;
+      const b=el('button','ftp'+(on?' on':'')); b.type='button'; b.setAttribute('aria-pressed', String(on));
+      b.appendChild(avatar(p.id,'xs')); b.appendChild(el('span',null, p.name.split(' ')[0]+(p.id===S.me?' (Me)':'')));
+      if(calOn() && !calHas(p.id)){ b.appendChild(el('small',null,'No Outlook')); b.title=p.name+'’s Outlook isn’t connected yet — only their Key Dates and working hours count.'; }
+      b.addEventListener('click', ()=>{ const k=FT.who.indexOf(p.id); if(k>=0) FT.who.splice(k,1); else FT.who.push(p.id); openAt=''; paint(); });
+      ppl.appendChild(b);
+    });
+    wr.appendChild(ppl); f.appendChild(wr);
+    /* how long, how far ahead, what for */
+    const r2=el('div','ftrow two');
+    const c1=el('div'); c1.appendChild(el('label','ftl','How Long'));
+    c1.appendChild(btnRow(FT_LENS, FT.len, 'tiny', v=>{ FT.len=+v; openAt=''; paint(); })); r2.appendChild(c1);
+    const c2=el('div'); c2.appendChild(el('label','ftl','Looking Ahead'));
+    c2.appendChild(btnRow(FT_SPANS, FT.span, 'tiny', v=>{ FT.span=+v; openAt=''; paint(); })); r2.appendChild(c2);
+    f.appendChild(r2);
+    const r3=el('div','ftrow');
+    const lb=el('label','ftl','What It’s For'); lb.htmlFor='ftsubj'; r3.appendChild(lb);
+    const si=inp('text', FT.subj, 'Optional — becomes the subject of the Outlook invitation'); si.id='ftsubj'; si.className='ftsubj';
+    si.addEventListener('input', ()=>{ FT.subj=si.value; box.querySelectorAll('a.ftbook').forEach(a=>{ a.href=a.href.replace(/([?&]subject=)[^&]*/, '$1'+encodeURIComponent(FT.subj)); }); });
+    r3.appendChild(si); f.appendChild(r3);
+    box.appendChild(f);
+
+    if(!FT.who.length){ box.appendChild(emptyBox('Pick who needs to be there.','Team HQ then lists every time all of them are free.')); return; }
+    const ids=FT.who.slice();
+    const daysL=ftDays(FT.span).map(d=> ftDay(d, ids, FT.len));
+    const total=daysL.reduce((a,x)=> a+(x.free? x.free.length : 0), 0);
+    const first=daysL.find(x=> x.free && x.free.length);
+
+    /* what this is based on */
+    const say=el('p','ftsay');
+    const lenTxt=FT_LENTXT[FT.len]||FT.len+'-minute';
+    if(first) say.innerHTML='<b>'+daysL.filter(x=>x.free&&x.free.length).length+' of '+daysL.length+' working days</b> have '+(ids.length>1?'a '+esc(lenTxt)+' gap that works for '+esc(ftNames(ids)):'a '+esc(lenTxt)+' gap for '+esc(ftNames(ids)))+'. The soonest starts <b>'+esc(ftWhen(first.iso, first.free[0].s, first.free[0].s+FT.len))+'</b>.';
+    else say.innerHTML='<b>No '+esc(lenTxt)+' gap works for '+esc(ftNames(ids))+'</b> in the '+esc((FT_SPANS.find(x=>x.v===FT.span)||{n:''}).n.toLowerCase())+'. Try a shorter meeting or look further ahead.';
+    box.appendChild(say);
+    const gaps=[];
+    if(!calOn()) gaps.push('This copy can’t see Outlook, so only Key Dates, holidays and working hours count. Use Team HQ on resources.mismo.org to include meetings.');
+    else { const no=ids.filter(id=> !calHas(id)); if(no.length) gaps.push(ftNames(no)+(no.length===1?'’s':'’') +' Outlook isn’t connected, so only their Key Dates and working hours count.'); }
+    gaps.push(dfLocalIsET(isoOf(today()))? 'Times are Eastern.' : 'Times are in your time ('+dfAbbr(DF_ME, isoOf(today()))+'), Eastern in brackets.');
+    box.appendChild(el('p','note ftnote', gaps.join(' ')));
+
+    const list=el('div','ftdays');
+    daysL.forEach(x=>{
+      const row=el('div','ftday'+(x.free && x.free.length? '' : ' none'));
+      const hd=el('div','ftdh');
+      hd.appendChild(el('b',null, ftDate(x.iso)));
+      if(isHalfFriday(x.d)) hd.appendChild(el('small',null,'Half Day'));
+      row.appendChild(hd);
+      const mid=el('div','ftdm');
+      if(x.why){ mid.appendChild(el('span','ftwhy', x.why)); row.appendChild(mid); list.appendChild(row); return; }
+      /* the day as a bar: everyone's meetings merged, open stretches that fit */
+      if(x.we>x.ws){
+        const span=x.we-x.ws, pos=m=> Math.max(0, Math.min(100, (m-x.ws)/span*100));
+        const bar=el('div','ftbar');
+        x.busy.forEach(b=>{ if(b.e<=x.ws || b.s>=x.we) return; const s=el('i','ftb'+(b.hq?' hq':''));
+          s.style.left=pos(b.s)+'%'; s.style.width=Math.max(.8, pos(b.e)-pos(b.s))+'%';
+          s.title=ftFirst(b.who)+': '+b.t+' · '+dfDualRange(b.s, b.e, x.iso, false); bar.appendChild(s); });
+        x.free.forEach(fr=>{ const s=el('i','ftf'); s.style.left=pos(fr.s)+'%'; s.style.width=(pos(fr.e)-pos(fr.s))+'%'; bar.appendChild(s); });
+        mid.appendChild(bar);
+      }
+      if(!x.free.length){ mid.appendChild(el('span','ftwhy', x.short || 'No gap long enough')); row.appendChild(mid); list.appendChild(row); return; }
+      const sl=el('div','ftslots');
+      x.free.forEach(fr=>{
+        const key=x.iso+'|'+fr.s;
+        const b=el('button','ftslot'+(openAt===key?' on':'')); b.type='button'; b.setAttribute('aria-expanded', String(openAt===key));
+        b.appendChild(el('span',null, dfDualRange(fr.s, fr.e, x.iso, false)));
+        if(!dfLocalIsET(x.iso)) b.appendChild(el('small',null, dfHM(fr.s)+'–'+dfHM(fr.e)+' ET'));
+        b.addEventListener('click', ()=>{ openAt = openAt===key? '' : key; paint(); });
+        sl.appendChild(b);
+      });
+      mid.appendChild(sl);
+      const op=x.free.find(fr=> openAt===x.iso+'|'+fr.s);
+      if(op) mid.appendChild(ftPick(ids, x.iso, op));
+      row.appendChild(mid);
+      list.appendChild(row);
+    });
+    box.appendChild(list);
+  };
+  paint();
+  box.repaint=paint;
+  return box;
+}
+/* a stretch picked: choose the start, then open it in Outlook or copy it */
+function ftPick(ids, iso, fr){
+  const w=el('div','ftpick');
+  const starts=[]; for(let m=fr.s; m+FT.len<=fr.e && starts.length<40; m+=15) starts.push(m);
+  const lb=el('label','ftl','Start At'); w.appendChild(lb);
+  const sel=document.createElement('select'); sel.className='ftsel'; sel.setAttribute('aria-label','Start time');
+  starts.forEach(m=>{ const o=document.createElement('option'); o.value=String(m); o.textContent=dfDualRange(m, m+FT.len, iso); sel.appendChild(o); });
+  w.appendChild(sel);
+  const acts=el('div','ftacts');
+  const a=el('a','btn sm ftbook'); a.target='_blank'; a.rel='noopener';
+  a.innerHTML='<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';
+  a.appendChild(el('span',null,'Open the Invitation in Outlook'));
+  const cp=el('button','btn ghost sm','Copy the Time'); cp.type='button';
+  const set=()=>{ const s=+sel.value; a.href=ftOutlook(ids, iso, s, FT.len, FT.subj); };
+  sel.addEventListener('change', set); set();
+  cp.addEventListener('click', ()=>{ const s=+sel.value; const txt=ftWhen(iso, s, s+FT.len)+' — '+ftNames(ids);
+    (navigator.clipboard? navigator.clipboard.writeText(txt) : Promise.reject()).then(()=> toast('Copied: '+txt), ()=> toast(txt)); });
+  acts.appendChild(a); acts.appendChild(cp); w.appendChild(acts);
+  const em=ids.filter(id=> id!==S.me && !ftEmail(id));
+  w.appendChild(el('p','note', 'Outlook opens a new meeting with the time'+(ids.length>1?' and '+(em.length? 'the people it has addresses for' : 'everyone')+' filled in':' filled in')+'. Check it and click Send there.'+(em.length? ' Add '+ftNames(em)+' yourself.' : '')));
+  return w;
+}
+/* the board panel opens it in the side panel */
+function findTimePanel(){ panel('Find a Time', 'When everyone you pick is free', body=> findTime(body)); }
 
 /* ============ rail search sources ============ */
 window.__search = function(t, push, goTab){
