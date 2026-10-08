@@ -2747,6 +2747,10 @@ html{scrollbar-color:var(--border-strong) var(--ground)}
 .hlbtn.icon svg{width:16px;height:16px;stroke-width:1.7}
 .boardbar{display:flex;justify-content:flex-end;align-items:center;gap:8px}
 .pgxhelp{margin:6px 0 0;font-size:12.5px;color:var(--ink-3)}
+/* Today: five tiles on one row; Active Projects carries the open-task count */
+@media(min-width:721px){ .headline .tiles.one{grid-template-columns:repeat(5,minmax(0,1fr))} }
+.tile .tsub{display:flex;align-items:baseline;gap:5px;font-style:normal;font-size:12px;color:var(--sky-soft);margin-top:6px;padding-top:6px;border-top:1px solid rgba(116,191,235,.2)}
+.tile .tsub b{display:inline;font-size:15px;font-weight:700;line-height:1;color:#fff}
 
 #rs-account{flex:0 0 auto;display:inline-flex;align-items:center}
 #rs-account .rs-who,#rs-account .rs-signin{border-radius:4px}
@@ -5299,13 +5303,16 @@ function vToday(root){
   /* Every number here is the whole team, not just you. Say so on the tile —
      a bare 124 reads as yours. */
   const nAct = S.rocks.filter(r=>r.status==='Active').length;
-  tl.appendChild(mk(openTasks().length,'Open Tasks',
-    'everyone\u2019s, across all '+S.rocks.length+' team projects','',()=>show('rocks')));
+  tl.classList.add('one');
+  tl.appendChild(mk(trav.length,'Traveling', trav.length? trav.map(p=>p.name.split(' ')[0]).join(', ') : 'nobody is away', trav.length?'warn':'', ()=>show('dates')));
+  /* projects and their tasks in one box: projects the big number, tasks under it */
+  const pj=mk(nAct,'Active Projects', 'of '+S.rocks.length+' team projects', '', ()=>show('rocks'));
+  const ot=el('em','tsub'); ot.appendChild(el('b',null,String(openTasks().length))); ot.appendChild(document.createTextNode(' Open Tasks'));
+  ot.title='Everyone\u2019s open tasks, across all '+S.rocks.length+' team projects';
+  pj.appendChild(ot); tl.appendChild(pj);
+  tl.appendChild(mk(ovl.length,'Possible Overlaps', ovl.length?'two people, one part':'nothing doubled up', ovl.length?'warn':'', ()=>show('rocks')));
   tl.appendChild(mk(late.length,'Past Due',
     late.length? 'anyone\u2019s, any project' : 'nobody is late', late.length?'bad':'', ()=>lateRail()));
-  tl.appendChild(mk(ovl.length,'Possible Overlaps', ovl.length?'two people, one part':'nothing doubled up', ovl.length?'warn':'', ()=>show('rocks')));
-  tl.appendChild(mk(nAct,'Active Projects', 'of '+S.rocks.length+' team projects', '', ()=>show('rocks')));
-  tl.appendChild(mk(trav.length,'Traveling', trav.length? trav.map(p=>p.name.split(' ')[0]).join(', ') : 'nobody is away', trav.length?'warn':'', ()=>show('dates')));
   const wd=workdaysLeft();
   tl.appendChild(mk(fmtDays(wd),'Working Days Left',
     'weekdays left in '+new Date().getFullYear()+', minus holidays', wd<40?'warn':'', ()=>show('dates')));
