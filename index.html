@@ -2573,6 +2573,16 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .dfrow.hq span:last-child{color:var(--c7)}
 .dfslot{display:inline-flex;flex-direction:column;align-items:flex-start;line-height:1.2;padding-top:4px;padding-bottom:4px}
 .dfslot small{font-size:10.5px;font-weight:500;color:var(--ink-3)}
+/* ---------- finished work, folded shut ---------- */
+.donefold{margin-top:16px}
+.donefh{display:flex;align-items:center;gap:8px;width:100%;background:none;border:0;padding:6px 2px;cursor:pointer;
+  font:inherit;font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2);text-align:left}
+.donefh:hover{color:var(--ink)}
+.donefh:focus-visible{outline:2px solid var(--sky);outline-offset:2px;border-radius:4px}
+.donefh .dfc{display:inline-block;font-size:16px;line-height:1;transition:transform .15s;color:var(--ink-3)}
+.donefold.open .dfc{transform:rotate(90deg)}
+.donefold .rows{margin-top:6px}
+@media (prefers-reduced-motion:reduce){ .donefh .dfc{transition:none} }
 
 /* ---------- messages: a small note in the bottom-left corner of the page, never over the
    right-hand panel or the middle of the work ---------- */
@@ -3114,7 +3124,11 @@ const SEED_LINKS = [
   {n:'QR Code Manager',        u:'https://resources.mismo.org/qr/',                     d:'Codes, tracking and expiry', c:6},
   {n:'Sponsorship Prospectus', u:'https://resources.mismo.org/Sponsorship-Prospectus/', d:'The 2027 summit sponsorship prospectus', c:5, doc:1},
   {n:'Financial System',       u:'https://claude.ai/artifact/QFAJwn9Nv4ExGNCPnVYUEX',   d:'Reconciliation, budget, board reporting and summit P&L', c:1, tmp:1},
-  {n:'Member 360',             u:'https://claude.ai/artifact/NyuB6FrzML8b9j9URqMo38',   d:'Member and stakeholder records', c:4, tmp:1}
+  {n:'Member 360',             u:'https://claude.ai/artifact/NyuB6FrzML8b9j9URqMo38',   d:'Member and stakeholder records', c:4, tmp:1},
+  {n:'CMS',                    u:'https://claude.ai/artifact/Rdt3ExdJgfnxJM2nsgwEg6?sk=ZIAZ_iA8q-V6gycdCY6big', d:'Certifications, renewals and assessors', c:2, tmp:1, nw:1},
+  {n:'IIF HQ',                 u:'https://resources.mismo.org/iif-hq/',                 d:'The IIF cycle: lenders, invoices and payments', c:3, nw:1},
+  {n:'People and Access',      u:'https://resources.mismo.org/initiative-hub/admin.html#people', d:'Who can open which MISMO tool', c:0, nw:1},
+  {n:'GitHub',                 u:'https://github.com/GitMISMO',                         d:'Where MISMO\u2019s tools and their data live', c:6, nw:1}
 ];
 /* The Summit P&L is no longer its own system — summit costing and margin moved
    inside the Financial System. A board that still lists it by name simply drops
@@ -5021,7 +5035,7 @@ function taskRow(t){
   const ac=autoChip(t); if(ac) rr.appendChild(ac);
   if(t.p==='High') rr.appendChild(Object.assign(el('span','chip ch-hi','High'),{}));
   rr.appendChild(statChip(t.s));
-  const dc=dueChip(t.due); if(dc) rr.appendChild(dc);
+  const dc= t.s==='Done' ? null : dueChip(t.due); if(dc) rr.appendChild(dc);
   rr.appendChild(whoPair(t));
   h.appendChild(rr);
   h.addEventListener('click', ()=> editTask(t));
@@ -5599,12 +5613,21 @@ function rockPanel(r, dupWs){
       row.addEventListener('click', ()=> wsPanel(r, w));
       ws.appendChild(row);
     });
-    if(!(r.ws||[]).length) ws.appendChild(emptyBox('No parts yet.','Edit this team project to add the parts people divide up.'));
+    /* tasks on this project that are not in any of its parts would otherwise never show */
+    const loose = mine.filter(t=> (r.ws||[]).indexOf(t.w)<0);
+    if(loose.length){
+      const lo=loose.filter(t=>t.s!=='Done'), ld=loose.length-lo.length;
+      const row=el('button','wsr'); row.type='button';
+      const wn=el('span','wn'); wn.appendChild(document.createTextNode('Not in a Part'));
+      wn.appendChild(el('small',null, (lo.length? lo.length+(lo.length===1?' open task':' open tasks') : 'nothing open')+(ld? ' \u00b7 '+ld+' done' : '')));
+      row.appendChild(wn); row.addEventListener('click', ()=> wsPanel(r, null)); ws.appendChild(row);
+    }
+    if(!(r.ws||[]).length && !loose.length) ws.appendChild(emptyBox('No parts yet.','Edit this team project to add the parts people divide up.'));
     body.appendChild(ws);
+    const dn2=mine.filter(t=>t.s==='Done');
+    if(dn2.length) body.appendChild(doneFold(dn2, true));
 
     const acts=el('div','rowacts');
-    const add=el('button','btn ghost','Jot Something Down'); add.type='button';
-    add.addEventListener('click', ()=>{ closePanel(); capture(r.id); }); acts.appendChild(add);
     /* The lead is answerable for this one; this is how they put somebody else
        on the actual work without giving up being accountable for it. */
     const wh=el('button','btn ghost','Who Is Doing What'); wh.type='button';
@@ -5618,7 +5641,7 @@ function rockPanel(r, dupWs){
 
 function wsPanel(r, w){
   panel(r.name, w, b=>{
-    const mine = S.tasks.filter(t=>t.r===r.id && t.w===w);
+    const mine = S.tasks.filter(t=>t.r===r.id && (w===null ? (r.ws||[]).indexOf(t.w)<0 : t.w===w));
     const ts = mine.filter(t=>t.s!=='Done');
     const done = mine.length - ts.length;
     const who = Array.from(new Set(ts.map(t=>t.o))).filter(Boolean);
@@ -5641,11 +5664,26 @@ function wsPanel(r, w){
       wh.addEventListener('click', ()=> assignPanel(r.id));
       bar.appendChild(wh);
     }
-    if(done) bar.appendChild(el('span','note pushr', done+' already done here'));
+
     b.appendChild(bar);
-    if(!ts.length){ b.appendChild(emptyBox('Nothing open here.','Add a task, or leave it — an empty part is fine.')); return; }
-    const rows=el('div','rows'); ts.forEach(t=>rows.appendChild(taskRow(t))); b.appendChild(rows);
-  }, w);
+    if(!ts.length) b.appendChild(emptyBox('Nothing open here.','Add a task, or leave it — an empty part is fine.'));
+    else { const rows=el('div','rows'); ts.forEach(t=>rows.appendChild(taskRow(t))); b.appendChild(rows); }
+    const dl=mine.filter(t=>t.s==='Done'); if(dl.length) b.appendChild(doneFold(dl, false));
+  }, w===null? 'Not in a Part' : w);
+}
+/* what has been finished, folded shut until asked for: newest first, with the part
+   it was in when the list covers the whole project */
+function doneFold(list, withPart){
+  const box=el('div','donefold');
+  const h=el('button','donefh'); h.type='button'; h.setAttribute('aria-expanded','false');
+  h.appendChild(el('span','dfc','\u203a')); h.appendChild(document.createTextNode('Done ('+list.length+')'));
+  const rows=el('div','rows'); rows.hidden=true;
+  list.slice().sort((a,c)=> (c.doneAt||c.at||0)-(a.doneAt||a.at||0)).forEach(t=>{
+    const r2=taskRow(t);
+    rows.appendChild(r2); });
+  h.addEventListener('click', ()=>{ rows.hidden=!rows.hidden; h.setAttribute('aria-expanded', String(!rows.hidden)); box.classList.toggle('open', !rows.hidden); });
+  box.appendChild(h); box.appendChild(rows);
+  return box;
 }
 
 function editRock(r){
@@ -5722,7 +5760,7 @@ function handOver(me){
       tt.appendChild(el('small',null,(r? r.name+(t.w?' \u00b7 '+t.w:'') : 'No team project')+(t.rail?' \u00b7 Running rail':'')));
       h.appendChild(tt);
       const rr=el('span','r');
-      const dc=dueChip(t.due); if(dc) rr.appendChild(dc);
+      const dc= t.s==='Done' ? null : dueChip(t.due); if(dc) rr.appendChild(dc);
       rr.appendChild(el('span','chip ch-ns','Hand It Over'));
       h.appendChild(rr);
       h.addEventListener('click', ()=> handTo(t, me));
@@ -8054,10 +8092,12 @@ function myLinks(w){
   const byName={}; SEED_LINKS.forEach(l=> byName[l.n]=l);
   const out=[], seen={};
   (w.k||[]).forEach(n=>{ if(byName[n] && !seen[n]){ out.push(byName[n]); seen[n]=1; } });
+  /* systems added since this board last chose its own show up on the end */
+  SEED_LINKS.forEach(l=>{ if(l.nw && !seen[l.n] && (w.seen||[]).indexOf(l.n)<0) out.push(l); });
   return out;
 }
 function pickLinks(L, existing){
-  const chosen = new Set(existing && existing.k ? existing.k : SEED_LINKS.map(l=>l.n));
+  const chosen = new Set(existing && existing.k ? myLinks(existing).map(l=>l.n) : SEED_LINKS.map(l=>l.n));
   sheet(box=>{
     box.appendChild(el('h2',null,'Which Systems?'));
     box.appendChild(el('p',null,'Tick the ones you want inside the My Systems panel. Everybody can still reach all of them \u2014 this only changes which ones show on your own board.'));
@@ -8097,8 +8137,9 @@ function pickLinks(L, existing){
       const had = (existing && existing.k) ? existing.k.slice() : [];
       const ids = had.filter(n=>chosen.has(n))
         .concat(SEED_LINKS.filter(l=>chosen.has(l.n) && had.indexOf(l.n)<0).map(l=>l.n));
-      if(existing) existing.k = ids;
-      else L.push({r:[newPanel({t:'links', k:ids}, L)]});
+      const seenAll=SEED_LINKS.map(l=>l.n);
+      if(existing){ existing.k = ids; existing.seen = seenAll; }
+      else L.push({r:[newPanel({t:'links', k:ids, seen:seenAll}, L)]});
       saveMine(); closeSheet(); vMine($('#app-mine'));
     });
     acts.appendChild(all); acts.appendChild(none); acts.appendChild(ok); box.appendChild(acts);
