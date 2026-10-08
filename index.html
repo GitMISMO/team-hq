@@ -13414,7 +13414,9 @@ function calLoad(force){
       .then(d=>[p.id, d], ()=>[p.id, null])))
     .then(list=>{
       const by={};
-      list.forEach(([id,d])=>{ if(d && Array.isArray(d.ev)) by[id]=d.ev.map(calEv).filter(Boolean); });
+      /* the starter files ({"who":"perry","ev":[]}) only make room for a flow; a person is
+         connected once their own flow has written the file, which it does without "who" */
+      list.forEach(([id,d])=>{ if(d && Array.isArray(d.ev) && (!d.who || d.ev.length)) by[id]=d.ev.map(calEv).filter(Boolean); });
       CAL.by=by; CAL.at=Date.now(); CAL.busy=false; CAL.tried=true;
       if(S.tab==='today') render('today');
     }, ()=>{ CAL.busy=false; CAL.tried=true; });
