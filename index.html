@@ -81,7 +81,7 @@
   var MAX_FILE = 940000;              /* the relay takes at most 1,000,000 bytes a save */
   var MAX_RECEIPT = 4 * 1024 * 1024;  /* base64 adds a third; the relay's request limit is about 6 MB */
   var COLLS = ['people', 'rocks', 'tasks', 'dates', 'notes', 'agenda', 'expenses', 'figures', 'nudges',
-    'leads', 'blocks', 'asks', 'plans', 'planitems', 'plankinds', 'datekinds', 'myitems', 'outbox'];
+    'leads', 'apps', 'blocks', 'asks', 'plans', 'planitems', 'plankinds', 'datekinds', 'myitems', 'outbox'];
 
   /* ---------- browser storage: every tool shares this web address ----------
      Team HQ's own keys (mismo.teamhq.…, hq.rail.off) are filed under
@@ -114,11 +114,15 @@
     }
     if (seg.length === 2) {
       if (seg[0] === 'leads') return { proj: PORTAL, file: 'leads', key: seg[1], ro: true };
+      /* the portal's pipeline: sponsorship applications, Submitted through Paid */
+      if (seg[0] === 'apps') return { proj: PORTAL, file: 'applications', key: seg[1], ro: true };
       if (COLLS.indexOf(seg[0]) >= 0 || SYNC[seg[0]]) return { proj: PROJECT, file: seg[0], key: seg[1] };
     }
     throw err('invalid_argument', 'Team HQ does not keep anything at ' + path);
   }
-  function fileOfColl(coll) { return coll === 'leads' ? { proj: PORTAL, file: 'leads', ro: true } : { proj: PROJECT, file: coll }; }
+  function fileOfColl(coll) { if (coll === 'leads') return { proj: PORTAL, file: 'leads', ro: true };
+    if (coll === 'apps') return { proj: PORTAL, file: 'applications', ro: true };
+    return { proj: PROJECT, file: coll }; }
 
   /* ---------- talking to the relay ---------- */
   var status = { offline: false, lastError: '' };
@@ -750,6 +754,10 @@
     canPrivate: function () { var rs = RS(); return !!(rs && rs.role(PRIVATE)); }, poll: function () { poll(true); }, pending: anyPending, status: status,
     /* read one file of another tool the person has access to (Meeting Trackers' schedule);
        resolves the file's content, or rejects (e.g. 403 when they have no access to it) */
+    /* how the Sponsorship Portal's prospect list is reaching Team HQ: the same file the
+       portal itself saves to (sponsorship-data, data/leads.json), read live */
+    leadsState: function () { var f = F[PORTAL + ':leads'], g = F[PORTAL + ':applications']; if (!f) return { loaded: false };
+      return { loaded: !!f.loaded, denied: !!f.denied && !(g && g.loaded && !g.denied), at: Math.max(f.polledAt || f.loadedAt || 0, g ? (g.polledAt || g.loadedAt || 0) : 0) }; },
     /* a JSON file another tool keeps outside data/ (Service Orders' orders/), read only */
     readFile: function (proj, path) { return call(proj, '/file/' + String(path).split('/').map(encodeURIComponent).join('/'), 'GET').then(function (b) {
       var bin = atob((b && b.content) || ''), bytes = new Uint8Array(bin.length);
@@ -3255,7 +3263,7 @@ function fmtNum(f, n){
 }
 
 /* ============ state ============ */
-const S = {people:[], rocks:[], tasks:[], dates:[], notes:[], agenda:[], expenses:[], figures:[], nudges:[], leads:[], blocks:[], asks:[], plans:[], planitems:[], plankinds:[], datekinds:[], openSecs:{}, openItems:{}, me:null, uid:null, whoseFilter:'',
+const S = {people:[], rocks:[], tasks:[], dates:[], notes:[], agenda:[], expenses:[], figures:[], nudges:[], leads:[], apps:[], blocks:[], asks:[], plans:[], planitems:[], plankinds:[], datekinds:[], openSecs:{}, openItems:{}, me:null, uid:null, whoseFilter:'',
            tab:'today', view:'rows', editing:false, layout:null, bset:null, db:null, ready:false,
            rockFilter:'Active', openRocks:{}, dateFilter:'', expScope:'mine', openTrips:{}};
 window.__S = S;
@@ -4122,8 +4130,8 @@ const LS = {
 
 /* `leads` is a nightly mirror of the Sponsorship Portal's prospect list. Team HQ
    only ever reads it; the portal stays the place those records are edited. */
-const COLS = ['people','rocks','tasks','dates','notes','agenda','expenses','figures','nudges','leads','blocks','asks','plans','planitems','plankinds','datekinds'];
-const KEYOF = {people:'people', rocks:'rocks', tasks:'tasks', dates:'dates', notes:'notes', agenda:'agenda', expenses:'expenses', figures:'figures', nudges:'nudges', leads:'leads', blocks:'blocks', asks:'asks', plans:'plans', planitems:'planitems', plankinds:'plankinds', datekinds:'datekinds'};
+const COLS = ['people','rocks','tasks','dates','notes','agenda','expenses','figures','nudges','leads','apps','blocks','asks','plans','planitems','plankinds','datekinds'];
+const KEYOF = {people:'people', rocks:'rocks', tasks:'tasks', dates:'dates', notes:'notes', agenda:'agenda', expenses:'expenses', figures:'figures', nudges:'nudges', leads:'leads', apps:'apps', blocks:'blocks', asks:'asks', plans:'plans', planitems:'planitems', plankinds:'plankinds', datekinds:'datekinds'};
 let unsubs = [];
 let localOnly = false;
 
@@ -13704,7 +13712,24 @@ function spMeName(){ const p=person(S.me); return p? p.name : ''; }
 function spIsMine(l){ const me=spMeName(); if(!me || !l.owner) return false;
   const o=String(l.owner).trim().toLowerCase(); return o===me.toLowerCase() || o===me.split(' ')[0].toLowerCase(); }
 function spDue(l){ const d=parseD(l.nextFollowUpDate); return d && d<=today(); }
-function spSeasons(){ const s={}; (S.leads||[]).forEach(l=>{ if(l.season) s[String(l.season)]=1; }); return Object.keys(s).sort(); }
+function spDate(s){ const m=/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/.exec(String(s||'').trim());
+  if(m){ const y=+m[3]<100? 2000 + +m[3] : +m[3]; return new Date(y, +m[1]-1, +m[2]); }
+  const d=parseD(String(s||'').slice(0,10)); return d || null; }
+const spAmt = (arr,f)=> arr.reduce((t,a)=> t+(+String(a[f]==null?'':a[f]).replace(/[$,\s]/g,'')||0), 0);
+const SP_STAGES = ['Submitted','Approved','Pending Payment','Paid','Declined','Written Off'];
+function spAppRow(a, d){
+  const row=el('div','row'); const h=el('div','rh2'); h.style.cursor='default';
+  const t2=el('span','t'); t2.appendChild(document.createTextNode(a.company||a.appNo||'Application'));
+  const bits=[]; if(a.event) bits.push(a.event); const lv=a.level2027||a.level2026; if(lv) bits.push(lv);
+  if(+a.amountDue) bits.push('$'+Math.round(+a.amountDue).toLocaleString('en-US'));
+  const n=d && d.pipe.age(a); if(a.status==='Pending Payment' && n!==null) bits.push('invoiced '+n+(n===1?' day':' days')+' ago');
+  else if(a.dateSubmitted && a.status==='Submitted'){ const s=spDate(a.dateSubmitted); if(s) bits.push('submitted '+fmtD(isoOf(s))); }
+  t2.appendChild(el('small',null, bits.join(' \u00b7 ')));
+  h.appendChild(t2); const rr=el('span','r'); rr.appendChild(el('span','chip '+(a.status==='Paid'?'ch-dn':a.status==='Submitted'?'ch-ip':'ch-ns'), a.status||'Submitted')); h.appendChild(rr);
+  row.appendChild(h); return row;
+}
+function spSeasons(){ const s={}; (S.leads||[]).forEach(l=>{ if(l.season) s[String(l.season)]=1; });
+  (S.apps||[]).forEach(a=>{ const m=/(20\d\d)/.exec(String(a.event||'')); if(m) s[m[1]]=1; }); return Object.keys(s).sort(); }
 /* the prospects a panel looks at, and everything worked out from them */
 function spData(w){
   const all=(S.leads||[]).filter(l=> !w || !w.season || String(l.season||'')===String(w.season));
@@ -13712,7 +13737,15 @@ function spData(w){
   const fresh=live.filter(l=> LEAD_NEW.indexOf(l.status)>=0);
   const flight=live.filter(l=> LEAD_NEW.indexOf(l.status)<0);
   const quiet=flight.filter(l=>{ const a=leadAge(l); return a!==null && a>=QUIET_DAYS; });
-  return {all, live, fresh, flight, quiet,
+  const apps=(S.apps||[]).filter(a=> !w || !w.season || String(a.event||'').indexOf(String(w.season))>=0);
+  const appAt=st=> apps.filter(a=> (a.status||'Submitted')===st);
+  const t0=today(), age=a=>{ const d=spDate(a.invoiceDate); return d? Math.round((t0-d)/86400000) : null; };
+  const pending=appAt('Pending Payment');
+  const P={apps, submitted:appAt('Submitted'), approved:appAt('Approved'), pending, paid:appAt('Paid'),
+    declined:appAt('Declined'), writtenOff:appAt('Written Off'),
+    late: pending.filter(a=>{ const n=age(a); return n!==null && n>30; }).sort((a,b)=> (age(b)||0)-(age(a)||0)),
+    active: apps.filter(a=> ['Declined','Written Off'].indexOf(a.status)<0), age};
+  return {all, live, fresh, flight, quiet, pipe:P,
     moving: flight.filter(l=> quiet.indexOf(l)<0),
     noOwner: live.filter(l=> !l.owner),
     mine: live.filter(spIsMine),
@@ -13743,6 +13776,18 @@ function spParts(){
   const grp=(list, by)=>{ const g={}; list.forEach(l=>{ const k=by(l); g[k]=(g[k]||0)+1; }); return g; };
   const P=[
     {k:'say', kind:'s', n:'The Summary Sentence', say:d=> leadSay(d)},
+    {k:'p:sub',   kind:'n', grp:'pipe', n:'Submitted',       sub:'waiting on Amy and Kelly to review', f:d=>d.pipe.submitted, tone:'warn'},
+    {k:'p:appr',  kind:'n', grp:'pipe', n:'Approved',        sub:'waiting on the invoice',     f:d=>d.pipe.approved},
+    {k:'p:pend',  kind:'n', grp:'pipe', n:'Pending Payment', sub:'invoiced, not paid yet',     f:d=>d.pipe.pending},
+    {k:'p:late',  kind:'n', grp:'pipe', n:'Past 30 Days',    sub:'invoices waiting over 30 days', f:d=>d.pipe.late, tone:'bad'},
+    {k:'p:paid',  kind:'n', grp:'pipe', n:'Paid',            sub:'money received',             f:d=>d.pipe.paid, tone:'good'},
+    {k:'p:decl',  kind:'n', grp:'pipe', n:'Declined',        sub:'turned down',                f:d=>d.pipe.declined},
+    {k:'p:wo',    kind:'n', grp:'pipe', n:'Written Off',     sub:'invoiced, not collected',    f:d=>d.pipe.writtenOff},
+    {k:'p:all',   kind:'n', grp:'pipe', n:'Applications',    sub:'every application on record', f:d=>d.pipe.apps},
+    {k:'p$sub',   kind:'n', grp:'pipem', n:'Submitted Value', sub:'amount due on submitted',   money:1, val:d=>({n:spAmt(d.pipe.submitted,'amountDue')})},
+    {k:'p$book',  kind:'n', grp:'pipem', n:'Pipeline Value',  sub:'due on everything not declined', money:1, val:d=>({n:spAmt(d.pipe.active,'amountDue')})},
+    {k:'p$out',   kind:'n', grp:'pipem', n:'Outstanding',     sub:'due on pending payment, less paid', money:1, val:d=>({n:spAmt(d.pipe.pending,'amountDue')-spAmt(d.pipe.pending,'amountPaid')})},
+    {k:'p$paid',  kind:'n', grp:'pipem', n:'Collected',       sub:'amount paid',               money:1, val:d=>({n:spAmt(d.pipe.apps,'amountPaid')})},
     {k:'live',    kind:'n', n:'Open Prospects',     sub:'not yet won or lost',              f:d=>d.live},
     {k:'fresh',   kind:'n', n:'Never Approached',   sub:'no one has made contact',          f:d=>d.fresh,   tone:'warn'},
     {k:'flight',  kind:'n', n:'In Flight',          sub:'talking, not yet won',             f:d=>d.flight},
@@ -13759,6 +13804,13 @@ function spParts(){
   ];
   st.forEach(s=> P.push({k:'st:'+s, kind:'n', grp:'nst', n:s, sub:'status in the portal', f:d=>d.all.filter(l=>l.status===s)}));
   P.push(
+    {k:'L:sub',     kind:'l', n:'Submitted, Waiting for Review', f:d=> d.pipe.submitted, row:a=>spAppRow(a,null), unit:'application'},
+    {k:'L:pend',    kind:'l', n:'Pending Payment',  f:d=> d.pipe.pending, row:a=>spAppRow(a,spData(null)), unit:'application'},
+    {k:'L:late',    kind:'l', n:'Invoices Past 30 Days', f:d=> d.pipe.late, row:a=>spAppRow(a,spData(null)), unit:'application'},
+    {k:'B:stage',   kind:'b', n:'Applications by Stage', groups:d=> grp(d.pipe.apps, a=> a.status||'Submitted'), order:SP_STAGES},
+    {k:'B:level',   kind:'b', n:'Applications by Level', groups:d=> grp(d.pipe.active, a=> a.level2027||a.level2026||'Not Set')},
+    {k:'B:event',   kind:'b', n:'Applications by Summit', groups:d=> grp(d.pipe.active, a=> a.event||'Not Set')},
+    {k:'B:$level',  kind:'b', n:'Amount Due by Level', money:1, groups:d=>{ const g={}; d.pipe.active.forEach(a=>{ const k=a.level2027||a.level2026||'Not Set'; g[k]=(g[k]||0)+(+a.amountDue||0); }); return g; }},
     {k:'L:quiet',   kind:'l', n:'Gone Quiet',        f:d=> d.quiet.slice().sort((a,c)=>(leadAge(c)||0)-(leadAge(a)||0)), row:l=>spRow(l,'touch')},
     {k:'L:fresh',   kind:'l', n:'Never Approached',  f:d=> d.fresh, row:l=>spRow(l,'added')},
     {k:'L:flight',  kind:'l', n:'In Flight',         f:d=> d.moving, row:l=>spRow(l,'touch')},
@@ -13792,6 +13844,8 @@ function spRow(l, how){
   h.appendChild(rr); row.appendChild(h);
   return row;
 }
+
+function spLink(){ try{ return (window.__hqRelay && window.__hqRelay.leadsState) ? window.__hqRelay.leadsState() : null; }catch(e){ return null; } }
 
 /* ---------- Meeting Trackers ---------- */
 function mtWeekDays(){ const now=mtET(), out=[]; const mon=new Date(now.getTime()); mon.setDate(now.getDate()-((now.getDay()+6)%7));
@@ -14039,10 +14093,13 @@ const SOON_PARTS = {
 const SYS_KINDS_BASE = [{k:'s', n:'Summary'}, {k:'n', n:'Numbers'}, {k:'l', n:'Lists'}, {k:'b', n:'Breakdowns'}];
 const SYS = {
   sponsors: {name:'Sponsorship Portal', from:'the Sponsorship Portal', parts:spParts, data:w=>spData(w), def:SP_DEF, seasons:spSeasons,
-    groups:[{k:'s', n:'Summary'}, {k:'n', n:'Numbers'}, {k:'nst', n:'Numbers by Status'}, {k:'l', n:'Lists'}, {k:'b', n:'Breakdowns'}],
-    has:()=> (S.leads||[]).length>0, unit:'prospect',
-    empty:['Nothing from the Sponsorship Portal yet.','The prospect list comes across from the portal. It has not come across yet, or there is nothing in it.'],
-    foot:'Read-only. A prospect is worked in the Sponsorship Portal.', open:'Open the Sponsorship Portal',
+    groups:[{k:'s', n:'Summary'}, {k:'pipe', n:'Pipeline'}, {k:'pipem', n:'Pipeline Money'}, {k:'n', n:'Prospects'}, {k:'nst', n:'Prospects by Status'}, {k:'l', n:'Lists'}, {k:'b', n:'Breakdowns'}],
+    has:()=> (S.leads||[]).length>0 || (S.apps||[]).length>0, unit:'prospect',
+    wait:()=>{ const st=spLink(); if(st && st.denied) return ['You don\u2019t have access to the Sponsorship Portal.','Ask for it in the admin panel and these numbers show here.']; return null; },
+    live:()=>{ const st=spLink(); if(!st) return null; if(!st.loaded) return 'Connecting to the Sponsorship Portal\u2026';
+      return 'Live from the Sponsorship Portal'+(st.at? ' \u00b7 checked '+new Date(st.at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : '')+'.'; },
+    empty:['Nothing from the Sponsorship Portal yet.','The pipeline and prospect list come across from the portal. Nothing has come across yet, or there is nothing in them.'],
+    foot:'Read-only. Applications and prospects are worked in the Sponsorship Portal; changes there show here within a minute.', open:'Open the Sponsorship Portal',
     link:()=> (typeof calOn==='function' && calOn())? 'https://resources.mismo.org/sponsorship/' : 'https://claude.ai/artifact/Lobt6M5kjNzJS5w5oJHEc5'},
   mtnums: {name:'Meeting Trackers', parts:mtParts, data:()=>mtData(), def:['today','week','active','L:today'],
     groups:[{k:'n', n:'Numbers'}, {k:'nty', n:'Active Workgroups by Type'}, {k:'l', n:'Lists'}, {k:'b', n:'Breakdowns'}],
@@ -14096,6 +14153,7 @@ function sysRender(w, b){
   const want=sysPartsOf(w), parts=s.parts().filter(p=> want.indexOf(p.k)>=0);
   const foot=()=>{
     if(s.foot) b.appendChild(el('p','note', s.foot));
+    const lv=s.live && s.live(); if(lv) b.appendChild(el('p','note syslive', lv));
     if(s.open){ const go=el('button','btn ghost sm', s.open); go.type='button';
       go.addEventListener('click', ()=> window.open(s.link(),'_blank','noopener')); b.appendChild(go); } };
   if(s.soon){
