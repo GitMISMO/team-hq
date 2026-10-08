@@ -2506,6 +2506,30 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .hl-occ .mtaway .btn.ghost:hover{background:rgba(255,255,255,.12)}
 .hl-occ .mtaway .btn:not(.ghost){background:var(--sky);color:var(--navy);border-color:var(--sky)}
 .calline{margin-top:8px;font-size:12.5px}
+/* setting time aside: the person's day from Outlook */
+.dayfree{margin:4px 0 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);padding:12px 14px}
+.dayfree:empty{display:none}
+.dayfree > .note{margin:0}
+.dfhd b{display:block;font-size:13px;font-weight:700;color:var(--ink)}
+.dfhd small{display:block;font-size:11.5px;color:var(--ink-3);margin-top:2px}
+.dfbar{position:relative;height:22px;margin-top:10px;border-radius:4px;background:color-mix(in srgb,var(--good) 16%,var(--surface));border:1px solid var(--border)}
+.dfbar i{position:absolute;top:0;bottom:0;display:block}
+.dfseg{background:var(--ink-3);opacity:.55;border-radius:2px}
+.dfseg.hq{background:var(--c7);opacity:.6}
+.dfseg.oof{background:var(--bad);opacity:.45}
+.dfpick{top:-3px!important;bottom:-3px!important;border:2px solid var(--c1);border-radius:4px;background:color-mix(in srgb,var(--c1) 22%,transparent)}
+.dfpick.clash{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 22%,transparent)}
+.dfticks{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-3);margin-top:3px}
+.dfwarn{margin:8px 0 0;font-size:12.5px;font-weight:600;color:var(--bad)}
+.dfwarn.soft{color:var(--warn,var(--ink-2));font-weight:500}
+.dfok{margin:8px 0 0;font-size:12.5px;font-weight:600;color:var(--good)}
+.dffree{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px}
+.dffree .dfl{font-size:12px;font-weight:700;color:var(--ink-2);margin-right:2px}
+.dffree .btn.short{opacity:.6}
+.dfbusy{margin-top:10px;display:flex;flex-direction:column;gap:3px}
+.dfrow{display:flex;gap:10px;font-size:12.5px;color:var(--ink-2)}
+.dfrow .dft{flex:0 0 auto;min-width:118px;font-weight:600;color:var(--ink)}
+.dfrow.hq span:last-child{color:var(--c7)}
 
 /* ---------- messages: a small note in the bottom-left corner of the page, never over the
    right-hand panel or the middle of the work ---------- */
@@ -4676,6 +4700,7 @@ function editTask(t, after){
       n: n>=60 ? (n%60? (n/60).toFixed(1).replace('.0','') : (n/60))+(n===60?' hour':' hours') : n+' minutes'})),
       String(blk? blockLen(blk) : 60)), 'w2');
     bWrap.appendChild(bg);
+    bWrap.appendChild(dayFree(bD, bT, bM, ()=> d.o || S.me || '', ()=> blk && blk.id));
     const bActs=el('div','rowflex'); bWrap.appendChild(bActs);
     body.appendChild(bWrap);
 
@@ -13318,6 +13343,119 @@ function obStart(){
 }
 if(calOn()) setTimeout(obStart, 3000);
 window.__ob = {compute:obCompute, sync:obSync, reconcile:obReconcile, readDone:obReadDone, OB:OB};
+
+/* ============ WHEN AM I FREE? (setting time aside on a task) ============
+   Under Time Set Aside for It, once a day is picked: that person's day from Outlook
+   (busy, tentative and out of office, with meeting names unless marked Private) and
+   any other time they set aside in Team HQ, laid along their working hours; the open
+   stretches as buttons that fill in the start time; and a warning when the time picked
+   runs into something. All times Eastern, like the time fields. resources.mismo.org
+   only — the Claude copy cannot see Outlook. */
+const DF_TZ='America/New_York';
+function dfParts(ms, tz){
+  const p=new Intl.DateTimeFormat('en-US',{timeZone:tz||DF_TZ, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false}).formatToParts(new Date(ms));
+  const g=k=> (p.find(x=>x.type===k)||{}).value;
+  return {iso:g('year')+'-'+g('month')+'-'+g('day'), min:((+g('hour'))%24)*60+(+g('minute'))};
+}
+/* how many minutes a time zone is ahead of Eastern on a given day (Mountain = -120) */
+function dfTzDiff(tz, iso){
+  if(!tz || tz===DF_TZ) return 0;
+  const noon=Date.parse(iso+'T16:00:00Z');
+  return dfParts(noon, tz).min - dfParts(noon, DF_TZ).min;
+}
+const dfHM = m=>{ const h=Math.floor(m/60), mm=m%60; return ((h%12)||12)+(mm?':'+String(mm).padStart(2,'0'):'')+(h<12?' AM':' PM'); };
+const dfTime = m=> String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
+/* what is already on that person's day, in Eastern minutes */
+function dfBusy(pid, iso, skipBlock){
+  const out=[];
+  const evs=(typeof CAL!=='undefined' && CAL.by[pid]) || [];
+  evs.forEach(x=>{
+    if(x.all){ if(x.show==='oof' && iso>=x.d0 && iso<x.d1) out.push({s:0, e:24*60, t:'Out of office', oof:1}); return; }
+    const a=dfParts(x.s), b=dfParts(x.e);
+    if(a.iso>iso || b.iso<iso) return;
+    const s = a.iso<iso ? 0 : a.min, e = b.iso>iso ? 24*60 : b.min;
+    if(e>s) out.push({s:s, e:e, t: x.t || (x.show==='oof' ? 'Out of office' : x.show==='tentative' ? 'Tentative' : 'Busy'), oof:x.show==='oof'});
+  });
+  (S.blocks||[]).forEach(b=>{
+    if(b.who!==pid || b.date!==iso || b.state==='remove' || (skipBlock && b.id===skipBlock)) return;
+    const s=hrMin(b.start), e=hrMin(b.end || addMins(b.start, b.mins||60));
+    if(s!=null && e!=null && e>s) out.push({s:s, e:e, t:(b.title||'Time set aside')+' (Team HQ)', hq:1});
+  });
+  return out.sort((a,b)=> a.s-b.s);
+}
+function dfFree(busy, ws, we){
+  const free=[]; let at=ws;
+  busy.forEach(x=>{ if(x.e<=at || x.s>=we) return; if(x.s>at) free.push({s:at, e:Math.min(x.s,we)}); at=Math.max(at, x.e); });
+  if(at<we) free.push({s:at, e:we});
+  return free.filter(f=> f.e-f.s>=15);
+}
+function dayFree(bD, bT, bM, whoFn, blockIdFn){
+  const box=el('div','dayfree');
+  const paint=()=>{
+    box.textContent='';
+    if(!calOn()) return;
+    const pid=whoFn(), iso=bD.value;
+    if(!iso || !pid) return;
+    const p=person(pid);
+    if(!calHas(pid)){
+      box.appendChild(el('p','note', (p && p.id!==S.me ? p.name.split(' ')[0]+'’s' : 'Your')+' Outlook isn’t connected to Team HQ yet, so the meetings on that day don’t show here.'));
+      return;
+    }
+    const h=workHours(p||{}), diff=dfTzDiff(h.tz, iso);
+    const ws=Math.max(0, hrMin(h.s)-diff), we=Math.min(24*60, hrMin(h.e)-diff);
+    const busy=dfBusy(pid, iso, blockIdFn && blockIdFn());
+    const free=dfFree(busy, ws, we);
+    const pick=hrMin(bT.value), len=+bM.value||60, pe=pick!=null? pick+len : null;
+    const hits = pick==null ? [] : busy.filter(x=> x.s<pe && x.e>pick);
+
+    const hd=el('div','dfhd');
+    hd.appendChild(el('b',null,(p && p.id!==S.me ? p.name.split(' ')[0]+'’s Day' : 'Your Day')+' in Outlook'));
+    hd.appendChild(el('small',null, fmtD(iso,1)+' · working hours '+dfHM(ws)+'–'+dfHM(we)+' · times Eastern'));
+    box.appendChild(hd);
+
+    /* the day as a bar: working hours, what is booked, and the time picked */
+    const span=Math.max(60, we-ws), pos=m=> Math.max(0, Math.min(100, (m-ws)/span*100));
+    const bar=el('div','dfbar');
+    busy.forEach(x=>{ if(x.e<=ws || x.s>=we) return; const s=el('i','dfseg'+(x.hq?' hq':'')+(x.oof?' oof':''));
+      s.style.left=pos(x.s)+'%'; s.style.width=Math.max(.8, pos(x.e)-pos(x.s))+'%'; s.title=x.t+' · '+dfHM(x.s)+'–'+dfHM(x.e); bar.appendChild(s); });
+    if(pick!=null && pe>ws && pick<we){ const s=el('i','dfpick'+(hits.length?' clash':''));
+      s.style.left=pos(pick)+'%'; s.style.width=Math.max(.8, pos(pe)-pos(pick))+'%'; s.title='The time you picked'; bar.appendChild(s); }
+    box.appendChild(bar);
+    const ticks=el('div','dfticks'); ticks.appendChild(el('span',null,dfHM(ws))); ticks.appendChild(el('span',null,dfHM(we))); box.appendChild(ticks);
+
+    if(hits.length){
+      box.appendChild(el('p','dfwarn','That runs into '+hits.map(x=> x.t+' ('+dfHM(x.s)+'–'+dfHM(x.e)+')').join(' and ')+'. Pick an open time below, or keep it if that is fine.'));
+    } else if(pick!=null && (pick<ws || pe>we)){
+      box.appendChild(el('p','dfwarn soft','That is outside working hours.'));
+    } else if(pick!=null){
+      box.appendChild(el('p','dfok','That time is open.'));
+    }
+
+    if(free.length){
+      const fr=el('div','dffree'); fr.appendChild(el('span','dfl','Open:'));
+      free.forEach(f=>{
+        const b=el('button','btn ghost sm', dfHM(f.s)+'–'+dfHM(f.e)); b.type='button';
+        b.title= (f.e-f.s)<len ? 'Shorter than the length you picked' : 'Start then';
+        if((f.e-f.s)<len) b.classList.add('short');
+        b.addEventListener('click', ()=>{ bT.value=dfTime(f.s); bT.dispatchEvent(new Event('change')); paint(); });
+        fr.appendChild(b);
+      });
+      box.appendChild(fr);
+    } else {
+      box.appendChild(el('p','dfwarn soft','No open time in working hours that day.'));
+    }
+    const bl=busy.filter(x=> x.e>ws && x.s<we);
+    if(bl.length){
+      const ul=el('div','dfbusy');
+      bl.forEach(x=>{ const r=el('div','dfrow'+(x.hq?' hq':'')); r.appendChild(el('span','dft', dfHM(x.s)+'–'+dfHM(x.e))); r.appendChild(el('span',null,x.t)); ul.appendChild(r); });
+      box.appendChild(ul);
+    }
+  };
+  [bD,bT,bM].forEach(x=>{ x.addEventListener('change', paint); x.addEventListener('input', paint); });
+  setTimeout(paint, 0);
+  box.repaint=paint;
+  return box;
+}
 
 /* ============ rail search sources ============ */
 window.__search = function(t, push, goTab){
