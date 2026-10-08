@@ -5678,7 +5678,9 @@ function doneFold(list, withPart){
   const h=el('button','donefh'); h.type='button'; h.setAttribute('aria-expanded','false');
   h.appendChild(el('span','dfc','\u203a')); h.appendChild(document.createTextNode('Done ('+list.length+')'));
   const rows=el('div','rows'); rows.hidden=true;
-  list.slice().sort((a,c)=> (c.doneAt||c.at||0)-(a.doneAt||a.at||0)).forEach(t=>{
+  const sorted=list.slice().sort((a,c)=> (c.doneAt||c.at||0)-(a.doneAt||a.at||0));
+  if(sorted.length>20){ const more=el('p','note','Showing the 20 most recent of '+sorted.length+'.'); rows.appendChild(more); }
+  sorted.slice(0,20).forEach(t=>{
     const r2=taskRow(t);
     rows.appendChild(r2); });
   h.addEventListener('click', ()=>{ rows.hidden=!rows.hidden; h.setAttribute('aria-expanded', String(!rows.hidden)); box.classList.toggle('open', !rows.hidden); });
@@ -7614,9 +7616,11 @@ function buildWidget(w, b){
     ho.addEventListener('click', ()=> handOver(me));
     return b.appendChild(ho);
   }
-  if(w.t==='mytasks') return rows(doingTasks(me).filter(t=>t.s!=='Done' && !t.rail)
+  if(w.t==='mytasks'){ const r_=rows(doingTasks(me).filter(t=>t.s!=='Done' && !t.rail)
     .sort((a,b2)=>{const x=days(a.due),y=days(b2.due); if(x===null&&y===null)return 0; if(x===null)return 1; if(y===null)return -1; return x-y;}));
-  if(w.t==='myrails') return rows(doingTasks(me).filter(t=>t.s!=='Done' && t.rail));
+    const dn_=doingTasks(me).filter(t=>t.s==='Done' && !t.rail); if(dn_.length) b.appendChild(doneFold(dn_, false)); return r_; }
+  if(w.t==='myrails'){ const r_=rows(doingTasks(me).filter(t=>t.s!=='Done' && t.rail));
+    const dn_=doingTasks(me).filter(t=>t.s==='Done' && t.rail); if(dn_.length) b.appendChild(doneFold(dn_, false)); return r_; }
   if(w.t==='duesoon') return rows(mySoon(me));
   if(w.t==='dueteam') return rows(openTasks().filter(t=>{const n=days(t.due); return n!==null && n<=7;})
     .sort((a,b2)=>days(a.due)-days(b2.due)));
@@ -7952,7 +7956,7 @@ function buildWidget(w, b){
     const hd=el('div','rowflex'); hd.appendChild(avatar(p.id,'sm'));
     hd.appendChild(el('span','note', L2.total+' open · '+L2.high+' high · '+(L2.late? L2.late+' late':'none late')));
     b.appendChild(hd);
-    return rows(ts);
+    const r_=rows(ts); const dn_=doingTasks(p.id).filter(t=>t.s==='Done'); if(dn_.length) b.appendChild(doneFold(dn_, false)); return r_;
   }
   if(w.t==='rock'){
     const r=rock(w.k); if(!r) return b.appendChild(emptyBox('This panel has lost its team project.','Take it off your board and add it again to choose one.'));
