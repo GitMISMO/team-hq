@@ -2629,6 +2629,15 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .pirow:hover .pih .dgrip,.pih .dgrip:focus-visible{opacity:1}
 .pih .dgrip:hover{background:var(--surface-3);color:var(--ink)}
 @media (pointer:coarse){ .pih .dgrip{opacity:.8;width:26px;height:32px} }
+/* plan sections: the grip on each section header, and in Plan Details */
+.psec > summary .dgrip{flex:0 0 auto;width:18px;height:26px;margin:0 -6px 0 -8px;opacity:.4}
+.psec > summary:hover .dgrip,.psec > summary .dgrip:focus-visible{opacity:1}
+.psec > summary .dgrip:hover{background:var(--surface);color:var(--ink)}
+.psehd{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--ink-3);margin:-2px 0 -4px -4px}
+.psehd .dgrip{width:20px;height:26px}
+.psehd .dgrip:hover{background:var(--surface-3);color:var(--ink)}
+.psecs.sorting .psec > summary:hover{background:var(--surface-2)}
+@media (pointer:coarse){ .psec > summary .dgrip{opacity:.8;width:26px;height:32px} .psehd .dgrip{width:28px;height:32px} }
 
 /* ---------- Sponsorship Prospects: chosen parts ---------- */
 .spbars{display:flex;flex-direction:column;gap:6px}
@@ -9313,6 +9322,11 @@ function planView(root, p){
   const cur=curSec(p);
   const wrap=el('div','psecs');
   planSecs(p).forEach(s=> wrap.appendChild(secBlock(p, s, cur && cur.id===s.id)));
+  /* drag a section by its grip (or arrow keys) to put the sections in a new order */
+  wrap.__onSort=ids=>{ const q=planOf(p.id); if(!q) return;
+    const by={}; (q.secs||[]).forEach(s=>{ by[s.id]=s; });
+    const next=ids.map(id=>by[id]).filter(Boolean).concat((q.secs||[]).filter(s=>ids.indexOf(s.id)<0));
+    q.secs=next; S.planForce=1; put('plans', Object.assign({}, q)); };
   if(!planSecs(p).length) wrap.appendChild(emptyBox('No sections yet.','Open Plan Details to add the first one.'));
   root.appendChild(wrap);
   root.appendChild(privateNotes(p));
@@ -9323,6 +9337,7 @@ function secBlock(p, s, isNow){
   const items=planItems(p.id).filter(i=>i.sec===s.id);
   const st=planStats(p, items);
   const d=el('details','psec'+(isNow?' now':''));
+  d.dataset.sid=s.id;
   d.open=!!S.openSecs[key];
   d.addEventListener('toggle', ()=>{ S.openSecs[key]=d.open; });
   const sm=el('summary');
@@ -9330,6 +9345,7 @@ function secBlock(p, s, isNow){
   c.setAttribute('class','caret'); c.setAttribute('viewBox','0 0 24 24');
   const pth=document.createElementNS('http://www.w3.org/2000/svg','path'); pth.setAttribute('d','M9 6l6 6-6 6'); c.appendChild(pth);
   sm.appendChild(c);
+  sm.appendChild(dgrip('Drag to move this section'));
   const tt=el('span','pst'); tt.appendChild(document.createTextNode(s.name||'Section'));
   const win=secWindow(s);
   const bits=[]; if(win) bits.push(win);
@@ -9927,7 +9943,9 @@ function editPlan(p0){
     const drawS=()=>{
       sw.textContent='';
       d.secs.forEach((s,i)=>{
-        const bx=el('div','pse');
+        const bx=el('div','pse'); bx.dataset.sid=s.id;
+        const hd=el('div','psehd'); hd.appendChild(dgrip('Drag to move this section')); hd.appendChild(el('span',null,'Section '+(i+1)));
+        bx.appendChild(hd);
         const sg=el('div','fields');
         const n=field(sg,'Section Name', inp('text', s.name||''), 'w2');
         n.addEventListener('input', ()=>{ s.name=n.value; });
@@ -9941,14 +9959,10 @@ function editPlan(p0){
         const ac=el('div','rowflex');
         const cnt=planItems(d.id).filter(x=>x.sec===s.id).length;
         ac.appendChild(el('span','note', cnt+(cnt===1?' item':' items')+((s.cols||[]).length? ' · extra fields: '+s.cols.map(c=>c.n).join(', ') : '')));
-        const up=el('button','btn ghost sm','Move Up'); up.type='button'; up.disabled=i===0; up.style.marginLeft='auto';
-        up.addEventListener('click', ()=>{ d.secs.splice(i-1,0,d.secs.splice(i,1)[0]); drawS(); });
-        const dn=el('button','btn ghost sm','Move Down'); dn.type='button'; dn.disabled=i===d.secs.length-1;
-        dn.addEventListener('click', ()=>{ d.secs.splice(i+1,0,d.secs.splice(i,1)[0]); drawS(); });
-        const rm=el('button','btn danger sm', cnt? 'Remove (and Its Items)' : 'Remove'); rm.type='button';
+        const rm=el('button','btn danger sm', cnt? 'Remove (and Its Items)' : 'Remove'); rm.type='button'; rm.style.marginLeft='auto';
         rm.addEventListener('click', ()=>{ if(!rm.dataset.c){ rm.dataset.c='1'; rm.textContent='Click Again to Remove'; return; }
           s.__gone=1; d.secs.splice(i,1); d.__drop=(d.__drop||[]).concat([s.id]); drawS(); });
-        ac.appendChild(up); ac.appendChild(dn); ac.appendChild(rm);
+        ac.appendChild(rm);
         bx.appendChild(ac);
         sw.appendChild(bx);
       });
@@ -9956,6 +9970,9 @@ function editPlan(p0){
       add.addEventListener('click', ()=>{ d.secs.push({id:uid('sc'), name:'New Section', from:'', to:'', note:''}); drawS(); });
       sw.appendChild(add);
     };
+    /* drag a section by its grip; the new order is kept when you click Save */
+    sw.__onSort=ids=>{ const by={}; d.secs.forEach(s=>{ by[s.id]=s; });
+      d.secs=ids.map(id=>by[id]).filter(Boolean).concat(d.secs.filter(s=>ids.indexOf(s.id)<0)); drawS(); };
     drawS();
 
     const acts=el('div','rowacts');
@@ -13351,6 +13368,8 @@ function dgrip(label){
    panel shows only the first eight), then saved where it changed */
 function sortCommit(item){
   const box=item.parentElement; if(!box) return;
+  /* a list that handles its own order (plan sections) */
+  if(box.__onSort){ box.__onSort([...box.children].filter(x=>x.dataset && x.dataset.sid).map(x=>x.dataset.sid)); return; }
   /* a plan checklist: the order on screen becomes the order, and an item dropped under
      another heading joins that group ("By the End of This Phase" marks the must-dos) */
   if(item.dataset.psec){
@@ -13400,8 +13419,10 @@ function sortCommit(item){
     e.preventDefault();
     if(!drag.moved){ drag.moved=true; drag.item.classList.add('dragging'); drag.box.classList.add('sorting'); }
     const over=document.elementFromPoint(e.clientX, e.clientY);
-    const t=over && over.closest && over.closest('[data-sid]');
-    if(!t || t===drag.item || t.parentElement!==drag.box) return;
+    /* the nearest row in the same list (a section can be dropped over the items inside another) */
+    let t=over && over.closest && over.closest('[data-sid]');
+    while(t && t.parentElement!==drag.box){ const up=t.parentElement; t=up && up.closest('[data-sid]'); }
+    if(!t || t===drag.item) return;
     const kids=[...drag.box.children], a=kids.indexOf(drag.item), b=kids.indexOf(t);
     drag.box.insertBefore(drag.item, a<b? t.nextSibling : t);
   }, true);
