@@ -2583,6 +2583,15 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .donefold.open .dfc{transform:rotate(90deg)}
 .donefold .rows{margin-top:6px}
 @media (prefers-reduced-motion:reduce){ .donefh .dfc{transition:none} }
+/* ---------- the person card's day ---------- */
+.pcard .dayb{margin-top:auto;padding-top:10px}
+.pcard .dbt{position:relative;height:6px;border-radius:3px;background:var(--surface-3);overflow:hidden}
+.pcard .dbt.off{opacity:.6}
+.pcard .dbt i{position:absolute;top:0;bottom:0;background:var(--pc,var(--c1));border-radius:2px}
+.pcard .dbt i.hq{background:repeating-linear-gradient(135deg,var(--pc,var(--c1)) 0 3px,transparent 3px 6px)}
+.pcard .dbt i.oof{background:var(--ink-3)}
+.pcard .dbt .dbnow{position:absolute;top:-1px;bottom:-1px;width:2px;margin-left:-1px;background:var(--ink);border-radius:1px}
+.pcard .dbl{font-size:11px;color:var(--ink-3);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* ---------- messages: a small note in the bottom-left corner of the page, never over the
    right-hand panel or the middle of the work ---------- */
@@ -2615,6 +2624,11 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .sticky.dragging{transform:rotate(-2deg)}
 @media (pointer:coarse){ .sticky .dgrip{opacity:.8;width:34px;height:24px} .mnrow .dgrip{opacity:.8;width:28px;height:30px} .mnrow{padding-left:38px} }
 @media (prefers-reduced-motion:reduce){ .sticky .dgrip{transition:none} .sticky.dragging{transform:none} }
+/* plan checklist items */
+.pih .dgrip{flex:0 0 auto;width:18px;height:26px;margin:0 -2px 0 -6px;opacity:.35}
+.pirow:hover .pih .dgrip,.pih .dgrip:focus-visible{opacity:1}
+.pih .dgrip:hover{background:var(--surface-3);color:var(--ink)}
+@media (pointer:coarse){ .pih .dgrip{opacity:.8;width:26px;height:32px} }
 
 /* ---------- Sponsorship Prospects: chosen parts ---------- */
 .spbars{display:flex;flex-direction:column;gap:6px}
@@ -5373,11 +5387,7 @@ function personCard(p){
   if(!det) dl.innerHTML='&nbsp;';
   dl.title = det;
   m.appendChild(dl);
-  const L=loadOf(p.id);
-  const ld=el('div','ld');
-  for(let k=0;k<6;k++){ const b=el('i'); if(k < Math.min(6, Math.ceil(L.score/3))) b.className='on'; ld.appendChild(b); }
-  ld.title = L.total+' open · '+L.rails+' running rails · '+L.high+' high priority';
-  m.appendChild(ld);
+  m.appendChild(dayStrip(p));
   c.appendChild(m);
   c.addEventListener('click', ()=> personPanel(p));
   return c;
@@ -9374,6 +9384,8 @@ function railItem(){ const e=PSTACK[PSTACK.length-1]; return (panelOpen() && e &
 function itemRow(p, s, it){
   const stt=itemStatus(it), done=stt==='Done', na=stt==='Not Needed';
   const row=el('div','pirow'+(railItem()===it.id?' open':'')); row.dataset.iid=it.id;
+  /* drag by the grip (or arrow keys on it) to reorder; dragsort.js saves `ord` */
+  row.dataset.sid=it.id; row.dataset.psec=s.id; row.dataset.plan=p.id;
   const h=el('div','pih'+(done||na?' done':'')); h.tabIndex=0; h.setAttribute('role','button');
   h.title='Open this item';
   const ck=el('button','pchk'+(done?' on': na?' na' : stt==='In Progress'?' half':'')); ck.type='button';
@@ -9381,6 +9393,7 @@ function itemRow(p, s, it){
   ck.title = done ? 'Done — click to untick' : (s.doneLabel ? 'Tick when: '+s.doneLabel : 'Tick it off');
   ck.setAttribute('aria-label', ck.title);
   ck.addEventListener('click', async e=>{ e.stopPropagation(); await setItemStatus(it, done? 'Not Started' : 'Done'); repaintItem(it.id); });
+  h.appendChild(dgrip('Drag to move this item'));
   h.appendChild(ck);
   const tx=el('span','pt'); tx.appendChild(el('span',null,it.t||'(untitled)'));
   const meta=[];
@@ -13334,6 +13347,23 @@ function dgrip(label){
    panel shows only the first eight), then saved where it changed */
 function sortCommit(item){
   const box=item.parentElement; if(!box) return;
+  /* a plan checklist: the order on screen becomes the order, and an item dropped under
+     another heading joins that group ("By the End of This Phase" marks the must-dos) */
+  if(item.dataset.psec){
+    let grp='', crit=0; const save=[]; let n=0;
+    [...box.children].forEach(x=>{
+      if(x.classList && x.classList.contains('rgrp')){ const t=x.textContent||''; if(t==='By the End of This Phase'){ crit=1; } else { grp=t; crit=0; } return; }
+      if(!x.dataset || !x.dataset.sid) return;
+      n++; const it=(S.planitems||[]).find(i=>i.id===x.dataset.sid); if(!it) return;
+      const ch={};
+      if((+it.ord||0)!==n*10) ch.ord=n*10;
+      if(x===item){ if(!!it.crit!==!!crit) ch.crit=crit; if(!crit && (it.grp||'')!==grp) ch.grp=grp; }
+      if(Object.keys(ch).length) save.push(Object.assign({}, it, ch));
+    });
+    S.planForce=1;
+    save.forEach(it=> put('planitems', it));
+    return;
+  }
   const shown=[...box.children].filter(x=>x.dataset && x.dataset.sid).map(x=>x.dataset.sid);
   if(item.classList.contains('sticky')){
     const full=S.notes.map(n=>n.id);
@@ -13758,6 +13788,44 @@ function dayFree(bD, bT, bM, whoFn, blockIdFn){
   setTimeout(paint, 0);
   box.repaint=paint;
   return box;
+}
+
+/* ---------- the person card's day: meetings today, not a task count ----------
+   Jonna, Oct 8: six bars filled by open tasks said nothing. The card's floor now
+   draws that person's working day from Outlook — each meeting a block, time set
+   aside in Team HQ a lighter block, a tick for now — with how many meetings and how
+   much open time is left. Times are compared in Eastern, as dayfree works. */
+function dayStrip(p){
+  const wrap=el('div','dayb');
+  const L=loadOf(p.id), loadTxt=L.total+' open tasks · '+L.rails+' running rails · '+L.high+' high priority';
+  const iso=isoOf(today()), dow=today().getDay();
+  const track=el('div','dbt'); wrap.appendChild(track);
+  const lab=el('div','dbl'); wrap.appendChild(lab);
+  if(!calOn() || !calHas(p.id)){
+    track.classList.add('off');
+    lab.textContent = calOn()? 'Outlook not connected' : 'Meetings show on resources.mismo.org';
+    wrap.title=loadTxt; return wrap;
+  }
+  if(dow===0 || dow===6){ track.classList.add('off'); lab.textContent='Not a working day'; wrap.title=loadTxt; return wrap; }
+  const h=workHours(p), diff=dfTzDiff(h.tz, iso);
+  const ws=Math.max(0, hrMin(h.s)-diff), we=Math.min(24*60, hrMin(h.e)-diff), span=Math.max(60, we-ws);
+  const busy=dfBusy(p.id, iso).filter(x=> x.e>ws && x.s<we);
+  const pos=m=> Math.max(0, Math.min(100, (m-ws)/span*100));
+  if(busy.some(x=>x.oof && x.s<=ws && x.e>=we)){
+    const s=el('i','oof'); s.style.left='0'; s.style.width='100%'; track.appendChild(s);
+    lab.textContent='Out of office all day'; wrap.title=loadTxt; return wrap;
+  }
+  busy.forEach(x=>{ const s=el('i', x.hq? 'hq' : x.oof? 'oof' : '');
+    s.style.left=pos(x.s)+'%'; s.style.width=Math.max(1.5, pos(x.e)-pos(x.s))+'%'; track.appendChild(s); });
+  const nowM=dfParts(Date.now()).min;
+  if(nowM>ws && nowM<we){ const n=el('b','dbnow'); n.style.left=pos(nowM)+'%'; track.appendChild(n); }
+  const mtgs=busy.filter(x=>!x.hq && !x.oof).length;
+  const free=dfFree(busy, Math.max(ws, nowM>ws? Math.min(nowM,we) : ws), we).reduce((a,f)=> a+(f.e-f.s), 0);
+  const hm=m=>{ const hh=Math.floor(m/60), mm=m%60; return hh? hh+'h'+(mm? ' '+mm+'m' : '') : mm+'m'; };
+  const left = nowM>=we ? 'day done' : (free? hm(free)+' free' : 'no open time');
+  lab.textContent=(mtgs? mtgs+(mtgs===1?' meeting':' meetings') : 'No meetings')+' · '+left;
+  wrap.title=busy.map(x=> dfDualRange(x.s, x.e, iso, false)+'  '+x.t).join('\n')+(busy.length? '\n\n' : '')+loadTxt;
+  return wrap;
 }
 
 /* ============ SPONSORSHIP PROSPECTS: YOU CHOOSE WHAT IT SHOWS ============
