@@ -10866,10 +10866,12 @@ function noteEditor(sec, id){
     const st=el('div','mynote-s'); wrap.appendChild(st);
     const stamp=()=>{ const x=cur && (syCard(cur.id)||cur); st.textContent = x && x.edited? 'Saved '+relWhen(x.edited)+'.' : 'It saves as you type.'; };
     stamp();
-    let tmr=null, busy=null;
+    let tmr=null, busy=null, gone=false;   /* once deleted, a late blur must not save it back */
     const save=async ()=>{ clearTimeout(tmr); tmr=null;
+      if(gone) return;
       const t=ti.value.trim(), note=tx.value;
       if(busy) await busy;
+      if(gone) return;
       if(!cur){
         if(!t && !note.trim()){ stamp(); return; }
         S.noteHold=1;
@@ -10887,7 +10889,7 @@ function noteEditor(sec, id){
     const del=el('button','btn danger','Delete This Note'); del.type='button';
     del.addEventListener('click', ()=>{
       if(!cur){ closePanel(); return; }
-      if(del.dataset.c){ clearTimeout(tmr); syDrop('syncitems', cur.id); S.noteOpen=''; closePanel(); toast('Note deleted.'); }
+      if(del.dataset.c){ gone=true; clearTimeout(tmr); syDrop('syncitems', cur.id); S.noteOpen=''; closePanel(); toast('Note deleted.'); }
       else { del.dataset.c='1'; del.textContent='Click Again to Delete'; } });
     acts.appendChild(del); acts.appendChild(el('span','spacer'));
     /* Make It a Task: the title (or the note's first line) names the task, the note goes
@@ -12130,10 +12132,12 @@ function mpForm(body, id, mode){
     const d = cur? JSON.parse(JSON.stringify(cur)) : {name:'', st:'Not Started', pri:'Normal', start:isoOf(today()), due:'', ties:'', goal:'', steps:[], tasks:[], notes:'', files:[]};
     const wrap=el('div','mynote mpedit'+(mode==='rail'?'':' mpinline'));
     const st=el('div','mynote-s');
-    let tmr=null, busy=null;
+    let tmr=null, busy=null, gone=false;   /* once deleted, nothing here may save it back */
     const stamp=()=>{ const x=cur && (syCard(cur.id)||cur); st.textContent = x && x.edited? 'Saved '+relWhen(x.edited)+'.' : (cur? '' : 'Give it a name and it saves by itself.'); };
     const save=async ()=>{ clearTimeout(tmr); tmr=null;
+      if(gone) return;
       if(busy) await busy;
+      if(gone) return;
       if(!cur && !String(d.name||'').trim()){ stamp(); return; }
       S.noteHold=1;
       if(!cur){ busy=syPut('syncitems', Object.assign({kind:'project', sync:'', at:Date.now(), by:S.me||''}, d, {edited:Date.now()}));
@@ -12237,7 +12241,7 @@ function mpForm(body, id, mode){
     const del=el('button','btn danger','Delete This Project'); del.type='button';
     del.addEventListener('click', ()=>{
       if(!cur){ if(mode==='rail') closePanel(); return; }
-      if(del.dataset.c){ clearTimeout(tmr); syDrop('syncitems', cur.id);
+      if(del.dataset.c){ gone=true; clearTimeout(tmr); syDrop('syncitems', cur.id);
         if(mode==='rail'){ S.mpOpen=''; closePanel(); } else if(S.mpExp) delete S.mpExp[cur.id];
         toast('Project deleted.'); }
       else { del.dataset.c='1'; del.textContent='Click Again to Delete'; } });
