@@ -2267,6 +2267,18 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .pgnpv .pgxlbl{margin-top:0}
 .pgxacts .btn:disabled{opacity:.5;cursor:not-allowed}
 @media(max-width:900px){ .pgnum{grid-template-columns:1fr} .pgnlist{max-height:none;overflow:visible} }
+/* the gallery's add buttons live in the bottom bar, just left of Done */
+.pgx .modal-acts{justify-content:flex-start}
+.pgxfoot{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pgxfoot .pgxacts{justify-content:flex-end}
+@media(max-width:640px){ .pgxfoot{margin-left:0;width:100%} .pgxfoot .pgxacts{justify-content:flex-start} }
+@media(max-width:900px){
+  .pgx .modal-acts{position:sticky;bottom:-18px;z-index:3;background:var(--surface);border-top:1px solid var(--border);
+    margin:16px -20px -18px;padding:10px 20px calc(12px + env(safe-area-inset-bottom,0px));gap:8px}
+  .pgx .modal-acts > .btn.ghost:first-child{display:none}
+  .pgxfoot{flex:1 1 auto;min-width:0;margin-left:0}
+  .pgxfoot .pgxacts{flex:1 1 auto;min-width:0;justify-content:flex-start}
+}
 
 /* ---------- my projects ---------- */
 .mptop{display:flex;align-items:center;gap:8px;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap}
@@ -2618,6 +2630,7 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .tile2.soon b{color:var(--ink-3)}
 .syswait{margin:0}
 .sysseason{margin:0;font-weight:600;color:var(--ink-2)}
+.statusnote.soon{color:var(--ink-3);font-style:italic}
 
 /* ---------- scrollbars: the Financial System's thin, themed bars, everywhere ----------
    Without these the browser draws its own white bars inside dark panels. A slim rounded
@@ -7520,9 +7533,7 @@ function widgetMeter(w){
       return {pct:null, label: free+' of '+S.people.length+' free today'}; }
     if(w.t==='asks'){ const n=asksForMe(me).length;
       return {pct:null, label: n? n+(n===1?' waiting on an answer':' waiting on an answer') : 'Nothing outstanding'}; }
-    if(w.t==='sponsors'){ const b2=spData(w);
-      if(!b2.all.length) return {pct:null, label:'Not refreshed yet'};
-      return {pct:null, label: b2.live.length+' open \u00b7 '+b2.fresh.length+' never approached \u00b7 '+b2.quiet.length+' quiet'}; }
+    if(SYS[w.t]){ const lb=sysBrief(w); return lb? {pct:null, label:lb} : null; }
     if(w.t==='taskcal'){ const m=w.m?new Date(w.m):today();
       const all=doingTasks(me).concat(S.tasks.filter(x=>x.o===me && !isDoing(x,me)));
       const inM=all.filter(x=>{ const d=parseD(x.due); return d && d.getMonth()===m.getMonth() && d.getFullYear()===m.getFullYear(); });
@@ -11775,7 +11786,10 @@ function addWidget(L){
     const groupOf=k=> groups.find(g=> g.items.indexOf(k)>=0);
 
     const redrawBoard=()=>{ saveMine(); vMine($('#app-mine')); };
-    const showRight=(k)=>{
+    /* the buttons for whatever is shown sit in the bar at the bottom, beside Done */
+    const foot=el('div','pgxfoot');
+    const showRight=k=>{ showRightIn(k); foot.textContent=''; const a=right.querySelector('.pgxacts'); if(a) foot.appendChild(a); };
+    const showRightIn=(k)=>{
       right.textContent='';
       if(!k || !WTYPES[k]){
         right.appendChild(el('div','pgxempty','Point at a panel on the left to see what it looks like.'));
@@ -11886,7 +11900,7 @@ function addWidget(L){
     reset.addEventListener('click', ()=>{ if(!reset.dataset.c){ reset.dataset.c='1'; reset.textContent='Click Again to Reset'; return; }
       S.layout=null; saveMine(); closeSheet(); vMine($('#app-mine')); toast('Board reset.'); });
     const cl=el('button','btn','Done'); cl.type='button'; cl.addEventListener('click',closeSheet);
-    if(!nbOn()) acts.appendChild(reset); acts.appendChild(cl); box.appendChild(acts);
+    if(!nbOn()) acts.appendChild(reset); acts.appendChild(foot); acts.appendChild(cl); box.appendChild(acts);
     setTimeout(()=>{ if(window.innerWidth>900) find.focus(); }, 60);
   });
 }
@@ -13730,6 +13744,18 @@ function spAppRow(a, d){
   h.appendChild(t2); const rr=el('span','r'); rr.appendChild(el('span','chip '+(a.status==='Paid'?'ch-dn':a.status==='Submitted'?'ch-ip':'ch-ns'), a.status||'Submitted')); h.appendChild(rr);
   row.appendChild(h); return row;
 }
+function spPipeSay(d){
+  const P=d.pipe, m=n=>'$'+Math.round(n).toLocaleString('en-US'), pl=(n,a,b)=> n+' '+(n===1?a:b);
+  if(!P.apps.length) return 'Nothing has come across from the pipeline yet.';
+  const bits=[];
+  if(P.submitted.length) bits.push(pl(P.submitted.length,'application is','applications are')+' waiting on Amy and Kelly to review');
+  if(P.approved.length) bits.push(pl(P.approved.length,'is','are')+' approved and waiting on the invoice');
+  if(P.late.length){ const a=P.late[0]; bits.push(pl(P.late.length,'invoice is','invoices are')+' past 30 days \u2014 '+(a.company||a.appNo||'one')+' the longest at '+P.age(a)+' days'); }
+  else if(P.pending.length) bits.push(pl(P.pending.length,'invoice is','invoices are')+' out, none past 30 days');
+  const out=spAmt(P.pending,'amountDue')-spAmt(P.pending,'amountPaid'), got=spAmt(P.apps,'amountPaid');
+  if(!bits.length) return 'Nothing waiting \u2014 '+pl(P.paid.length,'application','applications')+' paid, '+m(got)+' collected.';
+  const s=bits.join('; '); return s.charAt(0).toUpperCase()+s.slice(1)+'. '+m(got)+' collected'+(out>0? ', '+m(out)+' still outstanding' : '')+'.';
+}
 function spSeasons(){ const s={}; (S.leads||[]).forEach(l=>{ if(l.season) s[String(l.season)]=1; });
   (S.apps||[]).forEach(a=>{ const m=/(20\d\d)/.exec(String(a.event||'')); if(m) s[m[1]]=1; }); return Object.keys(s).sort(); }
 /* the prospects a panel looks at, and everything worked out from them */
@@ -13777,7 +13803,8 @@ function spParts(){
   const st=SP_STATUSES.slice(); (S.leads||[]).forEach(l=>{ if(l.status && st.indexOf(l.status)<0) st.push(l.status); });
   const grp=(list, by)=>{ const g={}; list.forEach(l=>{ const k=by(l); g[k]=(g[k]||0)+1; }); return g; };
   const P=[
-    {k:'say', kind:'s', n:'The Summary Sentence', say:d=> leadSay(d)},
+    {k:'sayp', kind:'s', n:'Pipeline Summary', say:d=> spPipeSay(d)},
+    {k:'say', kind:'s', n:'Prospects Summary', say:d=> leadSay(d)},
     {k:'p:sub',   kind:'n', grp:'pipe', n:'Submitted',       sub:'waiting on Amy and Kelly to review', f:d=>d.pipe.submitted, tone:'warn'},
     {k:'p:appr',  kind:'n', grp:'pipe', n:'Approved',        sub:'waiting on the invoice',     f:d=>d.pipe.approved},
     {k:'p:pend',  kind:'n', grp:'pipe', n:'Pending Payment', sub:'invoiced, not paid yet',     f:d=>d.pipe.pending},
@@ -13887,10 +13914,19 @@ function mtRowMeeting(m){
   h.appendChild(t2); const rr=el('span','r'); rr.appendChild(el('span','chip ch-ns', m[2]+(m[2]===1?' person':' people'))); h.appendChild(rr);
   row.appendChild(h); return row;
 }
+function mtSay(d){
+  const pl=(n,a,b)=> n+' '+(n===1?a:b), bits=[];
+  bits.push(d.today.length? pl(d.today.length,'workgroup meets','workgroups meet')+' today'+(d.onNow.length? ', '+d.onNow.length+' on now' : '') : 'No workgroups meet today');
+  bits.push(pl(d.week.length,'meeting','meetings')+' this week');
+  let s=bits.join(' and ')+'.';
+  if(d.quiet.length) s+=' '+pl(d.quiet.length,'active group hasn\u2019t','active groups haven\u2019t')+' met in 60 days.';
+  return s;
+}
 function mtParts(){
   const cnt=(arr,by)=>{ const g={}; arr.forEach(x=>{ const k=by(x); g[k]=(g[k]||0)+1; }); return g; };
   const types={}; ((MT.st && Object.keys(MT.st.groups).map(k=>MT.st.groups[k])) || []).forEach(g=>{ types[g.type||'Other']=1; });
   const P=[
+    {k:'say',    kind:'s', n:'The Summary Sentence', say:d=> mtSay(d)},
     {k:'today',  kind:'n', n:'Meetings Today',          sub:'on the schedule today',            f:d=>d.today},
     {k:'onnow',  kind:'n', n:'On Now',                  sub:'meeting right now',                f:d=>d.onNow, tone:'good'},
     {k:'week',   kind:'n', n:'Meetings This Week',      sub:'Monday to Friday',                 f:d=>d.week},
@@ -13984,9 +14020,22 @@ function soRow(o){
   h.appendChild(t2); const rr=el('span','r'); rr.appendChild(el('span','chip '+(o.status==='Executed'?'ch-dn':soWaiting(o)?'ch-ip':'ch-ns'), o.status||'Draft')); h.appendChild(rr);
   row.appendChild(h); return row;
 }
+function soSay(d){
+  const pl=(n,a,b)=> n+' '+(n===1?a:b);
+  if(!d.all.length) return 'No service orders have come across yet.';
+  const bits=[];
+  if(d.waiting.length) bits.push(pl(d.waiting.length,'order is','orders are')+' waiting on a signature');
+  if(d.approved.length) bits.push(pl(d.approved.length,'is','are')+' approved and waiting on MISMO\u2019s signature');
+  if(d.draft.length) bits.push(pl(d.draft.length,'draft hasn\u2019t','drafts haven\u2019t')+' been sent');
+  let s=bits.length? bits.join(', ') : 'Every order is signed';
+  s=s.charAt(0).toUpperCase()+s.slice(1)+'. '+d.executed.length+' of '+d.all.length+' executed';
+  if(d.ending.length) s+=', '+pl(d.ending.length,'ends','end')+' within 90 days';
+  return s+'.';
+}
 function soParts(){
   const cnt=(arr,by,val)=>{ const g={}; arr.forEach(o=>{ const k=by(o); g[k]=(g[k]||0)+(val? (+o[val]||0) : 1); }); return g; };
   const P=[
+    {k:'say',    kind:'s', n:'The Summary Sentence', say:d=> soSay(d)},
     {k:'total',  kind:'n', n:'Service Orders',          sub:'every order this year',            f:d=>d.all},
     {k:'fees',   kind:'n', n:'Total Maximum Fees',      sub:'what the orders can cost at most', money:1, val:d=>({n:d.fees})},
     {k:'hours',  kind:'n', n:'Estimated Hours',         sub:'across every order',               val:d=>({n:Math.round(d.hours)})},
@@ -14018,6 +14067,7 @@ if(soOn()) setTimeout(()=>{ try{ soLoad(); }catch(e){} }, 3000);
    read yet; the panel keeps the choices and shows dashes until the system moves. */
 const SOON_PARTS = {
   finnums: [
+    {k:'say', kind:'s', n:'The Summary Sentence', sub:'one line on where things stand'},
     {k:'cash',    kind:'n', n:'Gross Cash',               sub:'money in, less refunds, this fiscal year'},
     {k:'invd',    kind:'n', n:'Gross Invoiced',           sub:'invoiced this fiscal year'},
     {k:'revb',    kind:'n', n:'Revenue Against Budget',   sub:'percent of the year’s budget'},
@@ -14044,6 +14094,7 @@ const SOON_PARTS = {
     {k:'B:sum',   kind:'b', n:'Net Result by Summit'}
   ],
   cmsnums: [
+    {k:'say', kind:'s', n:'The Summary Sentence', sub:'one line on where things stand'},
     {k:'active',  kind:'n', n:'Active Certifications',    sub:'live certifications'},
     {k:'prog',    kind:'n', n:'In Progress',              sub:'applications being worked'},
     {k:'wait',    kind:'n', n:'Waiting on MISMO',         sub:'the next step is ours'},
@@ -14063,6 +14114,7 @@ const SOON_PARTS = {
     {k:'B:stage', kind:'b', n:'In Progress by Stage'}
   ],
   m360nums: [
+    {k:'say', kind:'s', n:'The Summary Sentence', sub:'one line on where things stand'},
     {k:'active',  kind:'n', n:'Active Members',           sub:'member organizations'},
     {k:'prosp',   kind:'n', n:'Prospects',                sub:'not yet members'},
     {k:'former',  kind:'n', n:'Former Members',           sub:'no longer members'},
@@ -14101,32 +14153,32 @@ const SYS = {
     live:()=>{ const st=spLink(); if(!st) return null; if(!st.loaded) return 'Connecting to the Sponsorship Portal\u2026';
       return 'Live from the Sponsorship Portal'+(st.at? ' \u00b7 checked '+new Date(st.at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : '')+'.'; },
     empty:['Nothing from the Sponsorship Portal yet.','The pipeline and prospect list come across from the portal. Nothing has come across yet, or there is nothing in them.'],
-    foot:'Read-only. Applications and prospects are worked in the Sponsorship Portal; changes there show here within a minute.', open:'Open the Sponsorship Portal',
+    open:'Open the Sponsorship Portal',
     link:()=> (typeof calOn==='function' && calOn())? 'https://resources.mismo.org/sponsorship/' : 'https://claude.ai/artifact/Lobt6M5kjNzJS5w5oJHEc5'},
-  mtnums: {name:'Meeting Trackers', parts:mtParts, data:()=>mtData(), def:['today','week','active','L:today'],
-    groups:[{k:'n', n:'Numbers'}, {k:'nty', n:'Active Workgroups by Type'}, {k:'l', n:'Lists'}, {k:'b', n:'Breakdowns'}],
+  mtnums: {name:'Meeting Trackers', parts:mtParts, data:()=>mtData(), def:['say','today','week','active','L:today'],
+    groups:[{k:'s', n:'Summary'}, {k:'n', n:'Numbers'}, {k:'nty', n:'Active Workgroups by Type'}, {k:'l', n:'Lists'}, {k:'b', n:'Breakdowns'}],
     has:()=> !!MT.sched, wait:()=>{ if(!mtAvailable()) return ['Meeting Trackers numbers show on resources.mismo.org.','They come from Meeting Trackers, which this copy of Team HQ cannot reach.'];
       if(MT.failed==='access' && !MT.sched) return ['You don’t have access to Meeting Trackers.','Ask for it in the admin panel and these numbers show here.'];
       if(!MT.sched){ mtLoad(); return ['Loading from Meeting Trackers…','']; } return null; },
-    unit:'meeting', foot:'Read-only. Meetings and attendance are logged in Meeting Trackers. Times are Eastern.',
+    unit:'meeting', foot:'Times are Eastern.',
     open:'Open Meeting Trackers', link:()=> '/meeting-trackers/'},
   sonums: {name:'Service Orders and Agreements', from:'Service Orders and Agreements', parts:soParts, data:()=>soData(),
-    def:['total','waiting','executed','L:waiting'],
-    groups:[{k:'n', n:'Numbers'}, {k:'nst', n:'Orders by Status'}, {k:'nco', n:'Maximum Fees by Company'}, {k:'l', n:'Lists'}, {k:'b', n:'Breakdowns'}],
+    def:['say','total','waiting','executed','L:waiting'],
+    groups:[{k:'s', n:'Summary'}, {k:'n', n:'Numbers'}, {k:'nst', n:'Orders by Status'}, {k:'nco', n:'Maximum Fees by Company'}, {k:'l', n:'Lists'}, {k:'b', n:'Breakdowns'}],
     has:()=> !!SO.orders, wait:()=>{ if(!soOn()) return ['Service Orders numbers show on resources.mismo.org.','They come from Service Orders and Agreements, which this copy of Team HQ cannot reach.'];
       if(SO.failed==='access') return ['You don\u2019t have access to Service Orders.','Ask for it in the admin panel and these numbers show here.'];
       if(SO.failed==='error' && !SO.orders) return ['Service Orders could not be read just now.','Team HQ will try again in a few minutes.'];
       if(!SO.orders){ soLoad(); return ['Loading from Service Orders\u2026','']; } return null; },
-    unit:'order', foot:'Read-only. Orders are written, sent and signed in Service Orders and Agreements.',
+    unit:'order',
     open:'Open Service Orders', link:()=> '/service-orders/'},
   finnums: {name:'Financial System', from:'the Financial System', soon:'Financial System', parts:()=>SOON_PARTS.finnums, def:[],
-    groups:[{k:'n', n:'The Year'}, {k:'ar', n:'Receivables'}, {k:'fc', n:'Next Year’s Budget'}, {k:'sum', n:'Summits'}, {k:'l', n:'Lists'}, {k:'b', n:'Breakdowns'}],
+    groups:[{k:'s', n:'Summary'}, {k:'n', n:'The Year'}, {k:'ar', n:'Receivables'}, {k:'fc', n:'Next Year’s Budget'}, {k:'sum', n:'Summits'}, {k:'l', n:'Lists'}, {k:'b', n:'Breakdowns'}],
     open:'Open the Financial System', link:()=> 'https://claude.ai/artifact/QFAJwn9Nv4ExGNCPnVYUEX'},
   cmsnums: {name:'CMS', from:'the CMS', soon:'CMS', parts:()=>SOON_PARTS.cmsnums, def:[],
-    groups:[{k:'n', n:'Certifications'}, {k:'ren', n:'Renewals'}, {k:'money', n:'Money'}, {k:'l', n:'Lists'}, {k:'b', n:'Breakdowns'}],
+    groups:[{k:'s', n:'Summary'}, {k:'n', n:'Certifications'}, {k:'ren', n:'Renewals'}, {k:'money', n:'Money'}, {k:'l', n:'Lists'}, {k:'b', n:'Breakdowns'}],
     open:'Open the CMS', link:()=> 'https://claude.ai/artifact/Rdt3ExdJgfnxJM2nsgwEg6'},
   m360nums: {name:'Member 360', soon:'Member 360', parts:()=>SOON_PARTS.m360nums, def:[],
-    groups:[{k:'n', n:'Members'}, {k:'ren', n:'Renewals'}, {k:'iif', n:'IIF'}, {k:'deal', n:'Deals'}, {k:'l', n:'Lists'}, {k:'b', n:'Breakdowns'}],
+    groups:[{k:'s', n:'Summary'}, {k:'n', n:'Members'}, {k:'ren', n:'Renewals'}, {k:'iif', n:'IIF'}, {k:'deal', n:'Deals'}, {k:'l', n:'Lists'}, {k:'b', n:'Breakdowns'}],
     open:'Open Member 360', link:()=> 'https://claude.ai/artifact/NyuB6FrzML8b9j9URqMo38'}
 };
 const sysGrpOf = p=> p.grp || p.kind;
@@ -14146,6 +14198,25 @@ function sysPartLine(t, p, d){
     if(p.kind==='b'){ const n=Object.keys(p.groups(d)).length; return n? n+(n===1?' group':' groups') : 'nothing to group yet'; }
   }catch(e){}
   return '';
+}
+
+/* ---------- what a collapsed panel says, in a few words ---------- */
+function sysBrief(w){
+  const s=SYS[w.t]; if(!s) return null;
+  if(s.soon) return 'Coming soon \u00b7 '+s.name;
+  try{
+    if(s.wait && s.wait()) return null;
+    if(s.has && !s.has()) return 'Nothing from '+(s.from||s.name)+' yet';
+    const d=s.data(w), pl=(n,a,b)=> n+' '+(n===1?a:b);
+    if(w.t==='sponsors'){ const P=d.pipe, bits=[];
+      if(P.apps.length) bits.push(pl(P.submitted.length,'application submitted','applications submitted'));
+      if(P.late.length) bits.push(P.late.length+' past 30 days');
+      if(d.all.length) bits.push(pl(d.live.length,'open prospect','open prospects')+' \u00b7 '+d.fresh.length+' never approached \u00b7 '+d.quiet.length+' quiet');
+      return bits.join(' \u00b7 ') || null; }
+    if(w.t==='mtnums') return pl(d.today.length,'workgroup meeting','workgroup meetings')+' today'+(d.onNow.length? ' \u00b7 '+d.onNow.length+' on now' : '')+' \u00b7 '+pl(d.week.length,'meeting','meetings')+' this week';
+    if(w.t==='sonums') return pl(d.all.length,'service order','service orders')+' \u00b7 '+d.waiting.length+' waiting on a signature \u00b7 '+d.executed.length+' executed';
+  }catch(e){}
+  return null;
 }
 
 /* ---------- the panel ---------- */
@@ -14169,7 +14240,7 @@ function sysRender(w, b){
   }
   const d=s.soon? null : s.data(w);
   if(w.season) b.appendChild(el('p','note sysseason', w.season+' season'));
-  parts.filter(p=>p.kind==='s').forEach(p=>{ const say=el('div','statusnote'); say.textContent=p.say(d); b.appendChild(say); });
+  parts.filter(p=>p.kind==='s').forEach(p=>{ const say=el('div','statusnote'); say.textContent= d? p.say(d) : 'The summary sentence arrives with the numbers.'; if(!d) say.classList.add('soon'); b.appendChild(say); });
   const nums=parts.filter(p=>p.kind==='n');
   if(nums.length){
     const tl=el('div','tiles2');
