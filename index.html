@@ -2751,6 +2751,10 @@ html{scrollbar-color:var(--border-strong) var(--ground)}
 @media(min-width:721px){ .headline .tiles.one{grid-template-columns:repeat(5,minmax(0,1fr))} }
 .tile .tsub{display:flex;align-items:baseline;gap:5px;font-style:normal;font-size:12px;color:var(--sky-soft);margin-top:6px;padding-top:6px;border-top:1px solid rgba(116,191,235,.2)}
 .tile .tsub b{display:inline;font-size:15px;font-weight:700;line-height:1;color:#fff}
+/* tiles: numbers line up across the row — content starts at the top, not centered */
+.tile{display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch}
+.tile .tsub{margin-top:auto}
+.tile small + .tsub{margin-top:8px}
 
 #rs-account{flex:0 0 auto;display:inline-flex;align-items:center}
 #rs-account .rs-who,#rs-account .rs-signin{border-radius:4px}
