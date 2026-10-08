@@ -750,6 +750,11 @@
     canPrivate: function () { var rs = RS(); return !!(rs && rs.role(PRIVATE)); }, poll: function () { poll(true); }, pending: anyPending, status: status,
     /* read one file of another tool the person has access to (Meeting Trackers' schedule);
        resolves the file's content, or rejects (e.g. 403 when they have no access to it) */
+    /* a JSON file another tool keeps outside data/ (Service Orders' orders/), read only */
+    readFile: function (proj, path) { return call(proj, '/file/' + String(path).split('/').map(encodeURIComponent).join('/'), 'GET').then(function (b) {
+      var bin = atob((b && b.content) || ''), bytes = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      var t = new TextDecoder('utf-8').decode(bytes); return t ? JSON.parse(t) : null; }); },
     readOther: function (proj, name) { return call(proj, '/data/' + encodeURIComponent(name), 'GET').then(function (b) { return (b && b.data) || null; }); },
     why: function () { return status.lastWhy || WHY[status.lastError] || status.lastError || ''; },
     config: { RELAY_URL: RELAY_URL, PROJECT: PROJECT, PRIVATE: PRIVATE, POLL_MS: POLL_MS } };
@@ -2238,6 +2243,22 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 }
 :root[data-theme="dark"] .pgxcat[aria-pressed="true"]{background:var(--sky);border-color:var(--sky);color:var(--navy-deep)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .pgxcat[aria-pressed="true"]{background:var(--sky);border-color:var(--sky);color:var(--navy-deep)}}
+/* Numbers from My Systems in the gallery: the numbers listed, the panel previewed */
+.pgnum{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:16px;flex:1 1 auto;min-height:0;margin-top:14px}
+.pgnlist{overflow:auto;min-height:0;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);padding:8px 10px}
+.pgnsrc{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:10px 2px 4px}
+.pgnsrc:first-child{margin-top:2px}
+.pgnrow{display:flex;align-items:flex-start;gap:10px;padding:8px 10px;margin-top:4px;border-radius:6px;background:var(--surface);box-shadow:0 0 0 1px var(--border);cursor:pointer}
+.pgnrow:hover{box-shadow:0 0 0 1px var(--border-strong)}
+.pgnrow.on{box-shadow:0 0 0 2px var(--c1);background:var(--info-soft)}
+.pgnrow input{margin-top:3px;flex:0 0 auto;width:16px;height:16px;accent-color:var(--c1)}
+.pgnt{min-width:0}
+.pgnt b{display:block;font-size:13px;font-weight:700;color:var(--ink)}
+.pgnt small{display:block;font-size:12px;color:var(--ink-2);margin-top:2px}
+.pgnpv{display:flex;flex-direction:column;min-height:0}
+.pgnpv .pgxlbl{margin-top:0}
+.pgxacts .btn:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:900px){ .pgnum{grid-template-columns:1fr} .pgnlist{max-height:none;overflow:visible} }
 
 /* ---------- my projects ---------- */
 .mptop{display:flex;align-items:center;gap:8px;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap}
@@ -2530,6 +2551,8 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .dfrow{display:flex;gap:10px;font-size:12.5px;color:var(--ink-2)}
 .dfrow .dft{flex:0 0 auto;min-width:118px;font-weight:600;color:var(--ink)}
 .dfrow.hq span:last-child{color:var(--c7)}
+.dfslot{display:inline-flex;flex-direction:column;align-items:flex-start;line-height:1.2;padding-top:4px;padding-bottom:4px}
+.dfslot small{font-size:10.5px;font-weight:500;color:var(--ink-3)}
 
 /* ---------- messages: a small note in the bottom-left corner of the page, never over the
    right-hand panel or the middle of the work ---------- */
@@ -2562,6 +2585,47 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .sticky.dragging{transform:rotate(-2deg)}
 @media (pointer:coarse){ .sticky .dgrip{opacity:.8;width:34px;height:24px} .mnrow .dgrip{opacity:.8;width:28px;height:30px} .mnrow{padding-left:38px} }
 @media (prefers-reduced-motion:reduce){ .sticky .dgrip{transition:none} .sticky.dragging{transform:none} }
+
+/* ---------- Sponsorship Prospects: chosen parts ---------- */
+.spbars{display:flex;flex-direction:column;gap:6px}
+.spbar{display:grid;grid-template-columns:minmax(90px,40%) 1fr auto;gap:10px;align-items:center;font-size:12.5px}
+.spbl{color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.spbt{height:12px;background:var(--surface-3);border-radius:3px;overflow:hidden;display:block}
+.spbt i{display:block;height:100%;background:var(--c1);border-radius:0 4px 4px 0}
+.spbar b{font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--ink);min-width:2ch;text-align:right}
+.spseason{margin:0;font-weight:600;color:var(--ink-2)}
+.pgnsrc{display:flex;align-items:center;gap:8px}
+.spall{margin-left:auto;background:none;border:0;padding:0;font:inherit;font-size:11.5px;font-weight:600;color:var(--c1);
+  text-transform:none;letter-spacing:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.spall:hover{color:var(--ink)}
+.spseasonrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}
+.spseasonrow .pgxlbl{margin:0}
+.splist.spset{max-height:none;overflow:visible;border:0;border-radius:0;background:none;padding:2px 16px 16px}
+/* ---------- system panels that are Coming Soon ---------- */
+.pgxsoon{flex:0 0 auto;font-size:10.5px;font-weight:700;color:var(--warn);background:var(--warn-soft,color-mix(in srgb,var(--warn) 14%,transparent));
+  border-radius:3px;padding:2px 7px;white-space:nowrap;margin-right:4px}
+.syssoon{display:flex;flex-direction:column;gap:3px;padding:10px 12px;border:1px dashed var(--border-strong);border-left:3px solid var(--warn);
+  border-radius:6px;background:var(--surface-2);font-size:12.5px;color:var(--ink-2);line-height:1.45}
+.syssoon b{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--warn)}
+.tile2.soon b{color:var(--ink-3)}
+.syswait{margin:0}
+.sysseason{margin:0;font-weight:600;color:var(--ink-2)}
+
+/* ---------- scrollbars: the Financial System's thin, themed bars, everywhere ----------
+   Without these the browser draws its own white bars inside dark panels. A slim rounded
+   thumb in the page's border colour on a clear track; on the navy rail, the Financial
+   System's navy trough and steel-blue thumb. */
+html, *{scrollbar-width:thin; scrollbar-color:var(--border-strong) transparent}
+*::-webkit-scrollbar{width:10px; height:10px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:var(--border-strong); border-radius:999px; border:2px solid transparent; background-clip:content-box}
+*::-webkit-scrollbar-thumb:hover{background:var(--ink-3); background-clip:content-box}
+*::-webkit-scrollbar-corner{background:transparent}
+html{scrollbar-color:var(--border-strong) var(--ground)}
+.hq.rail, .hq.rail *{scrollbar-color:#35709e #0a2639}
+.hq.rail::-webkit-scrollbar-track{background:#0a2639}
+.hq.rail::-webkit-scrollbar-thumb{background:#35709e; border-color:#0a2639}
+.hq.rail::-webkit-scrollbar-thumb:hover{background:#4a8cbe}
 
 #rs-account{flex:0 0 auto;display:inline-flex;align-items:center}
 #rs-account .rs-who,#rs-account .rs-signin{border-radius:4px}
@@ -4695,7 +4759,7 @@ function editTask(t, after){
     const bNote=el('p','note'); bWrap.appendChild(bNote);
     const bg=el('div','fields');
     const bD=field(bg,'Day', inp('date', blk? blk.date : ''), 'w2');
-    const bT=field(bg,'Starts', inp('time', blk? blk.start : '09:00'), 'w2');
+    const bT=field(bg, dfLocalIsET(blk? blk.date : isoOf(today())) ? 'Starts' : 'Starts (Your Time, '+dfAbbr(DF_ME, blk? blk.date : isoOf(today()))+')', inp('time', dfETToMe(blk? blk.start : '09:00', blk? blk.date : isoOf(today()))), 'w2');
     const bM=field(bg,'How Long', sel2b(BLK_MINS.map(n=>({v:String(n),
       n: n>=60 ? (n%60? (n/60).toFixed(1).replace('.0','') : (n/60))+(n===60?' hour':' hours') : n+' minutes'})),
       String(blk? blockLen(blk) : 60)), 'w2');
@@ -4718,14 +4782,14 @@ function editTask(t, after){
       } else if(!blk.evId){
         bNote.innerHTML='<b>Waiting to go on the calendar.</b> It is booked here; Outlook picks it up on the next sync.';
       } else {
-        bNote.innerHTML='<b>On the calendar.</b> '+esc(fmtD(blk.date,1))+' at '+esc(hhmm(blk.start))+'.';
+        bNote.innerHTML='<b>On the calendar.</b> '+esc(fmtD(blk.date,1))+' at '+esc(dfDual(hrMin(blk.start), blk.date)+(dfLocalIsET(blk.date)? '' : ' '+dfAbbr(DF_ME, blk.date)+' ('+hhmm(blk.start)+' Eastern)'))+'.';
       }
       const save=el('button','btn sm', blk? 'Change the Time' : 'Set Time Aside'); save.type='button';
       save.addEventListener('click', async ()=>{
         if(!bD.value){ bD.focus(); toast('Pick a day first.'); return; }
         const row = Object.assign({}, blk||{}, {
           who: d.o || S.me || '', task: d.id, title: d.t || (blk&&blk.title) || 'Focus time',
-          date: bD.value, start: bT.value||'09:00', end: addMins(bT.value||'09:00', +bM.value),
+          date: bD.value, start: dfMeToET(bT.value||'09:00', bD.value), end: addMins(dfMeToET(bT.value||'09:00', bD.value), +bM.value),
           mins: +bM.value, origin: blk? (blk.origin||'hq') : 'hq', state:'ready', at: Date.now()
         });
         await put('blocks', row);
@@ -6867,7 +6931,12 @@ const WTYPES = {
   overlap:   {n:'Overlap Check',       d:'Where two people have work in the same part.'},
   calendar:  {n:'The Month',           d:'Key Dates on a calendar, with who is away each day.'},
   asks:      {n:'What People Have Asked For', d:'Panels, numbers and changes the team has asked for, and where each one stands.'},
-  sponsors:  {n:'Sponsorship Prospects', d:'What is open in the Sponsorship Portal \u2014 who has never been approached, who has gone quiet, and who has nobody\u2019s name on them.'},
+  sponsors:  {n:'Sponsorship Portal', d:'Prospects from the Sponsorship Portal \u2014 tick the numbers, lists and breakdowns you want.', multi:1},
+  sonums:    {n:'Service Orders and Agreements', d:'Service orders from Service Orders and Agreements \u2014 tick the numbers, lists and breakdowns you want.', multi:1},
+  mtnums:    {n:'Meeting Trackers', d:'Workgroup meetings and attendance from Meeting Trackers \u2014 tick the numbers, lists and breakdowns you want.', multi:1},
+  finnums:   {n:'Financial System', d:'Cash, budget, receivables and summit results from the Financial System. Coming soon: tick what you want now.', multi:1},
+  cmsnums:   {n:'CMS', d:'Certifications, renewals and certification money from the CMS. Coming soon: tick what you want now.', multi:1},
+  m360nums:  {n:'Member 360', d:'Members, renewals, IIF and deals from Member 360. Coming soon: tick what you want now.', multi:1},
   taskcal:   {n:'My Tasks on a Calendar', d:'Your own work laid out by the day it is due. Drag one to another day to move it, click it to open it.'},
   freebusy:  {n:'Who Is Free',         d:'The next two weeks, person by person \u2014 for picking a day that suits everyone.'},
   planday:   {n:'Plan My Day',         d:'Reads everything on your board and tells you what to do, in what order, and what can wait.'},
@@ -6875,11 +6944,9 @@ const WTYPES = {
   mynote:    {n:'My Notes',            d:'A section of long-form notes on your board. Add as many notes inside it as you like, and as many sections as you like.'},
   numbers:   {n:'Numbers from My Systems', d:'Headline numbers out of the Financial System, certification and the rest.', multi:1}
 };
+/* Jonna, Oct 7: a new person starts with My Tasks and nothing else, and adds what they want */
 const DEF_ROWS = [
-  [{t:'mytasks', wide:1}, {t:'duesoon'}],
-  [{t:'countdown'}],
-  [{t:'myrails'}, {t:'watching'}],
-  [{t:'numbers'}, {t:'links'}]
+  [{t:'mytasks', wide:1}]
 ];
 const DEF_LAYOUT = DEF_ROWS;
 /* ---------------------------------------------------------------------------
@@ -7320,7 +7387,7 @@ function widgetCount(w){
     if(w.t==='team')     return S.people.length;
     if(w.t==='links')    return myLinks(w).length;
     if(w.t==='calendar')  return null;
-  if(w.t==='sponsors'){ const b2=leadBuckets(); return b2.fresh.length + b2.quiet.length; }
+  if(w.t==='sponsors'){ const b2=spData(w); return b2.fresh.length + b2.quiet.length; }
     if(w.t==='taskcal'){ const m=w.m?new Date(w.m):today();
       return doingTasks(me).concat(S.tasks.filter(x=>x.o===me && !isDoing(x,me)))
         .filter(x=>{ const d=parseD(x.due); return d && d.getMonth()===m.getMonth() && d.getFullYear()===m.getFullYear(); }).length; }
@@ -7445,7 +7512,7 @@ function widgetMeter(w){
       return {pct:null, label: free+' of '+S.people.length+' free today'}; }
     if(w.t==='asks'){ const n=asksForMe(me).length;
       return {pct:null, label: n? n+(n===1?' waiting on an answer':' waiting on an answer') : 'Nothing outstanding'}; }
-    if(w.t==='sponsors'){ const b2=leadBuckets();
+    if(w.t==='sponsors'){ const b2=spData(w);
       if(!b2.all.length) return {pct:null, label:'Not refreshed yet'};
       return {pct:null, label: b2.live.length+' open \u00b7 '+b2.fresh.length+' never approached \u00b7 '+b2.quiet.length+' quiet'}; }
     if(w.t==='taskcal'){ const m=w.m?new Date(w.m):today();
@@ -7619,6 +7686,7 @@ function buildWidget(w, b){
   }
   return;
   }
+  if(SYS[w.t]){ sysRender(w, b); return; }
   if(w.t==='sponsors'){
     const b2=leadBuckets();
   if(!b2.all.length) return b.appendChild(emptyBox('Nothing from the Sponsorship Portal yet.',
@@ -11540,12 +11608,14 @@ const PANEL_GROUPS = [
   {k:'notes',    n:'Notes and Ideas',     d:'Places to write things down before they turn into tasks.',
    items:['mynote','notes','asks']},
   {k:'numbers',  n:'Numbers and Systems', d:'Figures and lists from MISMO’s other systems, and the way into each one.',
-   items:['numbers','newcerts','sponsors','links']}
+   items:['sponsors','mtnums','sonums','finnums','cmsnums','m360nums','newcerts','links']}
 ];
 /* these can go on the board more than once (one per project, person, plan or section) */
 const PANEL_SEVERAL = ['rock','person','plan','mynote'];
 function panelAvailable(k){
   if(!WTYPES[k]) return false;
+  /* replaced by one panel per system (Oct 7); a board that already has it keeps it */
+  if(k==='numbers') return false;
   /* Plan My Day needs Claude; on resources.mismo.org it waits for the relay's ask route */
   if(k==='planday' && window.__hqRelay && !window.__hqRelay.askReady()) return false;
   return true;
@@ -11584,6 +11654,87 @@ function pgPreviewOf(k){
   n.appendChild(b);
   return n;
 }
+/* one number's current value, as the panel shows it */
+function pgFigLine(f){
+  try{
+    if(hasSeries(f)){ const sel=figDefaultSel(f); return fmtNum(f, figSum(f, sel))+' · '+periodLabel(sel); }
+    const v=String(f.v||'').trim(); return v ? figFmt(f)+' · '+figAge(f) : 'Not filled in yet';
+  }catch(e){ return ''; }
+}
+/* Numbers from My Systems: every number listed with its value; tick the ones you want
+   and the preview shows the panel as it will look, then add it in one click */
+function pgNumbers(right, L, allOf, redrawBoard, paintList, back){
+  const on=allOf('numbers'), cur=on[0]||null;
+  const picked=new Set(cur && cur.k ? cur.k : []);
+  let hover=null;
+  const t=WTYPES.numbers;
+  /* the order they are listed in: grouped by the system they come from */
+  const order=S.figures.slice().sort((a,b)=> String(a.src||'Other').localeCompare(String(b.src||'Other'))).map(f=>f.id);
+  const pickedIds=()=> order.filter(id=> picked.has(id));
+  right.textContent='';
+  if(back) right.appendChild(back);
+  const top=el('div','pgxtop'); const tt=el('div','pgxtt');
+  tt.appendChild(el('span','pgxgrp','Numbers and Systems'));
+  tt.appendChild(el('h3',null,t.n));
+  tt.appendChild(el('p',null,'Tick the numbers you want. The preview shows your panel as it will look, and the button puts it on your board.'));
+  top.appendChild(tt);
+  const acts=el('div','pgxacts'); top.appendChild(acts);
+  right.appendChild(top);
+  const cols=el('div','pgnum'); right.appendChild(cols);
+  const list=el('div','pgnlist'), pv=el('div','pgnpv');
+  cols.appendChild(list); cols.appendChild(pv);
+  const paintPv=()=>{
+    pv.textContent='';
+    const ids=order.filter(id=> picked.has(id) || id===hover);
+    pv.appendChild(el('div','pgxlbl', ids.length? 'Preview With Your Data' : 'Preview'));
+    const frame=el('div','pgxframe'); frame.setAttribute('inert',''); frame.setAttribute('aria-hidden','true');
+    if(!ids.length){ frame.appendChild(el('div','pgxempty','Tick a number, or point at one, to see it here.')); }
+    else {
+      const n=el('div','widget pgpv'); n.style.setProperty('--pc','var(--c1)');
+      const h=el('header'); h.appendChild(el('h3',null, ids.length===1 ? figure(ids[0]).n : t.n)); n.appendChild(h);
+      const b=el('div','wbody'); try{ buildWidget({t:'numbers', k:ids, id:'preview'}, b); }catch(e){} n.appendChild(b);
+      frame.appendChild(n);
+    }
+    pv.appendChild(frame);
+  };
+  const paintActs=()=>{
+    acts.textContent='';
+    const n=picked.size;
+    if(cur){
+      acts.appendChild(el('span','chip ch-dn','On Your Board'));
+      const sv=el('button','btn', 'Save My Numbers'); sv.type='button'; sv.disabled=!n;
+      sv.addEventListener('click', ()=>{ cur.k=pickedIds(); redrawBoard(); paintList(); toast('Your numbers panel is updated.'); });
+      const more=el('button','btn ghost sm','Add as Another Panel'); more.type='button'; more.disabled=!n;
+      more.addEventListener('click', ()=>{ L.push({r:[newPanel({t:'numbers', k:pickedIds()}, L)]}); redrawBoard(); paintList(); toast('Added to your board.'); });
+      acts.appendChild(more); acts.appendChild(sv);
+    } else {
+      const add=el('button','btn', n? 'Add '+(n===1?'This Number':'These '+n+' Numbers')+' to My Board' : 'Tick a Number First'); add.type='button'; add.disabled=!n;
+      add.addEventListener('click', ()=>{ L.push({r:[newPanel({t:'numbers', k:pickedIds()}, L)]}); redrawBoard(); closeSheet(); toast('Added to your board.'); });
+      acts.appendChild(add);
+    }
+  };
+  /* grouped by the system each number comes from */
+  const bySrc={}; S.figures.forEach(f=>{ (bySrc[f.src||'Other']=bySrc[f.src||'Other']||[]).push(f); });
+  Object.keys(bySrc).sort().forEach(src=>{
+    list.appendChild(el('div','pgnsrc', src));
+    bySrc[src].forEach(f=>{
+      const r=el('label','pgnrow'+(picked.has(f.id)?' on':''));
+      const cb=el('input'); cb.type='checkbox'; cb.checked=picked.has(f.id);
+      cb.addEventListener('change', ()=>{ if(cb.checked) picked.add(f.id); else picked.delete(f.id); r.classList.toggle('on', cb.checked); paintActs(); paintPv(); });
+      r.appendChild(cb);
+      const tx=el('span','pgnt'); tx.appendChild(el('b',null,f.n)); tx.appendChild(el('small',null,pgFigLine(f)));
+      r.appendChild(tx);
+      r.addEventListener('mouseenter', ()=>{ hover=f.id; paintPv(); });
+      r.addEventListener('mouseleave', ()=>{ hover=null; paintPv(); });
+      list.appendChild(r);
+    });
+  });
+  if(!S.figures.length) list.appendChild(emptyBox('No numbers set up yet.','Ask for one and it goes to whoever looks after Team HQ.'));
+  const ask=el('button','btn ghost sm','Ask for a Number That Isn’t Here'); ask.type='button'; ask.style.marginTop='12px';
+  ask.addEventListener('click', ()=>{ closeSheet(); askSheet({kind:'number', t:'', why:''}); });
+  list.appendChild(ask);
+  paintActs(); paintPv();
+}
 function addWidget(L){
   if(!S.pgOpen) S.pgOpen={};
   sheet(box=>{
@@ -11621,6 +11772,16 @@ function addWidget(L){
       if(!k || !WTYPES[k]){
         right.appendChild(el('div','pgxempty','Point at a panel on the left to see what it looks like.'));
         return;
+      }
+      if(k==='numbers'){
+        const back=el('button','btn ghost sm pgxback','\u2190 All Panels'); back.type='button';
+        back.addEventListener('click', ()=>{ grid.classList.remove('detail'); box.scrollTop=0; });
+        return pgNumbers(right, L, allOf, redrawBoard, paintList, back);
+      }
+      if(SYS[k]){
+        const back=el('button','btn ghost sm pgxback','\u2190 All Panels'); back.type='button';
+        back.addEventListener('click', ()=>{ grid.classList.remove('detail'); box.scrollTop=0; });
+        return sysPicker(k, right, L, allOf, redrawBoard, paintList, back);
       }
       const t=WTYPES[k], on=allOf(k), several=PANEL_SEVERAL.indexOf(k)>=0, g=groupOf(k);
       /* on a phone the preview takes the whole pop-up, with a way back to the list */
@@ -11685,6 +11846,7 @@ function addWidget(L){
           const tx=el('span','pgxrt'); tx.appendChild(el('b',null,t.n));
           tx.appendChild(el('small',null,t.d));
           r.appendChild(tx);
+          if(SYS[k] && SYS[k].soon) r.appendChild(el('span','pgxsoon','Coming Soon'));
           if(on) r.appendChild(el('span','pgxon', PANEL_SEVERAL.indexOf(k)>=0? on+' on' : 'On'));
           const choose=()=>{ if(pick===k) return; pick=k; S.pgPick=k;
             list.querySelectorAll('.pgxrow.sel').forEach(x=>x.classList.remove('sel')); r.classList.add('sel'); showRight(k); };
@@ -12443,7 +12605,8 @@ function panelLook(w, L, title){
           ni.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); keep(); ni.blur(); } });
           b.appendChild(setRow('Panel Name', 'Shows as this panel’s heading. Give each My Notes panel its own name to keep different notes apart — Board Prep, Sponsor Calls, Ideas.', ni, {pv:{k:'name', cur:'x', ctx:{name:(syCard(w.k)||{}).t||'My Notes'}, desc:'The name shows as this panel\u2019s heading on your board.'}}));
          }}] : [];
-      setGroups(box, 'panel', nameGroup.concat([
+      const partsGroup = SYS[w.t] ? [sysSettingsGroup(w, apply, paint)] : [];
+      setGroups(box, 'panel', nameGroup.concat(partsGroup).concat([
         {k:'size', n:'Size and Place', d:'How much of its row it takes, and whether it starts open.', repaint:paint,
          sum:()=> (w.wide?'Double Share':'Equal Share') + ' · Starts '+(w.c?'Collapsed':'Open'),
          rows:b=>{
@@ -12796,8 +12959,8 @@ function mtUngz(b64){
 }
 function mtAvailable(){ return !!(window.__hqRelay && window.__hqRelay.readOther); }
 function mtCacheGet(){ try{ const c=JSON.parse(localStorage.getItem('mtsched')||'null'); return c && c.sched ? c : null; }catch(e){ return null; } }
-function mtCacheSet(){ try{ localStorage.setItem('mtsched', JSON.stringify({sched:MT.sched, names:MT.names, archived:MT.archived, at:MT.at})); }catch(e){} }
-(function(){ const c=mtCacheGet(); if(c && mtAvailable()){ MT.sched=c.sched; MT.names=c.names||{}; MT.archived=c.archived||{}; MT.at=c.at||0; } })();
+function mtCacheSet(){ try{ localStorage.setItem('mtsched', JSON.stringify({sched:MT.sched, names:MT.names, archived:MT.archived, st:MT.st||null, at:MT.at})); }catch(e){} }
+(function(){ const c=mtCacheGet(); if(c && mtAvailable()){ MT.sched=c.sched; MT.names=c.names||{}; MT.archived=c.archived||{}; MT.st=c.st||null; MT.at=c.at||0; } })();
 async function mtLoad(force){
   if(!mtAvailable() || MT.loading) return;
   if(!force && MT.at && Date.now()-MT.at < 20*60*1000) return;
@@ -12820,6 +12983,9 @@ async function mtLoad(force){
     const sd=await over('sched');
     Object.keys(sd).forEach(id=>{ const items=(sd[id]||{}).items||{}; Object.keys(items).forEach(k=>{ const d=items[k]||{};
       if(d.removed){ delete sched[k]; return; } sched[k]=Object.assign({}, sched[k]||{}, d); }); });
+    /* the figures the Meeting Trackers panel can show: groups, meetings and attendance */
+    let md={}; try{ md=await over('meetings'); }catch(e){}
+    try{ MT.st=mtBuildStats(B, gd, md); }catch(e){ MT.st=null; }
     MT.sched=sched; MT.names=names; MT.archived=archived; MT.at=Date.now(); MT.failed='';
     mtCacheSet();
   }catch(e){
@@ -12884,6 +13050,7 @@ function mtFeed(host, opts){
   mtLoad();
 }
 function mtRepaint(){
+  document.querySelectorAll('.sysp-mtnums').forEach(x=>{ if(x.__w){ x.textContent=''; sysRender(x.__w, x); } });
   const band=document.getElementById('mtband'); if(band) mtFeed(band);
   document.querySelectorAll('.mtpanel').forEach(p=> mtFeed(p, {panel:1, week:p.dataset.view==='week'}));
 }
@@ -12910,6 +13077,50 @@ function mtWeek(host){
   if(!any) host.appendChild(el('div','mt-none','No workgroup meetings scheduled in the next seven days.'));
   else host.appendChild(el('span','mt-tz','All times ET'));
   setTimeout(mtTick, 0);
+}
+
+/* ---- the numbers behind the Meeting Trackers panel ----
+   Worked out from the same files Meeting Trackers itself reads: the imported history
+   (baseline) plus the meetings, groups and schedule the facilitators have saved since.
+   People folded into another record are not unpicked here, so a count can sit a
+   person or two off Meeting Trackers' own until it is reloaded there. */
+function mtFlat(docs){
+  const out=[];
+  Object.keys(docs||{}).forEach(id=>{ const d=docs[id]||{};
+    if(d.items && typeof d.items==='object') Object.keys(d.items).forEach(k=>{ const x=d.items[k]; if(x && typeof x==='object') out.push(Object.assign({_k:k}, x)); });
+    else out.push(Object.assign({_k:id}, d)); });
+  return out;
+}
+function mtBuildStats(B, gd, md){
+  if(!B) return null;
+  const groups={}, gk=[];
+  (B.groups||[]).forEach(g=>{ const k=mtKey(g[0]); gk.push(k);
+    groups[k]={name:g[0], type:g[1]||'Other', arch:g[2]?1:0, fac:g[3]||'', last:g[5]||''}; });
+  mtFlat(gd).forEach(d=>{ const k=d.id || (d._k && !d.name ? d._k : mtKey(d.name||d._k)); if(!k) return;
+    const prev=groups[k]||{name:d.name||k, type:'Other', arch:0, fac:'', last:''};
+    groups[k]=Object.assign(prev, {name:d.name||prev.name, type:d.type||prev.type,
+      arch: d.archived!=null ? (d.archived?1:0) : prev.arch, fac: d.facilitator!=null ? d.facilitator : prev.fac}); });
+  const cats=B.cats||[], cos=B.companies||[];
+  const pk=(B.people||[]).map(p=> mtKey(p[0]));
+  const pco={}; (B.people||[]).forEach((p,i)=>{ if(p[1]>=0 && cos[p[1]]) pco[pk[i]]=p[1]; });
+  const mt={};
+  (B.meetings||[]).forEach((m,i)=>{ const g=gk[m[0]]; if(!g) return;
+    mt[g+'|'+m[1]]={g:g, d:m[1], sum:m[2]>=0?1:0, p:new Set((B.att[i]||[]).map(x=>pk[x]))}; });
+  mtFlat(md).forEach(d=>{ if(!d.gk || !d.d) return; const key=d.gk+'|'+d.d, ex=mt[key];
+    const p=new Set(d.p||[]);
+    if(d.cancelled){ mt[key]={g:d.gk, d:d.d, sum:d.sum?1:0, p:p, x:1}; return; }
+    if(ex && !ex.x) ex.p.forEach(v=>p.add(v));
+    mt[key]={g:d.gk, d:d.d, sum:(d.sum||(ex&&ex.sum))?1:0, p:p}; });
+  const ms=[], ppl=new Set(), coset=new Set(), byCat={};
+  let recs=0, summit=0;
+  Object.keys(mt).forEach(key=>{ const m=mt[key]; if(m.x) return;
+    const n=m.p.size; recs+=n; if(m.sum) summit++;
+    ms.push([m.g, m.d, n, m.sum]);
+    if(groups[m.g] && (!groups[m.g].last || m.d>groups[m.g].last)) groups[m.g].last=m.d;
+    m.p.forEach(x=>{ ppl.add(x); const c=pco[x];
+      if(c!=null){ coset.add(c); const cat=cats[cos[c][1]]||'Unknown'; byCat[cat]=(byCat[cat]||0)+1; } else byCat['No Company']=(byCat['No Company']||0)+1; }); });
+  ms.sort((a,b)=> String(b[1]).localeCompare(String(a[1])));
+  return {groups:groups, ms:ms, recs:recs, ppl:ppl.size, cos:coset.size, summit:summit, byCat:byCat};
 }
 
 /* ============ POST-ITS ON THE NOTE WALL ============
@@ -13349,7 +13560,8 @@ window.__ob = {compute:obCompute, sync:obSync, reconcile:obReconcile, readDone:o
    (busy, tentative and out of office, with meeting names unless marked Private) and
    any other time they set aside in Team HQ, laid along their working hours; the open
    stretches as buttons that fill in the start time; and a warning when the time picked
-   runs into something. All times Eastern, like the time fields. resources.mismo.org
+   runs into something. Times show in the viewer's own time zone with Eastern beside
+   them; the Starts field is in the viewer's time and is saved as Eastern. resources.mismo.org
    only — the Claude copy cannot see Outlook. */
 const DF_TZ='America/New_York';
 function dfParts(ms, tz){
@@ -13363,8 +13575,27 @@ function dfTzDiff(tz, iso){
   const noon=Date.parse(iso+'T16:00:00Z');
   return dfParts(noon, tz).min - dfParts(noon, DF_TZ).min;
 }
+/* the viewer's own time zone (from their computer) and its short name */
+const DF_ME = (()=>{ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone || DF_TZ; }catch(e){ return DF_TZ; } })();
+function dfAbbr(tz, iso){
+  try{ const p=new Intl.DateTimeFormat('en-US',{timeZone:tz, timeZoneName:'short'}).formatToParts(new Date(Date.parse((iso||isoOf(today()))+'T16:00:00Z')));
+    return (p.find(x=>x.type==='timeZoneName')||{}).value || ''; }catch(e){ return ''; }
+}
+const dfLocalIsET = iso=> dfTzDiff(DF_ME, iso)===0;
+/* Eastern minutes <-> the viewer's minutes, and the same for 'HH:MM' strings */
+const dfToMe = (m, iso)=> m + dfTzDiff(DF_ME, iso);
+const dfToET = (m, iso)=> m - dfTzDiff(DF_ME, iso);
+function dfMeToET(hhmm, iso){ const m=hrMin(hhmm); if(m==null) return hhmm; const x=Math.max(0,Math.min(23*60+59, dfToET(m, iso))); return String(Math.floor(x/60)).padStart(2,'0')+':'+String(x%60).padStart(2,'0'); }
+function dfETToMe(hhmm, iso){ const m=hrMin(hhmm); if(m==null) return hhmm; const x=Math.max(0,Math.min(23*60+59, dfToMe(m, iso))); return String(Math.floor(x/60)).padStart(2,'0')+':'+String(x%60).padStart(2,'0'); }
 const dfHM = m=>{ const h=Math.floor(m/60), mm=m%60; return ((h%12)||12)+(mm?':'+String(mm).padStart(2,'0'):'')+(h<12?' AM':' PM'); };
 const dfTime = m=> String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
+/* an Eastern time as the viewer reads it: '7 AM MDT (9 AM EDT)', or just '9 AM EDT' in Eastern */
+function dfDual(m, iso){ return dfLocalIsET(iso) ? dfHM(m) : dfHM(dfToMe(m, iso)); }
+function dfDualRange(a, b, iso, withET){
+  const me=dfHM(dfToMe(a, iso))+'\u2013'+dfHM(dfToMe(b, iso));
+  if(dfLocalIsET(iso)) return me;
+  return me+(withET===false? '' : ' ('+dfHM(a)+'\u2013'+dfHM(b)+' '+dfAbbr(DF_TZ, iso)+')');
+}
 /* what is already on that person's day, in Eastern minutes */
 function dfBusy(pid, iso, skipBlock){
   const out=[];
@@ -13405,26 +13636,27 @@ function dayFree(bD, bT, bM, whoFn, blockIdFn){
     const ws=Math.max(0, hrMin(h.s)-diff), we=Math.min(24*60, hrMin(h.e)-diff);
     const busy=dfBusy(pid, iso, blockIdFn && blockIdFn());
     const free=dfFree(busy, ws, we);
-    const pick=hrMin(bT.value), len=+bM.value||60, pe=pick!=null? pick+len : null;
+    const pick0=hrMin(bT.value), pick=pick0==null? null : dfToET(pick0, iso), len=+bM.value||60, pe=pick!=null? pick+len : null;
     const hits = pick==null ? [] : busy.filter(x=> x.s<pe && x.e>pick);
 
     const hd=el('div','dfhd');
     hd.appendChild(el('b',null,(p && p.id!==S.me ? p.name.split(' ')[0]+'’s Day' : 'Your Day')+' in Outlook'));
-    hd.appendChild(el('small',null, fmtD(iso,1)+' · working hours '+dfHM(ws)+'–'+dfHM(we)+' · times Eastern'));
+    const zones = dfLocalIsET(iso) ? 'times Eastern' : 'times in your time ('+dfAbbr(DF_ME, iso)+'), Eastern in brackets';
+    hd.appendChild(el('small',null, fmtD(iso,1)+' · working hours '+dfDualRange(ws, we, iso)+' · '+zones));
     box.appendChild(hd);
 
     /* the day as a bar: working hours, what is booked, and the time picked */
     const span=Math.max(60, we-ws), pos=m=> Math.max(0, Math.min(100, (m-ws)/span*100));
     const bar=el('div','dfbar');
     busy.forEach(x=>{ if(x.e<=ws || x.s>=we) return; const s=el('i','dfseg'+(x.hq?' hq':'')+(x.oof?' oof':''));
-      s.style.left=pos(x.s)+'%'; s.style.width=Math.max(.8, pos(x.e)-pos(x.s))+'%'; s.title=x.t+' · '+dfHM(x.s)+'–'+dfHM(x.e); bar.appendChild(s); });
+      s.style.left=pos(x.s)+'%'; s.style.width=Math.max(.8, pos(x.e)-pos(x.s))+'%'; s.title=x.t+' · '+dfDualRange(x.s, x.e, iso); bar.appendChild(s); });
     if(pick!=null && pe>ws && pick<we){ const s=el('i','dfpick'+(hits.length?' clash':''));
       s.style.left=pos(pick)+'%'; s.style.width=Math.max(.8, pos(pe)-pos(pick))+'%'; s.title='The time you picked'; bar.appendChild(s); }
     box.appendChild(bar);
-    const ticks=el('div','dfticks'); ticks.appendChild(el('span',null,dfHM(ws))); ticks.appendChild(el('span',null,dfHM(we))); box.appendChild(ticks);
+    const ticks=el('div','dfticks'); ticks.appendChild(el('span',null,dfDual(ws, iso)+(dfLocalIsET(iso)?'':' \u00b7 '+dfHM(ws)+' ET'))); ticks.appendChild(el('span',null,dfDual(we, iso)+(dfLocalIsET(iso)?'':' \u00b7 '+dfHM(we)+' ET'))); box.appendChild(ticks);
 
     if(hits.length){
-      box.appendChild(el('p','dfwarn','That runs into '+hits.map(x=> x.t+' ('+dfHM(x.s)+'–'+dfHM(x.e)+')').join(' and ')+'. Pick an open time below, or keep it if that is fine.'));
+      box.appendChild(el('p','dfwarn','That runs into '+hits.map(x=> x.t+' at '+dfDualRange(x.s, x.e, iso)).join(' and ')+'. Pick an open time below, or keep it if that is fine.'));
     } else if(pick!=null && (pick<ws || pe>we)){
       box.appendChild(el('p','dfwarn soft','That is outside working hours.'));
     } else if(pick!=null){
@@ -13434,10 +13666,12 @@ function dayFree(bD, bT, bM, whoFn, blockIdFn){
     if(free.length){
       const fr=el('div','dffree'); fr.appendChild(el('span','dfl','Open:'));
       free.forEach(f=>{
-        const b=el('button','btn ghost sm', dfHM(f.s)+'–'+dfHM(f.e)); b.type='button';
+        const b=el('button','btn ghost sm dfslot'); b.type='button';
+        b.appendChild(el('span',null, dfDualRange(f.s, f.e, iso, false)));
+        if(!dfLocalIsET(iso)) b.appendChild(el('small',null, dfHM(f.s)+'–'+dfHM(f.e)+' ET'));
         b.title= (f.e-f.s)<len ? 'Shorter than the length you picked' : 'Start then';
         if((f.e-f.s)<len) b.classList.add('short');
-        b.addEventListener('click', ()=>{ bT.value=dfTime(f.s); bT.dispatchEvent(new Event('change')); paint(); });
+        b.addEventListener('click', ()=>{ bT.value=dfTime(dfToMe(f.s, iso)); bT.dispatchEvent(new Event('change')); paint(); });
         fr.appendChild(b);
       });
       box.appendChild(fr);
@@ -13447,7 +13681,7 @@ function dayFree(bD, bT, bM, whoFn, blockIdFn){
     const bl=busy.filter(x=> x.e>ws && x.s<we);
     if(bl.length){
       const ul=el('div','dfbusy');
-      bl.forEach(x=>{ const r=el('div','dfrow'+(x.hq?' hq':'')); r.appendChild(el('span','dft', dfHM(x.s)+'–'+dfHM(x.e))); r.appendChild(el('span',null,x.t)); ul.appendChild(r); });
+      bl.forEach(x=>{ const r=el('div','dfrow'+(x.hq?' hq':'')); r.appendChild(el('span','dft', dfDualRange(x.s, x.e, iso))); r.appendChild(el('span',null,x.t)); ul.appendChild(r); });
       box.appendChild(ul);
     }
   };
@@ -13456,6 +13690,583 @@ function dayFree(bD, bT, bM, whoFn, blockIdFn){
   box.repaint=paint;
   return box;
 }
+
+/* ============ SPONSORSHIP PROSPECTS: YOU CHOOSE WHAT IT SHOWS ============
+   Jonna: "allow them to decide what from the sponsorship portal to see, don't
+   predetermine for them." Every number, list and breakdown Team HQ can work out from
+   the Sponsorship Portal's prospect list is in SP_PARTS. Each panel keeps the ones its
+   owner ticked in w.parts (in the order they are listed here) and, if they chose one,
+   a season in w.season. A panel added before this keeps the set it always showed. */
+const SP_DEF = ['say','fresh','quiet','noOwner','won','L:quiet','L:fresh','L:flight'];
+const SP_STATUSES = ['New Lead','Contacted','Meeting Scheduled','Pitching to Management','Verbal Commitment',
+  'Follow Up','Not Now — Follow Up','Invoiced','Paid','Converted to Application','Lost','Declined'];
+function spMeName(){ const p=person(S.me); return p? p.name : ''; }
+function spIsMine(l){ const me=spMeName(); if(!me || !l.owner) return false;
+  const o=String(l.owner).trim().toLowerCase(); return o===me.toLowerCase() || o===me.split(' ')[0].toLowerCase(); }
+function spDue(l){ const d=parseD(l.nextFollowUpDate); return d && d<=today(); }
+function spSeasons(){ const s={}; (S.leads||[]).forEach(l=>{ if(l.season) s[String(l.season)]=1; }); return Object.keys(s).sort(); }
+/* the prospects a panel looks at, and everything worked out from them */
+function spData(w){
+  const all=(S.leads||[]).filter(l=> !w || !w.season || String(l.season||'')===String(w.season));
+  const live=all.filter(l=> !leadDone(l));
+  const fresh=live.filter(l=> LEAD_NEW.indexOf(l.status)>=0);
+  const flight=live.filter(l=> LEAD_NEW.indexOf(l.status)<0);
+  const quiet=flight.filter(l=>{ const a=leadAge(l); return a!==null && a>=QUIET_DAYS; });
+  return {all, live, fresh, flight, quiet,
+    moving: flight.filter(l=> quiet.indexOf(l)<0),
+    noOwner: live.filter(l=> !l.owner),
+    mine: live.filter(spIsMine),
+    due: live.filter(spDue),
+    acq: live.filter(l=> l.engagementType==='Acquisition'),
+    ret: live.filter(l=> l.engagementType==='Retention'),
+    won: all.filter(l=> ['Invoiced','Paid'].indexOf(l.status)>=0),
+    conv: all.filter(l=> l.status==='Converted to Application'),
+    lost: all.filter(l=> ['Lost','Declined'].indexOf(l.status)>=0)};
+}
+
+/* ============ NUMBERS FROM MISMO'S SYSTEMS: ONE PANEL PER SYSTEM ============
+   Jonna, Oct 7: instead of one "Numbers from My Systems" panel, each system gets its
+   own panel where people tick whatever they want to see, the way Sponsorship Prospects
+   works. Sponsorship Portal and Meeting Trackers are live (both are on
+   resources.mismo.org). The Financial System, CMS and Member 360 are still Claude
+   artifacts, so their panels say Coming Soon: the choices can be made and are kept, and
+   the numbers fill in once each system moves to resources.mismo.org.
+
+   A part: {k, kind, grp?, n, sub?, tone?, f(d)->array | val(d)->{v,n}, ...}
+     kind s = a summary sentence, n = a number tile, l = a list, b = a breakdown.
+   A system: {name, soon?, parts(), data(w), def, groups (headings in the tick list),
+     link, foot, has(), empty, unit}. */
+
+/* ---------- Sponsorship Portal ---------- */
+function spParts(){
+  const st=SP_STATUSES.slice(); (S.leads||[]).forEach(l=>{ if(l.status && st.indexOf(l.status)<0) st.push(l.status); });
+  const grp=(list, by)=>{ const g={}; list.forEach(l=>{ const k=by(l); g[k]=(g[k]||0)+1; }); return g; };
+  const P=[
+    {k:'say', kind:'s', n:'The Summary Sentence', say:d=> leadSay(d)},
+    {k:'live',    kind:'n', n:'Open Prospects',     sub:'not yet won or lost',              f:d=>d.live},
+    {k:'fresh',   kind:'n', n:'Never Approached',   sub:'no one has made contact',          f:d=>d.fresh,   tone:'warn'},
+    {k:'flight',  kind:'n', n:'In Flight',          sub:'talking, not yet won',             f:d=>d.flight},
+    {k:'quiet',   kind:'n', n:'Gone Quiet',         sub:'nothing for '+QUIET_DAYS+'+ days', f:d=>d.quiet,   tone:'bad'},
+    {k:'due',     kind:'n', n:'Follow-Up Due',      sub:'follow-up date today or past',     f:d=>d.due,     tone:'warn'},
+    {k:'noOwner', kind:'n', n:'No Owner',           sub:'nobody’s name on it',         f:d=>d.noOwner, tone:'warn'},
+    {k:'mine',    kind:'n', n:'Mine',               sub:'open, with your name on it',       f:d=>d.mine},
+    {k:'acq',     kind:'n', n:'Acquisition',        sub:'open, new to sponsoring',          f:d=>d.acq},
+    {k:'ret',     kind:'n', n:'Retention',          sub:'open, sponsored before',           f:d=>d.ret},
+    {k:'won',     kind:'n', n:'Invoiced or Paid',   sub:'money on the table',               f:d=>d.won},
+    {k:'conv',    kind:'n', n:'Converted to Application', sub:'became an application',      f:d=>d.conv},
+    {k:'lost',    kind:'n', n:'Lost or Declined',   sub:'closed without a sale',            f:d=>d.lost},
+    {k:'total',   kind:'n', n:'All Prospects',      sub:'open and closed',                  f:d=>d.all}
+  ];
+  st.forEach(s=> P.push({k:'st:'+s, kind:'n', grp:'nst', n:s, sub:'status in the portal', f:d=>d.all.filter(l=>l.status===s)}));
+  P.push(
+    {k:'L:quiet',   kind:'l', n:'Gone Quiet',        f:d=> d.quiet.slice().sort((a,c)=>(leadAge(c)||0)-(leadAge(a)||0)), row:l=>spRow(l,'touch')},
+    {k:'L:fresh',   kind:'l', n:'Never Approached',  f:d=> d.fresh, row:l=>spRow(l,'added')},
+    {k:'L:flight',  kind:'l', n:'In Flight',         f:d=> d.moving, row:l=>spRow(l,'touch')},
+    {k:'L:due',     kind:'l', n:'Follow-Ups Due',    f:d=> d.due.slice().sort((a,c)=> String(a.nextFollowUpDate).localeCompare(String(c.nextFollowUpDate))), row:l=>spRow(l,'due')},
+    {k:'L:noOwner', kind:'l', n:'No Owner',          f:d=> d.noOwner, row:l=>spRow(l,'touch')},
+    {k:'L:mine',    kind:'l', n:'Mine',              f:d=> d.mine, row:l=>spRow(l,'touch')},
+    {k:'L:won',     kind:'l', n:'Invoiced or Paid',  f:d=> d.won, row:l=>spRow(l,'touch')},
+    {k:'B:status',  kind:'b', n:'By Status',         groups:d=> grp(d.all, l=> l.status||'Not Set'), order:st},
+    {k:'B:owner',   kind:'b', n:'By Owner (Open)',   groups:d=> grp(d.live, l=> l.owner||'No Owner')},
+    {k:'B:type',    kind:'b', n:'Acquisition vs Retention (Open)', groups:d=> grp(d.live, l=> l.engagementType||'Not Set')},
+    {k:'B:interest',kind:'b', n:'By What They’re Interested In (Open)', groups:d=> grp(d.live, l=> l.interestedIn||'Not Set')}
+  );
+  return P;
+}
+function spRow(l, how){
+  const row=el('div','row'); const h=el('div','rh2'); h.style.cursor='default';
+  const t2=el('span','t'); t2.appendChild(document.createTextNode(l.company||'Unnamed'));
+  const a=leadAge(l);
+  let sm='';
+  if(how==='added') sm=(l.interestedIn? l.interestedIn+' · ' : '')+'added '+(l.createdDate? fmtD(l.createdDate) : 'at some point');
+  else if(how==='due') sm=(l.contactName? l.contactName+' · ' : '')+'follow up '+(l.nextFollowUpDate? fmtD(l.nextFollowUpDate) : 'soon');
+  else sm=(l.contactName? l.contactName+' · ' : '')+(a===null? 'no contact recorded' : a===0? 'touched today' : 'touched '+a+(a===1?' day':' days')+' ago');
+  t2.appendChild(el('small',null, sm));
+  h.appendChild(t2);
+  const rr=el('span','r');
+  rr.appendChild(el('span','chip ch-ns', l.status||'—'));
+  if(l.engagementType) rr.appendChild(el('span','chip '+(l.engagementType==='Acquisition'?'ch-ip':'ch-dn'), l.engagementType));
+  if(l.owner){ const pp=S.people.find(x=>x.name===l.owner || x.name.split(' ')[0]===l.owner);
+    rr.appendChild(pp? avatar(pp.id,'xs') : el('span','chip ch-out', l.owner)); }
+  else rr.appendChild(el('span','chip ch-warn','No Owner'));
+  h.appendChild(rr); row.appendChild(h);
+  return row;
+}
+
+/* ---------- Meeting Trackers ---------- */
+function mtWeekDays(){ const now=mtET(), out=[]; const mon=new Date(now.getTime()); mon.setDate(now.getDate()-((now.getDay()+6)%7));
+  for(let i=0;i<5;i++){ const d=new Date(mon.getTime()); d.setDate(mon.getDate()+i); out.push(d); } return out; }
+const mtIso=d=> d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+function mtData(){
+  const st=MT.st||null, now=mtET(), todayL=MT.sched? mtOn(now) : [];
+  const week=[]; if(MT.sched) mtWeekDays().forEach(d=> mtOn(d).forEach(it=> week.push(Object.assign({day:d}, it))));
+  const groups=st? Object.keys(st.groups).map(k=> Object.assign({k:k}, st.groups[k])) : [];
+  const act=groups.filter(g=>!g.arch), arc=groups.filter(g=>g.arch);
+  const iso=mtIso(now), back=n=>{ const d=new Date(now.getTime()); d.setDate(d.getDate()-n); return mtIso(d); };
+  const ms=st? st.ms : [];
+  return {st, now, today:todayL, onNow:todayL.filter(it=> mtStatus(it, now).k==='now'), week, groups, act, arc,
+    ms, last30: ms.filter(m=> m[1]>=back(30) && m[1]<=iso), last90: ms.filter(m=> m[1]>=back(90) && m[1]<=iso),
+    quiet: act.filter(g=> !g.last || g.last < back(60)).sort((a,b)=> String(a.last||'').localeCompare(String(b.last||'')))};
+}
+function mtRowIt(it, withDay){
+  const row=el('div','row'); const h=el('div','rh2'); h.style.cursor='default';
+  const t2=el('span','t'); t2.appendChild(document.createTextNode(mtName(it.gk)));
+  t2.appendChild(el('small',null, (withDay? MT_DAYS[it.day.getDay()].slice(0,3)+' · ' : '')+(mtTime(it)||'time not set')+' ET'+(it.fac? ' · '+it.fac : '')));
+  h.appendChild(t2);
+  const rr=el('span','r');
+  if(!withDay){ const s=mtStatus(it, mtET()); if(s.t) rr.appendChild(el('span','chip '+(s.k==='now'?'ch-ip':'ch-ns'), s.t)); }
+  if(it.zoom && /^https?:/i.test(it.zoom)){ const a=el('a','btn ghost sm','Join'); a.href=it.zoom; a.target='_blank'; a.rel='noopener noreferrer'; rr.appendChild(a); }
+  h.appendChild(rr); row.appendChild(h); return row;
+}
+function mtRowGroup(g){
+  const row=el('div','row'); const h=el('div','rh2'); h.style.cursor='default';
+  const t2=el('span','t'); t2.appendChild(document.createTextNode(g.name));
+  t2.appendChild(el('small',null, (g.type||'Other')+(g.fac? ' · '+g.fac : '')+' · '+(g.last? 'last met '+fmtD(g.last) : 'no meeting on record')));
+  h.appendChild(t2); row.appendChild(h); return row;
+}
+function mtRowMeeting(m){
+  const row=el('div','row'); const h=el('div','rh2'); h.style.cursor='default';
+  const t2=el('span','t'); t2.appendChild(document.createTextNode(mtName(m[0])));
+  t2.appendChild(el('small',null, fmtD(m[1])+(m[3]? ' · summit session' : '')));
+  h.appendChild(t2); const rr=el('span','r'); rr.appendChild(el('span','chip ch-ns', m[2]+(m[2]===1?' person':' people'))); h.appendChild(rr);
+  row.appendChild(h); return row;
+}
+function mtParts(){
+  const cnt=(arr,by)=>{ const g={}; arr.forEach(x=>{ const k=by(x); g[k]=(g[k]||0)+1; }); return g; };
+  const types={}; ((MT.st && Object.keys(MT.st.groups).map(k=>MT.st.groups[k])) || []).forEach(g=>{ types[g.type||'Other']=1; });
+  const P=[
+    {k:'today',  kind:'n', n:'Meetings Today',          sub:'on the schedule today',            f:d=>d.today},
+    {k:'onnow',  kind:'n', n:'On Now',                  sub:'meeting right now',                f:d=>d.onNow, tone:'good'},
+    {k:'week',   kind:'n', n:'Meetings This Week',      sub:'Monday to Friday',                 f:d=>d.week},
+    {k:'active', kind:'n', n:'Active Workgroups',       sub:'still meeting',                    f:d=>d.act},
+    {k:'arch',   kind:'n', n:'Archived Workgroups',     sub:'stopped meeting, kept on file',    f:d=>d.arc},
+    {k:'quiet',  kind:'n', n:'Not Met in 60 Days',      sub:'active, no meeting logged lately', f:d=>d.quiet, tone:'warn'},
+    {k:'ms',     kind:'n', n:'Meetings Tracked',        sub:'every meeting on record',          f:d=>d.ms},
+    {k:'m30',    kind:'n', n:'Meetings in the Last 30 Days', sub:'logged in Meeting Trackers',  f:d=>d.last30},
+    {k:'recs',   kind:'n', n:'Attendance Records',      sub:'person-by-meeting',                val:d=>({n:d.st? d.st.recs : 0})},
+    {k:'ppl',    kind:'n', n:'People',                  sub:'across all groups',                val:d=>({n:d.st? d.st.ppl : 0})},
+    {k:'cos',    kind:'n', n:'Companies',               sub:'people’s companies',          val:d=>({n:d.st? d.st.cos : 0})},
+    {k:'avg',    kind:'n', n:'Average per Meeting',     sub:'people in the room',               val:d=>({n:d.st && d.ms.length? Math.round(d.st.recs/d.ms.length) : 0})},
+    {k:'a30',    kind:'n', n:'Attendance, Last 30 Days',sub:'person-by-meeting',                val:d=>({n:d.last30.reduce((a,m)=>a+m[2],0)})},
+    {k:'summit', kind:'n', n:'Summit Sessions',         sub:'tracked at summits',               val:d=>({n:d.st? d.st.summit : 0})}
+  ];
+  Object.keys(types).sort().forEach(t=> P.push({k:'ty:'+t, kind:'n', grp:'nty', n:t, sub:'active groups of this type', f:d=> d.act.filter(g=>(g.type||'Other')===t)}));
+  P.push(
+    {k:'L:today', kind:'l', n:'Today’s Meetings',    f:d=>d.today, row:it=>mtRowIt(it,false), unit:'meeting'},
+    {k:'L:week',  kind:'l', n:'This Week’s Meetings',f:d=>d.week, row:it=>mtRowIt(it,true), unit:'meeting', max:12},
+    {k:'L:quiet', kind:'l', n:'Active Groups Not Met in 60 Days', f:d=>d.quiet, row:mtRowGroup, unit:'group'},
+    {k:'L:recent',kind:'l', n:'Latest Meetings Logged',  f:d=>d.ms.slice(0,8), row:mtRowMeeting, unit:'meeting'},
+    {k:'B:type',  kind:'b', n:'Active Workgroups by Type', groups:d=> cnt(d.act, g=> g.type||'Other')},
+    {k:'B:fac',   kind:'b', n:'Active Workgroups by Facilitator', groups:d=> cnt(d.act, g=> g.fac||'No Facilitator')},
+    {k:'B:att',   kind:'b', n:'Attendance by Workgroup, Last 90 Days', top:10, groups:d=>{ const g={}; d.last90.forEach(m=>{ const k=mtName(m[0]); g[k]=(g[k]||0)+m[2]; }); return g; }},
+    {k:'B:cat',   kind:'b', n:'Attendance by Company Category', groups:d=> Object.assign({}, (d.st && d.st.byCat) || {})}
+  );
+  return P;
+}
+
+
+/* ---------- Service Orders and Agreements ----------
+   Each contracting company keeps its orders in its own private repository
+   (so-phoenix-data and so on), read through the relay's file route at
+   orders/<short>.json. Team HQ only reads them, and only the companies the person
+   signed in has access to. */
+const SO_COS = [
+  {key:'so-phoenix',    file:'phoenixteam', name:'Phoenix Oversight Group LLC',      nick:'PhoenixTeam'},
+  {key:'so-actualize',  file:'actualize',   name:'Actualize Consulting LLC',         nick:'Actualize'},
+  {key:'so-trex',       file:'trex',        name:'Tidgewell Results eXperience LLC', nick:'TRex'},
+  {key:'so-falcon',     file:'falcon',      name:'Falcon Capital Advisors LLC',      nick:'Falcon'},
+  {key:'so-trudigital', file:'trudigital',  name:'TruDigital Mortgage Solutions LLC',nick:'TruDigital'}
+];
+const SO_STATUSES = ['Draft','Released to Send','Sent','Acknowledged','Approved','Executed'];
+const SO = {orders:null, cos:{}, loading:false, failed:'', at:0};
+function soOn(){ return !!(window.__hqRelay && window.__hqRelay.readFile); }
+function soList(raw, co){
+  let list=[];
+  if(Array.isArray(raw)) list=raw;
+  else if(raw && Array.isArray(raw.orders)) list=raw.orders;
+  else if(raw && raw.docs && typeof raw.docs==='object') list=Object.keys(raw.docs).map(k=> Object.assign({id:k}, raw.docs[k]));
+  else if(raw && typeof raw==='object') list=Object.keys(raw).map(k=> raw[k]).filter(x=> x && typeof x==='object' && (x.subject || x.status));
+  return list.filter(o=> o && (!o.kind || o.kind==='service-order')).map(o=> Object.assign({}, o, {company:o.company||co.name, nick:co.nick}));
+}
+function soLoad(force){
+  if(!soOn() || SO.loading) return;
+  if(!force && SO.at && Date.now()-SO.at < 15*60000) return;
+  SO.loading=true;
+  const R=window.__hqRelay;
+  Promise.all(SO_COS.map(c=> R.readFile(c.key, 'orders/'+c.file+'.json').then(d=>({c:c, d:d}), e=>({c:c, e:e}))))
+    .then(res=>{
+      const orders=[]; let ok=0, denied=0;
+      res.forEach(r=>{ if(r.e){ if(r.e.status===403 || r.e.code==='NO_ACCESS') denied++; SO.cos[r.c.nick]='no'; return; }
+        ok++; SO.cos[r.c.nick]='yes'; soList(r.d, r.c).forEach(o=> orders.push(o)); });
+      SO.orders = ok ? orders : null;
+      SO.failed = ok ? '' : (denied===res.length ? 'access' : 'error');
+      SO.at=Date.now(); SO.loading=false;
+      document.querySelectorAll('.sysp-sonums').forEach(x=>{ if(x.__w){ x.textContent=''; sysRender(x.__w, x); } });
+    }, ()=>{ SO.loading=false; SO.failed='error'; });
+}
+function soDate(s){ const m=/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/.exec(String(s||'').trim());
+  if(m){ const y=+m[3] < 100 ? 2000 + +m[3] : +m[3]; return new Date(y, +m[1]-1, +m[2]); }
+  return parseD(s); }
+const soWaiting = o=> ['Released to Send','Sent','Acknowledged'].indexOf(o.status)>=0;
+function soData(){
+  const all=(SO.orders||[]).slice(), t=today(), in90=new Date(t.getTime()+90*86400000);
+  const sum=(arr,f)=> arr.reduce((a,o)=> a+(+o[f]||0), 0);
+  return {all, t,
+    draft: all.filter(o=> (o.status||'Draft')==='Draft'),
+    waiting: all.filter(soWaiting),
+    approved: all.filter(o=> o.status==='Approved'),
+    executed: all.filter(o=> o.status==='Executed'),
+    ending: all.filter(o=>{ const d=soDate(o.endDate); return d && d>=t && d<=in90; }).sort((a,b)=> soDate(a.endDate)-soDate(b.endDate)),
+    fees: sum(all,'maximumFee'), hours: sum(all,'estimatedHours'), sum:sum};
+}
+const soMoney = n=> '$'+Math.round(n||0).toLocaleString('en-US');
+function soRow(o){
+  const row=el('div','row'); const h=el('div','rh2'); h.style.cursor='default';
+  const t2=el('span','t'); t2.appendChild(document.createTextNode(o.subject||o.description||'Service order'));
+  const bits=[o.nick||o.company]; if(o.maximumFee) bits.push(soMoney(o.maximumFee)); if(o.endDate) bits.push('ends '+(soDate(o.endDate)? fmtD(isoOf(soDate(o.endDate))) : o.endDate));
+  t2.appendChild(el('small',null, bits.join(' · ')));
+  h.appendChild(t2); const rr=el('span','r'); rr.appendChild(el('span','chip '+(o.status==='Executed'?'ch-dn':soWaiting(o)?'ch-ip':'ch-ns'), o.status||'Draft')); h.appendChild(rr);
+  row.appendChild(h); return row;
+}
+function soParts(){
+  const cnt=(arr,by,val)=>{ const g={}; arr.forEach(o=>{ const k=by(o); g[k]=(g[k]||0)+(val? (+o[val]||0) : 1); }); return g; };
+  const P=[
+    {k:'total',  kind:'n', n:'Service Orders',          sub:'every order this year',            f:d=>d.all},
+    {k:'fees',   kind:'n', n:'Total Maximum Fees',      sub:'what the orders can cost at most', money:1, val:d=>({n:d.fees})},
+    {k:'hours',  kind:'n', n:'Estimated Hours',         sub:'across every order',               val:d=>({n:Math.round(d.hours)})},
+    {k:'draft',  kind:'n', n:'Drafts',                  sub:'not sent yet',                     f:d=>d.draft},
+    {k:'waiting',kind:'n', n:'Waiting on a Signature',  sub:'released, sent or acknowledged',   f:d=>d.waiting, tone:'warn'},
+    {k:'approved',kind:'n',n:'Approved',                sub:'waiting on MISMO’s signature',f:d=>d.approved},
+    {k:'executed',kind:'n',n:'Executed',                sub:'signed by both sides',             f:d=>d.executed, tone:'good'},
+    {k:'ending', kind:'n', n:'Ending Within 90 Days',   sub:'end date coming up',               f:d=>d.ending, tone:'warn'},
+    {k:'cos',    kind:'n', n:'Contracting Companies',   sub:'with orders this year',            val:d=>({n:Object.keys(cnt(d.all, o=>o.nick)).length})}
+  ];
+  SO_STATUSES.forEach(s=> P.push({k:'st:'+s, kind:'n', grp:'nst', n:s, sub:'orders at this status', f:d=> d.all.filter(o=> (o.status||'Draft')===s)}));
+  SO_COS.forEach(c=> P.push({k:'co:'+c.nick, kind:'n', grp:'nco', n:c.nick, sub:'maximum fees, '+c.name, money:1, val:d=>({n:d.sum(d.all.filter(o=>o.nick===c.nick),'maximumFee')})}));
+  P.push(
+    {k:'L:waiting', kind:'l', n:'Waiting on a Signature', f:d=>d.waiting, row:soRow, unit:'order'},
+    {k:'L:draft',   kind:'l', n:'Drafts',                 f:d=>d.draft, row:soRow, unit:'order'},
+    {k:'L:ending',  kind:'l', n:'Ending Within 90 Days',  f:d=>d.ending, row:soRow, unit:'order'},
+    {k:'L:big',     kind:'l', n:'Largest Orders',         f:d=>d.all.slice().sort((a,b)=>(+b.maximumFee||0)-(+a.maximumFee||0)).slice(0,8), row:soRow, unit:'order'},
+    {k:'B:status',  kind:'b', n:'Orders by Status',       groups:d=> cnt(d.all, o=> o.status||'Draft'), order:SO_STATUSES},
+    {k:'B:fees',    kind:'b', n:'Maximum Fees by Company', money:1, groups:d=> cnt(d.all, o=> o.nick, 'maximumFee')},
+    {k:'B:hours',   kind:'b', n:'Estimated Hours by Company', groups:d=>{ const g=cnt(d.all, o=> o.nick, 'estimatedHours'); Object.keys(g).forEach(k=> g[k]=Math.round(g[k])); return g; }},
+    {k:'B:cat',     kind:'b', n:'Orders by Category',     groups:d=> cnt(d.all, o=> o.category||'Not Set')}
+  );
+  return P;
+}
+if(soOn()) setTimeout(()=>{ try{ soLoad(); }catch(e){} }, 3000);
+
+/* ---------- Coming Soon: the Financial System, CMS and Member 360 ----------
+   What each one will offer, named the way the system itself names it. Nothing is
+   read yet; the panel keeps the choices and shows dashes until the system moves. */
+const SOON_PARTS = {
+  finnums: [
+    {k:'cash',    kind:'n', n:'Gross Cash',               sub:'money in, less refunds, this fiscal year'},
+    {k:'invd',    kind:'n', n:'Gross Invoiced',           sub:'invoiced this fiscal year'},
+    {k:'revb',    kind:'n', n:'Revenue Against Budget',   sub:'percent of the year’s budget'},
+    {k:'expb',    kind:'n', n:'Expense Against Budget',   sub:'percent of the year’s budget'},
+    {k:'net',     kind:'n', n:'Net Income to Date',       sub:'from the Statement of Activities'},
+    {k:'months',  kind:'n', n:'Where the Year Has Got To',sub:'months closed of 12'},
+    {k:'ar',      kind:'n', n:'Receivables',              sub:'open invoices', grp:'ar'},
+    {k:'owed',    kind:'n', n:'Still Owed to MISMO',      sub:'dollars outstanding', grp:'ar'},
+    {k:'ar90',    kind:'n', n:'Over 90 Days',             sub:'dollars more than 90 days old', grp:'ar'},
+    {k:'rcvd',    kind:'n', n:'Received',                 sub:'paid against those invoices', grp:'ar'},
+    {k:'frev',    kind:'n', n:'Revenue Forecast',         sub:'next year’s budget', grp:'fc'},
+    {k:'fexp',    kind:'n', n:'Expense Forecast',         sub:'next year’s budget', grp:'fc'},
+    {k:'fnet',    kind:'n', n:'Net on the Forecast',      sub:'next year’s budget', grp:'fc'},
+    {k:'sheets',  kind:'n', n:'Budget Sheets Started',    sub:'of the sheets sent out', grp:'fc'},
+    {k:'srev',    kind:'n', n:'Last Summit: Revenue',     sub:'from the summit P&L', grp:'sum'},
+    {k:'scost',   kind:'n', n:'Last Summit: Cost',        sub:'from the summit P&L', grp:'sum'},
+    {k:'snet',    kind:'n', n:'Last Summit: Net Result',  sub:'from the summit P&L', grp:'sum'},
+    {k:'smargin', kind:'n', n:'Last Summit: Margin',      sub:'from the summit P&L', grp:'sum'},
+    {k:'spay',    kind:'n', n:'Last Summit: Share of the Room Paying', sub:'paid registrations', grp:'sum'},
+    {k:'L:ar90',  kind:'l', n:'Invoices Over 90 Days'},
+    {k:'L:owed',  kind:'l', n:'Largest Amounts Owed'},
+    {k:'B:rev',   kind:'b', n:'Revenue by Line Against Budget'},
+    {k:'B:exp',   kind:'b', n:'Expense by Line Against Budget'},
+    {k:'B:sum',   kind:'b', n:'Net Result by Summit'}
+  ],
+  cmsnums: [
+    {k:'active',  kind:'n', n:'Active Certifications',    sub:'live certifications'},
+    {k:'prog',    kind:'n', n:'In Progress',              sub:'applications being worked'},
+    {k:'wait',    kind:'n', n:'Waiting on MISMO',         sub:'the next step is ours'},
+    {k:'since',   kind:'n', n:'Certified Since the Summit', sub:'new since the last summit'},
+    {k:'due90',   kind:'n', n:'Renewals Due Within 90 Days', sub:'coming up for renewal', grp:'ren'},
+    {k:'pastdue', kind:'n', n:'Renewals Past Due',        sub:'renewal date has passed', grp:'ren'},
+    {k:'outearly',kind:'n', n:'Out Early',                sub:'left before their term ended', grp:'ren'},
+    {k:'invod',   kind:'n', n:'Invoices Overdue',         sub:'count', grp:'money'},
+    {k:'owedod',  kind:'n', n:'Owed and Overdue',         sub:'dollars', grp:'money'},
+    {k:'paidapt', kind:'n', n:'Paid in Aptify',           sub:'this fiscal year', grp:'money'},
+    {k:'rev',     kind:'n', n:'Certification Revenue',    sub:'this fiscal year', grp:'money'},
+    {k:'share',   kind:'n', n:'Revenue Share',            sub:'paid out to assessors', grp:'money'},
+    {k:'L:new',   kind:'l', n:'Newly Certified'},
+    {k:'L:due',   kind:'l', n:'Renewals Due Soon'},
+    {k:'L:wait',  kind:'l', n:'Waiting on MISMO'},
+    {k:'B:prog',  kind:'b', n:'Active Certifications by Program'},
+    {k:'B:stage', kind:'b', n:'In Progress by Stage'}
+  ],
+  m360nums: [
+    {k:'active',  kind:'n', n:'Active Members',           sub:'member organizations'},
+    {k:'prosp',   kind:'n', n:'Prospects',                sub:'not yet members'},
+    {k:'former',  kind:'n', n:'Former Members',           sub:'no longer members'},
+    {k:'lost',    kind:'n', n:'Lost',                     sub:'members who left'},
+    {k:'lender',  kind:'n', n:'Lenders',                  sub:'members that are lenders'},
+    {k:'nonlend', kind:'n', n:'Non-Lenders',              sub:'members that are not lenders'},
+    {k:'renup',   kind:'n', n:'Up for Renewal',           sub:'this renewal cycle', grp:'ren'},
+    {k:'renew',   kind:'n', n:'Renewed',                  sub:'this renewal cycle', grp:'ren'},
+    {k:'renopen', kind:'n', n:'Renewals Still Open',      sub:'this renewal cycle', grp:'ren'},
+    {k:'renpers', kind:'n', n:'Personal Outreach',        sub:'need a person, not an email', grp:'ren'},
+    {k:'renhold', kind:'n', n:'On Hold',                  sub:'renewals paused', grp:'ren'},
+    {k:'iifinv',  kind:'n', n:'IIF: Lenders Invoiced',    sub:'this IIF cycle', grp:'iif'},
+    {k:'iifcol',  kind:'n', n:'IIF: Collected',           sub:'dollars', grp:'iif'},
+    {k:'iiffull', kind:'n', n:'IIF: Paid in Full',        sub:'lenders', grp:'iif'},
+    {k:'iifpart', kind:'n', n:'IIF: Partial Payment',     sub:'lenders', grp:'iif'},
+    {k:'iifnot',  kind:'n', n:'IIF: Not Paid',            sub:'lenders', grp:'iif'},
+    {k:'iifmem',  kind:'n', n:'Members Through IIF',      sub:'joined by paying IIF', grp:'iif'},
+    {k:'dealc',   kind:'n', n:'Deals Committed',          sub:'this year', grp:'deal'},
+    {k:'dealnew', kind:'n', n:'New Memberships',          sub:'this year', grp:'deal'},
+    {k:'L:renopen', kind:'l', n:'Renewals Still Open'},
+    {k:'L:renpers', kind:'l', n:'Renewals Needing Personal Outreach'},
+    {k:'L:iifnot',  kind:'l', n:'IIF Lenders Not Paid'},
+    {k:'B:level',   kind:'b', n:'Members by Level'},
+    {k:'B:sector',  kind:'b', n:'Members by Industry Sector'},
+    {k:'B:renstage',kind:'b', n:'Renewals by Stage'}
+  ]
+};
+
+/* ---------- the systems ---------- */
+const SYS_KINDS_BASE = [{k:'s', n:'Summary'}, {k:'n', n:'Numbers'}, {k:'l', n:'Lists'}, {k:'b', n:'Breakdowns'}];
+const SYS = {
+  sponsors: {name:'Sponsorship Portal', from:'the Sponsorship Portal', parts:spParts, data:w=>spData(w), def:SP_DEF, seasons:spSeasons,
+    groups:[{k:'s', n:'Summary'}, {k:'n', n:'Numbers'}, {k:'nst', n:'Numbers by Status'}, {k:'l', n:'Lists'}, {k:'b', n:'Breakdowns'}],
+    has:()=> (S.leads||[]).length>0, unit:'prospect',
+    empty:['Nothing from the Sponsorship Portal yet.','The prospect list comes across from the portal. It has not come across yet, or there is nothing in it.'],
+    foot:'Read-only. A prospect is worked in the Sponsorship Portal.', open:'Open the Sponsorship Portal',
+    link:()=> (typeof calOn==='function' && calOn())? 'https://resources.mismo.org/sponsorship/' : 'https://claude.ai/artifact/Lobt6M5kjNzJS5w5oJHEc5'},
+  mtnums: {name:'Meeting Trackers', parts:mtParts, data:()=>mtData(), def:['today','week','active','L:today'],
+    groups:[{k:'n', n:'Numbers'}, {k:'nty', n:'Active Workgroups by Type'}, {k:'l', n:'Lists'}, {k:'b', n:'Breakdowns'}],
+    has:()=> !!MT.sched, wait:()=>{ if(!mtAvailable()) return ['Meeting Trackers numbers show on resources.mismo.org.','They come from Meeting Trackers, which this copy of Team HQ cannot reach.'];
+      if(MT.failed==='access' && !MT.sched) return ['You don’t have access to Meeting Trackers.','Ask for it in the admin panel and these numbers show here.'];
+      if(!MT.sched){ mtLoad(); return ['Loading from Meeting Trackers…','']; } return null; },
+    unit:'meeting', foot:'Read-only. Meetings and attendance are logged in Meeting Trackers. Times are Eastern.',
+    open:'Open Meeting Trackers', link:()=> '/meeting-trackers/'},
+  sonums: {name:'Service Orders and Agreements', from:'Service Orders and Agreements', parts:soParts, data:()=>soData(),
+    def:['total','waiting','executed','L:waiting'],
+    groups:[{k:'n', n:'Numbers'}, {k:'nst', n:'Orders by Status'}, {k:'nco', n:'Maximum Fees by Company'}, {k:'l', n:'Lists'}, {k:'b', n:'Breakdowns'}],
+    has:()=> !!SO.orders, wait:()=>{ if(!soOn()) return ['Service Orders numbers show on resources.mismo.org.','They come from Service Orders and Agreements, which this copy of Team HQ cannot reach.'];
+      if(SO.failed==='access') return ['You don\u2019t have access to Service Orders.','Ask for it in the admin panel and these numbers show here.'];
+      if(SO.failed==='error' && !SO.orders) return ['Service Orders could not be read just now.','Team HQ will try again in a few minutes.'];
+      if(!SO.orders){ soLoad(); return ['Loading from Service Orders\u2026','']; } return null; },
+    unit:'order', foot:'Read-only. Orders are written, sent and signed in Service Orders and Agreements.',
+    open:'Open Service Orders', link:()=> '/service-orders/'},
+  finnums: {name:'Financial System', from:'the Financial System', soon:'Financial System', parts:()=>SOON_PARTS.finnums, def:[],
+    groups:[{k:'n', n:'The Year'}, {k:'ar', n:'Receivables'}, {k:'fc', n:'Next Year’s Budget'}, {k:'sum', n:'Summits'}, {k:'l', n:'Lists'}, {k:'b', n:'Breakdowns'}],
+    open:'Open the Financial System', link:()=> 'https://claude.ai/artifact/QFAJwn9Nv4ExGNCPnVYUEX'},
+  cmsnums: {name:'CMS', from:'the CMS', soon:'CMS', parts:()=>SOON_PARTS.cmsnums, def:[],
+    groups:[{k:'n', n:'Certifications'}, {k:'ren', n:'Renewals'}, {k:'money', n:'Money'}, {k:'l', n:'Lists'}, {k:'b', n:'Breakdowns'}],
+    open:'Open the CMS', link:()=> 'https://claude.ai/artifact/Rdt3ExdJgfnxJM2nsgwEg6'},
+  m360nums: {name:'Member 360', soon:'Member 360', parts:()=>SOON_PARTS.m360nums, def:[],
+    groups:[{k:'n', n:'Members'}, {k:'ren', n:'Renewals'}, {k:'iif', n:'IIF'}, {k:'deal', n:'Deals'}, {k:'l', n:'Lists'}, {k:'b', n:'Breakdowns'}],
+    open:'Open Member 360', link:()=> 'https://claude.ai/artifact/NyuB6FrzML8b9j9URqMo38'}
+};
+const sysGrpOf = p=> p.grp || p.kind;
+function sysPartsOf(w){ const s=SYS[w.t]; return Array.isArray(w.parts) ? w.parts : (s? s.def : []); }
+const sysOrdered = (t, picked)=> SYS[t].parts().map(p=>p.k).filter(k=> picked.has(k));
+function sysCount(p, d){ if(p.val) return p.val(d).n; return p.f(d).length; }
+function sysFmt(n, money){ if(money && typeof n==='number') return '$'+Math.round(n).toLocaleString('en-US'); return typeof n==='number' ? n.toLocaleString('en-US') : String(n); }
+/* what the tick list says under each choice */
+function sysPartLine(t, p, d){
+  const s=SYS[t];
+  if(s.soon) return p.sub ? p.sub : (p.kind==='l'? 'a list' : p.kind==='b'? 'a breakdown' : '');
+  if(!d) return p.sub || '';
+  try{
+    if(p.kind==='s') return p.say(d);
+    if(p.kind==='n') return sysFmt(sysCount(p, d), p.money)+(p.sub? ' · '+p.sub : '');
+    if(p.kind==='l'){ const n=p.f(d).length, u=p.unit||s.unit||'item'; return n? n+' '+u+(n===1?'':'s') : 'none right now'; }
+    if(p.kind==='b'){ const n=Object.keys(p.groups(d)).length; return n? n+(n===1?' group':' groups') : 'nothing to group yet'; }
+  }catch(e){}
+  return '';
+}
+
+/* ---------- the panel ---------- */
+function sysRender(w, b){
+  const s=SYS[w.t]; if(!s) return;
+  b.classList.add('sysp-'+w.t); b.__w=w;
+  const want=sysPartsOf(w), parts=s.parts().filter(p=> want.indexOf(p.k)>=0);
+  const foot=()=>{
+    if(s.foot) b.appendChild(el('p','note', s.foot));
+    if(s.open){ const go=el('button','btn ghost sm', s.open); go.type='button';
+      go.addEventListener('click', ()=> window.open(s.link(),'_blank','noopener')); b.appendChild(go); } };
+  if(s.soon){
+    const cs=el('div','syssoon'); cs.appendChild(el('b',null,'Coming Soon'));
+    cs.appendChild(el('span',null, 'These numbers fill in once the '+s.soon+' moves to resources.mismo.org. '+(parts.length? 'Your choices are saved.' : 'Choose what you want in the panel’s settings (the gear) now, and it is ready when they arrive.')));
+    b.appendChild(cs);
+  } else {
+    const wait=s.wait && s.wait(); if(wait){ b.appendChild(emptyBox(wait[0], wait[1])); return; }
+    if(s.has && !s.has()){ b.appendChild(emptyBox(s.empty[0], s.empty[1])); foot(); return; }
+    if(!parts.length){ b.appendChild(emptyBox('Nothing chosen for this panel.','Open its settings (the gear) and tick what you want to see.')); return; }
+  }
+  const d=s.soon? null : s.data(w);
+  if(w.season) b.appendChild(el('p','note sysseason', w.season+' season'));
+  parts.filter(p=>p.kind==='s').forEach(p=>{ const say=el('div','statusnote'); say.textContent=p.say(d); b.appendChild(say); });
+  const nums=parts.filter(p=>p.kind==='n');
+  if(nums.length){
+    const tl=el('div','tiles2');
+    nums.forEach(p=>{ const n=d? sysCount(p, d) : null;
+      const x=el('div','tile2'+(n && p.tone? ' '+p.tone : '')+(d? '' : ' soon'));
+      x.appendChild(el('b',null, d? sysFmt(n, p.money) : '—')); x.appendChild(el('span',null,p.n)); if(p.sub) x.appendChild(el('small',null,p.sub)); tl.appendChild(x); });
+    b.appendChild(tl);
+  }
+  parts.filter(p=>p.kind==='l' || p.kind==='b').forEach(p=>{
+    if(!d){ b.appendChild(el('h3','sect-t', p.n)); b.appendChild(el('p','note syswait','Arrives with the numbers.')); return; }
+    if(p.kind==='l'){
+      const list=p.f(d), max=p.max||8;
+      b.appendChild(el('h3','sect-t', p.n+' ('+list.length+')'));
+      if(!list.length){ b.appendChild(el('p','note','None right now.')); return; }
+      const r=el('div','rows'); list.slice(0,max).forEach(x=> r.appendChild(p.row(x)));
+      if(list.length>max) r.appendChild(el('div','empty','and '+(list.length-max)+' more in '+(s.from||s.name)));
+      b.appendChild(r);
+      return;
+    }
+    const g=p.groups(d); let keys=Object.keys(g);
+    if(p.order) keys.sort((a,c)=>{ const ia=p.order.indexOf(a), ic=p.order.indexOf(c); return (ia<0?99:ia)-(ic<0?99:ic); });
+    else keys.sort((a,c)=> g[c]-g[a] || a.localeCompare(c));
+    if(p.top) keys=keys.slice(0,p.top);
+    b.appendChild(el('h3','sect-t', p.n));
+    if(!keys.length){ b.appendChild(el('p','note','Nothing to group yet.')); return; }
+    const max=Math.max.apply(null, keys.map(k=>g[k]));
+    const box=el('div','spbars');
+    keys.forEach(k=>{ const r=el('div','spbar'); r.appendChild(el('span','spbl',k));
+      const tr=el('span','spbt'); const i=el('i'); i.style.width=Math.max(3, g[k]/max*100)+'%'; tr.appendChild(i); r.appendChild(tr);
+      r.appendChild(el('b',null,sysFmt(g[k], p.money))); box.appendChild(r); });
+    b.appendChild(box);
+  });
+  foot();
+}
+
+/* ---------- choosing: the tick list, shared by Add a Panel and the gear ---------- */
+function sysTickList(t, picked, onChange, onHover, season){
+  const s=SYS[t], list=el('div','pgnlist splist');
+  let d=null; if(!s.soon){ try{ if(!(s.wait && s.wait()) && (!s.has || s.has())) d=s.data({t:t, season:season||''}); }catch(e){ d=null; } }
+  const P=s.parts();
+  (s.groups||SYS_KINDS_BASE).forEach(K=>{
+    const items=P.filter(p=> sysGrpOf(p)===K.k); if(!items.length) return;
+    const hd=el('div','pgnsrc'); hd.appendChild(document.createTextNode(K.n));
+    const all=el('button','spall', 'Tick All'); all.type='button';
+    const sync=()=>{ all.textContent = items.every(p=>picked.has(p.k)) ? 'Clear' : 'Tick All'; };
+    all.addEventListener('click', ()=>{ const on=!items.every(p=>picked.has(p.k));
+      items.forEach(p=>{ if(on) picked.add(p.k); else picked.delete(p.k); });
+      list.querySelectorAll('input[data-k]').forEach(cb=>{ cb.checked=picked.has(cb.dataset.k); cb.closest('.pgnrow').classList.toggle('on', cb.checked); });
+      list.querySelectorAll('.spall').forEach(x=> x.__sync && x.__sync());
+      onChange(); });
+    all.__sync=sync;
+    hd.appendChild(all); list.appendChild(hd);
+    items.forEach(p=>{
+      const r=el('label','pgnrow'+(picked.has(p.k)?' on':''));
+      const cb=el('input'); cb.type='checkbox'; cb.checked=picked.has(p.k); cb.dataset.k=p.k;
+      cb.addEventListener('change', ()=>{ if(cb.checked) picked.add(p.k); else picked.delete(p.k); r.classList.toggle('on', cb.checked); sync(); onChange(); });
+      r.appendChild(cb);
+      const tx=el('span','pgnt'); tx.appendChild(el('b',null,p.n)); tx.appendChild(el('small',null, sysPartLine(t, p, d)));
+      r.appendChild(tx);
+      if(onHover){ r.addEventListener('mouseenter', ()=> onHover(p.k)); r.addEventListener('mouseleave', ()=> onHover(null)); }
+      list.appendChild(r);
+    });
+    sync();
+  });
+  return list;
+}
+function sysPreview(t, parts, season){
+  const n=el('div','widget pgpv'); n.style.setProperty('--pc','var(--c1)');
+  const h=el('header'); h.appendChild(el('h3',null,WTYPES[t].n)); n.appendChild(h);
+  const b=el('div','wbody'); try{ sysRender({t:t, id:'preview', parts:parts, season:season||''}, b); }catch(e){} n.appendChild(b);
+  return n;
+}
+function sysSeasonPick(t, cur, set){
+  const s=SYS[t]; if(!s.seasons) return null; const ss=s.seasons(); if(!ss.length) return null;
+  return btnRow([{v:'',n:'All Seasons'}].concat(ss.map(x=>({v:x, n:x}))), cur||'', 'tiny', set);
+}
+/* Add a Panel: tick what you want, see it, add it */
+function sysPicker(t, right, L, allOf, redrawBoard, paintList, back){
+  const s=SYS[t], on=allOf(t), cur=on[0]||null;
+  const picked=new Set(cur? sysPartsOf(cur) : []);
+  let hover=null, season=cur? (cur.season||'') : '';
+  const T=WTYPES[t];
+  right.textContent='';
+  if(back) right.appendChild(back);
+  const top=el('div','pgxtop'); const tt=el('div','pgxtt');
+  tt.appendChild(el('span','pgxgrp', s.soon? 'Numbers and Systems · Coming Soon' : 'Numbers and Systems'));
+  tt.appendChild(el('h3',null,T.n));
+  tt.appendChild(el('p',null, s.soon
+    ? 'Everything Team HQ will show from the '+s.soon+'. Tick what you want now; the numbers fill in once it moves to resources.mismo.org.'
+    : 'Everything Team HQ can show from '+(s.from||s.name)+'. Tick what you want to see; the preview shows your panel as it will look.'));
+  top.appendChild(tt);
+  const acts=el('div','pgxacts'); top.appendChild(acts);
+  right.appendChild(top);
+  const cols=el('div','pgnum');
+  const pv=el('div','pgnpv');
+  const paintPv=()=>{
+    pv.textContent='';
+    const ids=s.parts().map(p=>p.k).filter(k=> picked.has(k) || k===hover);
+    pv.appendChild(el('div','pgxlbl', ids.length? (s.soon? 'Preview' : 'Preview With Your Data') : 'Preview'));
+    const frame=el('div','pgxframe'); frame.setAttribute('inert',''); frame.setAttribute('aria-hidden','true');
+    if(!ids.length) frame.appendChild(el('div','pgxempty','Tick something, or point at it, to see it here.'));
+    else frame.appendChild(sysPreview(t, ids, season));
+    pv.appendChild(frame);
+  };
+  const sp=sysSeasonPick(t, season, v=>{ season=v; paintPv(); });
+  if(sp){ const sr=el('div','spseasonrow'); sr.appendChild(el('span','pgxlbl','Season')); sr.appendChild(sp); right.appendChild(sr); }
+  right.appendChild(cols);
+  const mk=()=> newPanel({t:t, parts:sysOrdered(t, picked), season:season}, L);
+  const paintActs=()=>{
+    acts.textContent='';
+    const n=picked.size;
+    if(cur){
+      acts.appendChild(el('span','chip ch-dn','On Your Board'));
+      const more=el('button','btn ghost sm','Add as Another Panel'); more.type='button'; more.disabled=!n;
+      more.addEventListener('click', ()=>{ L.push({r:[mk()]}); redrawBoard(); paintList(); toast('Added to your board.'); });
+      const sv=el('button','btn','Save What It Shows'); sv.type='button'; sv.disabled=!n;
+      sv.addEventListener('click', ()=>{ cur.parts=sysOrdered(t, picked); cur.season=season; redrawBoard(); paintList(); toast('Your '+T.n+' panel is updated.'); });
+      acts.appendChild(more); acts.appendChild(sv);
+    } else {
+      const add=el('button','btn', n? 'Add It to My Board' : 'Tick Something First'); add.type='button'; add.disabled=!n;
+      add.addEventListener('click', ()=>{ L.push({r:[mk()]}); redrawBoard(); closeSheet(); toast('Added to your board.'); });
+      acts.appendChild(add);
+    }
+  };
+  cols.appendChild(sysTickList(t, picked, ()=>{ paintActs(); paintPv(); }, k=>{ hover=k; paintPv(); }, season));
+  cols.appendChild(pv);
+  paintActs(); paintPv();
+}
+/* the panel's own settings: a "What It Shows" group, with the panel itself in the preview pane */
+function sysSettingsGroup(w, apply, repaint){
+  const s=SYS[w.t];
+  const sumOf=()=>{ const n=sysPartsOf(w).length; return n+(n===1?' thing':' things')+(w.season? ' · '+w.season+' season' : ''); };
+  return {k:'parts', n:'What It Shows', d:'Tick what you want on this panel from '+(s.from||s.name)+'.'+(s.soon? ' The numbers fill in once it moves to resources.mismo.org.' : ''), repaint:repaint,
+    sum:sumOf,
+    rows:b=>{
+      const picked=new Set(sysPartsOf(w)), pane=PV_PANE;
+      let hover=null;
+      const drawPv=()=>{ if(!pane) return; pane.textContent='';
+        pane.appendChild(el('div','setpvk','Preview'));
+        pane.appendChild(el('h4',null,'This Panel'+(hover && !picked.has(hover)? ' With That Added' : '')));
+        const ids=s.parts().map(p=>p.k).filter(k=> picked.has(k) || k===hover);
+        const fr=el('div','pgxframe'); fr.setAttribute('inert',''); fr.setAttribute('aria-hidden','true');
+        fr.appendChild(ids.length? sysPreview(w.t, ids, w.season) : el('div','pgxempty','Nothing ticked.'));
+        pane.appendChild(fr); };
+      const sp=sysSeasonPick(w.t, w.season||'', v=>{ w.season=v; apply(); });
+      if(sp) b.appendChild(setRow('Season', 'Only the prospects for one season, or all of them.', sp));
+      const save=()=>{ w.parts=sysOrdered(w.t, picked); saveMine(); vMine($('#app-mine')); drawPv();
+        const nb=document.querySelector('.setnb.on small'); if(nb) nb.textContent=sumOf(); };
+      const tl=sysTickList(w.t, picked, save, k=>{ hover=k; drawPv(); }, w.season);
+      tl.classList.add('spset');
+      b.appendChild(tl);
+      if(pane) pane.rest=drawPv;
+      setTimeout(drawPv, 0);
+    }};
+}
+/* the Meeting Trackers panel and its tick list want the figures ready, so read them early */
+if(typeof mtAvailable==='function' && mtAvailable()) setTimeout(()=>{ try{ mtLoad(); }catch(e){} }, 2500);
 
 /* ============ rail search sources ============ */
 window.__search = function(t, push, goTab){
