@@ -2062,6 +2062,30 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .psadd{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;margin-top:12px}
 .psadd svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 @media(max-width:620px){ .psec > summary .psown span{display:none} }
+/* sections: priority by order, and grouped by owner (Oct 9) */
+.pgbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin:2px 0 -4px}
+.pgbar .pgl{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.pgbar .pgh{font-size:12px;color:var(--ink-3)}
+.psec > summary .prank{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 5px;border-radius:5px;background:var(--surface);border:1px solid var(--border);font-size:12px;font-weight:700;color:var(--ink-2);margin-left:-4px}
+.psec.now > summary .prank{border-color:var(--c1);color:var(--c1)}
+.pgrps{display:flex;flex-direction:column;gap:14px}
+.pgrp{border:1px solid var(--border);border-radius:10px;background:var(--surface-2);overflow:hidden}
+.pgrp > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:12px 16px}
+.pgrp > summary::-webkit-details-marker{display:none}
+.pgrp > summary:hover{background:var(--surface-3)}
+.pgrp > summary:focus-visible{outline:2px solid var(--c1);outline-offset:-2px}
+.pgrp > summary .caret{width:14px;height:14px;flex:0 0 auto;fill:none;stroke:var(--ink-3);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;transition:transform .15s}
+.pgrp[open] > summary .caret{transform:rotate(90deg)}
+.pgrp > summary .pgn{flex:1 1 auto;display:flex;align-items:center;gap:10px;min-width:0;font-size:15px;font-weight:700;color:var(--ink)}
+.pgrp > summary .pgn small{display:block;font-size:12px;font-weight:400;color:var(--ink-3)}
+.pgrp > summary .psr{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.pgrp > summary .pcount{font-size:12px;font-weight:600;color:var(--ink-2);white-space:nowrap;min-width:52px;text-align:right}
+.pgrp > .psecs{padding:0 12px 12px}
+@media (prefers-reduced-motion:reduce){.pgrp > summary .caret{transition:none}}
+@media(max-width:620px){.pgrp > summary{flex-wrap:wrap}.pgrp > summary .psr{flex:1 1 100%;padding-left:26px}}
+.pgbar .btnrow{flex:0 0 auto;width:auto;margin:0}
+.pgbar .pgh{flex:1 1 220px}
+.pgrp .psec > summary .psown{display:none}
 
 /* ---------- Sync Ups ---------- */
 .syspace > summary .syavs{display:inline-flex;gap:2px}
@@ -9436,15 +9460,52 @@ function planView(root, p){
 
   if(p.summary){ const c=el('div','statusnote'); c.textContent=p.summary; root.appendChild(c); }
   const cur=curSec(p);
-  const wrap=el('div','psecs');
-  planSecs(p).forEach(s=> wrap.appendChild(secBlock(p, s, cur && cur.id===s.id)));
-  /* drag a section by its grip (or arrow keys) to put the sections in a new order */
-  wrap.__onSort=ids=>{ const q=planOf(p.id); if(!q) return;
-    const by={}; (q.secs||[]).forEach(s=>{ by[s.id]=s; });
-    const next=ids.map(id=>by[id]).filter(Boolean).concat((q.secs||[]).filter(s=>ids.indexOf(s.id)<0));
-    q.secs=next; S.planForce=1; put('plans', Object.assign({}, q)); };
-  if(!planSecs(p).length) wrap.appendChild(emptyBox('No sections yet.','Click Add a Section to start.'));
-  root.appendChild(wrap);
+  /* Oct 9: the order of the sections is their priority — top is highest. Drag one by its
+     grip to change it. Sections can also be shown grouped by who owns them, each person's
+     sections in their own priority order. */
+  if(!S.planGroup) S.planGroup=LS.get('plangroup','order')||'order';
+  const bar=el('div','pgbar');
+  bar.appendChild(el('span','pgl','Show Sections'));
+  bar.appendChild(btnRow([{v:'order',n:'In Priority Order'},{v:'owner',n:'By Owner'}], S.planGroup, 'tiny', v=>{ S.planGroup=v; LS.set('plangroup', v); S.planForce=1; vPlans(root); }));
+  bar.appendChild(el('span','pgh','Drag a section to set its priority — the top is the highest.'));
+  if(planSecs(p).length>1) root.appendChild(bar);
+  /* a dragged set of sections keeps its slots in the plan; only their order changes */
+  const reorder=ids=>{ const q=planOf(p.id); if(!q) return;
+    const secs=(q.secs||[]).slice(), by={}; secs.forEach(s=>{ by[s.id]=s; });
+    const slots=[]; secs.forEach((s,i)=>{ if(ids.indexOf(s.id)>=0) slots.push(i); });
+    slots.forEach((pos,k)=>{ if(by[ids[k]]) secs[pos]=by[ids[k]]; });
+    q.secs=secs; S.planForce=1; put('plans', Object.assign({}, q)); };
+  const list=(secs)=>{ const w=el('div','psecs');
+    secs.forEach((s,i)=> w.appendChild(secBlock(p, s, cur && cur.id===s.id, i+1, secs.length)));
+    w.__onSort=reorder; return w; };
+  if(!planSecs(p).length){ const w=el('div','psecs'); w.appendChild(emptyBox('No sections yet.','Click Add a Section to start.')); root.appendChild(w); }
+  else if(S.planGroup==='owner'){
+    const order=[]; planSecs(p).forEach(s=>{ const k=(s.owner && person(s.owner))? s.owner : ''; if(order.indexOf(k)<0) order.push(k); });
+    order.sort((a,b)=> (a===''?1:0)-(b===''?1:0));
+    if(!S.openGrps) S.openGrps={};
+    const gw=el('div','pgrps');
+    order.forEach(k=>{
+      const secs=planSecs(p).filter(s=> ((s.owner && person(s.owner))? s.owner : '')===k);
+      const items=planItems(p.id).filter(i=> secs.some(s=>s.id===i.sec));
+      const st=planStats(p, items), key=p.id+':'+(k||'none');
+      const g=el('details','pgrp'); g.open=!!S.openGrps[key];
+      g.addEventListener('toggle', ()=>{ S.openGrps[key]=g.open; });
+      const sm=el('summary');
+      sm.innerHTML='<svg class="caret" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
+      const nm=el('span','pgn');
+      if(k) nm.appendChild(avatar(k,'sm'));
+      const tx=el('span'); tx.appendChild(document.createTextNode(k? pname(k) : 'Nobody Owns These Yet'));
+      tx.appendChild(el('small',null, secs.length+(secs.length===1?' section':' sections')+(st.behind? ' · '+st.behind+' behind' : '')));
+      nm.appendChild(tx); sm.appendChild(nm);
+      const r=el('span','psr');
+      const mb=el('span','minibar'); const mi=el('i'); mi.style.width=st.pct+'%'; mb.appendChild(mi); r.appendChild(mb);
+      r.appendChild(el('span','pcount', st.done+' of '+st.total));
+      sm.appendChild(r); g.appendChild(sm);
+      g.appendChild(list(secs));
+      gw.appendChild(g);
+    });
+    root.appendChild(gw);
+  } else root.appendChild(list(planSecs(p)));
   const asb=el('button','btn ghost psadd'); asb.type='button';
   asb.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>'; asb.appendChild(el('span',null,'Add a Section'));
   asb.addEventListener('click', ()=> secPanel(p.id, null));
@@ -9452,7 +9513,7 @@ function planView(root, p){
   root.appendChild(privateNotes(p));
 }
 
-function secBlock(p, s, isNow){
+function secBlock(p, s, isNow, rank, of){
   const key=p.id+':'+s.id;
   const items=planItems(p.id).filter(i=>i.sec===s.id);
   const st=planStats(p, items);
@@ -9465,7 +9526,8 @@ function secBlock(p, s, isNow){
   c.setAttribute('class','caret'); c.setAttribute('viewBox','0 0 24 24');
   const pth=document.createElementNS('http://www.w3.org/2000/svg','path'); pth.setAttribute('d','M9 6l6 6-6 6'); c.appendChild(pth);
   sm.appendChild(c);
-  sm.appendChild(dgrip('Drag to move this section'));
+  sm.appendChild(dgrip('Drag to change this section’s priority'));
+  if(rank){ const rk=el('span','prank', String(rank)); rk.title='Priority '+rank+(of? ' of '+of : '')+' — the top is the highest. Drag the section to change it.'; sm.appendChild(rk); }
   const tt=el('span','pst'); tt.appendChild(document.createTextNode(s.name||'Section'));
   const win=secWindow(s);
   const bits=[]; if(win) bits.push(win);
