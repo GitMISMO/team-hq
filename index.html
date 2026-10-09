@@ -13821,9 +13821,11 @@ function calLoad(force){
       .then(d=>[p.id, d], ()=>[p.id, null])))
     .then(list=>{
       const by={};
-      /* the starter files ({"who":"perry","ev":[]}) only make room for a flow; a person is
-         connected once their own flow has written the file, which it does without "who" */
-      list.forEach(([id,d])=>{ if(d && Array.isArray(d.ev) && (!d.who || d.ev.length)) by[id]=d.ev.map(calEv).filter(Boolean); });
+      /* a person counts as connected only once their own flow has sent meetings. An empty
+         file — a starter ({"who":"perry","ev":[]}) or a placeholder ({"ev":[]}) — only makes
+         room for a flow (Oct 8: empty placeholders were showing as "No meetings"). A real
+         calendar is never empty for the 31 days the flow reads. */
+      list.forEach(([id,d])=>{ if(d && Array.isArray(d.ev) && d.ev.length) by[id]=d.ev.map(calEv).filter(Boolean); });
       CAL.by=by; CAL.at=Date.now(); CAL.busy=false; CAL.tried=true;
       if(S.tab==='today') render('today');
     }, ()=>{ CAL.busy=false; CAL.tried=true; });
