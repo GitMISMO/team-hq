@@ -2053,6 +2053,15 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .pnh b{font-size:13.5px}
 .pnh .spacer{flex:1 1 auto}
 .pnt{margin-top:6px;font-size:13.5px;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink)}
+/* a section's owner and its Section Details button, on the section's header */
+.psec > summary .psown{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--ink-2);white-space:nowrap}
+.psec > summary .psedit{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid transparent;border-radius:5px;background:none;color:var(--ink-3);cursor:pointer;padding:0;flex:0 0 auto}
+.psec > summary .psedit svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.psec > summary .psedit:hover{background:var(--surface);border-color:var(--border);color:var(--ink)}
+.psec > summary .psedit:focus-visible{outline:2px solid var(--c1);outline-offset:1px}
+.psadd{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;margin-top:12px}
+.psadd svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+@media(max-width:620px){ .psec > summary .psown span{display:none} }
 
 /* ---------- Sync Ups ---------- */
 .syspace > summary .syavs{display:inline-flex;gap:2px}
@@ -2595,6 +2604,11 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .pcard .dbt i.oof{background:var(--ink-3)}
 .pcard .dbt .dbnow{position:absolute;top:-1px;bottom:-1px;width:2px;margin-left:-1px;background:var(--ink);border-radius:1px}
 .pcard .dbl{font-size:11px;color:var(--ink-3);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* unsaved words on a post-it: a dashed edge and the Save button */
+.sticky.unsaved{outline:2px dashed rgba(0,0,0,.35);outline-offset:-5px}
+.sticky .smk.ssave{background:#0d314c;color:#fff;border-color:#0d314c}
+.sticky .smk.ssave:hover{background:#173f5f}
+.sticky .smk.ssave + .smk{margin-left:4px}
 
 /* ---------- messages: a small note in the bottom-left corner of the page, never over the
    right-hand panel or the middle of the work ---------- */
@@ -2755,6 +2769,10 @@ html{scrollbar-color:var(--border-strong) var(--ground)}
 .tile{display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch}
 .tile .tsub{margin-top:auto}
 .tile small + .tsub{margin-top:8px}
+/* unsaved changes, said beside the Save button */
+.rowacts .unsaved.on,.mynote-s.unsaved{color:var(--warn-ink,#b45309);font-weight:600}
+:root[data-theme="dark"] .rowacts .unsaved.on,:root[data-theme="dark"] .mynote-s.unsaved{color:#ffcf73}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .rowacts .unsaved.on, :root:not([data-theme="light"]) .mynote-s.unsaved{color:#ffcf73} }
 
 #rs-account{flex:0 0 auto;display:inline-flex;align-items:center}
 #rs-account .rs-who,#rs-account .rs-signin{border-radius:4px}
@@ -9425,8 +9443,12 @@ function planView(root, p){
     const by={}; (q.secs||[]).forEach(s=>{ by[s.id]=s; });
     const next=ids.map(id=>by[id]).filter(Boolean).concat((q.secs||[]).filter(s=>ids.indexOf(s.id)<0));
     q.secs=next; S.planForce=1; put('plans', Object.assign({}, q)); };
-  if(!planSecs(p).length) wrap.appendChild(emptyBox('No sections yet.','Open Plan Details to add the first one.'));
+  if(!planSecs(p).length) wrap.appendChild(emptyBox('No sections yet.','Click Add a Section to start.'));
   root.appendChild(wrap);
+  const asb=el('button','btn ghost psadd'); asb.type='button';
+  asb.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>'; asb.appendChild(el('span',null,'Add a Section'));
+  asb.addEventListener('click', ()=> secPanel(p.id, null));
+  root.appendChild(asb);
   root.appendChild(privateNotes(p));
 }
 
@@ -9452,10 +9474,17 @@ function secBlock(p, s, isNow){
   if(bits.length) tt.appendChild(el('small',null,bits.join(' · ')));
   sm.appendChild(tt);
   const r=el('span','psr');
+  if(s.owner && person(s.owner)){ const oc=el('span','psown'); oc.appendChild(avatar(s.owner,'xs')); oc.appendChild(el('span',null, firstName(s.owner)));
+    oc.title=pname(s.owner)+' owns this section'; r.appendChild(oc); }
   if(isNow) r.appendChild(el('span','chip ch-hi','Now'));
   if(st.behind) r.appendChild(el('span','chip ch-od', st.behind+' Behind'));
   const mb=el('span','minibar'); const mi=el('i'); mi.style.width=st.pct+'%'; mb.appendChild(mi); r.appendChild(mb);
   r.appendChild(el('span','pcount', st.done+' of '+st.total));
+  /* Section Details, straight from the section — not through Plan Details */
+  const eb=el('button','psedit'); eb.type='button'; eb.title='Section Details'; eb.setAttribute('aria-label','Section Details: '+(s.name||'Section'));
+  eb.innerHTML='<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>';
+  eb.addEventListener('click', e=>{ e.preventDefault(); e.stopPropagation(); secPanel(p.id, s.id); });
+  r.appendChild(eb);
   sm.appendChild(r);
   d.appendChild(sm);
 
@@ -9482,7 +9511,7 @@ function secBlock(p, s, isNow){
     if(e.key!=='Enter') return;
     const v=i.value.trim(); if(!v) return; e.preventDefault();
     S.planForce=1; S.planQA=s.id;
-    await put('planitems', {plan:p.id, sec:s.id, t:v, who:p.who||'', s:'Not Started', ord:nextItemOrd(p.id, s.id), at:Date.now(), by:S.me||''});
+    await put('planitems', {plan:p.id, sec:s.id, t:v, who:s.owner||p.who||'', s:'Not Started', ord:nextItemOrd(p.id, s.id), at:Date.now(), by:S.me||''});
   });
   const fb=el('button','btn ghost sm','Add From the Board'); fb.type='button';
   fb.title='Pull tasks already on someone’s board into this section';
@@ -9563,37 +9592,55 @@ function repaintItem(iid){
   const b=$('#panel-b'); b.textContent=''; e.build(b);
 }
 
+/* every editor keeps its changes until Save (Jonna, Oct 8: one rule everywhere, no
+   autosave); this line in the button row says when there is something unsaved */
+function unsavedNote(base){
+  const n=el('span','note spacer unsaved', base||'');
+  n.mark=()=>{ n.textContent='Unsaved changes — click Save to keep them.'; n.classList.add('on'); };
+  return n;
+}
 function itemBody(p, s, it, b){
   const iid=it.id;
   const cur=()=> (S.planitems||[]).find(x=>x.id===iid) || it;
-  const save=patch=> saveItem(cur(), patch);
-  b.appendChild(el('p','note','Changes save as you go.'));
+  /* changes wait here until Save */
+  const D={}; let stNew=null, dirty=false;
+  const who0 = it.doneBy ? pname(it.doneBy) : '';
+  const un=unsavedNote(itemDone(it) && it.doneAt
+    ? 'Ticked off'+(who0?' by '+who0:'')+' on '+fmtD(isoOf(new Date(it.doneAt)),1)+'.'
+    : (it.by ? 'Added by '+pname(it.by)+'.' : ''));
+  const stage=patch=>{ Object.assign(D, patch||{}); dirty=true; un.mark(); };
+  const commit=async ()=>{
+    if(!dirty) return;
+    const patch=Object.assign({}, D);
+    if(patch.sec && patch.sec!==cur().sec){ patch.ord=nextItemOrd(p.id, patch.sec); patch.grp=''; patch.crit=0; S.openSecs[p.id+':'+patch.sec]=true; }
+    if(stNew && stNew!==itemStatus(cur())) await setItemStatus(cur(), stNew);
+    if(Object.keys(patch).length) await saveItem(cur(), patch);
+    dirty=false;
+  };
   const g=el('div','fields');
   const fT=field(g,'What It Is', inp('text', it.t||''), 'w4');
-  fT.addEventListener('change', async ()=>{ const v=fT.value.trim(); if(v && v!==cur().t){ await save({t:v});
-    const e=PSTACK[PSTACK.length-1]; if(e && e.iid===iid){ e.title=v; $('#panel-t').textContent=v; } } });
+  fT.addEventListener('input', ()=>{ const v=fT.value.trim(); if(v) stage({t:v}); });
   const sw=el('div','f w4'); sw.appendChild(el('span',null,'Where It Stands'));
-  sw.appendChild(btnRow(ISTAT.map(x=>({v:x,n:x})), itemStatus(it), 'tiny', async v=>{ await setItemStatus(cur(), v); repaintItem(iid); }));
+  sw.appendChild(btnRow(ISTAT.map(x=>({v:x,n:x})), itemStatus(it), 'tiny', v=>{ stNew=v; dirty=true; un.mark(); }));
   g.appendChild(sw);
   const fW=field(g,'Who Owns It', sel(peopleOpts(), it.who||'', 'Nobody Yet'), 'w2');
-  fW.addEventListener('change', ()=> save({who:fW.value}));
+  fW.addEventListener('change', ()=> stage({who:fW.value}));
   const fS=field(g,'Section', sel2(planSecs(p).map(x=>({v:x.id,n:x.name})), it.sec), 'w2');
-  fS.addEventListener('change', async ()=>{ await save({sec:fS.value, ord:nextItemOrd(p.id, fS.value), grp:'', crit:0});
-    S.openSecs[p.id+':'+fS.value]=true; repaintItem(iid); });
+  fS.addEventListener('change', ()=> stage({sec:fS.value}));
   const due=itemDue(it,p), lab=itemDueLabel(it,p);
   const fD=field(g,'Target Date', inp('date', due), 'w2');
-  fD.addEventListener('change', async ()=>{ await save({date:fD.value}); repaintItem(iid); });
+  fD.addEventListener('change', ()=> stage({date:fD.value}));
   const hint=el('span','fhint');
   if(it.date && (hasNum(it.wd) || itemDayNo(it,p)!==null)){
     hint.appendChild(document.createTextNode('Set by hand. '));
     const back=el('button','lk','Go back to the plan’s day'); back.type='button';
-    back.addEventListener('click', async ()=>{ await save({date:''}); repaintItem(iid); });
+    back.addEventListener('click', ()=>{ stage({date:''}); fD.value=itemDue(Object.assign({}, cur(), {date:''}), p)||''; hint.textContent='Back to the plan’s day once you save.'; });
     hint.appendChild(back);
   } else hint.textContent = lab ? 'From the plan: '+lab+(p.start?'':' — add a start date to the plan to turn it into a date') : 'No date on this one. Pick one if it needs it.';
   fD.parentNode.appendChild(hint);
   (s.cols||[]).forEach(c=>{
     const v0=(it.x||{})[c.k];
-    const patch = v=>{ const x=Object.assign({}, cur().x||{}); x[c.k]=v; save({x:x}); };
+    const patch = v=>{ const x=Object.assign({}, cur().x||{}, D.x||{}); x[c.k]=v; stage({x:x}); };
     if(c.type==='check'){
       const w=el('div','f w2'); w.appendChild(el('span',null,c.n));
       const l=el('label','chkrow'); const cb=el('input'); cb.type='checkbox'; cb.checked=!!v0;
@@ -9605,51 +9652,54 @@ function itemBody(p, s, it, b){
       f.addEventListener('change', ()=> patch(f.value)); return;
     }
     const f=field(g, c.n, inp('text', v0||''), 'w2');
-    f.addEventListener('change', ()=> patch(f.value.trim()));
+    f.addEventListener('input', ()=> patch(f.value.trim()));
   });
   const fN=field(g,'Notes', ta(it.note||'', 'Anything worth knowing about this one', 3), 'w4');
-  fN.addEventListener('change', ()=> save({note:fN.value.trim()}));
+  fN.addEventListener('input', ()=> stage({note:fN.value.trim()}));
   b.appendChild(g);
 
-  b.appendChild(attBlock(it.files||[], list=>{ save({files:list}); }, {folder:'attachments'}));
+  b.appendChild(attBlock(it.files||[], list=>{ stage({files:list}); }, {folder:'attachments'}));
 
-  /* the link to somebody's board */
+  /* the link to somebody's board — these buttons act straight away, keeping any edits first */
   const t=linkedTask(it);
   const lk=el('div');
   lk.appendChild(el('h3','sect-t','On the Board'));
   if(t){
     lk.appendChild(el('p','note','This item follows the task: when the task is marked done, so is this. Ticking this off marks the task done too.'));
     const rr=el('div','rows'); rr.appendChild(taskRow(t)); lk.appendChild(rr);
-    const un=el('button','btn ghost sm','Unlink the Task'); un.type='button'; un.style.marginTop='8px';
-    un.title='The task stays on the board; it just stops counting for this plan';
-    un.addEventListener('click', async ()=>{ await save({task:''}); repaintItem(iid); });
-    lk.appendChild(un);
+    const unl=el('button','btn ghost','Unlink the Task'); unl.type='button'; unl.style.marginTop='8px';
+    unl.title='The task stays on the board; it just stops counting for this plan';
+    unl.addEventListener('click', async ()=>{ await commit(); await saveItem(cur(), {task:''}); repaintItem(iid); });
+    lk.appendChild(unl);
   } else {
     if(it.task) lk.appendChild(el('p','note','The task this was linked to has been deleted.'));
     else lk.appendChild(el('p','note','Put it on someone’s board as a task, or link a task that is already there. Either way, finishing the task ticks this off.'));
     const bar=el('div','rowflex');
-    const mkb=el('button','btn sm','Put It on the Board'); mkb.type='button';
-    mkb.addEventListener('click', async ()=>{ await itemToTask(p, s, cur()); repaintItem(iid); });
-    const lnb=el('button','btn ghost sm','Link a Task Already There'); lnb.type='button';
-    lnb.addEventListener('click', ()=> linkTaskSheet(p, cur()));
+    const mkb=el('button','btn ghost','Put It on the Board'); mkb.type='button';
+    mkb.addEventListener('click', async ()=>{ await commit(); await itemToTask(p, s, cur()); repaintItem(iid); });
+    const lnb=el('button','btn ghost','Link a Task Already There'); lnb.type='button';
+    lnb.addEventListener('click', async ()=>{ await commit(); linkTaskSheet(p, cur()); });
     bar.appendChild(mkb); bar.appendChild(lnb); lk.appendChild(bar);
   }
   b.appendChild(lk);
 
   const acts=el('div','rowacts');
-  const who = it.doneBy ? pname(it.doneBy) : '';
-  acts.appendChild(el('span','note spacer', itemDone(it) && it.doneAt
-    ? 'Ticked off'+(who?' by '+who:'')+' on '+fmtD(isoOf(new Date(it.doneAt)),1)+'.'
-    : (it.by ? 'Added by '+pname(it.by)+'.' : '')));
-  const del=el('button','btn danger sm','Delete'); del.type='button';
+  acts.appendChild(un);
+  const del=el('button','btn danger','Delete'); del.type='button';
   del.addEventListener('click', ()=>{ if(del.dataset.c){ closePanel(); dropUndo('planitems', iid, 'Item'); }
     else { del.dataset.c='1'; del.textContent='Click Again to Delete'; } });
   acts.appendChild(del);
+  const cancel=el('button','btn ghost','Cancel'); cancel.type='button'; cancel.addEventListener('click', closePanel);
+  const save=el('button','btn','Save'); save.type='button';
+  save.addEventListener('click', async ()=>{
+    if(!fT.value.trim()){ fT.focus(); toast('The item needs a name.'); return; }
+    const had=dirty; await commit(); closePanel(); if(had) toast('Saved.'); });
+  acts.appendChild(cancel); acts.appendChild(save);
   b.appendChild(acts);
 }
 
 async function itemToTask(p, s, it){
-  const o = it.who || p.who || S.me || '';
+  const o = it.who || s.owner || p.who || S.me || '';
   const stt=itemStatus(it);
   const t={t:it.t, o:o, d:[], r:p.rock||'', w:p.part||'', s: stt==='Done'?'Done': stt==='In Progress'?'In Progress':'Not Started',
     p:'Normal', due:itemDue(it,p), notes:'From the plan “'+(p.title||'')+'” · '+(s.name||''), rail:0,
@@ -9807,7 +9857,8 @@ function leadView(root, p){
     const ns=xs.length-dn-bh-ip;
     const row=el('div','lrow');
     const ln=el('div','ln'); ln.appendChild(document.createTextNode(s.name));
-    const w=secWindow(s); if(w) ln.appendChild(el('small',null,w));
+    const w=secWindow(s), ow=s.owner && person(s.owner)? pname(s.owner) : '';
+    if(w || ow) ln.appendChild(el('small',null,[w, ow].filter(Boolean).join(' · ')));
     row.appendChild(ln);
     const bar=el('div','lbar'); bar.setAttribute('role','img');
     bar.setAttribute('aria-label', s.name+': '+dn+' done, '+ip+' in progress, '+ns+' not started, '+bh+' behind');
@@ -10051,6 +10102,8 @@ function editPlan(p0){
         fr.addEventListener('input', ()=>{ s.from = fr.value===''?'':+fr.value; });
         const to=field(sg,'To Day', inp('number', hasNum(s.to)?s.to:''));
         to.addEventListener('input', ()=>{ s.to = to.value===''?'':+to.value; });
+        const ow=field(sg,'Who Owns This Section', sel(peopleOpts(), s.owner||'', 'Nobody Yet'), 'w2');
+        ow.addEventListener('change', ()=>{ s.owner=ow.value; });
         const nt=field(sg,'What This Section Is For', inp('text', s.note||''), 'w4');
         nt.addEventListener('input', ()=>{ s.note=nt.value; });
         bx.appendChild(sg);
@@ -10164,6 +10217,71 @@ function leadRowGo(p, it){ return leadRow(p, it); }
   r.addEventListener('focusout', ()=>{ setTimeout(()=>{
     if(S.planDirty && S.tab==='plans' && !planBusy(r)){ S.planDirty=0; vPlans(r); } }, 40); }); })();
 window.__itemPanel = itemPanel;
+
+
+/* ---- one section's details, from the section itself (Jonna, Oct 8) ----
+   Name, who owns it, its days and what it is for. A new section goes on the end
+   (drag its grip to move it). Owning a section means new items added to it go to that
+   person, and the owner shows on the section and in the Leadership View. Nothing is
+   kept until Save. */
+function secPanel(pid, sid){
+  const p0=planOf(pid); if(!p0) return;
+  const s0=sid? planSec(p0, sid) : null; if(sid && !s0) return;
+  panel(s0? (s0.name||'Section') : 'Add a Section', p0.title||'Plan', body=>{
+    const p=planOf(pid); if(!p) return;
+    const s=sid? planSec(p, sid) : null;
+    const d=s? JSON.parse(JSON.stringify(s)) : {id:uid('sc'), name:'', from:'', to:'', note:'', owner:''};
+    const items=s? planItems(pid).filter(i=>i.sec===s.id) : [];
+    const g=el('div','fields');
+    const fN=field(g,'Section Name', inp('text', d.name||'', 'For example: Week 2, or Systems Access'), 'w4');
+    const fO=field(g,'Who Owns This Section', sel(peopleOpts(), d.owner||'', 'Nobody Yet'), 'w2');
+    const fF=field(g,'From Day', inp('number', hasNum(d.from)?d.from:''));
+    const fT=field(g,'To Day', inp('number', hasNum(d.to)?d.to:''));
+    const fW=field(g,'What This Section Is For', ta(d.note||'', 'A line people read before the items', 2), 'w4');
+    body.appendChild(g);
+    body.appendChild(el('p','note','Day 1 is the plan’s start date. Use 0 for Before Day 1. Leave both days blank for a plain list. New items added to this section go to its owner.'));
+    /* hand the unowned items to the new owner, if they want */
+    const loose=items.filter(i=>!i.who);
+    let give=null;
+    if(loose.length){
+      const l=el('label','chkrow'); give=el('input'); give.type='checkbox';
+      l.appendChild(give); l.appendChild(el('span',null,'Also give them the '+loose.length+(loose.length===1?' item':' items')+' in this section that nobody owns yet'));
+      const wrap=el('div'); wrap.appendChild(l); wrap.hidden=!fO.value; body.appendChild(wrap);
+      fO.addEventListener('change', ()=>{ wrap.hidden=!fO.value; });
+    }
+    const acts=el('div','rowacts');
+    if(s){
+      const rm=el('button','btn danger', items.length? 'Remove (and Its Items)' : 'Remove This Section'); rm.type='button';
+      rm.addEventListener('click', async ()=>{
+        if(!rm.dataset.c){ rm.dataset.c='1'; rm.textContent='Click Again to Remove'+(items.length? ' — '+items.length+(items.length===1?' Item':' Items')+' Go Too' : ''); return; }
+        const q=planOf(pid); if(!q) return;
+        const keptP=JSON.parse(JSON.stringify(q)), keptI=items.map(x=>JSON.parse(JSON.stringify(x)));
+        closePanel(); S.planForce=1;
+        await put('plans', Object.assign({}, q, {secs:(q.secs||[]).filter(x=>x.id!==s.id)}));
+        for(const it of keptI) await drop('planitems', it.id);
+        undoToast('Section removed.', async ()=>{ S.planForce=1; await put('plans', keptP); for(const it of keptI) await put('planitems', it); });
+      });
+      acts.appendChild(rm);
+    }
+    acts.appendChild(el('span','spacer'));
+    const cancel=el('button','btn ghost','Cancel'); cancel.type='button'; cancel.addEventListener('click', closePanel);
+    const save=el('button','btn', s? 'Save' : 'Add the Section'); save.type='button';
+    save.addEventListener('click', async ()=>{
+      const nm=fN.value.trim(); if(!nm){ fN.focus(); toast('The section needs a name.'); return; }
+      const q=planOf(pid); if(!q) return;
+      const nd=Object.assign({}, d, {name:nm, owner:fO.value, from:fF.value===''?'':+fF.value, to:fT.value===''?'':+fT.value, note:fW.value.trim()});
+      const secs=(q.secs||[]).slice(), at=secs.findIndex(x=>x.id===nd.id);
+      if(at>=0) secs[at]=Object.assign({}, secs[at], nd); else secs.push(nd);
+      S.planForce=1; S.openSecs[pid+':'+nd.id]=true;
+      await put('plans', Object.assign({}, q, {secs:secs}));
+      if(give && give.checked && nd.owner) for(const it of loose) await saveItem(it, {who:nd.owner});
+      closePanel(); toast(s? 'Saved.' : 'Section added.');
+    });
+    acts.appendChild(cancel); acts.appendChild(save);
+    body.appendChild(acts);
+    if(!s) setTimeout(()=> fN.focus(), 80);
+  }, 'the section');
+}
 
 /* ============ SYNC UPS ============
    Weekly sync-ups between a few people — two of the team, or the two VPs and the
@@ -10604,47 +10722,62 @@ function syCardPanel(cid){
     if(!c || !s){ body.appendChild(emptyBox('This card is gone.','Someone in the space may have deleted it.')); return; }
     const cur=()=> syCard(cid) || c;
     const save=patch=> sySaveItem(cur(), patch);
-    body.appendChild(el('p','note','Changes save as you go. Only the people in “'+(s.name||'this space')+'” can see this.'));
+    /* changes wait here until Save */
+    const D={}; let doneNew=null, dirty=false;
+    const un=unsavedNote(c.done && c.doneAt ? 'Done '+fmtD(isoOf(new Date(c.doneAt)),1)+(c.doneBy? ' by '+pname(c.doneBy):'')+'.' : (c.by? 'Added by '+pname(c.by)+'.' : ''));
+    const stage=patch=>{ Object.assign(D, patch||{}); dirty=true; un.mark(); };
+    let steps=(c.check||[]).map(x=>Object.assign({}, x));
+    const commit=async ()=>{
+      if(!dirty) return;
+      const patch=Object.assign({}, D);
+      if(patch.list && patch.list!==cur().list) patch.ord=syNextOrd(s.id, patch.list);
+      if(D.__steps){ delete patch.__steps; patch.check=steps.filter(x=>String(x.t||'').trim()); }
+      if(doneNew!==null && !!doneNew!==!!cur().done) await sySetDone(cur(), doneNew);
+      if(Object.keys(patch).length) await save(patch);
+      dirty=false;
+    };
+    body.appendChild(el('p','note','Only the people in “'+(s.name||'this space')+'” can see this.'));
     const g=el('div','fields');
     const fT=field(g,'What It Is', inp('text', c.t||''), 'w4');
-    fT.addEventListener('change', ()=>{ const v=fT.value.trim(); if(!v) return; save({t:v});
-      const e=syTop(); if(e && e.syId===cid){ e.title=v; $('#panel-t').textContent=v; } });
+    fT.addEventListener('input', ()=>{ const v=fT.value.trim(); if(v) stage({t:v}); });
     const sw=el('div','f w4'); sw.appendChild(el('span',null,'Where It Stands'));
-    sw.appendChild(btnRow([{v:'0',n:'Open'},{v:'1',n:'Done'}], c.done?'1':'0', 'tiny', v=>{ sySetDone(cur(), v==='1'); }));
+    sw.appendChild(btnRow([{v:'0',n:'Open'},{v:'1',n:'Done'}], c.done?'1':'0', 'tiny', v=>{ doneNew=(v==='1'); dirty=true; un.mark(); }));
     g.appendChild(sw);
     const fL=field(g,'List', sel2((s.lists||[]).map(L=>({v:L.id,n:L.name})), c.list), 'w2');
-    fL.addEventListener('change', ()=> save({list:fL.value, ord:syNextOrd(s.id, fL.value)}));
+    fL.addEventListener('change', ()=> stage({list:fL.value}));
     const fW=field(g,'Who Owns It', sel(syMemberOpts(s), c.who||'', 'Nobody Yet'), 'w2');
-    fW.addEventListener('change', ()=> save({who:fW.value}));
+    fW.addEventListener('change', ()=> stage({who:fW.value}));
     const fD=field(g,'Due Date', inp('date', c.due||''), 'w2');
-    fD.addEventListener('change', ()=> save({due:fD.value}));
+    fD.addEventListener('change', ()=> stage({due:fD.value}));
     const fN=field(g,'Notes', ta(c.note||'', 'What was said, what to bring up next time', 4), 'w4');
-    fN.addEventListener('change', ()=> save({note:fN.value.trim()}));
+    fN.addEventListener('input', ()=> stage({note:fN.value.trim()}));
     body.appendChild(g);
 
     /* steps, each its own field */
     const st=el('div');
     st.appendChild(el('h3','sect-t','Steps'));
     const rows=el('div','systeps');
-    (c.check||[]).forEach((x,i)=>{
-      const r=el('div','systep');
-      const cb=el('input'); cb.type='checkbox'; cb.checked=!!x.done; cb.setAttribute('aria-label','Done');
-      cb.addEventListener('change', ()=>{ const list=(cur().check||[]).slice(); list[i]=Object.assign({}, list[i], {done:cb.checked?1:0}); save({check:list}); });
-      const ti=inp('text', x.t||''); ti.setAttribute('aria-label','Step');
-      ti.addEventListener('change', ()=>{ const list=(cur().check||[]).slice(); list[i]=Object.assign({}, list[i], {t:ti.value.trim()}); save({check:list}); });
-      const rm=el('button','btn ghost sm','Remove'); rm.type='button';
-      rm.addEventListener('click', ()=>{ const list=(cur().check||[]).slice(); list.splice(i,1); save({check:list}).then(()=>syRepaint('card',cid)); });
-      r.appendChild(cb); r.appendChild(ti); r.appendChild(rm); rows.appendChild(r);
-    });
+    const stepsChanged=()=>{ D.__steps=1; dirty=true; un.mark(); };
+    const paintSteps=()=>{ rows.textContent='';
+      steps.forEach((x,i)=>{
+        const r=el('div','systep');
+        const cb=el('input'); cb.type='checkbox'; cb.checked=!!x.done; cb.setAttribute('aria-label','Done');
+        cb.addEventListener('change', ()=>{ x.done=cb.checked?1:0; stepsChanged(); });
+        const ti=inp('text', x.t||''); ti.setAttribute('aria-label','Step');
+        ti.addEventListener('input', ()=>{ x.t=ti.value; stepsChanged(); });
+        const rm=el('button','btn ghost sm','Remove'); rm.type='button';
+        rm.addEventListener('click', ()=>{ steps.splice(i,1); stepsChanged(); paintSteps(); });
+        r.appendChild(cb); r.appendChild(ti); r.appendChild(rm); rows.appendChild(r);
+      }); };
+    paintSteps();
     const add=inp('text','','Add a step and press Enter…');
     add.addEventListener('keydown', e=>{ if(e.key!=='Enter') return; const v=add.value.trim(); if(!v) return; e.preventDefault();
-      const list=(cur().check||[]).concat([{id:uid('st'), t:v, done:0}]); save({check:list}).then(()=>{ syRepaint('card',cid);
-        const n=$('#panel-b .systeps + input, #panel-b .syaddstep'); if(n) n.focus(); }); });
+      steps.push({id:uid('st'), t:v, done:0}); add.value=''; stepsChanged(); paintSteps(); add.focus(); });
     add.className='syaddstep';
     st.appendChild(rows); st.appendChild(add);
     body.appendChild(st);
 
-    body.appendChild(attBlock(c.files||[], list=>{ save({files:list}); },
+    body.appendChild(attBlock(c.files||[], list=>{ stage({files:list}); },
       {note:'Only the people in this space see these files.', folder:'attachments'}));
 
     /* the team board — only by choice, and it says so */
@@ -10655,14 +10788,14 @@ function syCardPanel(cid){
       lk.appendChild(el('p','note','This card is also a task on the team board, where the whole team can see the task (not this card).'));
       const rr=el('div','rows'); rr.appendChild(taskRow(t)); lk.appendChild(rr);
       const un=el('button','btn ghost sm','Unlink the Task'); un.type='button'; un.style.marginTop='8px';
-      un.addEventListener('click', ()=> save({task:''}).then(()=>syRepaint('card',cid)));
+      un.addEventListener('click', async ()=>{ await commit(); await save({task:''}); syRepaint('card',cid); });
       lk.appendChild(un);
     } else {
       lk.appendChild(el('p','note','Kept in this space only. Putting it on the board makes a task the whole team can see — the title, owner and date, never these notes.'));
       const mkb=el('button','btn ghost sm','Put It on the Board'); mkb.type='button';
       mkb.addEventListener('click', async ()=>{
         if(!mkb.dataset.c){ mkb.dataset.c='1'; mkb.textContent='Click Again — the Team Will See the Task'; return; }
-        const cc=cur(); const owner=syPersonOf(cc.who);
+        await commit(); const cc=cur(); const owner=syPersonOf(cc.who);
         const id=await put('tasks', {t:cc.t, o:(owner&&owner.id)||S.me||'', d:[], r:'', w:'', s:cc.done?'Done':'Not Started', p:'Normal',
           due:cc.due||'', notes:'', rail:0, ord:(S.tasks.length+1)*10, at:Date.now(), by:S.me||'', src:'sync'});
         await save({task:id}); syRepaint('card',cid); toast('On the board.');
@@ -10672,12 +10805,17 @@ function syCardPanel(cid){
     body.appendChild(lk);
 
     const acts=el('div','rowacts');
-    acts.appendChild(el('span','note spacer', c.done && c.doneAt ? 'Done '+fmtD(isoOf(new Date(c.doneAt)),1)+(c.doneBy? ' by '+pname(c.doneBy):'')+'.' : (c.by? 'Added by '+pname(c.by)+'.' : '')));
-    const del=el('button','btn danger sm','Delete'); del.type='button';
+    acts.appendChild(un);
+    const del=el('button','btn danger','Delete'); del.type='button';
     del.addEventListener('click', ()=>{ if(!del.dataset.c){ del.dataset.c='1'; del.textContent='Click Again to Delete'; return; }
       const kept=JSON.parse(JSON.stringify(cur())); closePanel(); syDrop('syncitems', cid);
       undoToast('Card deleted.', ()=> syPut('syncitems', kept)); });
-    acts.appendChild(del); body.appendChild(acts);
+    acts.appendChild(del);
+    const cancel=el('button','btn ghost','Cancel'); cancel.type='button'; cancel.addEventListener('click', closePanel);
+    const sv=el('button','btn','Save'); sv.type='button';
+    sv.addEventListener('click', async ()=>{ if(!fT.value.trim()){ fT.focus(); toast('The card needs a name.'); return; }
+      const had=dirty; await commit(); closePanel(); if(had) toast('Saved.'); });
+    acts.appendChild(cancel); acts.appendChild(sv); body.appendChild(acts);
   });
 }
 
@@ -10739,12 +10877,8 @@ function syLogPanel(sid, gid){
     const fN=field(f,'What You Talked About', ta(g.notes||'', 'The topics you covered and what was said', 4), 'w4');
     const fC=field(f,'What Was Decided', ta(g.decisions||'', 'Anything agreed, so nobody has to remember it', 3), 'w4');
     body.appendChild(f);
-    if(!isNew){
-      const save=patch=> sySaveItem(syCard(gid)||g, patch);
-      fD.addEventListener('change', ()=> save({date:fD.value}));
-      fN.addEventListener('change', ()=> save({notes:fN.value.trim()}));
-      fC.addEventListener('change', ()=> save({decisions:fC.value.trim()}));
-    }
+    let logDirty=false; const logUn=unsavedNote('');
+    if(!isNew) [fD,fN,fC].forEach(x=>{ x.addEventListener('input', ()=>{ logDirty=true; logUn.mark(); }); x.addEventListener('change', ()=>{ logDirty=true; logUn.mark(); }); });
     /* done since the sync before, so the conversation starts from what moved */
     const prev = syItems(sid,'log').filter(x=>x.id!==gid && String(x.date||'')<String(g.date||'9999')).sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0];
     const from = prev && parseD(prev.date) ? parseD(prev.date).getTime() : 0;
@@ -10763,12 +10897,18 @@ function syLogPanel(sid, gid){
       made.forEach(c=>{ const b=el('button','lk', c.t+(c.who? ' — '+syFirst(c.who):'')+(c.done?' (done)':'')); b.type='button';
         b.addEventListener('click', ()=> syCardPanel(c.id)); const w=el('div'); w.appendChild(b); ai.appendChild(w); });
       body.appendChild(ai);
-      const acts=el('div','rowacts'); acts.appendChild(el('span','spacer'));
-      const del=el('button','btn danger sm','Delete This Sync'); del.type='button';
+      const acts=el('div','rowacts'); acts.appendChild(logUn);
+      const del=el('button','btn danger','Delete This Sync'); del.type='button';
       del.addEventListener('click', ()=>{ if(!del.dataset.c){ del.dataset.c='1'; del.textContent='Click Again to Delete'; return; }
         const kept=JSON.parse(JSON.stringify(syCard(gid))); closePanel(); syDrop('syncitems', gid);
         undoToast('Sync deleted. Its action items stay as cards.', ()=> syPut('syncitems', kept)); });
-      acts.appendChild(del); body.appendChild(acts);
+      acts.appendChild(del);
+      const cancel=el('button','btn ghost','Cancel'); cancel.type='button'; cancel.addEventListener('click', closePanel);
+      const sv=el('button','btn','Save'); sv.type='button';
+      sv.addEventListener('click', async ()=>{
+        if(logDirty) await sySaveItem(syCard(gid)||g, {date:fD.value, notes:fN.value.trim(), decisions:fC.value.trim()});
+        closePanel(); if(logDirty) toast('Saved.'); });
+      acts.appendChild(cancel); acts.appendChild(sv); body.appendChild(acts);
       return;
     }
     ai.appendChild(el('p','note','Each one becomes a card in the list you pick.'));
@@ -10964,7 +11104,7 @@ function notesIn(sec){
   return (S.myitems||[]).filter(i=> i.kind==='note' && i.in===sec)
     .sort((a,b)=> byOrd(a, b, (b.edited||b.at||0)-(a.edited||a.at||0)));
 }
-/* one note, opened in the right rail; it saves as you type */
+/* one note, opened in the right rail; kept when you click Save (Oct 8) */
 function noteEditor(sec, id){
   const s0=syCard(sec); if(!s0) return;
   let cur = id? syCard(id) : null;
@@ -10977,9 +11117,9 @@ function noteEditor(sec, id){
     wrap.appendChild(g);
     const tl=el('label','f w4'); tl.appendChild(el('span',null,'Note'));
     const tx=el('textarea','mynote-x'); tx.value=cur? cur.note||'' : ''; tx.rows=18;
-    tx.placeholder='Write as much as you like. It saves as you go.'; tl.appendChild(tx); wrap.appendChild(tl);
+    tx.placeholder='Write as much as you like, then click Save.'; tl.appendChild(tx); wrap.appendChild(tl);
     const st=el('div','mynote-s'); wrap.appendChild(st);
-    const stamp=()=>{ const x=cur && (syCard(cur.id)||cur); st.textContent = x && x.edited? 'Saved '+relWhen(x.edited)+'.' : 'It saves as you type.'; };
+    const stamp=()=>{ const x=cur && (syCard(cur.id)||cur); st.textContent = x && x.edited? 'Last saved '+relWhen(x.edited)+'.' : ''; st.classList.remove('unsaved'); };
     stamp();
     let tmr=null, busy=null, gone=false;   /* once deleted, a late blur must not save it back */
     const save=async ()=>{ clearTimeout(tmr); tmr=null;
@@ -10996,15 +11136,14 @@ function noteEditor(sec, id){
       const x=syCard(cur.id)||cur;
       if((x.t||'')===t && (x.note||'')===note){ stamp(); return; }
       S.noteHold=1; busy=sySaveItem(x, {t:t, note:note, edited:Date.now()}); await busy; busy=null; S.noteHold=0; stamp(); };
-    const soon=()=>{ clearTimeout(tmr); st.textContent='Saving…'; tmr=setTimeout(save, 900); };
-    ti.addEventListener('input', soon); tx.addEventListener('input', soon);
-    [ti,tx].forEach(x=> x.addEventListener('blur', ()=>{ save().then(()=> setTimeout(syRefresh, 60)); }));
+    const mark=()=>{ st.textContent='Unsaved changes — click Save to keep them.'; st.classList.add('unsaved'); };
+    ti.addEventListener('input', mark); tx.addEventListener('input', mark);
 
     const acts=el('div','rowacts');
     const del=el('button','btn danger','Delete This Note'); del.type='button';
     del.addEventListener('click', ()=>{
       if(!cur){ closePanel(); return; }
-      if(del.dataset.c){ gone=true; clearTimeout(tmr); syDrop('syncitems', cur.id); S.noteOpen=''; closePanel(); toast('Note deleted.'); }
+      if(del.dataset.c){ gone=true; clearTimeout(tmr); del.blur(); syDrop('syncitems', cur.id); S.noteOpen=''; closePanel(); syRefresh(); toast('Note deleted.'); }
       else { del.dataset.c='1'; del.textContent='Click Again to Delete'; } });
     acts.appendChild(del); acts.appendChild(el('span','spacer'));
     /* Make It a Task: the title (or the note's first line) names the task, the note goes
@@ -11027,8 +11166,11 @@ function noteEditor(sec, id){
                d=>{ const y=syCard(x.id); if(y && d && d.id) sySaveItem(y, {task:d.id}); });
     });
     acts.appendChild(mk);
-    const done=el('button','btn','Done'); done.type='button';
-    done.addEventListener('click', async ()=>{ await save(); S.noteOpen=''; closePanel(); syRefresh(); });
+    const cancel=el('button','btn ghost','Cancel'); cancel.type='button';
+    cancel.addEventListener('click', ()=>{ S.noteOpen=''; closePanel(); });
+    acts.appendChild(cancel);
+    const done=el('button','btn','Save'); done.type='button';
+    done.addEventListener('click', async ()=>{ await save(); S.noteOpen=''; done.blur(); closePanel(); syRefresh(); toast('Saved.'); });
     acts.appendChild(done);
     wrap.appendChild(acts);
     body.appendChild(wrap);
@@ -12236,7 +12378,7 @@ function myProjectsWidget(w, b){
   }
 }
 
-/* one project, in the right rail; everything saves as you go */
+/* one project, in the right rail; nothing is kept until Save (Oct 8) */
 function mpEditor(id){
   const cur0 = id? mpOf(id) : null;
   if(id && !cur0) return;
@@ -12247,11 +12389,14 @@ function mpEditor(id){
    row on the board (mode 'drop', or 'both' with a way into the right rail) */
 function mpForm(body, id, mode){
     let cur = id? mpOf(id) : null;
-    const d = cur? JSON.parse(JSON.stringify(cur)) : {name:'', st:'Not Started', pri:'Normal', start:isoOf(today()), due:'', ties:'', goal:'', steps:[], tasks:[], notes:'', files:[]};
+    /* an unsaved edit survives the board redrawing underneath it */
+    if(!S.mpDraft) S.mpDraft={};
+    const kept = cur && S.mpDraft[cur.id];
+    const d = kept ? kept : cur? JSON.parse(JSON.stringify(cur)) : {name:'', st:'Not Started', pri:'Normal', start:isoOf(today()), due:'', ties:'', goal:'', steps:[], tasks:[], notes:'', files:[]};
     const wrap=el('div','mynote mpedit'+(mode==='rail'?'':' mpinline'));
     const st=el('div','mynote-s');
     let tmr=null, busy=null, gone=false;   /* once deleted, nothing here may save it back */
-    const stamp=()=>{ const x=cur && (syCard(cur.id)||cur); st.textContent = x && x.edited? 'Saved '+relWhen(x.edited)+'.' : (cur? '' : 'Give it a name and it saves by itself.'); };
+    const stamp=()=>{ const x=cur && (syCard(cur.id)||cur); st.textContent = x && x.edited? 'Last saved '+relWhen(x.edited)+'.' : ''; st.classList.remove('unsaved'); };
     const save=async ()=>{ clearTimeout(tmr); tmr=null;
       if(gone) return;
       if(busy) await busy;
@@ -12262,8 +12407,10 @@ function mpForm(body, id, mode){
         cur=await busy; S.mpOpen=cur.id; }
       else { busy=sySaveItem(syCard(cur.id)||cur, Object.assign({}, d, {edited:Date.now()})); await busy; }
       busy=null; S.noteHold=0; stamp(); };
-    const soon=()=>{ clearTimeout(tmr); st.textContent='Saving…'; tmr=setTimeout(save, 800); };
-    const now=()=>{ save(); };
+    /* every change only marks the project as unsaved; Save keeps it */
+    let dirty=false;
+    const soon=()=>{ dirty=true; if(cur) S.mpDraft[cur.id]=d; st.textContent='Unsaved changes — click Save to keep them.'; st.classList.add('unsaved'); };
+    const now=soon;
 
     const g=el('div','fields');
     const fN=field(g,'Project Name', inp('text', d.name, 'What is the project?'), 'w4');
@@ -12354,27 +12501,32 @@ function mpForm(body, id, mode){
     const g3=el('div','fields'); g3.appendChild(fNo); wrap.appendChild(g3);
     wrap.appendChild(attBlock(d.files||[], list=>{ d.files=list; now(); }, {title:'Files', folder:'attachments'}));
 
-    wrap.appendChild(st); stamp();
+    wrap.appendChild(st); stamp(); if(kept) soon();
     const acts=el('div','rowacts');
     const del=el('button','btn danger','Delete This Project'); del.type='button';
     del.addEventListener('click', ()=>{
       if(!cur){ if(mode==='rail') closePanel(); return; }
-      if(del.dataset.c){ gone=true; clearTimeout(tmr); syDrop('syncitems', cur.id);
+      if(del.dataset.c){ gone=true; clearTimeout(tmr); del.blur(); if(S.mpDraft) delete S.mpDraft[cur.id]; syDrop('syncitems', cur.id);
         if(mode==='rail'){ S.mpOpen=''; closePanel(); } else if(S.mpExp) delete S.mpExp[cur.id];
-        toast('Project deleted.'); }
+        syRefresh(); toast('Project deleted.'); }
       else { del.dataset.c='1'; del.textContent='Click Again to Delete'; } });
     acts.appendChild(del); acts.appendChild(el('span','spacer'));
-    if(mode==='rail'){
-      const done=el('button','btn','Back to My Board'); done.type='button';
-      done.addEventListener('click', async ()=>{ await save(); S.mpOpen=''; closePanel(); syRefresh(); });
-      acts.appendChild(done);
-    } else if(mode==='both'){
+    if(mode==='both'){
       const big=el('button','btn ghost','Open in the Right Rail'); big.type='button';
-      big.addEventListener('click', async ()=>{ await save(); if(cur) mpEditor(cur.id); });
+      big.title='Opens it in the right rail. Anything not saved yet comes along.';
+      big.addEventListener('click', ()=>{ if(dirty || !cur){ toast('Save it first, then open it in the right rail.'); return; } mpEditor(cur.id); });
       acts.appendChild(big);
     }
+    const shut=()=>{ const ae=document.activeElement; if(ae && ae.blur) ae.blur();   /* the board waits to redraw while focus is inside an editor */
+      if(mode==='rail'){ S.mpOpen=''; closePanel(); } else { if(cur && S.mpExp) delete S.mpExp[cur.id]; syRefresh(); } };
+    const cancel=el('button','btn ghost','Cancel'); cancel.type='button';
+    cancel.addEventListener('click', ()=>{ dirty=false; if(cur) delete S.mpDraft[cur.id]; shut(); });
+    const sv=el('button','btn','Save'); sv.type='button';
+    sv.addEventListener('click', async ()=>{
+      if(!String(d.name||'').trim()){ fN.focus(); toast('The project needs a name.'); return; }
+      const had=dirty || !cur; await save(); dirty=false; if(cur) delete S.mpDraft[cur.id]; shut(); syRefresh(); if(had) toast(id? 'Saved.' : 'Project added.'); });
+    acts.appendChild(cancel); acts.appendChild(sv);
     wrap.appendChild(acts);
-    wrap.addEventListener('focusout', ()=> setTimeout(()=>{ if(!wrap.contains(document.activeElement)) save().then(()=> syRefresh()); }, 60));
     body.appendChild(wrap);
     if(!cur) setTimeout(()=> fN.focus(), 80);
 }
@@ -13357,7 +13509,10 @@ function mtBuildStats(B, gd, md){
    A post-it is somewhere to think, not a form: type on it straight away, come back and
    add to it, change its color — and only when it is ready, Make It a Task. Notes from
    Jot It Down (Park It) and post-its added straight onto the wall work the same way.
-   Saves as you type; the page waits to redraw until you click away. */
+   Oct 8: like everything else, a post-it keeps what you type only when you click Save
+   (the button shows on it once something has changed). Unsaved words survive the page
+   redrawing; a brand-new post-it left blank is not kept. */
+const STICKY_DRAFT={};
 const STICKY_COLS=['y','b','g','p','o'];
 /* Where a post-it lives. Parked from Jot It Down (or added on Today) it is on the
    team's note wall. Put on someone's board, it carries `board` (their person id) and
@@ -13390,20 +13545,24 @@ function stickySize(tx){ tx.style.height='auto'; tx.style.height=Math.max(72, tx
 function noteSticky(n){
   const c=el('div','sticky '+(n.col||'y')); c.dataset.nid=n.id||''; if(n.id) c.dataset.sid=n.id;
   c.appendChild(dgrip('Drag to move this post-it'));
-  const tx=el('textarea','stx'); tx.value=n.t||''; tx.placeholder='Write anything…';
+  const tx=el('textarea','stx'); tx.value = (n.id && STICKY_DRAFT[n.id]!=null)? STICKY_DRAFT[n.id] : (n.t||''); tx.placeholder='Write anything…';
   tx.setAttribute('aria-label','Post-it note'); tx.rows=3; tx.spellcheck=true;
   c.appendChild(tx);
-  let tmr=null, last=n.t||'';
-  const save=async ()=>{ clearTimeout(tmr); tmr=null;
+  let last=n.t||'';
+  const changed=()=> tx.value!==last;
+  const paintDirty=()=>{ const on=changed(); c.classList.toggle('unsaved', on); if(sv) sv.hidden=!on;
+    if(n.id){ if(on) STICKY_DRAFT[n.id]=tx.value; else delete STICKY_DRAFT[n.id]; } };
+  const save=async ()=>{
     const v=tx.value; if(v===last) return; last=v;
     const cur=(S.notes||[]).find(x=>x.id===n.id) || n;
+    delete STICKY_DRAFT[n.id]; paintDirty();
     await put('notes', Object.assign({}, cur, {t:v, edited:Date.now(), editedBy:S.me||''})); };
-  tx.addEventListener('input', ()=>{ stickySize(tx); clearTimeout(tmr); tmr=setTimeout(save, 1200); });
+  let sv=null;
+  tx.addEventListener('input', ()=>{ stickySize(tx); paintDirty(); });
   tx.addEventListener('focus', ()=> c.classList.add('editing'));
   tx.addEventListener('blur', async ()=>{ c.classList.remove('editing');
-    /* a post-it left blank is not worth keeping */
-    if(!tx.value.trim() && n.id){ clearTimeout(tmr); await drop('notes', n.id); return; }
-    await save(); });
+    /* a brand-new post-it left blank is not worth keeping */
+    if(!tx.value.trim() && !last.trim() && n.id){ delete STICKY_DRAFT[n.id]; await drop('notes', n.id); } });
   tx.addEventListener('keydown', e=>{ if(e.key==='Escape'){ e.preventDefault(); tx.blur(); } });
   requestAnimationFrame(()=> stickySize(tx));
 
@@ -13416,8 +13575,12 @@ function noteSticky(n){
     const i=STICKY_COLS.indexOf(n.col||'y'), nx=STICKY_COLS[(i+1)%STICKY_COLS.length];
     STICKY_COLS.forEach(k=> c.classList.remove(k)); c.classList.add(nx); n.col=nx;
     const cur=(S.notes||[]).find(x=>x.id===n.id) || n;
-    await put('notes', Object.assign({}, cur, {t:tx.value, col:nx})); });
+    await put('notes', Object.assign({}, cur, {col:nx})); });
   f.appendChild(col);
+  sv=el('button','smk ssave','Save'); sv.type='button'; sv.title='Keep what you typed on this post-it';
+  sv.addEventListener('mousedown', e=> e.preventDefault());
+  sv.addEventListener('click', async e=>{ e.stopPropagation(); if(!tx.value.trim()){ tx.focus(); return; } await save(); toast('Saved.'); });
+  f.appendChild(sv);
   const mk=el('button','smk','Make It a Task'); mk.type='button';
   mk.title='Turn this post-it into a task. It comes off the wall once the task is saved.';
   mk.addEventListener('mousedown', e=> e.preventDefault());
@@ -13447,6 +13610,7 @@ function noteSticky(n){
     undoToast('Post-it cleared.', async ()=>{ await put('notes', kept); });
   });
   f.appendChild(x); c.appendChild(f);
+  paintDirty();
   /* a click anywhere on the post-it puts you in it */
   c.addEventListener('click', e=>{ if(e.target.closest('button')) return; tx.focus(); });
   return c;
