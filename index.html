@@ -13981,18 +13981,28 @@ window.__ob = {compute:obCompute, sync:obSync, reconcile:obReconcile, readDone:o
    them; the Starts field is in the viewer's time and is saved as Eastern. resources.mismo.org
    only — the Claude copy cannot see Outlook. */
 const DF_TZ='America/New_York';
+/* Oct 8: Who Is Free took ~1.5 s with everyone's Outlook in, because this built a new
+   date formatter for every meeting on every day. One formatter per time zone, and each
+   answer remembered, brings it down to a few milliseconds. */
+const DF_FMT={}, DF_PC=new Map();
 function dfParts(ms, tz){
-  const p=new Intl.DateTimeFormat('en-US',{timeZone:tz||DF_TZ, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false}).formatToParts(new Date(ms));
+  const z=tz||DF_TZ, key=z+'|'+ms, hit=DF_PC.get(key); if(hit) return hit;
+  const f=DF_FMT[z] || (DF_FMT[z]=new Intl.DateTimeFormat('en-US',{timeZone:z, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false}));
+  const p=f.formatToParts(new Date(ms));
   const g=k=> (p.find(x=>x.type===k)||{}).value;
-  return {iso:g('year')+'-'+g('month')+'-'+g('day'), min:((+g('hour'))%24)*60+(+g('minute'))};
+  const out={iso:g('year')+'-'+g('month')+'-'+g('day'), min:((+g('hour'))%24)*60+(+g('minute'))};
+  if(DF_PC.size>20000) DF_PC.clear();
+  DF_PC.set(key, out); return out;
 }
 /* how many minutes a time zone is ahead of Eastern on a given day (Mountain = -120) */
 function dfTzDiff(tz, iso){
   if(!tz || tz===DF_TZ) return 0;
+  const k=tz+'|'+iso; if(DF_TZD.has(k)) return DF_TZD.get(k);
   const noon=Date.parse(iso+'T16:00:00Z');
-  return dfParts(noon, tz).min - dfParts(noon, DF_TZ).min;
+  const v=dfParts(noon, tz).min - dfParts(noon, DF_TZ).min; DF_TZD.set(k, v); return v;
 }
 /* the viewer's own time zone (from their computer) and its short name */
+const DF_TZD=new Map();
 const DF_ME = (()=>{ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone || DF_TZ; }catch(e){ return DF_TZ; } })();
 function dfAbbr(tz, iso){
   try{ const p=new Intl.DateTimeFormat('en-US',{timeZone:tz, timeZoneName:'short'}).formatToParts(new Date(Date.parse((iso||isoOf(today()))+'T16:00:00Z')));
@@ -14014,9 +14024,19 @@ function dfDualRange(a, b, iso, withET){
   return me+(withET===false? '' : ' ('+dfHM(a)+'\u2013'+dfHM(b)+' '+dfAbbr(DF_TZ, iso)+')');
 }
 /* what is already on that person's day, in Eastern minutes */
+const DF_BUSY={at:-1, m:new Map()};
 function dfBusy(pid, iso, skipBlock){
-  const out=[];
   const evs=(typeof CAL!=='undefined' && CAL.by[pid]) || [];
+  const stamp=(typeof CAL!=='undefined' && CAL.at) || 0;
+  if(DF_BUSY.at!==stamp){ DF_BUSY.at=stamp; DF_BUSY.m.clear(); }
+  const key=pid+'|'+iso;
+  let cal=DF_BUSY.m.get(key);
+  if(!cal){ cal=[]; dfCalDay(evs, iso, cal); DF_BUSY.m.set(key, cal); }
+  const out=cal.slice();
+  dfBlocks(pid, iso, skipBlock, out);
+  return out.sort((a,b)=> a.s-b.s);
+}
+function dfCalDay(evs, iso, out){
   evs.forEach(x=>{
     if(x.all){ if(x.show==='oof' && iso>=x.d0 && iso<x.d1) out.push({s:0, e:24*60, t:'Out of office', oof:1}); return; }
     const a=dfParts(x.s), b=dfParts(x.e);
@@ -14024,12 +14044,13 @@ function dfBusy(pid, iso, skipBlock){
     const s = a.iso<iso ? 0 : a.min, e = b.iso>iso ? 24*60 : b.min;
     if(e>s) out.push({s:s, e:e, t: x.t || (x.show==='oof' ? 'Out of office' : x.show==='tentative' ? 'Tentative' : 'Busy'), oof:x.show==='oof'});
   });
+}
+function dfBlocks(pid, iso, skipBlock, out){
   (S.blocks||[]).forEach(b=>{
     if(b.who!==pid || b.date!==iso || b.state==='remove' || (skipBlock && b.id===skipBlock)) return;
     const s=hrMin(b.start), e=hrMin(b.end || addMins(b.start, b.mins||60));
     if(s!=null && e!=null && e>s) out.push({s:s, e:e, t:(b.title||'Time set aside')+' (Team HQ)', hq:1});
   });
-  return out.sort((a,b)=> a.s-b.s);
 }
 function dfFree(busy, ws, we){
   const free=[]; let at=ws;
