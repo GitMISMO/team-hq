@@ -9463,10 +9463,12 @@ function planView(root, p){
   /* Oct 9: the order of the sections is their priority — top is highest. Drag one by its
      grip to change it. Sections can also be shown grouped by who owns them, each person's
      sections in their own priority order. */
-  if(!S.planGroup) S.planGroup=LS.get('plangroup','order')||'order';
+  /* the choice is kept with your board settings (your profile), so it follows you to any
+     browser or computer; the browser's own copy is only a fallback */
+  S.planGroup=(S.bset && S.bset.planGroup) || LS.get('plangroup','order') || 'order';
   const bar=el('div','pgbar');
   bar.appendChild(el('span','pgl','Show Sections'));
-  bar.appendChild(btnRow([{v:'order',n:'In Priority Order'},{v:'owner',n:'By Owner'}], S.planGroup, 'tiny', v=>{ S.planGroup=v; LS.set('plangroup', v); S.planForce=1; vPlans(root); }));
+  bar.appendChild(btnRow([{v:'order',n:'In Priority Order'},{v:'owner',n:'By Owner'}], S.planGroup, 'tiny', v=>{ S.planGroup=v; LS.set('plangroup', v); if(!S.bset) S.bset=JSON.parse(JSON.stringify(BSET_DEF)); S.bset.planGroup=v; saveMine(); S.planForce=1; vPlans(root); }));
   bar.appendChild(el('span','pgh','Drag a section to set its priority — the top is the highest.'));
   if(planSecs(p).length>1) root.appendChild(bar);
   /* a dragged set of sections keeps its slots in the plan; only their order changes */
