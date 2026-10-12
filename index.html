@@ -2679,6 +2679,21 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .psehd .dgrip:hover{background:var(--surface-3);color:var(--ink)}
 .psecs.sorting .psec > summary:hover{background:var(--surface-2)}
 @media (pointer:coarse){ .psec > summary .dgrip{opacity:.8;width:26px;height:32px} .psehd .dgrip{width:28px;height:32px} }
+/* Sync Up cards: grip on each card; cards move within a list or onto another */
+.syc .dgrip{flex:0 0 auto;width:16px;height:22px;margin:0 -4px 0 -5px;opacity:.35}
+.syc:hover .dgrip,.syc .dgrip:focus-visible{opacity:1}
+.syc .dgrip:hover{background:var(--surface-3);color:var(--ink)}
+.syc.dragging{background:var(--surface)}
+.sylb:empty{min-height:40px}
+@media (pointer:coarse){ .syc .dgrip{opacity:.8;width:24px;height:30px} }
+/* Sync Up lists: a grip in each list's heading */
+.sylhw{display:flex;align-items:center;border-bottom:1px solid var(--rule)}
+.sylhw .sylh{border-bottom:0;padding-left:4px}
+.sylhw .dgrip{flex:0 0 auto;width:18px;height:26px;margin-left:6px;opacity:.4}
+.sylist:hover .sylhw .dgrip,.sylhw .dgrip:focus-visible{opacity:1}
+.sylhw .dgrip:hover{background:var(--surface-3);color:var(--ink)}
+.sylist.dragging{box-shadow:0 0 0 2px var(--c1)!important}
+@media (pointer:coarse){ .sylhw .dgrip{opacity:.8;width:26px;height:32px} }
 
 /* ---------- Sponsorship Prospects: chosen parts ---------- */
 .spbars{display:flex;flex-direction:column;gap:6px}
@@ -10421,7 +10436,7 @@ function syStart(){
   }
 }
 function syRefresh(){
-  if(S.tab==='syncs'){ const r=$('#app-syncs'); if(r) vSyncs(r); }
+  if(S.tab==='syncs' && !S.dragSort){ const r=$('#app-syncs'); if(r) vSyncs(r); }
   if(S.tab==='mine' && !S.noteHold && !S.dragSort){ const a=document.activeElement; if(!(a && a.closest && a.closest('.mynote'))){ const r=$('#app-mine'); if(r) vMine(r); } }
 }
 
@@ -10630,10 +10645,14 @@ function sySpace(s){
 
   const grid=el('div','sylists');
   (s.lists||[]).forEach(L=> grid.appendChild(syList(s, L)));
+  /* Oct 12: drag a list by the grip in its heading to put the lists in a new order */
+  grid.__onSort=ids=>{ const q=syOf(s.id); if(!q) return; S.syForce=1; const by={}; (q.lists||[]).forEach(L=>{ by[L.id]=L; });
+    const ls=ids.map(id=>by[id]).filter(Boolean).concat((q.lists||[]).filter(L=>ids.indexOf(L.id)<0));
+    syPut('syncs', Object.assign({}, q, {lists:ls})); };
   if(!(s.lists||[]).length) grid.appendChild(emptyBox('No lists yet.','Click Add a List.'));
   body.appendChild(grid);
 
-  body.appendChild(syBoards(s));
+  /* Oct 12: On Everyone's Board taken off — the space is about its own cards */
   const logs=syItems(s.id,'log').sort((a,b)=> String(b.date||'').localeCompare(String(a.date||'')));
   const ld=el('details','syfold');
   ld.open=!!S.openSyncs[s.id+':log'];
@@ -10690,26 +10709,32 @@ function syBoards(s){
   return d;
 }
 function syList(s, L){
-  const box=el('div','sylist'); box.dataset.list=L.id;
+  const box=el('div','sylist'); box.dataset.list=L.id; box.dataset.sid=L.id;
   const cards=syItems(s.id).filter(c=>c.list===L.id);
+  const hw=el('div','sylhw'); hw.appendChild(dgrip('Drag to move this list'));
   const hd=el('button','sylh'); hd.type='button'; hd.title='List settings';
   hd.appendChild(el('span','syln', L.name||'List'));
   hd.appendChild(el('span','cnt', String(cards.filter(c=>!c.done).length)));
   hd.addEventListener('click', ()=> syListPanel(s.id, L.id));
-  box.appendChild(hd);
+  hw.appendChild(hd); box.appendChild(hw);
   const body=el('div','sylb');
   const sorted=cards.slice().sort((a,b)=> (a.done?1:0)-(b.done?1:0) || (a.ord||0)-(b.ord||0));
   sorted.forEach(c=> body.appendChild(syCardRow(s, c)));
   if(!cards.length) body.appendChild(el('div','syempty','Nothing here yet.'));
-  /* drag a card onto another list */
-  box.addEventListener('dragover', e=>{ if(S.syDrag){ e.preventDefault(); box.classList.add('over'); } });
-  box.addEventListener('dragleave', ()=> box.classList.remove('over'));
-  box.addEventListener('drop', e=>{
-    e.preventDefault(); box.classList.remove('over');
-    const c=syCard(S.syDrag); S.syDrag=null;
-    if(!c || c.list===L.id) return;
-    sySaveItem(c, {list:L.id, ord:syNextOrd(s.id, L.id)});
-  });
+  /* Oct 12: drag a card by its grip to put it higher or lower, or onto another list in
+     this space (dragsort.js; the lists share data-xgroup). The order on screen is saved. */
+  box.dataset.xhost='1';
+  body.dataset.xgroup='sy-'+s.id;
+  body.__onSort=(ids, moved)=>{
+    S.syForce=1;   /* redraw even if the add-a-card box still has focus */
+    const ch=[];
+    ids.forEach((id,i)=>{ const c=syCard(id); if(!c) return; const p={};
+      if((+c.ord||0)!==(i+1)*10) p.ord=(i+1)*10;
+      if(c.list!==L.id) p.list=L.id;
+      if(Object.keys(p).length) ch.push([c,p]); });
+    ch.forEach(([c,p])=> sySaveItem(c, p));
+    if(!ch.length) syRefresh();
+  };
   box.appendChild(body);
   const qa=el('div','quickadd syqa');
   qa.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>';
@@ -10729,9 +10754,8 @@ function syNextOrd(sid, lid){
 }
 function syCardRow(s, c){
   const row=el('div','syc'+(c.done?' done':'')+(S.syOpen===c.id && panelOpen()?' open':''));
-  row.draggable=true; row.dataset.cid=c.id; row.tabIndex=0; row.setAttribute('role','button');
-  row.addEventListener('dragstart', e=>{ S.syDrag=c.id; try{ e.dataTransfer.setData('text/plain', c.id); e.dataTransfer.effectAllowed='move'; }catch(x){} });
-  row.addEventListener('dragend', ()=>{ S.syDrag=null; });
+  row.dataset.cid=c.id; row.dataset.sid=c.id; row.tabIndex=0; row.setAttribute('role','button');
+  row.appendChild(dgrip('Drag to move this card, or onto another list'));
   const ck=el('button','pchk'+(c.done?' on':'')); ck.type='button';
   ck.innerHTML='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
   ck.title=c.done? 'Done — click to untick' : 'Tick it off'; ck.setAttribute('aria-label', ck.title);
@@ -10895,12 +10919,8 @@ function syListPanel(sid, lid){
     const acts=el('div','rowacts');
     if(!isNew){
       const lists=s.lists||[], i=lists.findIndex(x=>x.id===lid);
-      const mv=(dir)=>{ const ls=lists.slice(); const j=i+dir; if(j<0||j>=ls.length) return; const t=ls[i]; ls[i]=ls[j]; ls[j]=t;
-        syPut('syncs', Object.assign({}, s, {lists:ls})); closePanel(); };
-      const up=el('button','btn ghost sm','Move Earlier'); up.type='button'; up.disabled=i<=0; up.addEventListener('click', ()=>mv(-1));
-      const dn=el('button','btn ghost sm','Move Later'); dn.type='button'; dn.disabled=i>=lists.length-1; dn.addEventListener('click', ()=>mv(1));
-      acts.appendChild(up); acts.appendChild(dn);
-      const del=el('button','btn danger sm','Delete the List'); del.type='button';
+      /* lists are reordered by dragging their grip on the space itself (Oct 12) */
+      const del=el('button','btn danger','Delete the List'); del.type='button';
       const n=syItems(sid).filter(c=>c.list===lid).length;
       del.disabled = lists.length<=1;
       del.title = lists.length<=1 ? 'A space keeps at least one list' : '';
@@ -13723,10 +13743,11 @@ function dgrip(label){
 }
 /* the new order of what is on screen, merged into the whole list (the board's Note Wall
    panel shows only the first eight), then saved where it changed */
-function sortCommit(item){
+function sortCommit(item, from){
   const box=item.parentElement; if(!box) return;
-  /* a list that handles its own order (plan sections) */
-  if(box.__onSort){ box.__onSort([...box.children].filter(x=>x.dataset && x.dataset.sid).map(x=>x.dataset.sid)); return; }
+  /* a list that handles its own order (plan sections, Sync Up cards — which can also
+     arrive from another list in the same space) */
+  if(box.__onSort){ box.__onSort([...box.children].filter(x=>x.dataset && x.dataset.sid).map(x=>x.dataset.sid), item.dataset.sid, from); return; }
   /* a plan checklist: the order on screen becomes the order, and an item dropped under
      another heading joins that group ("By the End of This Phase" marks the must-dos) */
   if(item.dataset.psec){
@@ -13776,21 +13797,33 @@ function sortCommit(item){
     e.preventDefault();
     if(!drag.moved){ drag.moved=true; drag.item.classList.add('dragging'); drag.box.classList.add('sorting'); }
     const over=document.elementFromPoint(e.clientX, e.clientY);
-    /* the nearest row in the same list (a section can be dropped over the items inside another) */
+    /* lists that share a data-xgroup (the lists of one Sync Up space) take each other's rows */
+    const G=drag.box.dataset && drag.box.dataset.xgroup;
+    const okBox=b=> b===drag.box || (!!G && !!b && !!b.dataset && b.dataset.xgroup===G);
+    /* the nearest row in a list it may go into (a section can be dropped over the items inside another) */
     let t=over && over.closest && over.closest('[data-sid]');
-    while(t && t.parentElement!==drag.box){ const up=t.parentElement; t=up && up.closest('[data-sid]'); }
-    if(!t || t===drag.item) return;
-    const kids=[...drag.box.children], a=kids.indexOf(drag.item), b=kids.indexOf(t);
-    drag.box.insertBefore(drag.item, a<b? t.nextSibling : t);
+    while(t && !okBox(t.parentElement)){ const up=t.parentElement; t=up && up.closest('[data-sid]'); }
+    const cur=drag.item.parentElement;
+    if(t && t!==drag.item){
+      const box=t.parentElement;
+      if(box===cur){ const kids=[...box.children], a=kids.indexOf(drag.item), b=kids.indexOf(t); box.insertBefore(drag.item, a<b? t.nextSibling : t); }
+      else { const r=t.getBoundingClientRect(); box.insertBefore(drag.item, e.clientY < r.top+r.height/2 ? t : t.nextSibling); }
+      return;
+    }
+    /* over another list but not over a card in it (an empty list, its heading): onto its end */
+    if(!t && G && over && over.closest){ const host=over.closest('[data-xhost]'); const ob=host && host.querySelector('[data-xgroup="'+G+'"]');
+      if(ob && ob!==cur){ const em=ob.querySelector('.syempty'); if(em) em.remove(); ob.appendChild(drag.item); } }
   }, true);
   const end=e=>{
     if(!drag || (e && e.pointerId!==drag.id)) return;
     const d=drag; drag=null;
     d.item.classList.remove('dragging'); d.box.classList.remove('sorting');
     S.dragSort=0;
-    const now=[...d.box.children].indexOf(d.item);
+    const moved=d.item.parentElement!==d.box;
+    const now=[...d.item.parentElement.children].indexOf(d.item);
     if(d.moved) d.item.dataset.justDragged='1';
-    if(now!==d.start) sortCommit(d.item);
+    document.querySelectorAll('.sorting').forEach(x=> x.classList.remove('sorting'));
+    if(moved || now!==d.start) sortCommit(d.item, d.box);
     else if(S.pendRender){ S.pendRender=0; renderAll(); }
   };
   document.addEventListener('pointerup', end, true);
