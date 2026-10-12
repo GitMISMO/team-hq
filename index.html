@@ -2177,6 +2177,17 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .attview iframe{width:100%;height:68vh;border:1px solid var(--rule);border-radius:4px;background:#fff}
 @media(max-width:620px){.attrow{flex-wrap:wrap}.attopen{flex:1 1 100%}}
 .aginfo{min-height:180px;resize:vertical;line-height:1.55}
+/* each list folds on its own (Oct 12): a folded list keeps its column and shrinks to its
+   heading; the lists beside it keep their own height */
+.sylists{align-items:start}
+.sylfold{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;margin-left:2px;border:0;border-radius:4px;background:none;color:var(--ink-3);cursor:pointer;padding:0}
+.sylfold svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;transform:rotate(90deg);transition:transform .15s}
+.sylist.shut .sylfold svg{transform:none}
+.sylfold:hover{background:var(--surface-3);color:var(--ink)}
+.sylfold:focus-visible{outline:2px solid var(--c1);outline-offset:1px}
+.sylist.shut .sylb,.sylist.shut .syqa{display:none}
+.sylist.shut .sylhw{border-bottom:0}
+@media (prefers-reduced-motion:reduce){.sylfold svg{transition:none}}
 
 /* ---------- expenses: snap a receipt ---------- */
 .rcpt .ph{background:none;border-bottom:0;padding:0;justify-content:center}
@@ -10711,7 +10722,24 @@ function syBoards(s){
 function syList(s, L){
   const box=el('div','sylist'); box.dataset.list=L.id; box.dataset.sid=L.id;
   const cards=syItems(s.id).filter(c=>c.list===L.id);
+  /* Oct 12: each list folds on its own, and stays folded for this person on any computer
+     (kept with their board settings). A folded list keeps its place and its width. */
+  const shutMap=(S.bset && S.bset.syShut) || {};
+  const shut=!!shutMap[L.id];
+  if(shut) box.classList.add('shut');
   const hw=el('div','sylhw'); hw.appendChild(dgrip('Drag to move this list'));
+  const fb=el('button','sylfold'); fb.type='button';
+  fb.setAttribute('aria-expanded', String(!shut)); fb.title=shut? 'Open this list' : 'Fold this list';
+  fb.setAttribute('aria-label', (shut? 'Open ' : 'Fold ')+(L.name||'list'));
+  fb.innerHTML='<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
+  fb.addEventListener('click', e=>{ e.stopPropagation();
+    if(!S.bset) S.bset=JSON.parse(JSON.stringify(BSET_DEF));
+    const m=Object.assign({}, S.bset.syShut||{}); if(m[L.id]) delete m[L.id]; else m[L.id]=1;
+    S.bset.syShut=m; saveMine();
+    const now=!!m[L.id]; box.classList.toggle('shut', now);
+    fb.setAttribute('aria-expanded', String(!now)); fb.title=now? 'Open this list' : 'Fold this list';
+    fb.setAttribute('aria-label', (now? 'Open ' : 'Fold ')+(L.name||'list')); });
+  hw.appendChild(fb);
   const hd=el('button','sylh'); hd.type='button'; hd.title='List settings';
   hd.appendChild(el('span','syln', L.name||'List'));
   hd.appendChild(el('span','cnt', String(cards.filter(c=>!c.done).length)));
