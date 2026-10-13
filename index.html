@@ -2190,6 +2190,19 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 @media (prefers-reduced-motion:reduce){.sylfold svg{transition:none}}
 /* lists stack in their own columns (syMasonry); each list hugs its content */
 .sylists > .sylist{align-self:start}
+/* Oct 13: spaces stand out from what is inside them — a stronger heading band with a navy
+   edge, a larger name, more room between spaces — and each has a grip to reorder them */
+.syspaces{gap:20px}
+.syspace{border:1px solid var(--border-strong,var(--border));box-shadow:0 1px 3px rgba(6,32,47,.08)}
+.syspace > summary{padding:14px 18px;background:color-mix(in srgb,var(--c1) 9%,var(--surface));box-shadow:inset 4px 0 0 var(--c1)}
+.syspace > summary:hover{background:color-mix(in srgb,var(--c1) 14%,var(--surface))}
+.syspace > summary .pst{font-size:16.5px;font-weight:700;letter-spacing:-.005em}
+.syspace > summary .pst small{font-size:12.5px;margin-top:2px}
+.syspace[open] > summary{border-bottom:1px solid var(--border)}
+.syspace > summary .dgrip{flex:0 0 auto;width:18px;height:26px;margin:0 -6px 0 -8px;opacity:.45}
+.syspace > summary:hover .dgrip,.syspace > summary .dgrip:focus-visible{opacity:1}
+.syspace > summary .dgrip:hover{background:var(--surface);color:var(--ink)}
+@media (pointer:coarse){ .syspace > summary .dgrip{opacity:.8;width:26px;height:32px} }
 
 /* ---------- expenses: snap a receipt ---------- */
 .rcpt .ph{background:none;border-bottom:0;padding:0;justify-content:center}
@@ -9493,10 +9506,14 @@ function planView(root, p){
      sections in their own priority order. */
   /* the choice is kept with your board settings (your profile), so it follows you to any
      browser or computer; the browser's own copy is only a fallback */
-  S.planGroup=(S.bset && S.bset.planGroup) || LS.get('plangroup','order') || 'order';
+  /* Oct 13: each plan keeps its own choice (S.bset.planGroups[plan id]); a plan never set
+     falls back to the last choice made anywhere, then In Priority Order */
+  const pg=(S.bset && S.bset.planGroups) || {};
+  S.planGroup=pg[p.id] || (S.bset && S.bset.planGroup) || 'order';
   const bar=el('div','pgbar');
   bar.appendChild(el('span','pgl','Show Sections'));
-  bar.appendChild(btnRow([{v:'order',n:'In Priority Order'},{v:'owner',n:'By Owner'}], S.planGroup, 'tiny', v=>{ S.planGroup=v; LS.set('plangroup', v); if(!S.bset) S.bset=JSON.parse(JSON.stringify(BSET_DEF)); S.bset.planGroup=v; saveMine(); S.planForce=1; vPlans(root); }));
+  bar.appendChild(btnRow([{v:'order',n:'In Priority Order'},{v:'owner',n:'By Owner'}], S.planGroup, 'tiny', v=>{ S.planGroup=v; if(!S.bset) S.bset=JSON.parse(JSON.stringify(BSET_DEF));
+    S.bset.planGroups=Object.assign({}, S.bset.planGroups||{}); S.bset.planGroups[p.id]=v; saveMine(); S.planForce=1; vPlans(root); }));
   bar.appendChild(el('span','pgh','Drag a section to set its priority — the top is the highest.'));
   if(planSecs(p).length>1) root.appendChild(bar);
   /* a dragged set of sections keeps its slots in the plan; only their order changes */
@@ -10622,18 +10639,26 @@ function vSyncs(root){
       : 'Click Start a Space to set one up.'));
     root.appendChild(bx); return;
   }
-  const wrap=el('div','psecs');
-  mine.forEach(s=> wrap.appendChild(sySpace(s)));
+  /* Oct 13: each person puts their spaces in their own order by dragging the grip on a
+     space's heading; the order is kept with their board settings */
+  const ord=(S.bset && S.bset.syOrder) || [];
+  const rank=x=>{ const i=ord.indexOf(x.id); return i<0? 1e6 : i; };
+  const sorted=mine.map((x,i)=>[x,i]).sort((a,b)=> (rank(a[0])-rank(b[0])) || (a[1]-b[1])).map(x=>x[0]);
+  const wrap=el('div','psecs syspaces');
+  sorted.forEach(s=> wrap.appendChild(sySpace(s)));
+  wrap.__onSort=ids=>{ if(!S.bset) S.bset=JSON.parse(JSON.stringify(BSET_DEF));
+    S.bset.syOrder=ids; saveMine(); S.syForce=1; syRefresh(); };
   root.appendChild(wrap);
   if(S.syQA){ const q=root.querySelector('input[data-syqa="'+S.syQA+'"]'); S.syQA=null; if(q) q.focus(); }
 }
 
 function sySpace(s){
-  const d=el('details','psec syspace');
+  const d=el('details','psec syspace'); d.dataset.sid=s.id;
   d.open=!!S.openSyncs[s.id];
   d.addEventListener('toggle', ()=>{ S.openSyncs[s.id]=d.open; });
   const sm=el('summary');
   sm.innerHTML='<svg class="caret" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
+  sm.appendChild(dgrip('Drag to move this space'));
   const tt=el('span','pst'); tt.appendChild(document.createTextNode(s.name||'Sync Up'));
   const others=(s.members||[]).filter(m=>m!==syMe());
   tt.appendChild(el('small',null, (others.length? 'With '+others.map(syFirst).join(', ') : 'Just you')+' · '+syWhen(s)));
