@@ -2895,6 +2895,19 @@ html{scrollbar-color:var(--border-strong) var(--ground)}
 .rte.mynote-x{padding:0;min-height:0;resize:none;border:1px solid var(--border-strong)}
 .mynote-ed .rte.mynote-x .rtx{min-height:340px}
 .mpedit .rte.mynote-x .rtx{min-height:110px}
+/* links in notes */
+.rtx a,.rtv a{color:var(--c1);text-decoration:underline;text-underline-offset:2px}
+:root[data-theme="dark"] .rtx a,:root[data-theme="dark"] .rtv a{color:var(--sky,#74bfeb)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .rtx a,:root:not([data-theme="light"]) .rtv a{color:var(--sky,#74bfeb)}}
+.rtpop.rtlinkpop{width:320px;gap:8px}
+.rtf{display:flex;flex-direction:column;gap:3px;font-size:12px;font-weight:600;color:var(--ink-2)}
+.rtf input{font:inherit;font-size:13px;font-weight:400;padding:6px 8px;border:1px solid var(--border-strong);border-radius:5px;background:var(--surface);color:var(--ink)}
+.rtf input:focus{outline:2px solid var(--c1);outline-offset:0;border-color:var(--c1)}
+.rtmsg{font-size:12px;color:var(--rt-red)}
+.rtmsg:empty{display:none}
+.rtrow{display:flex;align-items:center;gap:6px}
+.rtrow .spacer{flex:1}
+.rtrow .btn{white-space:nowrap;min-width:max-content;text-decoration:none}
 
 #rs-account{flex:0 0 auto;display:inline-flex;align-items:center}
 #rs-account .rs-who,#rs-account .rs-signin{border-radius:4px}
@@ -9230,9 +9243,19 @@ async function runPlan(w, out, go){
    they read well in light and dark. */
 const RT_COLORS=[{k:'blue',n:'Blue'},{k:'green',n:'Green'},{k:'orange',n:'Orange'},{k:'red',n:'Red'},{k:'purple',n:'Purple'},{k:'gray',n:'Gray'}];
 const RT_MARKS=[{k:'yellow',n:'Yellow'},{k:'green',n:'Green'},{k:'blue',n:'Blue'},{k:'pink',n:'Pink'}];
-const RT_TAGS={B:1,STRONG:1,I:1,EM:1,U:1,S:1,STRIKE:1,DEL:1,SPAN:1,UL:1,OL:1,LI:1,TABLE:1,THEAD:1,TBODY:1,TR:1,TD:1,TH:1,BR:1,P:1,DIV:1};
+const RT_TAGS={A:1,B:1,STRONG:1,I:1,EM:1,U:1,S:1,STRIKE:1,DEL:1,SPAN:1,UL:1,OL:1,LI:1,TABLE:1,THEAD:1,TBODY:1,TR:1,TD:1,TH:1,BR:1,P:1,DIV:1};
 const RT_DROP={SCRIPT:1,STYLE:1,IFRAME:1,OBJECT:1,EMBED:1,LINK:1,META:1,TITLE:1,HEAD:1,SVG:1,MATH:1,TEMPLATE:1,NOSCRIPT:1,XML:1};
-const RT_RX=/<\/?(b|strong|i|em|u|s|strike|del|span|ul|ol|li|table|thead|tbody|tr|td|th|br|p|div)\b/i;
+const RT_RX=/<\/?(a|b|strong|i|em|u|s|strike|del|span|ul|ol|li|table|thead|tbody|tr|td|th|br|p|div)\b/i;
+/* a link's address, made safe and complete: web, email and phone only; "mismo.org/x"
+   becomes https://mismo.org/x and "name@mismo.org" becomes mailto:. Anything else
+   (javascript:, data:, file:) is refused. */
+function rtUrl(u){
+  let s=String(u||'').trim(); if(!s) return '';
+  if(/^(https?:|mailto:|tel:)/i.test(s)) return /^(https?:\/\/[^\s<>"]+|mailto:[^\s<>"]+|tel:[+\d\s().-]+)$/i.test(s)? s : '';
+  if(/^[^\s@<>"]+@[^\s@<>"]+\.[a-z]{2,}$/i.test(s)) return 'mailto:'+s;
+  if(/^(www\.)?[a-z0-9-]+(\.[a-z0-9-]+)+([/?#][^\s<>"]*)?$/i.test(s)) return 'https://'+s;
+  return '';
+}
 function rtIsHTML(v){ return RT_RX.test(String(v||'')); }
 function rtClean(html){
   const doc=new DOMParser().parseFromString('<div>'+String(html||'')+'</div>', 'text/html');
@@ -9247,7 +9270,10 @@ function rtClean(html){
       if(!RT_TAGS[t]){ while(c.firstChild) n.insertBefore(c.firstChild, c); c.remove(); return; }
       const keepCls=(c.getAttribute('class')||'').split(/\s+/).filter(x=>/^rt-[ch]-[a-z]+$/.test(x)||x==='rt-t');
       const span=(t==='TD'||t==='TH')? [c.getAttribute('colspan'), c.getAttribute('rowspan')] : null;
+      const href=t==='A'? rtUrl(c.getAttribute('href')) : '';
       [...c.attributes].forEach(a=> c.removeAttribute(a.name));
+      if(t==='A'){ if(!href){ while(c.firstChild) n.insertBefore(c.firstChild, c); c.remove(); return; }
+        c.setAttribute('href', href); c.setAttribute('target','_blank'); c.setAttribute('rel','noopener noreferrer'); }
       if(keepCls.length) c.setAttribute('class', keepCls.join(' '));
       if(span){ if(/^\d{1,2}$/.test(span[0]||'')) c.setAttribute('colspan', span[0]); if(/^\d{1,2}$/.test(span[1]||'')) c.setAttribute('rowspan', span[1]); }
       if(t==='TABLE') c.setAttribute('class','rt-t');
@@ -9290,6 +9316,8 @@ function rtText(v){
    open color or table menu closes on a click anywhere else */
 let RT_POP=null;
 document.addEventListener('selectionchange', ()=>{ const a=document.activeElement; if(a && a.classList && a.classList.contains('rtx') && a._sel) a._sel(); });
+/* Escape closes an open color, table or link menu — and only that, not the side panel */
+document.addEventListener('keydown', e=>{ if(e.key==='Escape' && RT_POP){ e.preventDefault(); e.stopImmediatePropagation(); RT_POP.shut(); } }, true);
 document.addEventListener('mousedown', e=>{ if(RT_POP && !RT_POP.el.contains(e.target) && !(RT_POP.el._for && RT_POP.el._for.contains(e.target))) RT_POP.shut(); });
 /* the box itself */
 function rtEditor(val, ph, rows){
@@ -9350,7 +9378,8 @@ function rtEditor(val, ph, rows){
     ul:'<svg viewBox="0 0 24 24"><circle cx="5" cy="7" r="1.4"/><circle cx="5" cy="12" r="1.4"/><circle cx="5" cy="17" r="1.4"/><path d="M9 7h11M9 12h11M9 17h11"/></svg>',
     ol:'<svg viewBox="0 0 24 24"><path d="M9 7h11M9 12h11M9 17h11"/><text x="2.5" y="9" font-size="6.5" font-family="inherit" fill="currentColor" stroke="none">1</text><text x="2.5" y="14.2" font-size="6.5" fill="currentColor" stroke="none">2</text><text x="2.5" y="19.4" font-size="6.5" fill="currentColor" stroke="none">3</text></svg>',
     table:'<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="1.5"/><path d="M3.5 10h17M3.5 14.5h17M9.5 5v14M15 5v14"/></svg>',
-    clear:'<svg viewBox="0 0 24 24"><path d="M6 6h12M12 6l-3 12M4 20l16-16" /></svg>'
+    clear:'<svg viewBox="0 0 24 24"><path d="M6 6h12M12 6l-3 12M4 20l16-16" /></svg>',
+    link:'<svg viewBox="0 0 24 24"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1.2 1.2"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2"/></svg>'
   };
   const st={};
   st.b=B('<b>B</b>','Bold (Ctrl+B)', ()=>cmd('bold'));
@@ -9419,6 +9448,44 @@ function rtEditor(val, ph, rows){
     p.appendChild(g); p.appendChild(lab);
   }));
   sep();
+  /* links: select words and add an address, or add a link with its own words */
+  const linkAt=()=>{ const s=getSelection(); const n=s.anchorNode && (s.anchorNode.nodeType===1? s.anchorNode : s.anchorNode.parentElement); const a=n && n.closest && n.closest('a'); return a && ed.contains(a)? a : null; };
+  B(ICON.link,'Link (Ctrl+K)', b=> linkMenu(b), 'rtlink');
+  const linkMenu=b=> menu(b, p=>{
+    const a=linkAt(); const s=getSelection(); const selTxt=(saved && !saved.collapsed)? saved.toString() : '';
+    p.classList.add('rtlinkpop');
+    p.appendChild(el('div','rtpt', a? 'Edit the Link' : 'Add a Link'));
+    const f1=el('label','rtf'); f1.appendChild(el('span',null,'Text to Show'));
+    const iT=el('input'); iT.type='text'; iT.value= a? a.textContent : selTxt; iT.placeholder='The words people click'; f1.appendChild(iT); p.appendChild(f1);
+    const f2=el('label','rtf'); f2.appendChild(el('span',null,'Address'));
+    const iU=el('input'); iU.type='text'; iU.value= a? a.getAttribute('href').replace(/^mailto:/,'') : ''; iU.placeholder='https://… or an email address'; f2.appendChild(iU); p.appendChild(f2);
+    const msg=el('div','rtmsg'); p.appendChild(msg);
+    const row=el('div','rtrow');
+    if(a){ const rm=el('button','btn ghost sm','Remove Link'); rm.type='button';
+      rm.addEventListener('click', ()=>{ shut(); a.replaceWith(...a.childNodes); keep(); fire(); ed.focus(); });
+      row.appendChild(rm);
+      const op=el('a','btn ghost sm','Open'); op.href=a.href; op.target='_blank'; op.rel='noopener noreferrer'; row.appendChild(op); }
+    row.appendChild(el('span','spacer'));
+    const ok=el('button','btn sm', a? 'Save Link' : 'Add the Link'); ok.type='button';
+    const go=()=>{
+      const url=rtUrl(iU.value); if(!url){ msg.textContent='That address does not look right. Start it with https://, or type an email address.'; iU.focus(); return; }
+      const txt=iT.value.trim() || iU.value.trim();
+      shut();
+      if(a){ a.setAttribute('href', url); if(a.textContent!==txt) a.textContent=txt; }
+      else {
+        back();
+        const s2=getSelection(), r=s2.rangeCount? s2.getRangeAt(0) : null;
+        const na=document.createElement('a'); na.href=url; na.target='_blank'; na.rel='noopener noreferrer';
+        if(r && !r.collapsed && r.toString()===txt){ try{ r.surroundContents(na); }catch(x){ na.appendChild(r.extractContents()); r.insertNode(na); } }
+        else { na.textContent=txt; if(r){ r.deleteContents(); r.insertNode(na); } else ed.appendChild(na); }
+        const rg=document.createRange(); rg.setStartAfter(na); rg.collapse(true); s2.removeAllRanges(); s2.addRange(rg);
+      }
+      keep(); fire(); ed.focus(); };
+    ok.addEventListener('click', go);
+    [iT,iU].forEach(x=> x.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); go(); } if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); shut(); ed.focus(); } }));
+    row.appendChild(ok); p.appendChild(row);
+    setTimeout(()=> (a || selTxt? iU : iT).focus(), 0);
+  });
   B(ICON.clear,'Clear Formatting', ()=>{ back(); document.execCommand('removeFormat');
     const s=getSelection(); if(s.rangeCount){ ed.querySelectorAll('[class*="rt-c-"],[class*="rt-h-"]').forEach(n=>{ if(s.containsNode(n, true)){ [...n.classList].forEach(c=>{ if(/^rt-[ch]-/.test(c)) n.classList.remove(c); }); } }); }
     keep(); fire(); });
@@ -9430,6 +9497,19 @@ function rtEditor(val, ph, rows){
 
   /* Tab moves along a table and nests a bullet; pasted text keeps only what notes allow */
   ed.addEventListener('keydown', e=>{
+    if((e.ctrlKey||e.metaKey) && (e.key==='k'||e.key==='K')){ e.preventDefault(); keep(); linkMenu(bar.querySelector('.rtlink')); return; }
+    /* a web or email address typed into the note turns into a link when you press space or Enter */
+    if(e.key===' ' || e.key==='Enter'){
+      const s=getSelection(); const tn=s.anchorNode;
+      if(s.isCollapsed && tn && tn.nodeType===3 && ed.contains(tn) && !(tn.parentElement && tn.parentElement.closest('a'))){
+        const before=tn.nodeValue.slice(0, s.anchorOffset), m=before.match(/(?:^|\s)((?:https?:\/\/|www\.)[^\s<>"]+|[^\s@<>"]+@[^\s@<>"]+\.[a-z]{2,})$/i);
+        const url=m && rtUrl(m[1].replace(/[.,;:!?)]+$/,''));
+        if(url){ const word=m[1].replace(/[.,;:!?)]+$/,''), start=before.length-m[1].length;
+          const rg=document.createRange(); rg.setStart(tn, start); rg.setEnd(tn, start+word.length);
+          const na=document.createElement('a'); na.href=url; na.target='_blank'; na.rel='noopener noreferrer';
+          rg.surroundContents(na); const after=document.createRange(); after.setStartAfter(na); after.collapse(true); s.removeAllRanges(); s.addRange(after); fire(); }
+      }
+    }
     /* Enter: the new line starts with bold, italic, underline and strike just as they were
        before Enter — the browser would otherwise copy them from the line above */
     if(e.key==='Enter' && !e.shiftKey){
@@ -9451,10 +9531,18 @@ function rtEditor(val, ph, rows){
     const cd=e.clipboardData; if(!cd) return;
     const h=cd.getData('text/html'), t=cd.getData('text/plain');
     e.preventDefault();
+    const sel=getSelection(), pu=rtUrl(t);
+    if(pu && !h.replace(/<[^>]*>/g,'').trim().includes(' ') && sel.rangeCount && !sel.isCollapsed && /^\S+$/.test(String(t).trim())){
+      const r=sel.getRangeAt(0); const na=document.createElement('a'); na.href=pu; na.target='_blank'; na.rel='noopener noreferrer';
+      try{ r.surroundContents(na); }catch(x){ na.appendChild(r.extractContents()); r.insertNode(na); }
+      fire(); return; }
+    if(pu && /^\S+$/.test(String(t).trim()) && !h){ document.execCommand('insertHTML', false, '<a href="'+pu.replace(/"/g,'&quot;')+'" target="_blank" rel="noopener noreferrer">'+String(t).trim().replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))+'</a>&nbsp;'); fire(); return; }
     if(h) document.execCommand('insertHTML', false, rtClean(h));
     else document.execCommand('insertText', false, t||'');
     fire();
   });
+  ed.addEventListener('click', e=>{ const a=e.target.closest && e.target.closest('a'); if(a && (e.ctrlKey||e.metaKey)){ e.preventDefault(); window.open(a.href, '_blank', 'noopener'); } });
+  ed.addEventListener('mouseover', e=>{ const a=e.target.closest && e.target.closest('a'); if(a && !a.title) a.title=a.getAttribute('href').replace(/^mailto:/,'')+' — Ctrl+click to open'; });
   w.appendChild(bar); w.appendChild(ed);
   paintEmpty();
   return w;
