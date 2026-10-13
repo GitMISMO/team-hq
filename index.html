@@ -2188,6 +2188,8 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .sylist.shut .sylb,.sylist.shut .syqa{display:none}
 .sylist.shut .sylhw{border-bottom:0}
 @media (prefers-reduced-motion:reduce){.sylfold svg{transition:none}}
+/* lists stack in their own columns (syMasonry); each list hugs its content */
+.sylists > .sylist{align-self:start}
 
 /* ---------- expenses: snap a receipt ---------- */
 .rcpt .ph{background:none;border-bottom:0;padding:0;justify-content:center}
@@ -10662,6 +10664,7 @@ function sySpace(s){
     syPut('syncs', Object.assign({}, q, {lists:ls})); };
   if(!(s.lists||[]).length) grid.appendChild(emptyBox('No lists yet.','Click Add a List.'));
   body.appendChild(grid);
+  syMasonry(grid);
 
   /* Oct 12: On Everyone's Board taken off — the space is about its own cards */
   const logs=syItems(s.id,'log').sort((a,b)=> String(b.date||'').localeCompare(String(a.date||'')));
@@ -11296,6 +11299,38 @@ async function newNotePanel(L, done){
   L.push({r:[newPanel({t:'mynote', k:n.id}, L)]}); done();
 }
 window.__notes = {widget:noteWidget, notesIn:notesIn, put:o=>syPut('syncitems',o), card:syCard, me:syMe};
+
+
+/* Oct 13: lists sit in columns that stack on their own. Opening a list pushes down only
+   the lists under it in the same column, never a list in another column. Lists still read
+   left to right (list 1, 2, 3, 4 across the top, 5 under 1 …) and stay plain children of
+   one box, so dragging them keeps working. Each list is placed on a fine 4px grid: its
+   column is its position across, its row is wherever that column's stack ends. Redone
+   whenever a list changes height, the space changes width, or the lists are reordered. */
+function syMasonry(g){
+  const U=4, GAP=12, MIN=240;
+  let raf=0, seen=false;
+  const lay=()=>{ raf=0;
+    /* built before it is on the page: wait for it; once it has left the page for good, stop */
+    if(!g.isConnected){ if(seen){ ro.disconnect(); mo.disconnect(); } else soon(); return; }
+    seen=true;
+    const cs=getComputedStyle(g), cw=g.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
+    const kids=[...g.children];
+    const N=Math.max(1, Math.min(kids.length||1, Math.floor((cw+GAP)/(MIN+GAP))));
+    g.style.gridTemplateColumns='repeat('+Math.max(N, Math.floor((cw+GAP)/(MIN+GAP))||1)+', minmax(0,1fr))';
+    g.style.gridAutoRows=U+'px'; g.style.rowGap='0'; g.style.columnGap=GAP+'px';
+    const colH=new Array(N).fill(0);
+    kids.forEach((k,i)=>{ const c=i%N; const h=k.getBoundingClientRect().height;
+      const span=Math.max(1, Math.ceil((h+GAP)/U));
+      k.style.gridColumn=String(c+1); k.style.gridRow=(colH[c]+1)+' / span '+span; colH[c]+=span; });
+  };
+  const soon=()=>{ if(!raf) raf=requestAnimationFrame(lay); };
+  const ro=new ResizeObserver(soon);
+  const watch=()=>{ ro.observe(g); [...g.children].forEach(k=> ro.observe(k)); };
+  const mo=new MutationObserver(()=>{ watch(); soon(); });
+  mo.observe(g, {childList:true});
+  watch(); soon();
+}
 
 /* ============ ATTACHMENTS ============
    Files on a task, a plan item or a Sync Ups card, and the receipt on an expense.
