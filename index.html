@@ -2203,6 +2203,24 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .syspace > summary:hover .dgrip,.syspace > summary .dgrip:focus-visible{opacity:1}
 .syspace > summary .dgrip:hover{background:var(--surface);color:var(--ink)}
 @media (pointer:coarse){ .syspace > summary .dgrip{opacity:.8;width:26px;height:32px} }
+/* list names edit in place (Oct 14) */
+.sylh{cursor:default}
+.sylh:hover{background:none}
+.syln{cursor:text;border-radius:4px;padding:2px 4px;margin:-2px -4px}
+.syln:hover{background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--border)}
+.syln:focus-visible{outline:2px solid var(--c1);outline-offset:1px}
+.sylnin{flex:1 1 auto;min-width:0;font:inherit;font-weight:700;font-size:13.5px;padding:3px 6px;margin:-3px 0;border:1px solid var(--c1);border-radius:4px;background:var(--surface);color:var(--ink);outline:2px solid color-mix(in srgb,var(--c1) 25%,transparent)}
+.syldel{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 4px;border:1px solid transparent;border-radius:4px;background:none;color:var(--ink-3);cursor:pointer;opacity:0;font:inherit;font-size:11.5px;font-weight:700;white-space:nowrap}
+.syldel svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.sylist:hover .syldel,.syldel:focus-visible,.syldel.arm{opacity:1}
+.syldel:hover:not(:disabled){background:var(--surface-2);color:var(--bad,#b42318)}
+.syldel.arm{color:#fff;background:var(--bad,#b42318);border-color:var(--bad,#b42318);padding:0 8px}
+.syldel:disabled{cursor:not-allowed}
+.sylist:hover .syldel:disabled{opacity:.35}
+@media (pointer:coarse){ .syldel{opacity:.7} }
+.syldc{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-bottom:1px solid var(--rule);background:color-mix(in srgb,var(--bad,#b42318) 8%,var(--surface));font-size:12.5px;color:var(--ink)}
+.syldcb{display:flex;justify-content:flex-end;gap:6px}
+.syldcb .btn{white-space:nowrap;min-width:max-content}
 
 /* ---------- expenses: snap a receipt ---------- */
 .rcpt .ph{background:none;border-bottom:0;padding:0;justify-content:center}
@@ -11066,7 +11084,9 @@ function sySpace(s){
   const bar=el('div','sybar');
   const mk=(txt, fn, cls)=>{ const b=el('button','btn '+(cls||'ghost')+' sm', txt); b.type='button'; b.addEventListener('click', fn); bar.appendChild(b); return b; };
   mk('Log This Week’s Sync', ()=> syLogPanel(s.id, null), 'sm');
-  mk('Add a List', ()=> syListPanel(s.id, null));
+  /* a new list goes on the end, named "New List", with its name ready to type over */
+  mk('Add a List', ()=>{ const q=syOf(s.id)||s; const id=uid('ls'); S.syRenameList=id; S.syForce=1; S.openSyncs[s.id]=true;
+    syPut('syncs', Object.assign({}, q, {lists:(q.lists||[]).concat([{id:id, name:'New List'}])})); });
   mk('Space Settings', ()=> sySpacePanel(s.id));
   body.appendChild(bar);
 
@@ -11157,10 +11177,49 @@ function syList(s, L){
     fb.setAttribute('aria-expanded', String(!now)); fb.title=now? 'Open this list' : 'Fold this list';
     fb.setAttribute('aria-label', (now? 'Open ' : 'Fold ')+(L.name||'list')); });
   hw.appendChild(fb);
-  const hd=el('button','sylh'); hd.type='button'; hd.title='List settings';
-  hd.appendChild(el('span','syln', L.name||'List'));
+  /* Oct 14: the list's name is edited right on the list — click it, type, press Enter
+     (or click away) to keep it, Escape to leave it as it was. No side panel. */
+  const hd=el('div','sylh');
+  const nm=el('span','syln', L.name||'List'); nm.tabIndex=0; nm.setAttribute('role','button'); nm.title='Click to rename this list';
+  hd.appendChild(nm);
   hd.appendChild(el('span','cnt', String(cards.filter(c=>!c.done).length)));
-  hd.addEventListener('click', ()=> syListPanel(s.id, L.id));
+  const lists=s.lists||[];
+  const del=el('button','syldel'); del.type='button'; del.title= lists.length<=1? 'A space keeps at least one list' : 'Delete this list';
+  del.setAttribute('aria-label','Delete the list '+(L.name||'')); del.disabled=lists.length<=1;
+  del.innerHTML='<svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/></svg>';
+  /* deleting asks first, on a line of its own under the heading */
+  del.addEventListener('click', e=>{ e.stopPropagation(); if(lists.length<=1) return;
+    const old=box.querySelector('.syldc'); if(old){ old.remove(); return; }
+    const to=lists.find(x=>x.id!==L.id), n=cards.length;
+    const cf=el('div','syldc');
+    cf.appendChild(el('span',null, 'Delete this list?'+(n? ' Its '+n+(n===1?' card moves':' cards move')+' to '+(to.name||'the next list')+'.' : '')));
+    const yes=el('button','btn danger sm','Delete'); yes.type='button';
+    const no=el('button','btn ghost sm','Keep It'); no.type='button';
+    no.addEventListener('click', ()=> cf.remove());
+    yes.addEventListener('click', ()=>{ S.syForce=1;
+      cards.forEach(c=> sySaveItem(c, {list:to.id, ord:syNextOrd(s.id, to.id)}));
+      const q=syOf(s.id)||s; syPut('syncs', Object.assign({}, q, {lists:(q.lists||[]).filter(x=>x.id!==L.id)}));
+      toast('List deleted.'); });
+    const r=el('div','syldcb'); r.appendChild(no); r.appendChild(yes); cf.appendChild(r);
+    hw.after(cf); });
+  hd.appendChild(del);
+  const rename=()=>{
+    const ip=el('input','sylnin'); ip.type='text'; ip.value=L.name||''; ip.setAttribute('aria-label','List name');
+    nm.replaceWith(ip); ip.focus(); ip.select();
+    let done=false;
+    const finish=keep=>{ if(done) return; done=true;
+      const v=ip.value.trim();
+      if(keep && v && v!==L.name){ S.syForce=1; const q=syOf(s.id)||s;
+        syPut('syncs', Object.assign({}, q, {lists:(q.lists||[]).map(x=> x.id===L.id? Object.assign({}, x, {name:v}) : x)})); }
+      else { ip.replaceWith(nm); }
+    };
+    ip.addEventListener('keydown', e=>{ e.stopPropagation(); if(e.key==='Enter'){ e.preventDefault(); finish(true); } if(e.key==='Escape'){ e.preventDefault(); finish(false); } });
+    ip.addEventListener('blur', ()=> finish(true));
+  };
+  nm.addEventListener('click', rename);
+  nm.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); rename(); } });
+  /* a just-added list opens ready to name — on whichever drawing of it is actually on screen */
+  if(S.syRenameList===L.id) setTimeout(()=>{ if(S.syRenameList!==L.id || !nm.isConnected) return; S.syRenameList=null; rename(); }, 30);
   hw.appendChild(hd); box.appendChild(hw);
   const body=el('div','sylb');
   const sorted=cards.slice().sort((a,b)=> (a.done?1:0)-(b.done?1:0) || (a.ord||0)-(b.ord||0));
