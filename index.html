@@ -2738,6 +2738,16 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .sylhw .dgrip:hover{background:var(--surface-3);color:var(--ink)}
 .sylist.dragging{box-shadow:0 0 0 2px var(--c1)!important}
 @media (pointer:coarse){ .sylhw .dgrip{opacity:.8;width:26px;height:32px} }
+/* team meeting agenda: a grip on each item */
+.agrows .row{display:flex;align-items:stretch}
+.agrows .row > .rh2{flex:1 1 auto;min-width:0}
+.agrows .row > .dgrip{flex:0 0 auto;width:22px;margin-left:6px;align-self:center;height:28px;opacity:.4}
+.agrows .row:hover > .dgrip,.agrows .row > .dgrip:focus-visible{opacity:1}
+.agrows .row > .dgrip:hover{background:var(--surface-2);color:var(--ink)}
+.agrows .row.dragging{background:var(--surface)}
+@media (pointer:coarse){ .agrows .row > .dgrip{opacity:.8;width:28px;height:32px} }
+.agrows .row:hover{background:var(--surface-2)}
+.agrows .row:hover > .rh2{background:transparent}
 
 /* ---------- Sponsorship Prospects: chosen parts ---------- */
 .spbars{display:flex;flex-direction:column;gap:6px}
@@ -8732,6 +8742,9 @@ function vAgenda(root){
   } else {
     const rows=el('div','rows');
     items.slice().sort((a,b)=>(a.done?1:0)-(b.done?1:0) || (a.ord||0)-(b.ord||0)).forEach(x=>rows.appendChild(agRow(x, sel)));
+    /* drag an item by its grip to change the running order; covered items stay at the end */
+    rows.classList.add('agrows');
+    rows.__onSort=ids=>{ ids.forEach((id,i)=>{ const x=(S.agenda||[]).find(a=>a.id===id); if(x && (+x.ord||0)!==(i+1)*10) put('agenda', Object.assign({}, x, {ord:(i+1)*10})); }); };
     list.appendChild(rows);
   }
   root.appendChild(list);
@@ -8775,7 +8788,8 @@ function vAgenda(root){
 }
 
 function agRow(x, mtg){
-  const row=el('div','row');
+  const row=el('div','row'); row.dataset.sid=x.id;
+  row.appendChild(dgrip('Drag to change the order'));
   const h=el('button','rh2'+(x.done?' done':'')); h.type='button';
   const t=el('span','t'); t.appendChild(document.createTextNode(x.t));
   const bits=[];
