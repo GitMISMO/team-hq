@@ -2937,6 +2937,20 @@ html{scrollbar-color:var(--border-strong) var(--ground)}
 .rtrow .spacer{flex:1}
 .rtrow .btn{white-space:nowrap;min-width:max-content;text-decoration:none}
 
+/* a team project's parts, one field each (Oct 15) */
+.parted{display:flex;flex-direction:column;gap:8px}
+.partrows{display:flex;flex-direction:column;gap:6px}
+.partrow{display:flex;align-items:center;gap:8px;padding:4px 6px 4px 2px;border:1px solid var(--border);border-radius:6px;background:var(--surface)}
+.partrow input{flex:1 1 auto;min-width:0}
+.partrow .partn{flex:0 0 auto;font-size:12px;color:var(--ink-3);white-space:nowrap;min-width:72px;text-align:right}
+.partrow .btn{flex:0 0 auto;white-space:nowrap;min-width:max-content}
+.partrow .dgrip{flex:0 0 auto;width:18px;height:26px;opacity:.45}
+.partrow:hover .dgrip,.partrow .dgrip:focus-visible{opacity:1}
+.partrow.dragging{box-shadow:0 0 0 2px var(--c1)}
+.partnone{font-size:12.5px;color:var(--ink-3);padding:4px 2px}
+.partadd select{max-width:340px;width:100%}
+@media(max-width:620px){ .partrow{flex-wrap:wrap} .partrow input{flex:1 1 60%} .partrow .partn{min-width:0} }
+
 #rs-account{flex:0 0 auto;display:inline-flex;align-items:center}
 #rs-account .rs-who,#rs-account .rs-signin{border-radius:4px}
 </style>
@@ -4742,7 +4756,7 @@ $('#sheet').addEventListener('mousedown', e=>{ if(e.target.id==='sheet') closeSh
 /* ============ field builders ============ */
 function field(parent, label, node, wide){
   /* a formatted Notes box is not put inside a <label>: a click in it would press its first button */
-  const f=el(node && node.classList && node.classList.contains('rte')? 'div' : 'label','f'+(wide?' '+wide:'')); f.appendChild(el('span',null,label)); f.appendChild(node); parent.appendChild(f); return node;
+  const f=el(node && node.classList && (node.classList.contains('rte') || node.classList.contains('parted'))? 'div' : 'label','f'+(wide?' '+wide:'')); f.appendChild(el('span',null,label)); f.appendChild(node); parent.appendChild(f); return node;
 }
 function sel(opts, val, blank){
   const s=el('select');
@@ -5975,9 +5989,9 @@ function editRock(r){
     const fL=field(g,'Lead', sel(peopleOpts(), d.lead, 'No Lead Yet'));
     const fWh=field(g,'Whose Is This?', sel(peopleOpts(), d.whose||'', 'The Team\u2019s'), 'w2');
     const fD=field(g,'What It Is', ta(d.desc||'', '', 3), 'w4');
-    const fW=field(g,'The Parts (One per Line)', ta((d.ws||[]).join('\n'), '', 6), 'w4');
+    const fW=field(g,'The Parts', partsEditor(d.ws||[], isNew? '' : d.id), 'w4');
     body.appendChild(g);
-    const hint=el('p','note','The parts are how you divide and conquer — for FRAME that might be Certification, Marketing, Development, Workshops, Webinars, Education. Tasks get tagged to a part, and Team HQ flags it when two people are in the same one.');
+    const hint=el('p','note','The parts are the 3 to 7 big chunks the project breaks into — for FRAME that might be Certification, Marketing, Development, Workshops, Webinars, Education. Each task is filed under one, and Team HQ flags it when two people are in the same one. Renaming a part takes its tasks with it.');
     body.appendChild(hint);
     const st=el('div','callout'); st.textContent = RSTAT_D[fS.value]; body.appendChild(st);
     fS.addEventListener('change', ()=>{ st.textContent = RSTAT_D[fS.value]; });
@@ -6008,8 +6022,9 @@ function editRock(r){
     save.addEventListener('click', async ()=>{
       if(!fN.value.trim()){ fN.focus(); return; }
       d.name=fN.value.trim(); d.status=fS.value; d.lead=fL.value; d.whose=fWh.value; d.desc=fD.value.trim();
-      d.ws = fW.value.split('\n').map(x=>x.trim()).filter(Boolean);
-      const commitR = async ()=>{ await put('rocks', d); closePanel();
+      d.ws = fW.value;
+      const carry = fW.renames();
+      const commitR = async ()=>{ await put('rocks', d); if(carry.length) await partsCarry(d.id, carry); closePanel();
         toast(isNew?'Team project added.':'Saved.'); };
       const RLAB = {name:'the name', status:'the status', lead:'who is accountable',
         whose:'whose it is', desc:'the description', ws:'the parts'};
@@ -15688,6 +15703,80 @@ function ftPick(ids, iso, fr){
 }
 /* the board panel opens it in the side panel */
 function findTimePanel(){ panel('Find a Time', 'When everyone you pick is free', body=> findTime(body)); }
+
+/* ============ A TEAM PROJECT'S PARTS (Oct 15) ============
+   Jonna: "I just need a dropdown of what the choices are so I don't have to guess."
+   The Parts are no longer a box of lines. Each Part is its own field, with how many tasks
+   are filed under it; drag the grip to put them in order; Remove takes one off. New
+   ones come from a dropdown — the Parts already used on the team's other projects, then
+   common ones — or Something Else to type your own. Renaming a Part takes its tasks
+   (and any plan pointing at it) with it, on Save. */
+const PART_COMMON=['Planning','Approval','Governance','Recruitment','Launch','Marketing','Communications','Outreach','Education','Webinars','Workshops','Certification','Development','Budget','Events','Reporting','Wrap-Up'];
+function partsEditor(ws, rockId){
+  const w=el('div','parted');
+  let k=0;
+  let rows=(ws||[]).map(n=>({key:'p'+(k++), name:n, was:n}));
+  const used=n=> rockId? S.tasks.filter(t=> t.r===rockId && t.w===n) : [];
+  const list=el('div','partrows'); w.appendChild(list);
+  const paint=()=>{
+    list.textContent='';
+    if(!rows.length) list.appendChild(el('div','partnone','No parts yet. Pick one below.'));
+    rows.forEach(r=>{
+      const row=el('div','partrow'); row.dataset.sid=r.key;
+      row.appendChild(dgrip('Drag to change the order'));
+      const ip=inp('text', r.name, 'Name of the part'); ip.setAttribute('aria-label','Part name');
+      ip.addEventListener('input', ()=>{ r.name=ip.value; w.dispatchEvent(new Event('input',{bubbles:true})); });
+      row.appendChild(ip);
+      const n=r.was? used(r.was).filter(t=>t.s!=='Done').length : 0, all=r.was? used(r.was).length : 0;
+      row.appendChild(el('span','partn', all? n+' open'+(all>n? ' · '+(all-n)+' done' : '') : 'no tasks'));
+      const rm=el('button','btn ghost sm','Remove'); rm.type='button';
+      rm.addEventListener('click', ()=>{
+        if(all && !rm.dataset.c){ rm.dataset.c='1'; rm.textContent='Click Again — '+all+(all===1?' Task Goes':' Tasks Go')+' to Not in a Part'; return; }
+        rows=rows.filter(x=>x!==r); paint(); w.dispatchEvent(new Event('input',{bubbles:true})); });
+      row.appendChild(rm);
+      list.appendChild(row);
+    });
+  };
+  list.__onSort=ids=>{ const by={}; rows.forEach(r=>{ by[r.key]=r; }); rows=ids.map(id=>by[id]).filter(Boolean); paint(); w.dispatchEvent(new Event('input',{bubbles:true})); };
+  /* the dropdown of choices */
+  const add=el('div','partadd');
+  const pick=document.createElement('select'); pick.setAttribute('aria-label','Add a part');
+  const fill=()=>{
+    pick.textContent='';
+    const have=new Set(rows.map(r=>r.name.trim().toLowerCase()));
+    const o0=document.createElement('option'); o0.value=''; o0.textContent='Add a Part…'; pick.appendChild(o0);
+    const other=[]; S.rocks.forEach(x=>{ if(x.id===rockId) return; (x.ws||[]).forEach(n=>{ if(!have.has(n.toLowerCase()) && other.indexOf(n)<0) other.push(n); }); });
+    other.sort((a,b)=>a.localeCompare(b));
+    const grp=(label, names)=>{ if(!names.length) return; const g=document.createElement('optgroup'); g.label=label;
+      names.forEach(n=>{ const o=document.createElement('option'); o.value=n; o.textContent=n; g.appendChild(o); }); pick.appendChild(g); };
+    grp('Used on Other Team Projects', other);
+    grp('Common Parts', PART_COMMON.filter(n=> !have.has(n.toLowerCase()) && other.indexOf(n)<0));
+    const g=document.createElement('optgroup'); g.label='Your Own';
+    const o=document.createElement('option'); o.value='__new'; o.textContent='Something Else (Type It)'; g.appendChild(o); pick.appendChild(g);
+  };
+  pick.addEventListener('change', ()=>{
+    const v=pick.value; if(!v) return;
+    const r={key:'p'+(k++), name: v==='__new'? '' : v, was:''};
+    rows.push(r); paint(); fill(); pick.value='';
+    if(v==='__new'){ const ips=list.querySelectorAll('input'); const last=ips[ips.length-1]; if(last) last.focus(); }
+    w.dispatchEvent(new Event('input',{bubbles:true}));
+  });
+  pick.addEventListener('focus', fill);
+  add.appendChild(pick);
+  w.appendChild(add);
+  paint(); fill();
+  /* what Save reads */
+  Object.defineProperty(w, 'value', {get:()=>{ const seen={}; return rows.map(r=>r.name.trim()).filter(n=>{ const l=n.toLowerCase(); if(!n || seen[l]) return false; seen[l]=1; return true; }); }});
+  w.renames=()=> rows.filter(r=> r.was && r.name.trim() && r.name.trim()!==r.was).map(r=>[r.was, r.name.trim()]);
+  return w;
+}
+/* after a project is saved: tasks (and plans) under a renamed part follow it */
+async function partsCarry(rockId, renames){
+  for(const [from,to] of renames){
+    for(const t of S.tasks.filter(x=> x.r===rockId && x.w===from)) await put('tasks', Object.assign({}, t, {w:to}));
+    for(const p of (S.plans||[]).filter(x=> x.rock===rockId && x.part===from)) await put('plans', Object.assign({}, p, {part:to}));
+  }
+}
 
 /* ============ rail search sources ============ */
 window.__search = function(t, push, goTab){
