@@ -47,6 +47,8 @@
      data/<collection>.json   {docs:{<id>:{...}}}   people, tasks, dates, plans …
      data/profiles.json       {docs:{<email>:{...}}} each person's own board layout
      data/plannotes.json      (in team-hq-private)  {docs:{<email>:{notes:[…]}}}
+     data/vault.json          (in team-hq-private)  {docs:{<email>:{salt,iv,ct,…}}} — the Locked Note,
+                              scrambled with the person's passphrase before it leaves the browser
      receipts/<time>-<name>   receipt photos, stored as files
 
    Saving: every save sends the version (sha) it last read. If someone else saved
@@ -111,6 +113,8 @@
     if (seg.length === 4 && seg[0] === 'data' && seg[1] === 'users') {
       if (seg[3] === 'profile') return { proj: PROJECT, file: 'profiles', key: seg[2] };
       if (seg[3] === 'plannotes') return { proj: PRIVATE, file: 'plannotes', key: seg[2] };
+      /* the Locked Note: already scrambled in the browser, and still kept in the private repo */
+      if (seg[3] === 'vault') return { proj: PRIVATE, file: 'vault', key: seg[2] };
     }
     if (seg.length === 2) {
       if (seg[0] === 'leads') return { proj: PORTAL, file: 'leads', key: seg[1], ro: true };
@@ -2148,6 +2152,20 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .mynote-top .btn{flex:0 0 auto}
 .mynote-empty{font-size:13px;color:var(--ink-2);margin:6px 0}
 .mynotes{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:var(--surface)}
+/* Oct 16: in a panel with a set height the list used to be squeezed and cut off; now it
+   keeps its rows and scrolls inside the panel, with Add a Note and the count still showing */
+.mynote{min-height:0}
+.mynote > .mynotes{flex:0 1 auto;min-height:60px;overflow-y:auto;overscroll-behavior:contain}
+.mynote > .mynotes > .mnrow{flex:0 0 auto}
+.nbp.fixedh .wbody > :not(.mynote){flex-shrink:0}
+/* archived notes */
+.mnfoot{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+.mnfoot .mynote-s{flex:1 1 auto}
+.mnarchbtn{border:0;background:none;color:var(--c1);font:inherit;font-size:12px;font-weight:600;padding:2px 0;cursor:pointer;white-space:nowrap}
+.mnarchbtn:hover{text-decoration:underline}
+.mynotes.mnarch{border-style:dashed;background:var(--surface-2)}
+.mynotes.mnarch .mnrow b{color:var(--ink-2)}
+.mnrow .mnatag{display:inline-block;margin-left:6px;padding:0 6px;border-radius:3px;font-size:10.5px;font-weight:700;letter-spacing:.03em;background:var(--surface-3);color:var(--ink-2);vertical-align:1px}
 .mnrow{display:flex;flex-direction:column;gap:3px;text-align:left;padding:10px 12px;border:0;border-top:1px solid var(--border);background:none;color:var(--ink);font:inherit;cursor:pointer}
 .mnrow:first-child{border-top:0}
 .mnrow:hover,.mnrow.open{background:var(--info-soft)}
@@ -2885,7 +2903,21 @@ html{scrollbar-color:var(--border-strong) var(--ground)}
 .rtb .rtbarh{display:block;width:16px;height:3px;border-radius:1px;background:var(--rt-hy-strong);margin-top:2px}
 .rtsep{width:1px;height:18px;background:var(--rule);margin:0 4px}
 .rtx{padding:9px 11px;outline:none;font-size:13.5px;line-height:1.55;color:var(--ink);overflow-wrap:anywhere;overflow-x:auto;max-height:60vh;overflow-y:auto}
-.rte.empty .rtx::before{content:attr(data-ph);color:var(--ink-3);pointer-events:none;position:absolute}
+.rte{text-align:left}
+.rte.rtempty .rtx{position:relative}
+.rte.rtempty .rtx::before{content:attr(data-ph);color:var(--ink-3);pointer-events:none;position:absolute;left:11px;top:9px;right:11px}
+/* read-only */
+.rte.rtoff{background:var(--surface-2)}
+.rte.rtoff .rtbar{display:none}
+.rte.rtoff .rtx{color:var(--ink-2);cursor:default}
+/* slim: no frame, the toolbar only while you are typing in it (post-its, Jot It Down) */
+.rte.rtslim{border:0;background:transparent;box-shadow:none}
+.rte.rtslim .rtbar{border-radius:4px;border:1px solid var(--rule);margin-bottom:6px;padding:2px 3px;gap:0}
+.rte.rtslim .rtb{min-width:24px;height:24px;padding:0 4px}
+.rte.rtslim .rtsep{margin:0 2px}
+.rte.rtslim:not(:focus-within):not(:has(.rtpop)) .rtbar{display:none}
+.rte.rtslim .rtx{padding:0;max-height:none;overflow:visible;color:inherit;min-height:72px}
+.rte.rtslim.rtempty .rtx::before{left:0;top:0;right:0;color:inherit;opacity:.5}
 .rtpop{position:absolute;z-index:40;min-width:180px;background:var(--surface);border:1px solid var(--border-strong);border-radius:7px;box-shadow:0 8px 24px rgba(6,32,47,.18);padding:8px;display:flex;flex-direction:column;gap:4px}
 .rtpt{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);padding:2px 2px 4px}
 .rtsw{display:grid;grid-template-columns:repeat(6,26px);gap:5px}
@@ -2936,6 +2968,26 @@ html{scrollbar-color:var(--border-strong) var(--ground)}
 .rtrow{display:flex;align-items:center;gap:6px}
 .rtrow .spacer{flex:1}
 .rtrow .btn{white-space:nowrap;min-width:max-content;text-decoration:none}
+.rtv.psecnote{font-size:12.5px;color:var(--ink-2)}
+.statusnote .rtv{font-size:inherit;color:inherit}
+.rtbar,.rtpop{font-family:var(--display)}
+/* on paper (post-its, Jot It Down): a light toolbar in both themes */
+.sticky .rtbar,.cap-in-r .rtbar{background:rgba(255,255,255,.6);border-color:rgba(0,0,0,.14)}
+.sticky .rtb,.cap-in-r .rtb{color:#1d2a16}
+.sticky .rtb:hover,.cap-in-r .rtb:hover{background:rgba(0,0,0,.08);color:#1d2a16}
+.sticky .rtsep,.cap-in-r .rtsep{background:rgba(0,0,0,.18)}
+.sticky .rtx a,.cap-in-r .rtx a{color:#1f4f86}
+/* Jot It Down keeps its yellow-paper look */
+.rte.cap-in-r{background:#fdf0a4;color:#1d2a16;border:0;border-radius:3px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);font-family:var(--hand)}
+.rte.cap-in-r.on{box-shadow:0 0 0 2px var(--c1)}
+.rte.cap-in-r .rtbar{border-radius:3px 3px 0 0;border-width:0 0 1px}
+.rte.cap-in-r .rtx{font-size:22px;line-height:1.35;color:#1d2a16;min-height:92px;padding:12px 14px}
+.rte.cap-in-r.rtempty .rtx::before{color:rgba(29,42,22,.42);left:14px;top:12px}
+.rtv.rtin{display:inline}
+/* paper stays light in dark mode, so its colors do too */
+.sticky,.rte.cap-in-r{--rt-blue:#1f62a8;--rt-green:#1d7344;--rt-orange:#b25209;--rt-red:#b42318;--rt-purple:#6b3fa0;--rt-gray:#5b6b78;--rt-cr:#b42318;
+  --rt-hy:#fff1a1;--rt-hg:#cdf1d9;--rt-hb:#d3e8fb;--rt-hp:#fbd5e5;--rt-hy-strong:#f5d33b}
+.sticky [class*="rt-h-"],.cap-in-r [class*="rt-h-"]{color:#1d2a16}
 
 /* a team project's parts, one field each (Oct 15) */
 .parted{display:flex;flex-direction:column;gap:8px}
@@ -2950,6 +3002,26 @@ html{scrollbar-color:var(--border-strong) var(--ground)}
 .partnone{font-size:12.5px;color:var(--ink-3);padding:4px 2px}
 .partadd select{max-width:340px;width:100%}
 @media(max-width:620px){ .partrow{flex-wrap:wrap} .partrow input{flex:1 1 60%} .partrow .partn{min-width:0} }
+
+/* ---------- Locked Note ---------- */
+.vaultw{display:flex;align-items:center;gap:14px;padding:4px 2px;flex-wrap:wrap}
+.vaulti{width:42px;height:42px;flex:0 0 auto;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--surface-2);border:1px solid var(--border)}
+.vaulti svg{width:22px;height:22px;fill:none;stroke:var(--ink-2);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.vaultw.open .vaulti{background:var(--good-soft);border-color:color-mix(in srgb,var(--good) 40%,transparent)}
+.vaultw.open .vaulti svg{stroke:var(--good)}
+.vaultt{flex:1 1 200px;min-width:0;display:flex;flex-direction:column;gap:2px}
+.vaultt b{font-size:14px}
+.vaultt span{font-size:12.5px;color:var(--ink-2)}
+.vaulta{display:flex;gap:8px;flex:0 0 auto}
+.vaulta .btn{white-space:nowrap;min-width:max-content}
+.vaultp{display:flex;flex-direction:column;gap:12px}
+.vaultp .rowacts .btn{white-space:nowrap;min-width:max-content}
+.vaultmsg{font-size:12.5px;font-weight:600;color:var(--bad)}
+.vaultmsg:empty{display:none}
+:root[data-theme="dark"] .vaultmsg{color:#ff8f85}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .vaultmsg{color:#ff8f85}}
+.vaultp .mynote-x .rtx{min-height:300px}
+input[type=password]{background:var(--surface);color:var(--ink);border:1px solid var(--border-strong);border-radius:4px;padding:6px 8px;font-size:13px;max-width:100%;font-family:inherit}
 
 #rs-account{flex:0 0 auto;display:inline-flex;align-items:center}
 #rs-account .rs-who,#rs-account .rs-signin{border-radius:4px}
@@ -5202,7 +5274,7 @@ function capture(presetRock){
   sheet(box=>{
     box.appendChild(el('h2','', 'Jot It Down'));
     box.appendChild(el('p',null,'Write it the way you would on a sticky note. Put it on a board as a post-it, or park it on the team\u2019s note wall. Have the details already? Use Add a Task instead.'));
-    const ta=el('textarea','cap-in'); ta.placeholder='Type it here…'; box.appendChild(ta);
+    const ta=rtEditor('', 'Type it here…', 3); ta.classList.add('cap-in-r'); box.appendChild(ta);
 
     const mrow=el('div','rowflex'); mrow.style.marginTop='12px';
     const mic=el('button','mic'); mic.type='button'; mic.title='Speak it instead';
@@ -5878,7 +5950,7 @@ function rockPanel(r, dupWs){
        shows the list as it is now, not as it was when you opened it */
     const mine = S.tasks.filter(t=>t.r===r.id);
     const all = mine.length, dn = mine.filter(t=>t.s==='Done').length;
-    if(r.desc) body.appendChild(el('div','rkd', r.desc));
+    if(r.desc) body.appendChild(rtView(r.desc,'rkd'));
 
     const pb=el('div','pbar'); pb.style.margin='14px 0 2px';
     const bi=el('i'); bi.style.width=(all? Math.round(dn/all*100):0)+'%'; pb.appendChild(bi);
@@ -5988,7 +6060,7 @@ function editRock(r){
     const fS=field(g,'Status', sel(RSTAT, d.status));
     const fL=field(g,'Lead', sel(peopleOpts(), d.lead, 'No Lead Yet'));
     const fWh=field(g,'Whose Is This?', sel(peopleOpts(), d.whose||'', 'The Team\u2019s'), 'w2');
-    const fD=field(g,'What It Is', ta(d.desc||'', '', 3), 'w4');
+    const fD=field(g,'What It Is', rtEditor(d.desc||'', 'What the project is and why it matters', 3), 'w4');
     const fW=field(g,'The Parts', partsEditor(d.ws||[], isNew? '' : d.id), 'w4');
     body.appendChild(g);
     const hint=el('p','note','The parts are the 3 to 7 big chunks the project breaks into — for FRAME that might be Certification, Marketing, Development, Workshops, Webinars, Education. Each task is filed under one, and Team HQ flags it when two people are in the same one. Renaming a part takes its tasks with it.');
@@ -6184,7 +6256,7 @@ function personPanel(p){
       c.innerHTML='<b>\ud83c\udf82 Birthday:</b> '+esc(fmtD(isoOf(nb)).replace(/,? \\d{4}$/,''))+
         (n===0? ' \u2014 today.' : n===1? ' \u2014 tomorrow.' : ' \u2014 in '+n+' days.');
       b.appendChild(c); }
-    if(p.focus){ const c=el('div','callout'); c.innerHTML='<b>Focused On:</b> '+esc(p.focus); b.appendChild(c); }
+    if(p.focus){ const c=el('div','callout'); c.innerHTML='<b>Focused On:</b> '; c.appendChild(rtView(p.focus,'rtin')); b.appendChild(c); }
     const bar=el('div','rowflex');
     const e=el('button','btn ghost','Edit Status and Details'); e.type='button';
     e.addEventListener('click', ()=> editPerson(p));
@@ -6321,7 +6393,7 @@ function editPerson(p){
     const fN=field(g,'A Short Note (Optional)', inp('text', d.statusNote||'', 'e.g. In New Orleans for the site visit'), 'w4');
     const fR=field(g,'Role', inp('text', d.role), 'w2');
     const fB=field(g,'Birthday', inp('text', d.bday||'', 'MM-DD, e.g. 10-31'), 'w2');
-    const fF=field(g,'Focused On', ta(d.focus||'', '', 3), 'w4');
+    const fF=field(g,'Focused On', rtEditor(d.focus||'', 'What you are spending your time on', 3), 'w4');
     const fI=field(g,'Outlook Calendar Link (Optional)', inp('url', d.ics||'', 'Paste the published calendar link'), 'w4');
     body.appendChild(g);
     const c=el('div','callout');
@@ -7306,6 +7378,7 @@ const WTYPES = {
   freebusy:  {n:'Who Is Free',         d:'The next two weeks, person by person \u2014 for picking a day that suits everyone.'},
   planday:   {n:'Plan My Day',         d:'Reads everything on your board and tells you what to do, in what order, and what can wait.'},
   newcerts:  {n:'New Certifications',  d:'Who the Certification Management System has certified lately, newest first.'},
+  vault:     {n:'Locked Note',          d:'A private note locked with a passphrase only you know — for passwords, logins and anything nobody else should see. It is scrambled before it is saved, so nobody can read it without your passphrase.'},
   mynote:    {n:'My Notes',            d:'A section of long-form notes on your board. Add as many notes inside it as you like, and as many sections as you like.'},
   numbers:   {n:'Numbers from My Systems', d:'Headline numbers out of the Financial System, certification and the rest.', multi:1}
 };
@@ -7803,6 +7876,7 @@ function widgetMeter(w){
       if(!all.length) return {pct:null, label:'No projects yet'};
       return {pct: Math.round(dn/all.length*100), label:(all.length-dn)+' open · '+dn+' done'};
     }
+    if(w.t==='vault') return {pct:null, label: vaultOpen()? 'Unlocked' : 'Locked'};
     if(w.t==='mynote' && w.k){
       try{ myStart(); }catch(e){}
       const n=notesIn(w.k).length;
@@ -8287,6 +8361,7 @@ function buildWidget(w, b){
   }
   if(w.t==='plan') return planWidget(w, b);
   if(w.t==='mynote') return noteWidget(w, b);
+  if(w.t==='vault') return vaultWidget(w, b);
   if(w.t==='projects') return projectsWidget(w, b);
   if(w.t==='myprojects') return myProjectsWidget(w, b);
   if(w.t==='mtoday') return mtPanel(w, b);
@@ -8795,7 +8870,7 @@ function vAgenda(root){
     items.filter(x=>x.outcome).forEach(x=>{
       const row=el('div','row'); const h=el('div','rh2'); h.style.cursor='default';
       const t=el('span','t'); t.appendChild(document.createTextNode(x.t));
-      t.appendChild(el('small',null,x.outcome)); h.appendChild(t); row.appendChild(h); g.appendChild(row);
+      t.appendChild(el('small',null,rtText(x.outcome).replace(/\s+/g,' '))); h.appendChild(t); row.appendChild(h); g.appendChild(row);
     });
     if(!g.children.length) g.appendChild(el('div','empty','Nothing was written down for this one.'));
     w.appendChild(g); root.appendChild(w);
@@ -8866,20 +8941,20 @@ function editAgenda(x, mtg){
     const fW=field(g,'Who Is Raising It?', sel(peopleOpts(), d.who, 'Anyone'));
     const fG=field(g,'Which Meeting?', sel2(mtgSeries(5).concat(d.mtg && mtgSeries(5).indexOf(d.mtg)<0?[d.mtg]:[])
       .map(i=>({v:i,n:fmtD(i,1)})), d.mtg));
-    const fN=field(g,'Anything to Read First?', ta(d.notes||'', 'What everyone should look at before the meeting \u2014 a link, a page number, a question to think about', 3), 'w4');
+    const fN=field(g,'Anything to Read First?', rtEditor(d.notes||'', 'What everyone should look at before the meeting \u2014 a link, a page number, a question to think about', 3), 'w4');
     body.appendChild(g);
     body.appendChild(attBlock(d.files||[], list=>{ d.files=list; },
       {title:'Files to Read First', note: isNew? 'Files are kept with the topic when you save it.' : 'Files are kept with the topic when you click Save.', folder:'attachments'}));
     body.appendChild(el('h3','sect-t','Notes and Information'));
     const gI=el('div','fields');
-    const fI=field(gI,'About This Topic', ta(d.info||'', 'Background, the details, the numbers, talking points \u2014 anything about the topic, before or during the meeting', 8), 'w4');
+    const fI=field(gI,'About This Topic', rtEditor(d.info||'', 'Background, the details, the numbers, talking points \u2014 anything about the topic, before or during the meeting', 8), 'w4');
     fI.classList.add('aginfo');
     body.appendChild(gI);
 
     if(!isNew){
       body.appendChild(el('h3','sect-t','After You Have Talked About It'));
       const g2=el('div','fields');
-      const fO=field(g2,'What Was Decided?', ta(d.outcome||'', 'What came out of it, and who is doing what', 3), 'w4');
+      const fO=field(g2,'What Was Decided?', rtEditor(d.outcome||'', 'What came out of it, and who is doing what', 3), 'w4');
       const cw=el('div','f w4');
       const cl=el('label','chkrow'); const cb=el('input'); cb.type='checkbox'; cb.checked=!!d.done;
       cl.appendChild(cb); cl.appendChild(el('span',null,'Covered — tick this once it has been talked about'));
@@ -8944,7 +9019,7 @@ function askSheet(preset){
     const g=el('div','fields');
     const fK=field(g,'What Kind?', sel(ASK_KINDS, d.kind));
     const fT=field(g,'What Do You Want?', inp('text', d.t, 'e.g. A panel showing certifications by program'), 'w4');
-    const fW=field(g,'What Would You Use It For?', ta(d.why||'', 'What would it let you do that you cannot do now?', 3), 'w4');
+    const fW=field(g,'What Would You Use It For?', rtEditor(d.why||'', 'What would it let you do that you cannot do now?', 3), 'w4');
     box.appendChild(g);
     const acts=el('div','modal-acts');
     const cancel=el('button','btn ghost','Cancel'); cancel.type='button';
@@ -8974,7 +9049,7 @@ function askRow(a){
   const bits=[askKindName(a.kind)];
   if(a.by) bits.push(pname(a.by));
   bits.push(relWhen(a.at));
-  if(a.why) bits.push(a.why);
+  if(a.why) bits.push(rtText(a.why).replace(/\s+/g,' '));
   t.appendChild(el('small',null, bits.join(' · ')));
   h.appendChild(t);
   const r=el('span','r');
@@ -8995,7 +9070,7 @@ function editAsk(a){
     const c=el('div','callout');
     c.innerHTML='<b>'+esc(askKindName(a.kind))+'</b> · asked by '+esc(pname(a.by))+' '+esc(relWhen(a.at))+'.';
     body.appendChild(c);
-    if(a.why){ const w=el('div','statusnote'); w.textContent=a.why; body.appendChild(w); }
+    if(a.why){ const w=el('div','statusnote'); w.appendChild(rtView(a.why)); body.appendChild(w); }
 
     const g=el('div','fields');
     const fT=field(g,'What They Asked For', inp('text', a.t, ''), 'w4');
@@ -9004,7 +9079,7 @@ function editAsk(a){
     fS.disabled = !mine;
     body.appendChild(g);
     const g2=el('div','fields');
-    const fR=field(g2,'Answer', ta(a.reply||'', mine? 'What you are doing about it' : 'Only Jonna can answer this', 3), 'w4');
+    const fR=field(g2,'Answer', rtEditor(a.reply||'', mine? 'What you are doing about it' : 'Only Jonna can answer this', 3), 'w4');
     fR.disabled = !mine;
     body.appendChild(g2);
 
@@ -9026,9 +9101,9 @@ function editAsk(a){
         if(mine){ next.state=fS.value; next.reply=fR.value.trim(); }
         const commit=async ()=>{ await put('asks', next);
           /* tell them when it has been answered */
-          if(mine && a.by && a.by!==S.me && (next.state!==a.state || next.reply!==a.reply)){
+          if(mine && a.by && a.by!==S.me && (next.state!==a.state || rtText(next.reply||'')!==rtText(a.reply||''))){
             await put('nudges', {to:a.by, by:S.me||'', k:'About Your Ask',
-              m:next.t+' — '+next.state+(next.reply? ': '+next.reply : ''), at:Date.now(), done:0});
+              m:next.t+' — '+next.state+(next.reply? ': '+rtText(next.reply).replace(/\s+/g,' ') : ''), at:Date.now(), done:0});
           }
           closePanel(); renderAll(); toast('Saved.'); };
         if(movedUnderYou('asks', a.id, openedAs)) return askOverwrite('asks', a.id, openedAs, LAB, commit);
@@ -9054,7 +9129,7 @@ const ASK_EX = [
 function snapshotForAI(){
   const P = S.people.map(p=>{
     const L=loadOf(p.id); const ef=effStatus(p);
-    return {name:p.name, role:p.role, focus:p.focus, status:statusOf(ef.k).n,
+    return {name:p.name, role:p.role, focus:rtText(p.focus||''), status:statusOf(ef.k).n,
             statusNote:ef.note||'', handsOnTasks:L.total, accountableButNotDoing:L.oversight,
             high:L.high, rails:L.rails, pastDue:L.late};
   });
@@ -9075,7 +9150,7 @@ function snapshotForAI(){
             daysAway:days(dOf(d)), where:d.loc||'', note:d.note||'', who:(d.who||[]).map(pname)}));
   const O = overlaps().map(o=>({kind:o.kind==='dup'?'near-duplicate tasks':'same part, several owners',
             what:o.title, detail:o.sub, people:o.who.map(pname)}));
-  const N = S.notes.map(n=>({note:n.t, by:pname(n.by)}));
+  const N = S.notes.map(n=>({note:rtText(n.t), by:pname(n.by)}));
   const X = S.expenses.map(e=>({trip:e.trip||'', person:pname(e.who), type:e.cat, date:e.date,
             what:e.name, amount:Number(e.amt)||0, hasReceipt:!!e.receipt,
             submittedToDataBasics:!!e.submitted, policyFlags:checkExp(e).map(c=>c.m)}));
@@ -9216,7 +9291,7 @@ function planSnapshot(me){
   return {
     today: isoOf(t0),
     dayOfWeek: t0.toLocaleDateString('en-US',{weekday:'long'}),
-    me: {name:p.name, role:p.role, focus:p.focus||'', statusRightNow:statusOf(ef.k).n,
+    me: {name:p.name, role:p.role, focus:rtText(p.focus||''), statusRightNow:statusOf(ef.k).n,
          statusNote:ef.note||'', awayOrTravelingOn:away},
     myOpenWork: mine.map(task),
     iAmAccountableSomeoneElseIsDoingIt: watching,
@@ -9224,7 +9299,7 @@ function planSnapshot(me){
     waitingOnMe: myNudges(me).map(n=>({from:pname(n.by), message:n.m||'',
          kind:(NUDGE_KINDS.find(x=>x.v===n.k)||{n:'Note'}).n})),
     tripsWithNoExpensesClaimed: expenseGaps(me).map(g=>({trip:g.t, daysSinceBack:g.days, where:g.loc||''})),
-    myNotesNobodyHasTurnedIntoTasks: S.notes.filter(n=>n.by===me).map(n=>n.t),
+    myNotesNobodyHasTurnedIntoTasks: S.notes.filter(n=>n.by===me).map(n=>rtText(n.t)),
     whereTwoPeopleAreInTheSamePart: overlaps().filter(o=>o.who.indexOf(me)>=0)
       .map(o=>({what:o.title, detail:o.sub, people:o.who.map(pname)}))
   };
@@ -9379,7 +9454,10 @@ function rtEditor(val, ph, rows){
   Object.defineProperty(w, 'value', {get:value, set:v=>{ ed.innerHTML=rtHTML(v); paintEmpty(); }});
   Object.defineProperty(w, 'placeholder', {get:()=>ed.dataset.ph||'', set:v=>{ ed.dataset.ph=v||''; }});
   w.focus=()=>{ ed.focus(); const r=document.createRange(); r.selectNodeContents(ed); r.collapse(false); const s=getSelection(); s.removeAllRanges(); s.addRange(r); };
-  const paintEmpty=()=>{ w.classList.toggle('empty', !ed.textContent.trim() && !ed.querySelector('table,li,br+br')); };
+  /* 'rtempty', not 'empty' — the page already uses .empty for its centered "nothing here yet" boxes */
+  const paintEmpty=()=>{ w.classList.toggle('rtempty', !ed.textContent.trim() && !ed.querySelector('table,li,br+br')); };
+  /* read-only (an answer only Jonna can give, say) */
+  Object.defineProperty(w, 'disabled', {get:()=>w.classList.contains('rtoff'), set:v=>{ w.classList.toggle('rtoff', !!v); ed.contentEditable= v? 'false' : 'true'; }});
   const fire=()=>{ paintEmpty(); w.dispatchEvent(new Event('input', {bubbles:true})); };
   ed.addEventListener('input', e=>{ if(e.target===ed){ paintEmpty(); } });
   ed.addEventListener('focus', ()=>{ last=value(); w.classList.add('on'); try{ document.execCommand('styleWithCSS', false, false); document.execCommand('defaultParagraphSeparator', false, 'div'); }catch(x){} });
@@ -9935,7 +10013,7 @@ function planView(root, p){
   root.appendChild(planHeadline(p));
   if((S.planMode||'work')==='lead') return leadView(root, p);
 
-  if(p.summary){ const c=el('div','statusnote'); c.textContent=p.summary; root.appendChild(c); }
+  if(p.summary){ const c=el('div','statusnote'); c.appendChild(rtView(p.summary)); root.appendChild(c); }
   const cur=curSec(p);
   /* Oct 9: the order of the sections is their priority — top is highest. Drag one by its
      grip to change it. Sections can also be shown grouped by who owns them, each person's
@@ -10034,7 +10112,7 @@ function secBlock(p, s, isNow, rank, of){
   d.appendChild(sm);
 
   const body=el('div','psecbody');
-  if(s.note) body.appendChild(el('div','psecnote', s.note));
+  if(s.note) body.appendChild(rtView(s.note,'psecnote'));
   const plain=items.filter(i=>!i.crit), crit=items.filter(i=>i.crit);
   let g=null;
   plain.forEach(it=>{
@@ -10388,7 +10466,7 @@ function notesPanel(pid){
 /* ---- leadership view: the plan and where it stands, nothing private ---- */
 function leadView(root, p){
   const items=planItems(p.id);
-  if(p.summary){ const c=el('div','statusnote'); c.textContent=p.summary; root.appendChild(c); }
+  if(p.summary){ const c=el('div','statusnote'); c.appendChild(rtView(p.summary)); root.appendChild(c); }
 
   /* where each section stands — a composition bar per section */
   const box=el('div','box');
@@ -10538,13 +10616,14 @@ async function planReport(p){
     +'table{width:100%;border-collapse:collapse;font-size:13px}th{background:#e9f1f8;text-align:left;padding:6px 8px;border-bottom:2px solid #0d314c}td{padding:6px 8px;border-bottom:1px solid #d5e2ed;vertical-align:top}td.n{text-align:right;font-variant-numeric:tabular-nums}'
     +'.bar{height:7px;background:#e9f1f8;border-radius:4px;overflow:hidden;min-width:80px}.bar i{display:block;height:100%;background:#0f7b5c}'
     +'.c{display:inline-block;padding:0 7px;border-radius:3px;font-size:11.5px;font-weight:600}.ok{background:#e2f2ec;color:#0f7b5c}.bad{background:#f9e6e4;color:#b3372c}.ip{background:#e4f2fb;color:#2477b8}.ns{background:#e9f1f8;color:#456179}.na{background:#f6fafd;color:#7794aa}'
+    +'.sum{margin:12px 0}.sum ul,.sum ol{margin:4px 0;padding-left:24px}.sum table{width:auto;margin:6px 0}.sum td{border:1px solid #d5e2ed}.rt-h-yellow{background:#fff1a1}.rt-h-green{background:#cdf1d9}.rt-h-blue{background:#d3e8fb}.rt-h-pink{background:#fbd5e5}.rt-c-blue{color:#1f62a8}.rt-c-green{color:#1d7344}.rt-c-orange{color:#b25209}.rt-c-red{color:#b42318}.rt-c-purple{color:#6b3fa0}.rt-c-gray{color:#5b6b78}'
     +'.m{color:#7794aa}footer{margin-top:36px;color:#7794aa;font-size:12px}</style></head><body>'
     +'<svg width="0" height="0" style="position:absolute">'+logo+'</svg>'
     +'<svg class="w" viewBox="0 0 708 108" role="img" aria-label="MISMO"><use href="#mismo-logo"/></svg>'
     +'<h1>'+e(p.title)+'</h1><div class="sub">'+e([p.kind, p.who?'for '+pname(p.who):'', p.owner?'run by '+pname(p.owner):'', p.start?'started '+fmtD(p.start,1):''].filter(Boolean).join(' · '))+'</div>'
     +'<div class="sub">Progress as of '+e(fmtD(isoOf(today()),1))+' · '+e(planDayLabel(p))+'</div>'
     +'<div class="tiles"><div class="tile"><b>'+st.pct+'%</b><span>Done · '+st.done+' of '+st.total+'</span></div><div class="tile"><b>'+st.behind+'</b><span>Behind</span></div><div class="tile"><b>'+st.soon+'</b><span>Due in the Next Two Weeks</span></div></div>'
-    +(p.summary? '<p>'+e(p.summary)+'</p>' : '')
+    +(p.summary? '<div class="sum">'+rtHTML(p.summary)+'</div>' : '')
     +'<h2>Where Each Part of the Plan Stands</h2><table><tr><th>Section</th><th>Window</th><th>Done</th><th>Behind</th><th></th></tr>'+secRows+'</table>'
     +(own? '<h2>Handing Over the Work</h2><table><tr><th>Responsibility</th><th>Starts</th><th>Full Ownership</th><th>Status</th></tr>'
       +items.filter(i=>i.sec===own.id).map(it=>'<tr><td>'+e(it.t)+'</td><td>'+e((it.x||{}).from||'')+'</td><td>'+e((it.x||{}).by||'')+'</td><td>'+chip(it)+'</td></tr>').join('')+'</table>' : '')
@@ -10627,7 +10706,7 @@ function editPlan(p0){
       (r? r.ws:[]).forEach(w=>{ const o=el('option',null,w); o.value=w; if(w===cur) o.selected=true; fP.appendChild(o); });
       fP.disabled=!r; };
     fR.addEventListener('change', fillP); fillP();
-    const fSum=field(g,'What the Plan Is For', ta(d.summary||'', 'One or two lines leadership will read first', 3), 'w4');
+    const fSum=field(g,'What the Plan Is For', rtEditor(d.summary||'', 'One or two lines leadership will read first', 3), 'w4');
     body.appendChild(g);
     body.appendChild(el('p','note','Tasks made from this plan land in the team project and part above, so they show up there too.'));
 
@@ -10649,7 +10728,7 @@ function editPlan(p0){
         to.addEventListener('input', ()=>{ s.to = to.value===''?'':+to.value; });
         const ow=field(sg,'Who Owns This Section', sel(peopleOpts(), s.owner||'', 'Nobody Yet'), 'w2');
         ow.addEventListener('change', ()=>{ s.owner=ow.value; });
-        const nt=field(sg,'What This Section Is For', inp('text', s.note||''), 'w4');
+        const nt=field(sg,'What This Section Is For', rtEditor(s.note||'', 'A line people read before the items', 2), 'w4');
         nt.addEventListener('input', ()=>{ s.note=nt.value; });
         bx.appendChild(sg);
         const ac=el('div','rowflex');
@@ -10782,7 +10861,7 @@ function secPanel(pid, sid){
     const fO=field(g,'Who Owns This Section', sel(peopleOpts(), d.owner||'', 'Nobody Yet'), 'w2');
     const fF=field(g,'From Day', inp('number', hasNum(d.from)?d.from:''));
     const fT=field(g,'To Day', inp('number', hasNum(d.to)?d.to:''));
-    const fW=field(g,'What This Section Is For', ta(d.note||'', 'A line people read before the items', 2), 'w4');
+    const fW=field(g,'What This Section Is For', rtEditor(d.note||'', 'A line people read before the items', 2), 'w4');
     body.appendChild(g);
     body.appendChild(el('p','note','Day 1 is the plan’s start date. Use 0 for Before Day 1. Leave both days blank for a plain list. New items added to this section go to its owner.'));
     /* hand the unowned items to the new owner, if they want */
@@ -11714,12 +11793,47 @@ function noteWidget(w, b){
     });
     wrap.appendChild(ul);
   }
-  wrap.appendChild(el('div','mynote-s', list.length+(list.length===1?' note':' notes')));
+  const arch=notesArch(n.id);
+  const foot=el('div','mnfoot');
+  foot.appendChild(el('div','mynote-s', list.length+(list.length===1?' note':' notes')));
+  if(arch.length){
+    const shown=!!(S.mnArch && S.mnArch[n.id]);
+    const ab=el('button','mnarchbtn', shown? 'Hide Archived' : 'Archived ('+arch.length+')'); ab.type='button';
+    ab.title= shown? 'Put the archived notes away' : 'See the notes you archived';
+    ab.addEventListener('click', e=>{ e.stopPropagation(); S.mnArch=S.mnArch||{}; S.mnArch[n.id]=!shown; ab.blur(); syRefresh(); });
+    foot.appendChild(ab);
+    if(shown){
+      const al=el('div','mynotes mnarch');
+      arch.forEach(x=>{
+        const r=el('button','mnrow'+(S.noteOpen===x.id && panelOpen()?' open':'')); r.type='button';
+        const t=el('b',null, x.t || 'Untitled Note'); t.appendChild(el('span','mnatag','Archived')); r.appendChild(t);
+        const snip=rtText(x.note||'').replace(/\s+/g,' ').trim();
+        if(snip) r.appendChild(el('span','mnsnip', snip.length>160? snip.slice(0,160)+'…' : snip));
+        r.appendChild(el('small',null, 'Archived '+relWhen(x.arch)));
+        r.addEventListener('click', ()=> noteEditor(n.id, x.id));
+        al.appendChild(r);
+      });
+      wrap.appendChild(foot); wrap.appendChild(al); b.appendChild(wrap); return;
+    }
+  }
+  wrap.appendChild(foot);
   b.appendChild(wrap);
 }
 function notesIn(sec){
-  return (S.myitems||[]).filter(i=> i.kind==='note' && i.in===sec)
+  return (S.myitems||[]).filter(i=> i.kind==='note' && i.in===sec && !i.arch)
     .sort((a,b)=> byOrd(a, b, (b.edited||b.at||0)-(a.edited||a.at||0)));
+}
+/* archived notes: off the list, kept, and one click from coming back (Oct 16) */
+function notesArch(sec){
+  return (S.myitems||[]).filter(i=> i.kind==='note' && i.in===sec && i.arch)
+    .sort((a,b)=> (b.arch||0)-(a.arch||0));
+}
+async function noteArchive(x, on){
+  const y=syCard(x.id)||x;
+  await sySaveItem(y, {arch: on? Date.now() : 0});
+  S.noteOpen=''; syRefresh();
+  if(on) undoToast('Note archived. It is under Archived at the foot of the panel.', async ()=>{ const z=syCard(x.id); if(z){ await sySaveItem(z, {arch:0}); syRefresh(); } });
+  else toast('Note brought back.');
 }
 /* one note, opened in the right rail; kept when you click Save (Oct 8) */
 function noteEditor(sec, id){
@@ -11729,6 +11843,7 @@ function noteEditor(sec, id){
   S.noteOpen=id||'';
   panel(cur? (cur.t||'Untitled Note') : 'New Note', s0.t||'My Notes', body=>{
     const wrap=el('div','mynote mynote-ed');
+    if(cur && cur.arch){ const ac=el('div','callout'); ac.innerHTML='<b>Archived '+esc(relWhen(cur.arch))+'.</b> It is off the list in your panel. Bring It Back puts it back.'; wrap.appendChild(ac); }
     const g=el('div','fields');
     const ti=field(g,'Title', inp('text', cur? cur.t||'' : '', 'What this note is about'), 'w4');
     wrap.appendChild(g);
@@ -11783,6 +11898,14 @@ function noteEditor(sec, id){
                d=>{ const y=syCard(x.id); if(y && d && d.id) sySaveItem(y, {task:d.id}); });
     });
     acts.appendChild(mk);
+    /* archive: off the list but kept; anything typed is saved first */
+    if(cur){
+      const isA=!!(syCard(cur.id)||cur).arch;
+      const ar=el('button','btn ghost', isA? 'Bring It Back' : 'Archive'); ar.type='button';
+      ar.title= isA? 'Put this note back on the list' : 'Take this note off the list but keep it — find it under Archived';
+      ar.addEventListener('click', async ()=>{ await save(); const x=syCard(cur.id)||cur; ar.blur(); closePanel(); await noteArchive(x, !isA); });
+      acts.appendChild(ar);
+    }
     const cancel=el('button','btn ghost','Cancel'); cancel.type='button';
     cancel.addEventListener('click', ()=>{ S.noteOpen=''; closePanel(); });
     acts.appendChild(cancel);
@@ -12591,7 +12714,7 @@ const PANEL_GROUPS = [
   {k:'dates',    n:'Dates and Meetings',  d:'What is coming up and when, including today\u2019s workgroup meetings.',
    items:['mtoday','countdown','calendar']},
   {k:'notes',    n:'Notes and Ideas',     d:'Places to write things down before they turn into tasks.',
-   items:['mynote','notes','asks']},
+   items:['mynote','vault','notes','asks']},
   {k:'numbers',  n:'Numbers and Systems', d:'Figures and lists from MISMO’s other systems, and the way into each one.',
    items:['sponsors','mtnums','sonums','finnums','cmsnums','m360nums','newcerts','links']}
 ];
@@ -13287,7 +13410,7 @@ function wireDrops(w, body){
     const row=rowFor(ev.target, body); if(!row) return;
     const nx=row.nextElementSibling;
     if(nx && nx.classList.contains('wdrop')){  /* clicking the row again closes it */
-      if(ev.target.closest('input,select,textarea,label')) return;
+      if(ev.target.closest('input,select,textarea,label,[contenteditable]')) return;
       ev.stopPropagation(); ev.preventDefault(); closeDrop(nx); return; }
     DROP_CTX={mode:mode, row:row, body:body, wk:wk, rk:rowKeyOf(row)};
     setTimeout(()=>{ DROP_CTX=null; }, 0);
@@ -14194,10 +14317,12 @@ function stickySize(tx){ tx.style.height='auto'; tx.style.height=Math.max(72, tx
 function noteSticky(n){
   const c=el('div','sticky '+(n.col||'y')); c.dataset.nid=n.id||''; if(n.id) c.dataset.sid=n.id;
   c.appendChild(dgrip('Drag to move this post-it'));
-  const tx=el('textarea','stx'); tx.value = (n.id && STICKY_DRAFT[n.id]!=null)? STICKY_DRAFT[n.id] : (n.t||''); tx.placeholder='Write anything…';
-  tx.setAttribute('aria-label','Post-it note'); tx.rows=3; tx.spellcheck=true;
+  /* the post-it takes the same formatting as every other note — the toolbar shows while you type */
+  const tx=rtEditor((n.id && STICKY_DRAFT[n.id]!=null)? STICKY_DRAFT[n.id] : (n.t||''), 'Write anything…', 3);
+  tx.classList.add('rtslim','stx-r'); tx.setAttribute('aria-label','Post-it note');
   c.appendChild(tx);
-  let last=n.t||'';
+  /* what is saved, read the same way the editor reads it, so an old plain post-it is not flagged as changed */
+  let last=rtEditor(n.t||'').value;
   const changed=()=> tx.value!==last;
   const paintDirty=()=>{ const on=changed(); c.classList.toggle('unsaved', on); if(sv) sv.hidden=!on;
     if(n.id){ if(on) STICKY_DRAFT[n.id]=tx.value; else delete STICKY_DRAFT[n.id]; } };
@@ -14207,13 +14332,14 @@ function noteSticky(n){
     delete STICKY_DRAFT[n.id]; paintDirty();
     await put('notes', Object.assign({}, cur, {t:v, edited:Date.now(), editedBy:S.me||''})); };
   let sv=null;
-  tx.addEventListener('input', ()=>{ stickySize(tx); paintDirty(); });
-  tx.addEventListener('focus', ()=> c.classList.add('editing'));
-  tx.addEventListener('blur', async ()=>{ c.classList.remove('editing');
-    /* a brand-new post-it left blank is not worth keeping */
-    if(!tx.value.trim() && !last.trim() && n.id){ delete STICKY_DRAFT[n.id]; await drop('notes', n.id); } });
-  tx.addEventListener('keydown', e=>{ if(e.key==='Escape'){ e.preventDefault(); tx.blur(); } });
-  requestAnimationFrame(()=> stickySize(tx));
+  tx.addEventListener('input', ()=>{ paintDirty(); });
+  tx.addEventListener('focusin', ()=> c.classList.add('editing'));
+  tx.addEventListener('focusout', async e=>{ if(e.relatedTarget && tx.contains(e.relatedTarget)) return;
+    setTimeout(async ()=>{ if(tx.contains(document.activeElement) || tx.querySelector('.rtpop')) return;
+      c.classList.remove('editing');
+      /* a brand-new post-it left blank is not worth keeping */
+      if(!tx.value.trim() && !String(last).trim() && n.id){ delete STICKY_DRAFT[n.id]; await drop('notes', n.id); } }, 0); });
+  tx.addEventListener('keydown', e=>{ if(e.key==='Escape' && !tx.querySelector('.rtpop')){ e.preventDefault(); document.activeElement && document.activeElement.blur(); } });
 
   const f=el('div','sfoot');
   f.appendChild(avatar(n.by,'xs'));
@@ -14237,7 +14363,7 @@ function noteSticky(n){
     const v=tx.value.trim(); if(!v){ tx.focus(); return; }
     await save();
     /* the first line is the task; anything after it goes into the notes */
-    const lines=v.split(/\n+/), first=lines.shift().trim().slice(0,160), rest=lines.join('\n').trim();
+    const lines=rtText(v).split(/\n+/), first=lines.shift().trim().slice(0,160), rest=lines.join('\n').trim();
     editTask({t:first, o:n.board||n.by||S.me||'', r:n.r||'', w:'', s:'Not Started', p:'Normal', due:'', notes:rest,
               ord:(S.tasks.length+1)*10, at:Date.now(), src:'note'}, ()=> drop('notes', n.id));
   });
@@ -14261,7 +14387,7 @@ function noteSticky(n){
   f.appendChild(x); c.appendChild(f);
   paintDirty();
   /* a click anywhere on the post-it puts you in it */
-  c.addEventListener('click', e=>{ if(e.target.closest('button')) return; tx.focus(); });
+  c.addEventListener('click', e=>{ if(e.target.closest('button') || e.target.closest('.rte')) return; tx.focus(); });
   return c;
 }
 /* a fresh, blank post-it, ready to type on */
@@ -14270,7 +14396,7 @@ async function addPostIt(board){
   const n={t:'', by:S.me, r:'', at:Date.now(), col:STICKY_COLS[Math.floor(Math.random()*STICKY_COLS.length)]};
   if(board) n.board=board;
   const id=await put('notes', n);
-  setTimeout(()=>{ const t=document.querySelector('.sticky[data-nid="'+id+'"] .stx'); if(t){ t.focus(); t.scrollIntoView({block:'nearest'}); } }, 80);
+  setTimeout(()=>{ const t=document.querySelector('.sticky[data-nid="'+id+'"] .stx-r'); if(t){ t.focus(); t.scrollIntoView({block:'nearest'}); } }, 80);
 }
 function addPostItButton(board){
   const b=el('button','btn ghost sm addpostit'); b.type='button';
@@ -15778,6 +15904,228 @@ async function partsCarry(rockId, renames){
   }
 }
 
+/* ============ LOCKED NOTE (Oct 16) ============
+   Jonna: "you know the private note thing, can we have that as an option on my board and
+   i can use that for keeping my passwords?"
+   A note only its owner can read. It is locked in the browser with a passphrase before it
+   is saved, so what is stored — in Team HQ's data, in GitHub, anywhere — is scrambled.
+   Nobody can read it without the passphrase: not the team, not Jonna as admin, not Claude.
+   The flip side: a forgotten passphrase cannot be reset, and the note cannot be recovered.
+
+   How: the passphrase is stretched into a key with PBKDF2 (SHA-256, 600,000 rounds, a
+   random salt) and the note is sealed with AES-GCM (256-bit, a fresh random IV every
+   save). The key lives only in this tab's memory while the note is open; it locks itself
+   after 10 quiet minutes, when you click Lock Now, or when the page is closed.
+   Filed at data/users/<you>/vault — on resources.mismo.org that goes to the PRIVATE data
+   repo (team-hq-private), next to the plan notes. */
+const VAULT={ doc:null, loaded:false, loading:null, key:null, salt:null, text:'', idle:null, err:'' };
+const VAULT_ITER=600000, VAULT_IDLE=10*60000, VAULT_MIN=10;
+const vb64=u8=>{ let s=''; u8.forEach(c=>{ s+=String.fromCharCode(c); }); return btoa(s); };
+const vu8=b=> Uint8Array.from(atob(b), c=>c.charCodeAt(0));
+function vaultOK(){ return !!(window.crypto && crypto.subtle && S.db && S.uid); }
+function vaultRef(){ return S.db.doc('data/users/'+S.uid+'/vault'); }
+async function vaultKey(pass, salt){
+  const base=await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2', salt:salt, iterations:VAULT_ITER, hash:'SHA-256'}, base,
+    {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']);
+}
+async function vaultSeal(text){
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM', iv:iv}, VAULT.key, new TextEncoder().encode(text)));
+  return {v:1, kdf:'PBKDF2-SHA256', iter:VAULT_ITER, salt:vb64(VAULT.salt), iv:vb64(iv), ct:vb64(ct), at:Date.now()};
+}
+async function vaultLoad(force){
+  if(VAULT.loaded && !force) return VAULT.doc;
+  if(VAULT.loading) return VAULT.loading;
+  VAULT.loading=(async ()=>{
+    try{ const snap=await vaultRef().get(); VAULT.doc= snap.exists? JSON.parse(JSON.stringify(snap.data()||{})) : null; VAULT.err=''; VAULT.loaded=true; }
+    catch(e){ VAULT.err= e && e.code==='NO_ACCESS'? 'noaccess' : 'failed'; }
+    VAULT.loading=null; return VAULT.doc;
+  })();
+  return VAULT.loading;
+}
+async function vaultSave(text){
+  const d=await vaultSeal(text);
+  await vaultRef().set(d);
+  VAULT.doc=d; VAULT.text=text; VAULT.loaded=true;
+}
+function vaultOpen(){ return !!VAULT.key; }
+function vaultLock(why){
+  VAULT.key=null; VAULT.salt=null; VAULT.text=''; clearTimeout(VAULT.idle); VAULT.idle=null;
+  if(document.querySelector('#panel-b .vaultp') && panelOpen()) shutPanel();
+  vaultRedraw();
+  if(why) toast(why);
+}
+function vaultRedraw(){ try{ if(S.tab==='mine'){ const r=$('#app-mine'); if(r) vMine(r); } }catch(e){} }
+/* 10 quiet minutes and it locks — anything typed and not saved is saved first, then locked */
+function vaultPoke(){
+  clearTimeout(VAULT.idle);
+  VAULT.idle=setTimeout(async ()=>{
+    const ed=document.querySelector('#panel-b .vaultp .rte');
+    if(ed && VAULT.key && ed.value!==VAULT.text){ try{ await vaultSave(ed.value); }catch(e){} vaultLock('Your locked note locked itself after 10 quiet minutes. What you typed was saved first.'); return; }
+    vaultLock('Your locked note locked itself after 10 quiet minutes.');
+  }, VAULT_IDLE);
+}
+window.addEventListener('pagehide', ()=>{ VAULT.key=null; VAULT.text=''; });
+
+/* ---- the panel on the board: never shows what is inside, only whether it is open ---- */
+function vaultWidget(w, b){
+  const box=el('div','vaultw');
+  const ic=el('div','vaulti'); ic.innerHTML='<svg viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="'+(vaultOpen() && w.id!=='preview'? 'M8 10.5V7.5a4 4 0 017.6-1.7' : 'M8 10.5V7.5a4 4 0 018 0v3')+'"/></svg>';
+  box.appendChild(ic);
+  const tx=el('div','vaultt'); box.appendChild(tx);
+  const acts=el('div','vaulta'); box.appendChild(acts);
+  b.appendChild(box);
+  const btn=(label, cls, fn)=>{ const x=el('button','btn sm'+(cls?' '+cls:''), label); x.type='button'; x.addEventListener('click', e=>{ e.stopPropagation(); fn(); }); acts.appendChild(x); return x; };
+  if(w.id==='preview'){
+    tx.appendChild(el('b',null,'Locked'));
+    tx.appendChild(el('span',null,'Click Unlock and type your passphrase to see it.'));
+    btn('Unlock', '', ()=>{}); return;
+  }
+  if(!vaultOK()){ tx.appendChild(el('b',null,'Not available here')); tx.appendChild(el('span',null,'A locked note needs you signed in on a secure page.')); return; }
+  if(VAULT.err==='noaccess'){ tx.appendChild(el('b',null,'Not turned on for you')); tx.appendChild(el('span',null,'Locked notes are kept with the private notes. Ask Jonna Critchley to give you Team HQ Private Notes.')); return; }
+  if(!VAULT.loaded){
+    tx.appendChild(el('span',null, VAULT.err? 'Your locked note did not load.' : 'Checking your locked note…'));
+    if(VAULT.err) btn('Try Again', '', ()=>{ VAULT.err=''; vaultLoad(true).then(vaultRedraw); });
+    else vaultLoad().then(vaultRedraw);
+    return;
+  }
+  if(!VAULT.doc){
+    tx.appendChild(el('b',null,'Not set up yet'));
+    tx.appendChild(el('span',null,'Pick a passphrase only you know. Everything in the note is locked with it before it is saved.'));
+    btn('Set It Up', '', ()=> vaultPanel());
+    return;
+  }
+  if(vaultOpen()){
+    box.classList.add('open');
+    tx.appendChild(el('b',null,'Unlocked'));
+    tx.appendChild(el('span',null,'Locks itself after 10 quiet minutes.'));
+    btn('Open It', '', ()=> vaultPanel());
+    btn('Lock Now', 'ghost', ()=> vaultLock('Locked.'));
+    return;
+  }
+  tx.appendChild(el('b',null,'Locked'));
+  tx.appendChild(el('span',null,'Last saved '+relWhen(VAULT.doc.at)+'.'));
+  btn('Unlock', '', ()=> vaultPanel());
+}
+
+/* ---- the right rail: set it up, unlock it, read and change it ---- */
+function vaultPanel(){
+  panel('Locked Note', 'Only you can read this', body=>{
+    const wrap=el('div','vaultp'); body.appendChild(wrap);
+    const draw=()=>{ wrap.textContent='';
+      if(!VAULT.doc) return vaultSetup(wrap, draw);
+      if(!vaultOpen()) return vaultUnlock(wrap, draw);
+      vaultEdit(wrap, draw);
+    };
+    draw();
+  });
+}
+function vaultWarn(){
+  const c=el('div','callout warn');
+  c.innerHTML='<b>Write the passphrase down somewhere safe, away from Team HQ.</b> If it is forgotten, nobody can open this note — not Jonna, not IT, not Claude — and what is in it cannot be got back.';
+  return c;
+}
+function vaultSetup(wrap, draw, change){
+  const c=el('div','callout');
+  c.textContent= change? 'Pick the new passphrase. The note is locked again with it as soon as you click Save.'
+    : 'What you write here is locked in your browser with your passphrase before it is saved. What is stored is scrambled — the team, admins and GitHub only ever see that.';
+  wrap.appendChild(c);
+  wrap.appendChild(vaultWarn());
+  const g=el('div','fields');
+  const p1=field(g, change? 'New Passphrase' : 'Choose a Passphrase', inp('password','', 'At least '+VAULT_MIN+' characters — four random words work well'), 'w4');
+  const p2=field(g,'Type It Again', inp('password','', ''), 'w4');
+  p1.autocomplete='new-password'; p2.autocomplete='new-password';
+  wrap.appendChild(g);
+  const show=el('label','chkrow'); const sc=el('input'); sc.type='checkbox'; show.appendChild(sc); show.appendChild(el('span',null,'Show what I typed'));
+  sc.addEventListener('change', ()=>{ p1.type=p2.type= sc.checked? 'text' : 'password'; });
+  wrap.appendChild(show);
+  const msg=el('div','vaultmsg'); wrap.appendChild(msg);
+  const acts=el('div','rowacts'); acts.appendChild(el('span','spacer'));
+  const cancel=el('button','btn ghost','Cancel'); cancel.type='button';
+  cancel.addEventListener('click', ()=>{ if(change) draw(); else closePanel(); });
+  const go=el('button','btn', change? 'Save' : 'Lock It With This Passphrase'); go.type='button';
+  const run=async ()=>{
+    const a=p1.value, b2=p2.value; msg.textContent='';
+    if(a.length<VAULT_MIN){ msg.textContent='Make it at least '+VAULT_MIN+' characters.'; p1.focus(); return; }
+    if(a!==b2){ msg.textContent='The two do not match. Type it again.'; p2.focus(); return; }
+    go.disabled=true; go.textContent='Locking…';
+    try{
+      const keep=change? VAULT.text : '';
+      VAULT.salt=crypto.getRandomValues(new Uint8Array(16));
+      VAULT.key=await vaultKey(a, VAULT.salt);
+      await vaultSave(keep);
+      vaultPoke(); toast(change? 'Passphrase changed.' : 'Your locked note is set up.'); draw(); vaultRedraw();
+    }catch(e){ go.disabled=false; go.textContent= change? 'Save' : 'Lock It With This Passphrase'; msg.textContent='That did not save. Try again in a moment.'; }
+  };
+  go.addEventListener('click', run);
+  [p1,p2].forEach(x=> x.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); run(); } }));
+  acts.appendChild(cancel); acts.appendChild(go); wrap.appendChild(acts);
+  setTimeout(()=> p1.focus(), 60);
+}
+function vaultUnlock(wrap, draw){
+  const c=el('div','callout'); c.textContent='Locked. Type your passphrase to open it.'; wrap.appendChild(c);
+  const g=el('div','fields');
+  const pp=field(g,'Passphrase', inp('password','',''), 'w4'); pp.autocomplete='current-password';
+  wrap.appendChild(g);
+  const msg=el('div','vaultmsg'); wrap.appendChild(msg);
+  const acts=el('div','rowacts'); acts.appendChild(el('span','spacer'));
+  const cancel=el('button','btn ghost','Cancel'); cancel.type='button'; cancel.addEventListener('click', closePanel);
+  const go=el('button','btn','Unlock'); go.type='button';
+  const run=async ()=>{
+    if(!pp.value){ pp.focus(); return; }
+    go.disabled=true; go.textContent='Unlocking…'; msg.textContent='';
+    try{
+      await vaultLoad(true);
+      const d=VAULT.doc, salt=vu8(d.salt);
+      const key=await vaultKey(pp.value, salt);
+      const pt=await crypto.subtle.decrypt({name:'AES-GCM', iv:vu8(d.iv)}, key, vu8(d.ct));
+      VAULT.key=key; VAULT.salt=salt; VAULT.text=new TextDecoder().decode(pt);
+      pp.value=''; vaultPoke(); draw(); vaultRedraw();
+    }catch(e){
+      go.disabled=false; go.textContent='Unlock';
+      msg.textContent= VAULT.err? 'Your locked note did not load. Try again in a moment.' : 'That passphrase does not open it. Check Caps Lock and try again.';
+      pp.select();
+    }
+  };
+  go.addEventListener('click', run);
+  pp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); run(); } });
+  acts.appendChild(cancel); acts.appendChild(go); wrap.appendChild(acts);
+  setTimeout(()=> pp.focus(), 60);
+}
+function vaultEdit(wrap, draw){
+  const tl=el('div','f w4'); tl.appendChild(el('span',null,'Note'));
+  const tx=rtEditor(VAULT.text, 'Logins, passwords, anything private. A table works well: Site · Username · Password.', 14);
+  tx.classList.add('mynote-x'); tl.appendChild(tx); wrap.appendChild(tl);
+  const st=el('div','mynote-s'); wrap.appendChild(st);
+  const stamp=()=>{ st.classList.remove('unsaved'); st.textContent= VAULT.doc && VAULT.doc.at? 'Last saved '+relWhen(VAULT.doc.at)+'. Locks itself after 10 quiet minutes.' : ''; };
+  stamp();
+  const dirty=()=> tx.value!==VAULT.text;
+  tx.addEventListener('input', ()=>{ vaultPoke(); if(dirty()){ st.textContent='Unsaved changes — click Save to keep them.'; st.classList.add('unsaved'); } else stamp(); });
+  wrap.addEventListener('keydown', vaultPoke); wrap.addEventListener('pointerdown', vaultPoke);
+  const acts=el('div','rowacts');
+  const lk=el('button','btn ghost','Lock Now'); lk.type='button';
+  lk.addEventListener('click', ()=>{
+    if(dirty() && !lk.dataset.c){ lk.dataset.c='1'; lk.textContent='Click Again — Unsaved Changes Are Lost'; return; }
+    vaultLock('Locked.'); });
+  acts.appendChild(lk);
+  const ch=el('button','btn ghost','Change Passphrase'); ch.type='button';
+  ch.addEventListener('click', async ()=>{ if(dirty()){ try{ await vaultSave(tx.value); }catch(e){ toast('That did not save. Try again.'); return; } }
+    wrap.textContent=''; vaultSetup(wrap, draw, true); });
+  acts.appendChild(ch);
+  acts.appendChild(el('span','spacer'));
+  const cancel=el('button','btn ghost','Cancel'); cancel.type='button'; cancel.addEventListener('click', closePanel);
+  acts.appendChild(cancel);
+  const sv=el('button','btn','Save'); sv.type='button';
+  sv.addEventListener('click', async ()=>{ sv.disabled=true;
+    try{ await vaultSave(tx.value); stamp(); toast('Saved and locked away.'); closePanel(); vaultRedraw(); }
+    catch(e){ toast('That did not save. Try again in a moment.'); }
+    sv.disabled=false; });
+  acts.appendChild(sv);
+  wrap.appendChild(acts);
+  setTimeout(()=> tx.focus(), 80);
+}
+
 /* ============ rail search sources ============ */
 window.__search = function(t, push, goTab){
   try{ S.tasks.forEach(x=>{ if(norm(x.t).indexOf(t)<0) return;
@@ -15797,8 +16145,8 @@ window.__search = function(t, push, goTab){
     push('Plans', x.title, (x.kind||'Plan')+(x.who? ' \u00b7 for '+pname(x.who):''), ()=>{ S.planOpen=x.id; S.planMode='work'; goTab('plans'); }); }); }catch(e){}
   try{ (S.planitems||[]).forEach(x=>{ if(norm(x.t).indexOf(t)<0) return; const p=planOf(x.plan); if(!p) return;
     push('Plan Items', x.t, p.title, ()=>{ S.planOpen=p.id; S.planMode='work'; S.openSecs[p.id+':'+x.sec]=true; S.planScroll=x.id; goTab('plans'); itemPanel(p.id, x.id); }); }); }catch(e){}
-  try{ S.notes.forEach(x=>{ if(norm(x.t).indexOf(t)<0) return;
-    push('Notes', x.t, 'on the note wall by '+pname(x.by), ()=>{ goTab('today'); }); }); }catch(e){}
+  try{ S.notes.forEach(x=>{ if(norm(rtText(x.t)).indexOf(t)<0) return;
+    push('Notes', rtText(x.t).replace(/\s+/g,' ').slice(0,120), 'on the note wall by '+pname(x.by), ()=>{ goTab('today'); }); }); }catch(e){}
 };
 window.__show = show;
 window.__setStatus = setStatus; window.__gaps = expenseGaps; window.__fyStart = ()=>isoOf(fyStart()); window.__mtg = {next:nextMtg, after:afterMtg, clash:mtgClash, series:mtgSeries}; window.__blkWait = blocksWaiting; window.__ask2 = askSheet; window.__editAsk = editAsk; window.__bw = buildWidget; window.__ask = askOverwrite; window.__edit = editTask; window.__editRock = editRock; window.__editDate = editDate; window.__saveMine = saveMine; window.__drop = drop; window.__put = put; window.__dOn = datesOn;
