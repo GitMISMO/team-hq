@@ -3102,6 +3102,13 @@ input[type=password]{background:var(--surface);color:var(--ink);border:1px solid
 .rkpabout > summary{cursor:pointer;padding:9px 12px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
 .rkpabout > .rkd{padding:0 12px 12px;font-size:13px;color:var(--ink-2)}
 
+.callout.nrescue{margin:0 0 16px}
+.nrrows{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.nrrow{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:7px 10px}
+.nrrow .nrn{font-weight:700;color:var(--ink);flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nrrow .nrc{font-size:12.5px;color:var(--ink-2);flex:1 1 auto}
+.nrrow .btn{white-space:nowrap;min-width:max-content}
+
 #rs-account{flex:0 0 auto;display:inline-flex;align-items:center}
 #rs-account .rs-who,#rs-account .rs-signin{border-radius:4px}
 </style>
@@ -7590,6 +7597,7 @@ function vMine(root){
     root.appendChild(bx); return;
   }
   if(!bset().noBand) root.appendChild(myHeadline(me)); else root.appendChild(right);
+  notesRescue(root);
   if(nbOn()){ nbView(root); return; }
 
   const L=layout();
@@ -8487,7 +8495,7 @@ function newPanel(p, L){
 /* a few panels need you to say which one before they go on */
 function pickExtra(k, t, L){
   const done = ()=>{ saveMine(); closeSheet(); vMine($('#app-mine')); };
-  if(k==='mynote') return newNotePanel(L, done);
+  if(k==='mynote') return notePanelPick(L, done);
   if(k==='rock' || k==='person'){
     sheet(box=>{
       box.appendChild(el('h2',null, k==='rock'?'Which Team Project?':'Whose Board?'));
@@ -16708,6 +16716,80 @@ function rockByPart(body, r, mine, dupWs){
   }
   if(!(r.ws||[]).length && !loose.length) ws.appendChild(emptyBox('No parts yet.','Edit this team project to add the parts people divide up.'));
   body.appendChild(ws);
+}
+
+/* ============ NOTES THAT ARE NOT ON YOUR BOARD (Oct 20) ============
+   Jonna: "what happened to all my notes, they're gone i need them back!" Nothing was deleted.
+   Notes live in their own store, filed under a My Notes SECTION; a section only shows through
+   a My Notes panel that points at it. Switching to Free-Form or Notebook draws a different
+   layout, and adding My Notes there made a NEW, empty section — so her notes (in her old
+   section) had no panel showing them. Now:
+     - any section of yours with notes in it that is not on your board (any page) is listed
+       at the top of My Board, with Put It Back (one click puts its panel back where you are);
+     - Add a Panel → My Notes offers those sections first, before starting a new one. */
+function noteSecsOnBoard(){
+  const ids={}; const add=L=>{ try{ eachPanel(L||[], w=>{ if(w && w.t==='mynote' && w.k) ids[w.k]=1; }); }catch(e){} };
+  if(nbOn()){ const N=nbEnsure(); N.pages.forEach(pg=> (pg.tabs||[]).forEach(t=> add(t.L))); }
+  else add(LAYOUT_ROWS());
+  return ids;
+}
+function noteSecCount(s){ return notesIn(s.id).length + notesArch(s.id).length + (String(s.note||'').trim() && !s.split? 1 : 0); }
+function noteSecsMissing(){
+  const on=noteSecsOnBoard();
+  return myItems().filter(i=> i.kind==='note' && !i.in && !i.sync && !on[i.id])
+    .map(s=>({s:s, n:noteSecCount(s)})).filter(x=> x.n>0)
+    .sort((a,b)=> b.n-a.n);
+}
+function noteSecName(s){ return (s.t && s.t!=='Notes')? s.t : 'My Notes'; }
+function noteSecPutBack(sec, quiet){
+  const L=layout();
+  L.push({r:[newPanel({t:'mynote', k:sec.id}, L)]});
+  saveMine(); vMine($('#app-mine'));
+  if(!quiet) toast('Your “'+noteSecName(sec)+'” notes are back on your board.');
+}
+function notesRescue(root){
+  try{ myStart(); }catch(e){}
+  const miss=noteSecsMissing(); if(!miss.length) return;
+  const c=el('div','callout warn nrescue');
+  const total=miss.reduce((a,x)=>a+x.n,0);
+  c.appendChild(el('b',null, total+(total===1?' note of yours is':' notes of yours are')+' not on this board.'));
+  c.appendChild(document.createTextNode(' Nothing was deleted — they just have no panel showing them here.'));
+  const rows=el('div','nrrows');
+  miss.forEach(x=>{
+    const r=el('div','nrrow');
+    r.appendChild(el('span','nrn', noteSecName(x.s)));
+    r.appendChild(el('span','nrc', x.n+(x.n===1?' note':' notes')));
+    const b=el('button','btn sm','Put It Back'); b.type='button';
+    b.addEventListener('click', ()=> noteSecPutBack(x.s));
+    r.appendChild(b); rows.appendChild(r);
+  });
+  c.appendChild(rows);
+  root.appendChild(c);
+}
+/* Add a Panel → My Notes: your sections that are not on the board come first */
+function notePanelPick(L, done){
+  try{ myStart(); }catch(e){}
+  const miss=noteSecsMissing();
+  if(!miss.length) return newNotePanel(L, done);
+  sheet(box=>{
+    box.appendChild(el('h2',null,'Which Notes?'));
+    box.appendChild(el('p',null,'These notes of yours are not on your board right now. Put one back, or start a new, empty notes section.'));
+    const g=el('div','linkcards');
+    miss.forEach(x=>{
+      const bb=el('button','lcard'); bb.type='button';
+      const sp=el('span'); sp.appendChild(document.createTextNode(noteSecName(x.s)));
+      sp.appendChild(el('small',null, x.n+(x.n===1?' note':' notes')));
+      bb.appendChild(sp);
+      bb.addEventListener('click', ()=>{ L.push({r:[newPanel({t:'mynote', k:x.s.id}, L)]}); done(); toast('Your “'+noteSecName(x.s)+'” notes are on your board.'); });
+      g.appendChild(bb);
+    });
+    const nw=el('button','lcard'); nw.type='button';
+    const sp=el('span'); sp.appendChild(document.createTextNode('Start a New Notes Section')); sp.appendChild(el('small',null,'Empty, ready for new notes'));
+    nw.appendChild(sp); nw.addEventListener('click', ()=> newNotePanel(L, done)); g.appendChild(nw);
+    box.appendChild(g);
+    const a=el('div','modal-acts'); const bk=el('button','btn ghost','Back'); bk.type='button';
+    bk.addEventListener('click', ()=> addWidget(L)); a.appendChild(bk); box.appendChild(a);
+  });
 }
 
 /* ============ rail search sources ============ */
