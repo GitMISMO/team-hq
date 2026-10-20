@@ -2552,7 +2552,7 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .nbsw.on{border-color:var(--ink)}
 .nbsw:hover{outline:2px solid var(--c1);outline-offset:1px}
 /* typing straight on the page */
-.nbcanvas{cursor:text}
+.nbcanvas{cursor:default}
 .nbcanvas .nbp,.nbcanvas .nbloose{cursor:auto}
 .nbempty{pointer-events:none}
 .nbcanvas > .nbtext{position:absolute;margin:0;min-width:160px;cursor:auto;border:1px solid transparent;border-radius:4px;background:transparent;transition:border-color .12s,background .12s}
@@ -2628,6 +2628,9 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .nbghost{position:fixed!important;z-index:9999;pointer-events:none;margin:0;opacity:.92;transform:rotate(-2deg);box-shadow:0 18px 40px rgba(6,32,47,.35)!important}
 .sticky.leaving{opacity:.35}
 .nb .nbsecs .nbcolb svg circle{fill:var(--sc);stroke:var(--sc)}
+/* everything on the board stays under pop-ups and settings (Oct 20) */
+.nbcanvas{isolation:isolate}
+.nbp.nbnew{box-shadow:0 0 0 3px var(--c1),0 12px 30px rgba(6,32,47,.22)}
 
 /* ---------- today's workgroup meetings ---------- */
 .mtband{display:flex;align-items:center;gap:18px;flex-wrap:wrap;background:var(--navy);color:#fff;border:1px solid var(--navy-deep);border-radius:8px;padding:11px 16px;margin:0 0 16px}
@@ -7649,6 +7652,12 @@ function myHeadline(me){
     pb.appendChild(el('span',null,'Add a Post-It'));
     pb.title='A post-it you can stick anywhere on your board';
     pb.addEventListener('click', ()=> nbAddPostIt());
+    const tx=el('button','hlbtn'); tx.type='button';
+    tx.innerHTML='<svg viewBox="0 0 24 24"><path d="M5 6h14M12 6v13M9 19h6"/></svg>';
+    tx.appendChild(el('span',null,'Add Text'));
+    tx.title='A box to write in, right on your board (or double-click an empty spot)';
+    tx.addEventListener('click', ()=> nbAddText());
+    top.appendChild(tx);
     top.appendChild(pb);
   }
   const bg=el('button','hlbtn icon'); bg.type='button'; bg.title='My Board Settings'; bg.setAttribute('aria-label','My Board Settings');
@@ -13971,8 +13980,12 @@ function nbEnsure(){
 function nbPage(){ const N=nbEnsure(); const pg=(nbSide() && N.pages.find(p=>p.id===N.cp)) || N.pages[0];
   if(!pg.tabs || !pg.tabs.length) pg.tabs=[{id:nbId('tb'), n:'Main', L:[]}]; return pg; }
 function nbTab(){ const N=nbEnsure(), pg=nbPage(); return (nbTop() && pg.tabs.find(t=>t.id===N.ct[pg.id])) || pg.tabs[0]; }
+/* Oct 20: tidied IN PLACE. It used to hand back a new list each time, so a panel added while
+   the board redrew (My Notes waits a moment to make its section) went into a list nobody
+   kept — Jonna: "I've tried to add my notes to my board, it did not appear". */
 function nbL(){ const t=nbTab(); if(!Array.isArray(t.L)) t.L=[];
-  t.L=t.L.filter(r=> r && Array.isArray(r.r) && r.r.length).map(r=>({r:r.r.filter(w=> w && WTYPES[w.t])})).filter(r=>r.r.length);
+  const keep=t.L.filter(r=> r && Array.isArray(r.r) && r.r.length).map(r=>{ r.r=r.r.filter(w=> w && WTYPES[w.t]); return r; }).filter(r=>r.r.length);
+  t.L.length=0; keep.forEach(r=> t.L.push(r));
   return t.L; }
 
 /* Board mode keeps using the rows; notebook mode hands the current tab to everything
@@ -14135,17 +14148,21 @@ function nbCanvas(tb){
   nbClickToType(cv, tb);
   if(!L.length && !LN.length && !tb.tx.length){
     const e=el('div','nbempty');
-    e.appendChild(emptyBox('Click anywhere and start typing.','Or use Add a Panel and Add a Post-It up top, or drag a panel onto this '+(nbTop()?'page':'board')+' from another one.'));
+    e.appendChild(emptyBox('Nothing here yet.','Double-click anywhere to write, or use Add Text, Add a Post-It or Add a Panel up top.'));
     cv.appendChild(e);
   }
-  /* new panels go below everything else */
-  let bottom=0; L.forEach(r=>{ const w=r.r[0]; if(w.nby!=null) bottom=Math.max(bottom, w.nby+(w.nbh||360)); });
-  let maxZ=0;
-  L.forEach(r=>{ const w=r.r[0]; if(w.nbx==null || w.nby==null){ w.nbx=1; w.nbw=w.nbw||48; w.nby=bottom? bottom+16 : 0; bottom=w.nby+(w.nbh||360); saveMine(); } maxZ=Math.max(maxZ, w.z||0); });
+  /* a new panel goes where you are looking, on top of everything (Oct 20 — it used to go
+     below everything else, out of sight) */
+  const oldCv=document.querySelector('#app-mine .nbcanvas');
+  const viewY=oldCv? Math.max(0, Math.round(-oldCv.getBoundingClientRect().top+90)) : 0;
+  let maxZ=0; L.forEach(r=>{ maxZ=Math.max(maxZ, r.r[0].z||0); });
+  let fresh=null;
+  L.forEach(r=>{ const w=r.r[0]; if(w.nbx==null || w.nby==null){ w.nbx=26; w.nbw=w.nbw||48; w.nby=viewY; w.z=++maxZ; fresh=w; saveMine(); } });
+  if(fresh) setTimeout(()=>{ const nd=[...document.querySelectorAll('#app-mine .nbp')].find(x=>x.__w===fresh); if(nd){ nd.classList.add('nbnew'); nd.scrollIntoView({block:'nearest', behavior:'smooth'}); setTimeout(()=>nd.classList.remove('nbnew'), 1600); } }, 60);
   const order=L.map((r,ri)=>({w:r.r[0], ri})).sort((a,b)=> nbStack()? (a.w.nby-b.w.nby)||(a.w.nbx-b.w.nbx) : 0);
   order.forEach(({w,ri})=>{
     const n=widget(w, ri, 0, L, 12);
-    n.classList.add('nbp');
+    n.classList.add('nbp'); n.__w=w;
     if(!nbStack()){
       n.style.gridColumn=''; n.style.position='absolute';
       n.style.left=w.nbx+'%'; n.style.top=w.nby+'px'; n.style.width=w.nbw+'%';
@@ -14165,7 +14182,7 @@ function nbCanvas(tb){
 }
 function nbFit(cv){
   let h=0; cv.querySelectorAll('.nbp, .nbloose, .nbtext').forEach(p=>{ h=Math.max(h, p.offsetTop+p.offsetHeight); });
-  cv.style.height=Math.max(560, h+160)+'px';
+  cv.style.height=Math.max(560, h+320)+'px';
 }
 function nbDrag(n, w, cv, L, nextZ){
   n.addEventListener('pointerdown', e=>{
@@ -14174,22 +14191,22 @@ function nbDrag(n, w, cv, L, nextZ){
     e.stopPropagation();                       /* the rows board's drag stays out of it */
     if(e.target.closest('button,a,input,select,textarea') && !e.target.closest('.grip')) { /* a click on a control */ }
     w.z=nextZ(); n.style.zIndex=String(w.z);
-    const sx=e.clientX, sy=e.clientY, ox=n.offsetLeft, oy=n.offsetTop, W=cv.clientWidth;
+    nbAsStart(); const sY0=window.scrollY, sx=e.clientX, sy=e.clientY, ox=n.offsetLeft, oy=n.offsetTop, W=cv.clientWidth;
     let moving=false, target=null;
     const mv=ev=>{
-      const dx=ev.clientX-sx, dy=ev.clientY-sy;
+      const dx=ev.clientX-sx, dy=(ev.clientY+window.scrollY-sY0)-sy;
       if(!moving && Math.hypot(dx,dy)<5) return;
       if(!moving){ moving=true; n.classList.add('nbmoving'); try{ n.setPointerCapture(e.pointerId); }catch(x){} }
       ev.preventDefault();
       const nx=Math.max(0, Math.min(W-60, ox+dx)), ny=Math.max(0, oy+dy);
-      n.style.left=(nx/W*100)+'%'; n.style.top=ny+'px';
+      n.style.left=(nx/W*100)+'%'; n.style.top=ny+'px'; nbGrow(cv, n);
       const under=document.elementsFromPoint(ev.clientX, ev.clientY).find(x=> x.classList && x.classList.contains('nbt'));
       if(target && target!==under) target.classList.remove('droptarget');
       target = under && !under.classList.contains('on') ? under : null;
       if(target) target.classList.add('droptarget');
     };
     const up=ev=>{
-      document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up);
+      document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); nbAsStop();
       if(!moving){ saveMine(); return; }
       n.classList.remove('nbmoving');
       const swallow=c=>{ c.stopPropagation(); c.preventDefault(); document.removeEventListener('click', swallow, true); };
@@ -14205,11 +14222,11 @@ function nbDrag(n, w, cv, L, nextZ){
 function nbResize(handle, n, w, cv){
   handle.addEventListener('pointerdown', e=>{
     e.stopPropagation(); e.preventDefault();
-    const sx=e.clientX, sy=e.clientY, ow=n.offsetWidth, oh=n.offsetHeight, W=cv.clientWidth;
+    nbAsStart(); const sY0=window.scrollY, sx=e.clientX, sy=e.clientY, ow=n.offsetWidth, oh=n.offsetHeight, W=cv.clientWidth;
     n.classList.add('nbmoving');
-    const mv=ev=>{ ev.preventDefault(); const nw=Math.max(240, Math.min(W-n.offsetLeft, ow+ev.clientX-sx)), nh=Math.max(120, oh+ev.clientY-sy);
-      n.style.width=(nw/W*100)+'%'; n.style.height=nh+'px'; n.classList.add('fixedh'); };
-    const up=()=>{ document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); n.classList.remove('nbmoving');
+    const mv=ev=>{ ev.preventDefault(); const nw=Math.max(240, Math.min(W-n.offsetLeft, ow+ev.clientX-sx)), nh=Math.max(120, oh+(ev.clientY+window.scrollY-sY0)-sy);
+      n.style.width=(nw/W*100)+'%'; n.style.height=nh+'px'; n.classList.add('fixedh'); nbGrow(cv, n); };
+    const up=()=>{ document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); nbAsStop(); n.classList.remove('nbmoving');
       w.nbw=+(n.offsetWidth/W*100).toFixed(2); w.nbh=Math.round(n.offsetHeight); saveMine(); nbFit(cv); };
     document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
   });
@@ -14285,22 +14302,22 @@ function nbLooseDrag(wr, n, cv){
     if(e.pointerType==='mouse' && e.button!==0) return;
     e.stopPropagation(); e.preventDefault();
     const z=nbLooseTop()+1; wr.style.zIndex=String(z);
-    const sx=e.clientX, sy=e.clientY, ox=wr.offsetLeft, oy=wr.offsetTop, W=cv.clientWidth;
+    nbAsStart(); const sY0=window.scrollY, sx=e.clientX, sy=e.clientY, ox=wr.offsetLeft, oy=wr.offsetTop, W=cv.clientWidth;
     let moving=false, target=null;
     const mv=ev=>{
-      const dx=ev.clientX-sx, dy=ev.clientY-sy;
+      const dx=ev.clientX-sx, dy=(ev.clientY+window.scrollY-sY0)-sy;
       if(!moving && Math.hypot(dx,dy)<4) return;
       if(!moving){ moving=true; wr.classList.add('nbmoving'); try{ wr.setPointerCapture(e.pointerId); }catch(x){} }
       ev.preventDefault();
       const nx=Math.max(0, Math.min(W-60, ox+dx)), ny=Math.max(0, oy+dy);
-      wr.style.left=(nx/W*100)+'%'; wr.style.top=ny+'px';
+      wr.style.left=(nx/W*100)+'%'; wr.style.top=ny+'px'; nbGrow(cv, wr);
       const under=document.elementsFromPoint(ev.clientX, ev.clientY).find(x=> x.classList && x.classList.contains('nbt'));
       if(target && target!==under) target.classList.remove('droptarget');
       target = under && !under.classList.contains('on') ? under : null;
       if(target) target.classList.add('droptarget');
     };
     const up=()=>{
-      document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up);
+      document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); nbAsStop();
       wr.classList.remove('nbmoving');
       if(!moving){ if(z!==(n.lz||0)) nbLooseSave(n, {lz:z}); return; }
       if(target){ target.classList.remove('droptarget');
@@ -14318,12 +14335,12 @@ function nbLooseDrag(wr, n, cv){
 function nbLooseSize(handle, wr, st, n, cv){
   handle.addEventListener('pointerdown', e=>{
     e.stopPropagation(); e.preventDefault();
-    const sx=e.clientX, sy=e.clientY, ow=wr.offsetWidth, oh=st.offsetHeight, W=cv.clientWidth;
+    nbAsStart(); const sY0=window.scrollY, sx=e.clientX, sy=e.clientY, ow=wr.offsetWidth, oh=st.offsetHeight, W=cv.clientWidth;
     wr.classList.add('nbmoving');
     const mv=ev=>{ ev.preventDefault();
       wr.style.width=Math.max(160, Math.min(W-wr.offsetLeft, ow+ev.clientX-sx))+'px';
-      st.style.minHeight=Math.max(120, oh+ev.clientY-sy)+'px'; };
-    const up=()=>{ document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); wr.classList.remove('nbmoving');
+      st.style.minHeight=Math.max(120, oh+(ev.clientY+window.scrollY-sY0)-sy)+'px'; nbGrow(cv, wr); };
+    const up=()=>{ document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); nbAsStop(); wr.classList.remove('nbmoving');
       nbLooseSave(n, {lw:Math.round(wr.offsetWidth), lh:Math.round(st.offsetHeight)}); nbFit(cv); };
     document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
   });
@@ -14349,10 +14366,13 @@ async function nbAddPostIt(){
    A box you click into and leave empty is not kept. Kept on the page itself (tb.tx: id,
    h = the formatted text, x = share of the width, y, w in pixels, z). */
 const NB_TXT_DRAFT={};
+/* Oct 20 — Jonna: "not sure i like that everything you click there is a text box". A single
+   click on the board does nothing now; DOUBLE-click an empty spot to write there, or use
+   Add Text in the navy band. */
 function nbClickToType(cv, tb){
-  cv.addEventListener('click', e=>{
+  cv.addEventListener('dblclick', e=>{
     if(e.target!==cv && !e.target.closest('.nbempty')) return;
-    if(e.detail>1) return;
+    e.preventDefault(); try{ getSelection().removeAllRanges(); }catch(x){}
     const r=cv.getBoundingClientRect();
     const box={id:nbId('tx'), h:'', x:+(Math.max(0, Math.min(88, (e.clientX-r.left)/r.width*100))).toFixed(2), y:Math.max(0, Math.round(e.clientY-r.top-14)), w:340, z:nbTxtTop(tb)+1};
     tb.tx.push(box);
@@ -14402,16 +14422,16 @@ function nbTextBox(cv, tb, box, fresh){
     bar.addEventListener('pointerdown', e=>{
       if(e.target.closest('button')) return; if(e.pointerType==='mouse' && e.button!==0) return;
       e.preventDefault(); e.stopPropagation();
-      const sx=e.clientX, sy=e.clientY, ox=wr.offsetLeft, oy=wr.offsetTop, W=cv.clientWidth; let moving=false, target=null;
+      nbAsStart(); const sY0=window.scrollY, sx=e.clientX, sy=e.clientY, ox=wr.offsetLeft, oy=wr.offsetTop, W=cv.clientWidth; let moving=false, target=null;
       box.z=nbTxtTop(tb)+1; wr.style.zIndex=String(box.z);
-      const mv=ev=>{ const dx=ev.clientX-sx, dy=ev.clientY-sy;
+      const mv=ev=>{ const dx=ev.clientX-sx, dy=(ev.clientY+window.scrollY-sY0)-sy;
         if(!moving && Math.hypot(dx,dy)<3) return;
         if(!moving){ moving=true; wr.classList.add('nbmoving'); }
-        wr.style.left=(Math.max(0, Math.min(W-60, ox+dx))/W*100)+'%'; wr.style.top=Math.max(0, oy+dy)+'px';
+        wr.style.left=(Math.max(0, Math.min(W-60, ox+dx))/W*100)+'%'; wr.style.top=Math.max(0, oy+dy)+'px'; nbGrow(cv, wr);
         const under=document.elementsFromPoint(ev.clientX, ev.clientY).find(x=> x.classList && x.classList.contains('nbt'));
         if(target && target!==under) target.classList.remove('droptarget');
         target = under && !under.classList.contains('on') ? under : null; if(target) target.classList.add('droptarget'); };
-      const up=()=>{ document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); wr.classList.remove('nbmoving');
+      const up=()=>{ document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); nbAsStop(); wr.classList.remove('nbmoving');
         if(!moving){ saveMine(); return; }
         if(target){ target.classList.remove('droptarget');
           const N=nbEnsure(); let dest=null;
@@ -14427,7 +14447,7 @@ function nbTextBox(cv, tb, box, fresh){
       e.preventDefault(); e.stopPropagation();
       const sx=e.clientX, ow=wr.offsetWidth, W=cv.clientWidth; wr.classList.add('nbmoving');
       const mv=ev=>{ wr.style.width=Math.max(160, Math.min(W-wr.offsetLeft, ow+ev.clientX-sx))+'px'; };
-      const up=()=>{ document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); wr.classList.remove('nbmoving');
+      const up=()=>{ document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); nbAsStop(); wr.classList.remove('nbmoving');
         box.w=Math.round(wr.offsetWidth); saveMine(); };
       document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
     });
@@ -14468,6 +14488,41 @@ function nbOutDrop(d, e){
   toast(n.board===S.me? 'Stuck on your board.' : 'Taken off the team wall and stuck on your board.');
 }
 function eachHas(L, t){ let f=false; eachPanel(L||[], w=>{ if(w && w.t===t) f=true; }); return f; }
+
+/* ============ A BOARD AS LONG AS YOU NEED (Oct 20) ============
+   Jonna: "can the free form board be as long as they want when they start moving things to
+   the bottom of the page it expands". While a panel, post-it or text box is dragged or sized,
+   the board grows under it (always 320px of room below the lowest thing), and holding the
+   pointer near the top or bottom of the window scrolls the page so you can keep going. */
+function nbGrow(cv, node){ const need=node.offsetTop+node.offsetHeight+320; if(need>cv.offsetHeight) cv.style.height=need+'px'; }
+const NB_AS={on:false, x:0, y:0, raf:0};
+function nbAsStart(){ NB_AS.on=true; }
+function nbAsStop(){ NB_AS.on=false; if(NB_AS.raf) cancelAnimationFrame(NB_AS.raf); NB_AS.raf=0; }
+document.addEventListener('pointermove', e=>{ if(!NB_AS.on || e.__nbs) return; NB_AS.x=e.clientX; NB_AS.y=e.clientY; if(!NB_AS.raf) NB_AS.raf=requestAnimationFrame(nbAsTick); }, true);
+function nbAsTick(){
+  NB_AS.raf=0; if(!NB_AS.on) return;
+  const m=70, H=window.innerHeight; let v=0;
+  if(NB_AS.y>H-m) v=Math.ceil((NB_AS.y-(H-m))/3)+3;
+  else if(NB_AS.y<m && window.scrollY>0) v=-(Math.ceil((m-NB_AS.y)/3)+3);
+  if(!v) return;
+  window.scrollBy(0, Math.max(-16, Math.min(16, v)));
+  let ev; try{ ev=new PointerEvent('pointermove', {clientX:NB_AS.x, clientY:NB_AS.y, bubbles:true, cancelable:true}); }catch(x){ ev=new MouseEvent('pointermove', {clientX:NB_AS.x, clientY:NB_AS.y, bubbles:true, cancelable:true}); }
+  ev.__nbs=1; document.dispatchEvent(ev);
+  NB_AS.raf=requestAnimationFrame(nbAsTick);
+}
+
+/* Add Text in the navy band: a box to write in, where you are looking */
+function nbAddText(){
+  const cv=document.querySelector('#app-mine .nbcanvas'); if(!cv) return;
+  const tb=nbTab(); if(!Array.isArray(tb.tx)) tb.tx=[];
+  const r=cv.getBoundingClientRect();
+  const box={id:nbId('tx'), h:'', x:30, y:Math.max(0, Math.round(-r.top+110)), w:360, z:nbTxtTop(tb)+1};
+  tb.tx.push(box);
+  const em=cv.querySelector('.nbempty'); if(em) em.remove();
+  const node=nbTextBox(cv, tb, box, true); cv.appendChild(node); nbGrow(cv, node);
+  node.scrollIntoView({block:'nearest'});
+  setTimeout(()=>{ const ed=node.querySelector('.rte'); if(ed) ed.focus(); }, 30);
+}
 
 /* ============ TODAY'S WORKGROUP MEETINGS ============
    The same "today" feed as Meeting Trackers: which workgroups meet today, when (Eastern
