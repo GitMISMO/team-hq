@@ -5428,8 +5428,22 @@ function capture(presetRock){
     mk.addEventListener('click', async ()=>{
       const v=ta.value.trim(); if(!v){ ta.focus(); return; }
       if(!fO.value) return park.click();
-      await put('notes', {t:v, by:S.me||'', board:fO.value, r:fR.value||'', at:Date.now(), col:STICKY_COLS[Math.floor(Math.random()*STICKY_COLS.length)]});
+      const pin={t:v, by:S.me||'', board:fO.value, r:fR.value||'', at:Date.now(), col:STICKY_COLS[Math.floor(Math.random()*STICKY_COLS.length)]};
+      let where='';
+      if(fO.value===S.me){
+        if(nbOn()){
+          /* a Free-Form or Notebook board: stuck straight onto the page you are on, top right */
+          Object.assign(pin, {loose:1, ltab:nbTab().id, lx:+(60+Math.random()*12).toFixed(2), ly:12, lw:230, lz:nbLooseTop()+1});
+          where=' It is at the top right of '+(nbTop()? 'this page' : 'your board')+' — drag it anywhere.';
+        } else if(!eachHas(LAYOUT_ROWS(), 'notes')){
+          /* the rows Board has nowhere else to show a post-it, so a Note Wall panel goes on top */
+          const L=LAYOUT_ROWS(); L.unshift({r:[newPanel({t:'notes', nf:'mine'}, L)]}); saveMine();
+          where=' A Note Wall panel was added to the top of your board to hold it.';
+        }
+      }
+      await put('notes', pin);
       closeSheet();
+      if(where){ toast('On your board as a post-it.'+where); if(S.tab==='mine') vMine($('#app-mine')); return; }
       toast(fO.value===S.me ? 'On your board as a post-it.' : 'On '+pname(fO.value).split(' ')[0]+'\u2019s board as a post-it.');
     });
     acts.appendChild(cancel); acts.appendChild(park); acts.appendChild(mk);
@@ -14228,12 +14242,23 @@ window.addEventListener('resize', ()=>{ if(!nbOn() || S.tab!=='mine') return; cl
    task takes it off the board with nothing left behind, and Undo puts it back where it was.
    On the rows Board it shows in the Note Wall panel like any other post-it. */
 function nbTabIds(){ const N=nbEnsure(), ids={}; N.pages.forEach(pg=> (pg.tabs||[]).forEach(t=>{ ids[t.id]=1; })); return ids; }
+/* Oct 20 — Jonna: "i did jot it down but didn't see the postit on my board i don't have the
+   note wall thought we didn't have to have it". A post-it put on your board with nowhere to
+   go (not stuck anywhere yet, and no Note Wall panel on any page) now shows on whichever
+   page you are looking at, dealt down the right-hand side, until you drag it where you want
+   it — that sticks it to that page. */
+function nbHasWall(){ const N=nbEnsure(); return N.pages.some(pg=> (pg.tabs||[]).some(t=> (t.L||[]).some(r=> (r.r||[]).some(w=> w && w.t==='notes')))); }
 function nbLoose(tb){
   const N=nbEnsure(), first=((N.pages[0]||{}).tabs||[])[0], ids=nbTabIds();
-  return (S.notes||[]).filter(n=> n.loose && n.board===S.me && ((n.ltab && ids[n.ltab])? n.ltab : first && first.id)===tb.id);
+  const stuck=(S.notes||[]).filter(n=> n.loose && n.board===S.me && ((n.ltab && ids[n.ltab])? n.ltab : first && first.id)===tb.id);
+  if(nbHasWall()) return stuck;
+  const waiting=(S.notes||[]).filter(n=> !n.loose && n.board===S.me).sort((a,b)=>(b.at||0)-(a.at||0));
+  return stuck.concat(waiting.map((n,i)=> Object.assign({}, n, {lx:+(68-(i%4)*3).toFixed(2), ly:300+i*34, lw:230, lz:400+i, __wait:1})));
 }
 function nbLooseSave(n, patch){
   const cur=(S.notes||[]).find(x=>x.id===n.id) || n;
+  /* the first move of a waiting post-it sticks it to the page it is on */
+  if(!cur.loose) patch=Object.assign({loose:1, ltab:nbTab().id}, patch);
   Object.assign(n, patch);
   return put('notes', Object.assign({}, cur, patch));
 }
@@ -14442,6 +14467,7 @@ function nbOutDrop(d, e){
   nbLooseSave(n, patch).then(()=>{ vMine($('#app-mine')); });
   toast(n.board===S.me? 'Stuck on your board.' : 'Taken off the team wall and stuck on your board.');
 }
+function eachHas(L, t){ let f=false; eachPanel(L||[], w=>{ if(w && w.t===t) f=true; }); return f; }
 
 /* ============ TODAY'S WORKGROUP MEETINGS ============
    The same "today" feed as Meeting Trackers: which workgroups meet today, when (Eastern
