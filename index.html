@@ -2631,6 +2631,7 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 /* everything on the board stays under pop-ups and settings (Oct 20) */
 .nbcanvas{isolation:isolate}
 .nbp.nbnew{box-shadow:0 0 0 3px var(--c1),0 12px 30px rgba(6,32,47,.22)}
+.nbp.shut > .nbsize{cursor:ew-resize}
 
 /* ---------- today's workgroup meetings ---------- */
 .mtband{display:flex;align-items:center;gap:18px;flex-wrap:wrap;background:var(--navy);color:#fff;border:1px solid var(--navy-deep);border-radius:8px;padding:11px 16px;margin:0 0 16px}
@@ -14234,15 +14235,27 @@ function nbDrag(n, w, cv, L, nextZ){
     document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
   }, true);
 }
+/* Oct 20 — Jonna: "these are now taller sections when i go to update the size, can i make
+   them less tall?" Sizing used to stop at 120px tall, taller than a folded panel (heading plus
+   its progress strip), so sizing a folded panel stretched it with empty space. Now a folded
+   panel sizes only its width and stays exactly as tall as its heading; an open panel can go
+   down to its heading plus a line. */
 function nbResize(handle, n, w, cv){
   handle.addEventListener('pointerdown', e=>{
     e.stopPropagation(); e.preventDefault();
     nbAsStart(); const sY0=window.scrollY, sx=e.clientX, sy=e.clientY, ow=n.offsetWidth, oh=n.offsetHeight, W=cv.clientWidth;
+    const shut=!!w.c || n.classList.contains('shut');
+    const hd=n.querySelector(':scope > header'), mt=n.querySelector(':scope > .wmeter');
+    const minH=(hd? hd.offsetHeight : 42)+(mt? mt.offsetHeight : 0)+(shut? 0 : 40);
     n.classList.add('nbmoving');
-    const mv=ev=>{ ev.preventDefault(); const nw=Math.max(240, Math.min(W-n.offsetLeft, ow+ev.clientX-sx)), nh=Math.max(120, oh+(ev.clientY+window.scrollY-sY0)-sy);
-      n.style.width=(nw/W*100)+'%'; n.style.height=nh+'px'; n.classList.add('fixedh'); nbGrow(cv, n); };
+    const mv=ev=>{ ev.preventDefault(); const nw=Math.max(240, Math.min(W-n.offsetLeft, ow+ev.clientX-sx));
+      n.style.width=(nw/W*100)+'%';
+      if(!shut){ const nh=Math.max(minH, oh+(ev.clientY+window.scrollY-sY0)-sy); n.style.height=nh+'px'; n.classList.add('fixedh'); }
+      nbGrow(cv, n); };
     const up=()=>{ document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); nbAsStop(); n.classList.remove('nbmoving');
-      w.nbw=+(n.offsetWidth/W*100).toFixed(2); w.nbh=Math.round(n.offsetHeight); saveMine(); nbFit(cv); };
+      w.nbw=+(n.offsetWidth/W*100).toFixed(2);
+      if(!shut) w.nbh=Math.round(n.offsetHeight);
+      saveMine(); nbFit(cv); };
     document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
   });
   handle.addEventListener('dblclick', e=>{ e.stopPropagation(); w.nbh=null; saveMine(); vMine($('#app-mine')); });
