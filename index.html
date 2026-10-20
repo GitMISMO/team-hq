@@ -3572,6 +3572,7 @@ const SEED_LINKS = [
   {n:'Website Migration HQ',   u:'https://resources.mismo.org/website-migration/',      d:'Pages, decisions and cutover', c:3},
   {n:'Initiative Hub',         u:'https://resources.mismo.org/initiative-hub/',         d:'Active workgroup initiatives by domain', c:1},
   {n:'Service Orders',         u:'https://resources.mismo.org/service-orders/',         d:'Contractor agreements and e-signature', c:0},
+  {n:'Meeting Trackers',       u:'https://resources.mismo.org/meeting-trackers/',       d:'Workgroup meetings, schedules and attendance', c:5, nw:1},
   {n:'QR Code Manager',        u:'https://resources.mismo.org/qr/',                     d:'Codes, tracking and expiry', c:6},
   {n:'Sponsorship Prospectus', u:'https://resources.mismo.org/Sponsorship-Prospectus/', d:'The 2027 summit sponsorship prospectus', c:5, doc:1},
   {n:'Financial System',       u:'https://claude.ai/artifact/QFAJwn9Nv4ExGNCPnVYUEX',   d:'Reconciliation, budget, board reporting and summit P&L', c:1, tmp:1},
@@ -13767,6 +13768,8 @@ function boardSettings(L){
           const arrNow= !nbOn()? 'board' : (!nbSide() && !nbTop())? 'free' : 'notebook';
           b.appendChild(setRow('Arrange My Board As', 'Board lays panels out in rows. Free-Form is one open board: panels and post-its go wherever you drag them, any size, no grid. Notebook works like OneNote: colored sections across the top, pages down the side, and you click anywhere on a page to type.',
             btnRow(ARR, arrNow, 'tiny', v=>{ if(v!=='board') nbEnsure();
+              /* whatever the other layout has that this one is missing comes across */
+              try{ layoutCarry(arrNow, v); }catch(e){}
               if(v==='free'){ B.arr='notebook'; B.nbSide=0; B.nbTop=0; }
               else if(v==='notebook'){ B.arr='notebook'; B.nbSide=1; B.nbTop=1; }
               else B.arr='board';
@@ -13985,9 +13988,11 @@ function nbEnsure(){
   S.nb={pages:[{id:nbId('pg'), n:'My Board', tabs:[{id:nbId('tb'), n:'Main', L:nbFromBoard()}]}], cp:'', ct:{}};
   return S.nb;
 }
-function nbPage(){ const N=nbEnsure(); const pg=(nbSide() && N.pages.find(p=>p.id===N.cp)) || N.pages[0];
+/* Oct 20: the page you were last on stays the one shown even with the section tabs or page
+   list hidden (Free-Form), so switching layouts never hides what you were working on */
+function nbPage(){ const N=nbEnsure(); const pg=N.pages.find(p=>p.id===N.cp) || N.pages[0];
   if(!pg.tabs || !pg.tabs.length) pg.tabs=[{id:nbId('tb'), n:'Main', L:[]}]; return pg; }
-function nbTab(){ const N=nbEnsure(), pg=nbPage(); return (nbTop() && pg.tabs.find(t=>t.id===N.ct[pg.id])) || pg.tabs[0]; }
+function nbTab(){ const N=nbEnsure(), pg=nbPage(); return pg.tabs.find(t=>t.id===N.ct[pg.id]) || pg.tabs[0]; }
 /* Oct 20: tidied IN PLACE. It used to hand back a new list each time, so a panel added while
    the board redrew (My Notes waits a moment to make its section) went into a list nobody
    kept — Jonna: "I've tried to add my notes to my board, it did not appear". */
@@ -14013,6 +14018,8 @@ const NB_COLS=['c1','c2','c3','c4','c5','c7','teal','gray'];
 const NB_COLN={c1:'Blue',c2:'Orange',c3:'Green',c4:'Gold',c5:'Pink',c7:'Purple',teal:'Teal',gray:'Gray'};
 function nbSecCol(sec, i){ return sec.col || NB_COLS[(i||0)%NB_COLS.length]; }
 function nbView(root){
+  /* once: anything on the rows Board that never made it onto this layout comes across */
+  if(!bset().nbMerged && typeof MY!=='undefined' && MY.seen){ layoutCarry('board','notebook'); bset().nbMerged=1; saveMine(); }  /* after your notes have loaded, so an empty My Notes panel is pointed at your notes first */
   const N=nbEnsure(), pg=nbPage(), tb=nbTab();
   const si=Math.max(0, N.pages.indexOf(pg));
   const nb=el('div','nb'+(nbSide()?' side':'')+(nbTop()?' top':''));
@@ -14530,6 +14537,43 @@ function nbAddText(){
   const node=nbTextBox(cv, tb, box, true); cv.appendChild(node); nbGrow(cv, node);
   node.scrollIntoView({block:'nearest'});
   setTimeout(()=>{ const ed=node.querySelector('.rte'); if(ed) ed.focus(); }, 30);
+}
+
+/* ============ YOUR STUFF COMES WITH YOU (Oct 20) ============
+   Jonna: "when I go to a different layout my stuff should still be there". The rows Board and
+   the Free-Form/Notebook canvas keep their own arrangement (so switching back puts things
+   where you left them), but switching now carries across any panel the other one is missing.
+   Board → Free-Form/Notebook: missing panels land on the page you will see, below what is
+   there. Free-Form/Notebook → Board: missing panels go on the end of the rows, and if you have
+   post-its stuck on the canvas, a Note Wall panel is added so they still show. Writing typed
+   straight on a page stays on that page — it comes back when you switch back. */
+function panelKey(w){ return w.t+'|'+(w.k||''); }
+function nbAllLists(){ const N=nbEnsure(), out=[]; N.pages.forEach(pg=> (pg.tabs||[]).forEach(t=>{ if(!Array.isArray(t.L)) t.L=[]; out.push(t.L); })); return out; }
+function layoutCount(lists){ const c={}; lists.forEach(L=> eachPanel(L||[], w=>{ if(!w || !WTYPES[w.t]) return; const k=panelKey(w); c[k]=(c[k]||0)+1; })); return c; }
+function layoutCarry(from, to){
+  const fromNb=from!=='board', toNb=to!=='board';
+  if(fromNb===toNb) return 0;
+  let added=0;
+  if(toNb){
+    const lists=nbAllLists(), have=layoutCount(lists), seen={};
+    const T=nbTab().L;
+    let bottom=0; T.forEach(r=>{ const w=r.r[0]; if(w && w.nby!=null) bottom=Math.max(bottom, w.nby+(w.nbh||360)); });
+    let col=0, rowTop=bottom? bottom+24 : 0;
+    eachPanel(LAYOUT_ROWS(), w=>{ if(!w || !WTYPES[w.t]) return; const k=panelKey(w); seen[k]=(seen[k]||0)+1;
+      if(seen[k]<=(have[k]||0)) return;
+      const p=JSON.parse(JSON.stringify(w)); p.nbx=col? 51 : 1; p.nbw=48; p.nby=rowTop; p.nbh=null;
+      T.push({r:[p]}); have[k]=(have[k]||0)+1; added++;
+      if(col){ rowTop+=400; col=0; } else col=1; });
+  } else {
+    const rows=LAYOUT_ROWS(), have=layoutCount([rows]), seen={};
+    nbAllLists().forEach(L=> eachPanel(L, w=>{ if(!w || !WTYPES[w.t]) return; const k=panelKey(w); seen[k]=(seen[k]||0)+1;
+      if(seen[k]<=(have[k]||0)) return;
+      const p=JSON.parse(JSON.stringify(w)); ['nbx','nby','nbw','nbh','z'].forEach(x=> delete p[x]);
+      rows.push({r:[p]}); have[k]=(have[k]||0)+1; added++; }));
+    if((S.notes||[]).some(n=> n.loose && n.board===S.me) && !eachHas(rows, 'notes')){ rows.unshift({r:[newPanel({t:'notes', nf:'mine'}, rows)]}); added++; }
+  }
+  if(added) saveMine();
+  return added;
 }
 
 /* ============ TODAY'S WORKGROUP MEETINGS ============
@@ -16747,8 +16791,21 @@ function noteSecPutBack(sec, quiet){
   saveMine(); vMine($('#app-mine'));
   if(!quiet) toast('Your “'+noteSecName(sec)+'” notes are back on your board.');
 }
+/* Oct 20 — Jonna: "why is it a different My Note, can you fix that?" A My Notes panel on
+   this board that points at an EMPTY section (made by adding My Notes again) is switched to
+   your notes that are not on the board, quietly — so the panel you added shows your notes. */
+function notesAutoMend(){
+  if(!MY.seen) return false;
+  const miss=noteSecsMissing(); if(!miss.length) return false;
+  let changed=false;
+  try{ eachPanel(layout(), w=>{ if(!miss.length || !w || w.t!=='mynote' || !w.k) return;
+    const s=syCard(w.k); if(s && noteSecCount(s)===0){ w.k=miss.shift().s.id; changed=true; } }); }catch(e){}
+  if(changed) saveMine();
+  return changed;
+}
 function notesRescue(root){
   try{ myStart(); }catch(e){}
+  notesAutoMend();
   const miss=noteSecsMissing(); if(!miss.length) return;
   const c=el('div','callout warn nrescue');
   const total=miss.reduce((a,x)=>a+x.n,0);
@@ -16770,7 +16827,23 @@ function notesRescue(root){
 function notePanelPick(L, done){
   try{ myStart(); }catch(e){}
   const miss=noteSecsMissing();
-  if(!miss.length) return newNotePanel(L, done);
+  /* your notes, if they are not on this board already — no question asked when there is one */
+  if(miss.length===1){ L.push({r:[newPanel({t:'mynote', k:miss[0].s.id}, L)]}); done(); toast('Your notes are on your board.'); return; }
+  if(!miss.length){
+    const mine=myItems().filter(i=> i.kind==='note' && !i.in && !i.sync);
+    if(!mine.length) return newNotePanel(L, done);
+    /* they are already here: say so, and only start a separate section if asked */
+    sheet(box=>{
+      box.appendChild(el('h2',null,'Your Notes Are Already on This Board'));
+      box.appendChild(el('p',null,'My Notes is on your board already. You only need another one if you want a separate set of notes, kept apart from the first.'));
+      const a=el('div','modal-acts');
+      const bk=el('button','btn ghost','Back'); bk.type='button'; bk.addEventListener('click', ()=> addWidget(L));
+      const nw=el('button','btn ghost','Start a Separate Notes Section'); nw.type='button'; nw.addEventListener('click', ()=> newNotePanel(L, done));
+      const ok=el('button','btn','OK'); ok.type='button'; ok.addEventListener('click', closeSheet);
+      a.appendChild(bk); a.appendChild(el('span','spacer')); a.appendChild(nw); a.appendChild(ok); box.appendChild(a);
+    });
+    return;
+  }
   sheet(box=>{
     box.appendChild(el('h2',null,'Which Notes?'));
     box.appendChild(el('p',null,'These notes of yours are not on your board right now. Put one back, or start a new, empty notes section.'));
@@ -16784,7 +16857,7 @@ function notePanelPick(L, done){
       g.appendChild(bb);
     });
     const nw=el('button','lcard'); nw.type='button';
-    const sp=el('span'); sp.appendChild(document.createTextNode('Start a New Notes Section')); sp.appendChild(el('small',null,'Empty, ready for new notes'));
+    const sp=el('span'); sp.appendChild(document.createTextNode('Start a Separate Notes Section')); sp.appendChild(el('small',null,'Empty, kept apart from the others'));
     nw.appendChild(sp); nw.addEventListener('click', ()=> newNotePanel(L, done)); g.appendChild(nw);
     box.appendChild(g);
     const a=el('div','modal-acts'); const bk=el('button','btn ghost','Back'); bk.type='button';
