@@ -2526,6 +2526,52 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 
 /* ---------- My Board as a notebook ---------- */
 .nb{display:flex;align-items:stretch;border:1px solid var(--border);border-radius:8px;background:var(--surface);box-shadow:var(--shadow);min-height:640px;overflow:hidden}
+/* Oct 19 — the OneNote way round: sections across the top, that section's pages down the side */
+:root{--nbs-c1:var(--c1);--nbs-c2:var(--c2);--nbs-c3:var(--c3);--nbs-c4:var(--c4);--nbs-c5:var(--c5);--nbs-c7:var(--c7);--nbs-teal:#14898a;--nbs-gray:#6b7f90}
+:root[data-theme="dark"]{--nbs-teal:#2fb3b3;--nbs-gray:#8fa3b4}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--nbs-teal:#2fb3b3;--nbs-gray:#8fa3b4}}
+.nb{flex-direction:column;--sec:var(--c1)}
+.nbbody{display:flex;align-items:stretch;flex:1 1 auto;min-height:0}
+.nb .nbsecs{padding:10px 12px 0;border-bottom:3px solid var(--sec)}
+.nb .nbsecs .nbt{--sc:var(--c1);background:color-mix(in srgb,var(--sc) 20%,var(--surface-2));border:1px solid color-mix(in srgb,var(--sc) 40%,transparent);border-bottom:0;margin-bottom:0;color:var(--ink)}
+.nb .nbsecs .nbt:hover{background:color-mix(in srgb,var(--sc) 32%,var(--surface-2))}
+.nb .nbsecs .nbt.on{background:color-mix(in srgb,var(--sc) 8%,var(--surface));border-color:var(--sc);color:var(--ink);box-shadow:inset 0 4px 0 var(--sc)}
+.nb .nbpages{border-right:1px solid var(--border);background:color-mix(in srgb,var(--sec) 6%,var(--surface-2))}
+.nb .nbpages .nbt.on{box-shadow:inset 3px 0 0 var(--sec),0 1px 2px rgba(6,32,47,.08)}
+.nb .nbpages .nbt.sub{margin-left:18px;font-weight:500;font-size:12.5px}
+.nb .nbpages .nbt.sub.on{font-weight:700}
+.nb .nbhead{padding:18px 22px 4px 22px;display:flex;flex-direction:column;gap:4px}
+.nb .nbhead .nbtitle{font:inherit;font-size:26px;font-weight:700;color:var(--ink);background:transparent;border:0;border-bottom:1px solid var(--rule);border-radius:0;padding:2px 0 6px;max-width:640px;outline:none}
+.nb .nbhead .nbtitle::placeholder{color:var(--ink-3);font-weight:600}
+.nb .nbhead .nbtitle:focus{border-bottom-color:var(--sec);outline:none}
+.nb .nbwhen{font-size:12.5px;color:var(--ink-3);white-space:pre}
+.nb .nbhead + .nbcanvas{margin-top:8px}
+.nbt{position:relative}
+.nbcolpop{position:absolute;top:calc(100% + 6px);left:0;z-index:60;display:grid;grid-template-columns:repeat(4,24px);gap:6px;padding:8px;background:var(--surface);border:1px solid var(--border-strong);border-radius:7px;box-shadow:0 8px 24px rgba(6,32,47,.18);cursor:default}
+.nbsw{width:24px;height:24px;border-radius:4px;border:2px solid transparent;cursor:pointer;padding:0}
+.nbsw.on{border-color:var(--ink)}
+.nbsw:hover{outline:2px solid var(--c1);outline-offset:1px}
+/* typing straight on the page */
+.nbcanvas{cursor:text}
+.nbcanvas .nbp,.nbcanvas .nbloose{cursor:auto}
+.nbempty{pointer-events:none}
+.nbcanvas > .nbtext{position:absolute;margin:0;min-width:160px;cursor:auto;border:1px solid transparent;border-radius:4px;background:transparent;transition:border-color .12s,background .12s}
+.nbtext:hover,.nbtext:focus-within,.nbtext.unsaved{border-color:var(--border);background:var(--surface)}
+.nbtext:focus-within{border-color:var(--border-strong);box-shadow:0 2px 10px rgba(6,32,47,.08)}
+.nbtbar{display:flex;align-items:center;gap:6px;height:16px;padding:0 4px;cursor:grab;opacity:0;transition:opacity .12s;background:var(--surface-2);border-radius:3px 3px 0 0}
+.nbtext:hover .nbtbar,.nbtext:focus-within .nbtbar,.nbtext.unsaved .nbtbar{opacity:1}
+.nbtgrip{flex:1 1 auto;height:4px;margin:0 30%;border-top:1px dotted var(--ink-3);border-bottom:1px dotted var(--ink-3)}
+.nbtsave{border:0;border-radius:3px;background:var(--c1);color:#fff;font:inherit;font-size:10.5px;font-weight:700;padding:0 7px;line-height:15px;cursor:pointer;white-space:nowrap}
+.nbtdel{border:0;background:none;color:var(--ink-3);font:inherit;font-size:13px;line-height:15px;padding:0 3px;cursor:pointer;white-space:nowrap}
+.nbtdel:hover{color:var(--bad)}
+.nbtdel.arm{color:#fff;background:var(--bad);border-radius:3px;font-size:10.5px;font-weight:700;padding:0 6px}
+.nbtext .nbted{padding:4px 8px 6px}
+.nbtext .nbted .rtbar{margin-top:2px}
+.nbtext .nbted .rtx{font-size:14px}
+.nbtext.nbmoving{box-shadow:0 12px 30px rgba(6,32,47,.24);cursor:grabbing}
+.nbtw{position:absolute;top:16px;right:-4px;bottom:0;width:8px;cursor:ew-resize}
+.nbcanvas.nbstack > .nbtext{position:relative;width:auto!important;margin:0 0 12px;border-color:var(--border);background:var(--surface)}
+.nbcanvas.nbstack .nbtbar{opacity:1;cursor:default}
 .nbpages{flex:0 0 210px;display:flex;flex-direction:column;gap:2px;padding:12px 8px;background:var(--surface-2);border-right:1px solid var(--border)}
 .nbmain{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
 .nbtabs{display:flex;align-items:flex-end;gap:2px;padding:10px 12px 0;background:var(--surface-2);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:thin}
@@ -2569,6 +2615,19 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
   .nbpages .nbt.on{box-shadow:inset 0 -3px 0 var(--c1)}
   .nbpages .nbadd{margin:0 0 0 4px}
 }
+/* post-its stuck straight on the board */
+.nbcanvas > .nbloose{position:absolute;margin:0}
+.nbloose > .sticky{margin:0;height:100%}
+.nbloose .sticky > .dgrip{cursor:grab}
+.nbloose.nbmoving > .sticky{box-shadow:0 16px 36px rgba(6,32,47,.32)}
+.nbloose.nbmoving .sticky > .dgrip{cursor:grabbing}
+.nbloose > .nbsize{opacity:0;transition:opacity .15s}
+.nbloose:hover > .nbsize,.nbloose.nbmoving > .nbsize{opacity:.8}
+.nbcanvas.nbstack > .nbloose{position:static;width:auto!important;margin:0 0 12px}
+@media(max-width:760px){.nbbody{flex-direction:column}.nbhead{padding:12px 12px 2px}.nbtitle{font-size:21px}}
+.nbghost{position:fixed!important;z-index:9999;pointer-events:none;margin:0;opacity:.92;transform:rotate(-2deg);box-shadow:0 18px 40px rgba(6,32,47,.35)!important}
+.sticky.leaving{opacity:.35}
+.nb .nbsecs .nbcolb svg circle{fill:var(--sc);stroke:var(--sc)}
 
 /* ---------- today's workgroup meetings ---------- */
 .mtband{display:flex;align-items:center;gap:18px;flex-wrap:wrap;background:var(--navy);color:#fff;border:1px solid var(--navy-deep);border-radius:8px;padding:11px 16px;margin:0 0 16px}
@@ -3022,6 +3081,23 @@ html{scrollbar-color:var(--border-strong) var(--ground)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .vaultmsg{color:#ff8f85}}
 .vaultp .mynote-x .rtx{min-height:300px}
 input[type=password]{background:var(--surface);color:var(--ink);border:1px solid var(--border-strong);border-radius:4px;padding:6px 8px;font-size:13px;max-width:100%;font-family:inherit}
+
+/* ---------- a team project, opened ---------- */
+.rkptop{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.rkptop .btn{white-space:nowrap;min-width:max-content}
+.rkptop .btn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+.rkpprog{display:flex;align-items:center;gap:12px;margin:0 0 16px}
+.rkpprog .pbar{flex:1 1 auto;margin:0}
+.rkpprog span{font-size:12.5px;color:var(--ink-2);white-space:nowrap}
+.sect-t.rkpg{display:flex;align-items:center;gap:8px;margin:18px 0 8px}
+.sect-t.rkpg:first-of-type{margin-top:4px}
+.sect-t.rkpg.late{color:var(--bad)}
+:root[data-theme="dark"] .sect-t.rkpg.late{color:#ff8f85}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .sect-t.rkpg.late{color:#ff8f85}}
+.rkpn{display:inline-block;min-width:20px;padding:0 6px;border-radius:3px;background:var(--surface-2);border:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:0;color:var(--ink-2);text-align:center}
+.rkpabout{margin-top:16px;border:1px solid var(--border);border-radius:6px;background:var(--surface)}
+.rkpabout > summary{cursor:pointer;padding:9px 12px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+.rkpabout > .rkd{padding:0 12px 12px;font-size:13px;color:var(--ink-2)}
 
 #rs-account{flex:0 0 auto;display:inline-flex;align-items:center}
 #rs-account .rs-who,#rs-account .rs-signin{border-radius:4px}
@@ -5816,7 +5892,7 @@ function vRocks(root){
   nb.appendChild(el('span',null,'New Team Project'));
   nb.addEventListener('click', ()=> editRock(null));
   right.appendChild(nb);
-  vhead(root,'Team Projects','The umbrella efforts everything rolls up to. Open one to see its parts and who has work in each — that is where overlap shows up.', right);
+  vhead(root,'Team Projects','The umbrella efforts everything rolls up to. Open one to see its tasks, soonest first — or switch to By Part to see who has work in each part, which is where overlap shows up.', right);
 
   const ovl = overlaps();
   if(ovl.length){
@@ -5942,7 +6018,7 @@ function rockCard(r, dupWs, root){
 
 /* Everything that used to drop down below the card now opens in the right rail,
    so the row of cards never reflows under you while you read one. */
-function rockPanel(r, dupWs){
+function rockPanelOld(r, dupWs){
   const head = (()=>{ const m=S.tasks.filter(t=>t.r===r.id);
     return r.status+(r.lead? ' \u00b7 lead '+pname(r.lead):'')+' \u00b7 '+m.filter(t=>t.s==='Done').length+' of '+m.length+' done'; })();
   panel(r.name, head, body=>{
@@ -7552,6 +7628,15 @@ function myHeadline(me){
   ab.appendChild(el('span',null,'Add a Panel'));
   ab.addEventListener('click', ()=> addWidget(layout()));
   top.appendChild(ab);
+  /* on a Free-Form or Notebook board, a post-it can sit anywhere on it */
+  if(nbOn()){
+    const pb=el('button','hlbtn'); pb.type='button';
+    pb.innerHTML='<svg viewBox="0 0 24 24"><path d="M5 4h14v10l-5 6H5z"/><path d="M14 20v-6h5"/></svg>';
+    pb.appendChild(el('span',null,'Add a Post-It'));
+    pb.title='A post-it you can stick anywhere on your board';
+    pb.addEventListener('click', ()=> nbAddPostIt());
+    top.appendChild(pb);
+  }
   const bg=el('button','hlbtn icon'); bg.type='button'; bg.title='My Board Settings'; bg.setAttribute('aria-label','My Board Settings');
   bg.innerHTML='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
   bg.addEventListener('click', ()=> boardSettings(layout()));
@@ -8372,6 +8457,7 @@ function newPanel(p, L){
   const B=bset();
   if(B.autocol && !p.col) p.col = nextColor(L);
   if(!p.st && B.style==='bold') p.st='bold';
+  if(B.start==='1' && p.c==null) p.c=1;
   return p;
 }
 /* addWidget lives in panels.js */
@@ -13439,13 +13525,14 @@ function openField(cur, onPick, withBoard){
    now; pointing at one of its choices shows what that choice would do — a small
    picture of the board and a sentence — before anything is clicked. */
 const PV_INFO = {
-  arr:    {t:'Arrange My Board As', n:{board:'Board', notebook:'Notebook'},
+  arr:    {t:'Arrange My Board As', n:{board:'Board', free:'Free-Form', notebook:'Notebook'},
            say:{board:'Panels sit in rows down the page. Drag a panel by its heading to move it to another row.',
-                notebook:'Works like OneNote: pages down the side, tabs across the top, and you drag panels anywhere on a tab and size them by the corner.'}},
-  nbSide: {t:'Pages Down the Side', n:{'1':'On','0':'Off'},
-           say:{'1':'A list of your pages runs down the left. Click one to switch pages; drag to reorder.', '0':'The page list is hidden for more room. Your other pages are kept.'}},
-  nbTop:  {t:'Tabs Across the Top', n:{'1':'On','0':'Off'},
-           say:{'1':'Each page has tabs across the top, like sections in OneNote.', '0':'The tabs are hidden. The other tabs are kept.'}},
+                free:'One open board with no rows and no grid. Drag panels anywhere, size them by the corner, overlap them, and stick post-its wherever you like.',
+                notebook:'Works like OneNote: colored sections across the top, each section\u2019s pages down the side, a title and date on every page, and you click anywhere on a page to type.'}},
+  nbSide: {t:'Sections Across the Top', n:{'1':'On','0':'Off'},
+           say:{'1':'Colored section tabs run across the top, like OneNote. Click one to switch; drag to reorder.', '0':'The section tabs are hidden for more room. Your other sections are kept.'}},
+  nbTop:  {t:'Pages Down the Side', n:{'1':'On','0':'Off'},
+           say:{'1':'The section\u2019s pages are listed down the left, with subpages tucked under the page above.', '0':'The page list is hidden. The other pages are kept.'}},
   match:  {t:'Panels Side by Side', n:{'1':'Match Their Heights','0':'Each Its Own Height'},
            say:{'1':'Panels on the same row line up to the tallest one, so the row reads as a neat block.', '0':'Each panel is only as tall as what is in it, so a short list stays short.'}},
   shut:   {t:'Collapsed Panels', n:{'1':'Stay Short','0':'Match the Row'},
@@ -13493,8 +13580,9 @@ function pvMock(k, v, ctx){
   const nb=(side,top,hlS,hlT)=>{
     const L=side?22:2;
     let h='';
-    if(side) h+='<i class="mk-pages'+(hlS?' hl':'')+'"><i class="mk-pg on"></i><i class="mk-pg"></i><i class="mk-pg"></i></i>';
-    if(top) h+='<i class="mk-tabs'+(hlT?' hl':'')+'" style="left:'+L+'%"><i class="mk-tab on"></i><i class="mk-tab"></i><i class="mk-tab"></i></i>';
+    /* OneNote's way round: section tabs right across the top, the page list under them on the left */
+    if(side) h+='<i class="mk-pages'+(hlS?' hl':'')+'" style="'+(top?'top:18%':'')+'"><i class="mk-pg on"></i><i class="mk-pg"></i><i class="mk-pg"></i></i>';
+    if(top) h+='<i class="mk-tabs'+(hlT?' hl':'')+'" style="left:2%"><i class="mk-tab on"></i><i class="mk-tab"></i><i class="mk-tab"></i></i>';
     h+='<i class="mk-canvas" style="left:'+L+'%;top:'+(top?20:4)+'%"></i>';
     const ox=L+3, w=100-L;
     h+=P(ox, top?28:12, w*0.40, 38, '', 2)+P(ox+w*0.48, top?36:20, w*0.38, 30, '', 2)+P(ox+w*0.1, top?72:58, w*0.5, 22, '', 1);
@@ -13503,9 +13591,9 @@ function pvMock(k, v, ctx){
   let h='';
   const col=ctx.col? 'border-top:3px solid var(--'+ctx.col+');' : '';
   switch(k){
-    case 'arr': h = v==='notebook' ? nb(1,1) : band()+P(3,24,46,34,'',2)+P(51,24,46,34,'',2)+P(3,63,94,31,'',2); break;
-    case 'nbSide': h = nb(v==='1', 1, v==='1', 0); break;
-    case 'nbTop': h = nb(1, v==='1', 0, v==='1'); break;
+    case 'arr': h = v==='notebook' ? nb(1,1) : v==='free' ? nb(0,0)+'<i class="mk-p me" style="left:70%;top:14%;width:16%;height:22%;background:#fbe27a;border-color:#e5c84a"></i>' : band()+P(3,24,46,34,'',2)+P(51,24,46,34,'',2)+P(3,63,94,31,'',2); break;
+    case 'nbSide': h = nb(1, v==='1', 0, v==='1'); break;
+    case 'nbTop': h = nb(v==='1', 1, v==='1', 0); break;
     case 'match': h = band()+ (v==='1' ? P(3,24,30,70,'me',3)+P(35,24,30,70,'me',5)+P(67,24,30,70,'me',2)
                                         : P(3,24,30,46,'me',3)+P(35,24,30,70,'me',5)+P(67,24,30,34,'me',2)); break;
     case 'shut': h = band()+ (v==='1' ? P(3,24,46,10,'me shut',0)+P(51,24,46,70,'',5)
@@ -13640,19 +13728,34 @@ function boardSettings(L){
       const STY=[{v:'plain',n:'Plain'},{v:'bold',n:'Bold'}];
       const ONOFF=[{v:'1',n:'On'},{v:'0',n:'Off'}];
       setGroups(box, 'board', [
-        {k:'layout', n:'Layout', d:'Rows of panels, or a notebook with pages and tabs.', repaint:paint,
-         sum:()=> nbOn()? 'Notebook'+(nbSide()&&nbTop()?' · Pages and Tabs':nbSide()?' · Pages':nbTop()?' · Tabs':'')
+        {k:'layout', n:'Layout', d:'Rows of panels, an open free-form board, or a notebook with pages and tabs — and whether panels start open.', repaint:paint,
+         sum:()=> nbOn() && !nbSide() && !nbTop()? 'Free-Form' : nbOn()? 'Notebook'+(nbSide()&&nbTop()?' · Sections and Pages':nbSide()?' · Sections':nbTop()?' · Pages':'')
                         : 'Board · '+(B.match? 'Heights Matched' : 'Each Its Own Height'),
          rows:b=>{
-          const ARR=[{v:'board',n:'Board'},{v:'notebook',n:'Notebook'}];
-          b.appendChild(setRow('Arrange My Board As', 'Board lays panels out in rows. Notebook works like OneNote: pages down the side, tabs across the top, and panels wherever you drag them.',
-            btnRow(ARR, nbOn()?'notebook':'board', 'tiny', v=>{ if(v==='notebook') nbEnsure(); B.arr=v; apply(); }), {pv:{k:'arr', cur:nbOn()?'notebook':'board'}}));
+          const ARR=[{v:'board',n:'Board'},{v:'free',n:'Free-Form'},{v:'notebook',n:'Notebook'}];
+          const arrNow= !nbOn()? 'board' : (!nbSide() && !nbTop())? 'free' : 'notebook';
+          b.appendChild(setRow('Arrange My Board As', 'Board lays panels out in rows. Free-Form is one open board: panels and post-its go wherever you drag them, any size, no grid. Notebook works like OneNote: colored sections across the top, pages down the side, and you click anywhere on a page to type.',
+            btnRow(ARR, arrNow, 'tiny', v=>{ if(v!=='board') nbEnsure();
+              if(v==='free'){ B.arr='notebook'; B.nbSide=0; B.nbTop=0; }
+              else if(v==='notebook'){ B.arr='notebook'; B.nbSide=1; B.nbTop=1; }
+              else B.arr='board';
+              apply(); }), {pv:{k:'arr', cur:arrNow}}));
           if(nbOn()){
-            b.appendChild(setRow('Pages Down the Side', 'A list of pages on the left. Turning it off hides the other pages but keeps them.',
+            b.appendChild(setRow('Sections Across the Top', 'Colored section tabs across the top. Turning it off hides the other sections but keeps them.',
               btnRow(ONOFF, nbSide()?'1':'0', 'tiny', v=>{ B.nbSide=v==='1'?1:0; apply(); }), {pv:{k:'nbSide', cur:nbSide()?'1':'0'}}));
-            b.appendChild(setRow('Tabs Across the Top', 'Tabs within each page. Turning it off hides the other tabs but keeps them.',
+            b.appendChild(setRow('Pages Down the Side', 'The section\u2019s pages, listed down the left. Turning it off hides the other pages but keeps them.',
               btnRow(ONOFF, nbTop()?'1':'0', 'tiny', v=>{ B.nbTop=v==='1'?1:0; apply(); }), {pv:{k:'nbTop', cur:nbTop()?'1':'0'}}));
           }
+          /* every panel at once — each panel's own gear can still set it its own way */
+          const START=[{v:'0',n:'Open'},{v:'1',n:'Collapsed'}];
+          const every=fn=>{ try{ eachPanel(LAYOUT_ROWS(), fn); }catch(e){ eachPanel(L, fn); }
+            if(S.nb && Array.isArray(S.nb.pages)) S.nb.pages.forEach(pg=> (pg.tabs||[]).forEach(t=> eachPanel(t.L||[], fn))); };
+          const cs=[]; every(w=> cs.push(w.c?1:0));
+          const stNow= cs.length && cs.every(x=>x===1)? '1' : cs.length && cs.every(x=>x===0)? '0' : (B.start||'');
+          const mixed= cs.length && !cs.every(x=>x===cs[0]);
+          b.appendChild(setRow('When the Board Opens', 'Start every panel open, or collapsed to its heading — new panels too.'+(mixed? ' Right now some are open and some collapsed; picking one sets them all.' : '')+' A panel’s own gear can still set it its own way.',
+            btnRow(START, mixed? '' : stNow, 'tiny', v=>{ B.start=v; every(w=>{ w.c= v==='1'?1:0; }); apply(); toast(v==='1'? 'Every panel starts collapsed.' : 'Every panel starts open.'); }),
+            {pv:{k:'start', cur: mixed? '0' : stNow||'0'}}));
           b.appendChild(setRow('Panels Side by Side', nbOn()? 'Only for the Board layout. In a notebook, size each panel by dragging its corner.' : 'Line every panel on a row up to the tallest one, or let each be as tall as what is in it.',
             btnRow(HEIGHTS, String(B.match?1:0), 'tiny', v=>{ B.match=v==='1'?1:0; apply(); }), {off:nbOn(), pv:{k:'match', cur:String(B.match?1:0)}}));
           b.appendChild(setRow('Collapsed Panels', B.match? 'A collapsed panel shrinks to just its heading, so opening the panel beside it never stretches it. Match the Row keeps it as tall as its row instead.' : 'Only applies when panels match their heights.',
@@ -13863,54 +13966,92 @@ function nbL(){ const t=nbTab(); if(!Array.isArray(t.L)) t.L=[];
 const LAYOUT_ROWS = layout;
 layout = function(){ return nbOn()? nbL() : LAYOUT_ROWS(); };
 
-/* ---- the view ---- */
+/* ---- the view ----
+   Oct 19 — laid out like OneNote. Jonna: "With the notebook, can you make it function like
+   OneNote?" The two levels kept in S.nb are shown the OneNote way round: the outer level
+   (S.nb.pages, filed as kind 'page') is SECTIONS, colored tabs across the top; the inner
+   level (each section's .tabs, kind 'tab') is that section's PAGES, listed down the side,
+   with subpages indented under the page above (`sub`). Each page opens with a big title
+   and the date and time it was made (`at`), and you can click anywhere on it and type.
+   The settings flags keep their names: nbSide shows the sections, nbTop shows the pages. */
+const NB_COLS=['c1','c2','c3','c4','c5','c7','teal','gray'];
+const NB_COLN={c1:'Blue',c2:'Orange',c3:'Green',c4:'Gold',c5:'Pink',c7:'Purple',teal:'Teal',gray:'Gray'};
+function nbSecCol(sec, i){ return sec.col || NB_COLS[(i||0)%NB_COLS.length]; }
 function nbView(root){
   const N=nbEnsure(), pg=nbPage(), tb=nbTab();
+  const si=Math.max(0, N.pages.indexOf(pg));
   const nb=el('div','nb'+(nbSide()?' side':'')+(nbTop()?' top':''));
+  nb.style.setProperty('--sec', 'var(--nbs-'+nbSecCol(pg, si)+')');
+  /* sections across the top */
   if(nbSide()) nb.appendChild(nbStrip('page', N.pages, pg.id, id=>{ N.cp=id; }, ()=>{
-    const p={id:nbId('pg'), n:'New Page', tabs:[{id:nbId('tb'), n:'Main', L:[]}]}; N.pages.push(p); N.cp=p.id; return p.id; },
+    const p={id:nbId('pg'), n:'New Section', col:NB_COLS[N.pages.length%NB_COLS.length], tabs:[{id:nbId('tb'), n:'', at:Date.now(), L:[]}]};
+    N.pages.push(p); N.cp=p.id; return p.id; },
     (id)=>{ N.pages=N.pages.filter(p=>p.id!==id); if(N.cp===id) N.cp=N.pages[0].id; }, (from,to)=>{ nbMove(N.pages, from, to); }));
+  const body=el('div','nbbody');
+  /* that section's pages down the side */
+  if(nbTop()) body.appendChild(nbStrip('tab', pg.tabs, tb.id, id=>{ N.ct[pg.id]=id; }, ()=>{
+    const cur=pg.tabs.findIndex(t=>t.id===tb.id);
+    const t={id:nbId('tb'), n:'', at:Date.now(), L:[]};
+    pg.tabs.splice(cur>=0? cur+1 : pg.tabs.length, 0, t); N.ct[pg.id]=t.id; NB_FOCUS_TITLE=t.id; return t.id; },
+    (id)=>{ const i=pg.tabs.findIndex(t=>t.id===id); pg.tabs=pg.tabs.filter(t=>t.id!==id);
+      if(pg.tabs[i] && pg.tabs[i].sub && (i===0 || !pg.tabs[i-1])) pg.tabs[i].sub=0;
+      if(pg.tabs[0]) pg.tabs[0].sub=0;
+      if(N.ct[pg.id]===id) N.ct[pg.id]=(pg.tabs[Math.max(0,i-1)]||pg.tabs[0]).id; }, (from,to)=>{ nbMove(pg.tabs, from, to); if(pg.tabs[0]) pg.tabs[0].sub=0; }));
   const main=el('div','nbmain');
-  if(nbTop()) main.appendChild(nbStrip('tab', pg.tabs, tb.id, id=>{ N.ct[pg.id]=id; }, ()=>{
-    const t={id:nbId('tb'), n:'New Tab', L:[]}; pg.tabs.push(t); N.ct[pg.id]=t.id; return t.id; },
-    (id)=>{ pg.tabs=pg.tabs.filter(t=>t.id!==id); if(N.ct[pg.id]===id) N.ct[pg.id]=pg.tabs[0].id; }, (from,to)=>{ nbMove(pg.tabs, from, to); }));
+  if(nbTop()) main.appendChild(nbPageHead(tb));
   main.appendChild(nbCanvas(tb));
-  nb.appendChild(main);
+  body.appendChild(main);
+  nb.appendChild(body);
   root.appendChild(nb);
+  if(NB_FOCUS_TITLE===tb.id){ NB_FOCUS_TITLE=''; setTimeout(()=>{ const t=document.querySelector('#app-mine .nbtitle'); if(t){ t.focus(); t.select(); } }, 60); }
 }
+let NB_FOCUS_TITLE='';
 function nbMove(arr, fromId, toId){
   const a=arr.findIndex(x=>x.id===fromId), b=arr.findIndex(x=>x.id===toId); if(a<0||b<0||a===b) return;
   const [it]=arr.splice(a,1); arr.splice(b,0,it);
 }
-/* a strip of pages (down the side) or tabs (across the top) */
+/* the page's title, and when it was made — like the top of a OneNote page */
+function nbPageHead(tb){
+  const h=el('div','nbhead');
+  const ti=inp('text', tb.n||'', 'Untitled Page'); ti.className='nbtitle'; ti.setAttribute('aria-label','Page title');
+  const keep=()=>{ const v=ti.value.trim().slice(0,80); if(v===(tb.n||'')) return; tb.n=v; saveMine();
+    const li=document.querySelector('#app-mine .nbpages .nbt[data-id="'+tb.id+'"] .nbn'); if(li) li.textContent=v||'Untitled Page'; };
+  ti.addEventListener('keydown', e=>{ e.stopPropagation(); if(e.key==='Enter'){ e.preventDefault(); ti.blur(); } if(e.key==='Escape'){ ti.value=tb.n||''; ti.blur(); } });
+  ti.addEventListener('blur', keep);
+  h.appendChild(ti);
+  if(tb.at){ const d=new Date(tb.at);
+    h.appendChild(el('div','nbwhen', d.toLocaleDateString('en-US',{weekday:'long', month:'long', day:'numeric', year:'numeric'})+'   '+d.toLocaleTimeString('en-US',{hour:'numeric', minute:'2-digit'}))); }
+  return h;
+}
+/* sections (kind 'page', across the top) or pages (kind 'tab', down the side) */
 function nbStrip(kind, items, curId, onPick, onAdd, onDel, onMove){
-  const word = kind==='page'? 'Page' : 'Tab';
-  const strip=el('div', kind==='page'? 'nbpages' : 'nbtabs');
-  strip.setAttribute('role','tablist'); strip.setAttribute('aria-label', kind==='page'? 'Pages' : 'Tabs');
+  const isSec = kind==='page';
+  const word = isSec? 'Section' : 'Page';
+  const strip=el('div', isSec? 'nbtabs nbsecs' : 'nbpages');
+  strip.setAttribute('role','tablist'); strip.setAttribute('aria-label', isSec? 'Sections' : 'Pages');
   const redraw=()=>{ saveMine(); vMine($('#app-mine')); };
-  items.forEach(it=>{
+  items.forEach((it,i)=>{
     const on=it.id===curId;
-    const b=el('div','nbt'+(on?' on':'')); b.dataset.id=it.id; b.dataset.kind=kind;
+    const b=el('div','nbt'+(on?' on':'')+(!isSec && it.sub && i>0?' sub':'')); b.dataset.id=it.id; b.dataset.kind=kind;
+    if(isSec) b.style.setProperty('--sc', 'var(--nbs-'+nbSecCol(it, i)+')');
     b.setAttribute('role','tab'); b.setAttribute('aria-selected', String(on)); b.tabIndex=0;
     b.draggable=true;
     const nm=el('span','nbn', it.n||('Untitled '+word)); b.appendChild(nm);
-    const cnt=kind==='page'? (it.tabs||[]).reduce((a,t)=>a+((t.L||[]).length),0) : (it.L||[]).length;
-    if(cnt) b.appendChild(el('span','nbc', String(cnt)));
-    b.addEventListener('click', e=>{ if(e.target.closest('.nbx, input')) return; if(!on){ onPick(it.id); redraw(); } });
+    const cnt=isSec? (it.tabs||[]).length : 0;
+    if(isSec && cnt>1) b.appendChild(el('span','nbc', String(cnt)));
+    b.addEventListener('click', e=>{ if(e.target.closest('.nbx, input, .nbcolpop')) return; if(!on){ onPick(it.id); redraw(); } });
     b.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.target.closest('input')){ if(!on){ onPick(it.id); redraw(); } else nbRename(b, it, redraw); } });
-    b.addEventListener('dblclick', e=>{ e.preventDefault(); nbRename(b, it, redraw); });
+    b.addEventListener('dblclick', e=>{ e.preventDefault(); if(isSec) nbRename(b, it, redraw); else { const t=document.querySelector('#app-mine .nbtitle'); if(t){ t.focus(); t.select(); } } });
     if(on){
       const acts=el('span','nbx');
-      const rn=el('button','nbi'); rn.type='button'; rn.title='Rename this '+word.toLowerCase(); rn.setAttribute('aria-label','Rename '+(it.n||word));
-      rn.innerHTML='<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>';
-      rn.addEventListener('click', e=>{ e.stopPropagation(); nbRename(b, it, redraw); });
-      acts.appendChild(rn);
-      if(items.length>1){
-        const dl=el('button','nbi'); dl.type='button'; dl.title='Delete this '+word.toLowerCase(); dl.setAttribute('aria-label','Delete '+(it.n||word));
-        dl.innerHTML='<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
-        dl.addEventListener('click', e=>{ e.stopPropagation(); nbConfirmDelete(kind, it, ()=>{ onDel(it.id); redraw(); }); });
-        acts.appendChild(dl);
-      }
+      const btn=(title, svg, fn)=>{ const x=el('button','nbi'); x.type='button'; x.title=title; x.setAttribute('aria-label', title);
+        x.innerHTML='<svg viewBox="0 0 24 24">'+svg+'</svg>'; x.addEventListener('click', e=>{ e.stopPropagation(); fn(x); }); acts.appendChild(x); return x; };
+      btn('Rename this '+word.toLowerCase(), '<path d="M4 20h4L19 9l-4-4L4 16z"/>', ()=>{
+        if(isSec) nbRename(b, it, redraw); else { const t=document.querySelector('#app-mine .nbtitle'); if(t){ t.focus(); t.select(); } } });
+      if(isSec) btn('Section color', '<circle cx="12" cy="12" r="7"/>', x=> nbColorPop(x, it, redraw)).classList.add('nbcolb');
+      if(!isSec && i>0) btn(it.sub? 'Move out from under the page above' : 'Make it a subpage of the page above',
+        it.sub? '<path d="M15 6l-6 6 6 6"/>' : '<path d="M9 6l6 6-6 6"/>', ()=>{ it.sub=it.sub?0:1; redraw(); });
+      if(items.length>1) btn('Delete this '+word.toLowerCase(), '<path d="M6 6l12 12M18 6L6 18"/>', ()=> nbConfirmDelete(kind, it, ()=>{ onDel(it.id); redraw(); }));
       b.appendChild(acts);
     }
     /* reorder by dragging */
@@ -13926,9 +14067,20 @@ function nbStrip(kind, items, curId, onPick, onAdd, onDel, onMove){
   add.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>';
   add.appendChild(el('span',null,'Add a '+word));
   add.addEventListener('click', ()=>{ const id=onAdd(); saveMine(); vMine($('#app-mine'));
-    const nb2=document.querySelector('#app-mine .nbt[data-id="'+id+'"]'); if(nb2){ const it=items.find(x=>x.id===id); if(it) nbRename(nb2, it, ()=>{ saveMine(); vMine($('#app-mine')); }); } });
+    if(isSec){ const nb2=document.querySelector('#app-mine .nbt[data-id="'+id+'"]'); if(nb2){ const it=items.find(x=>x.id===id); if(it) nbRename(nb2, it, ()=>{ saveMine(); vMine($('#app-mine')); }); } } });
   strip.appendChild(add);
   return strip;
+}
+/* pick a section's color */
+function nbColorPop(anchor, sec, done){
+  const old=document.querySelector('.nbcolpop'); if(old){ old.remove(); if(old.__for===sec.id) return; }
+  const pop=el('div','nbcolpop'); pop.__for=sec.id; pop.setAttribute('role','dialog'); pop.setAttribute('aria-label','Section color');
+  NB_COLS.forEach(c=>{ const b=el('button','nbsw'+((sec.col||'')===c?' on':'')); b.type='button'; b.title=NB_COLN[c]; b.setAttribute('aria-label',NB_COLN[c]);
+    b.style.background='var(--nbs-'+c+')';
+    b.addEventListener('click', e=>{ e.stopPropagation(); sec.col=c; pop.remove(); done(); }); pop.appendChild(b); });
+  anchor.closest('.nbt').appendChild(pop);
+  const off=e=>{ if(!pop.contains(e.target) && e.target!==anchor){ pop.remove(); document.removeEventListener('pointerdown', off, true); } };
+  setTimeout(()=> document.addEventListener('pointerdown', off, true), 0);
 }
 let NB_DRAG=null;
 function nbRename(btn, it, done){
@@ -13942,13 +14094,19 @@ function nbRename(btn, it, done){
   i.addEventListener('click', e=> e.stopPropagation());
 }
 function nbConfirmDelete(kind, it, go){
-  const n=kind==='page'? (it.tabs||[]).reduce((a,t)=>a+((t.L||[]).length),0) : (it.L||[]).length;
+  const word= kind==='page'? 'section' : 'page';
+  const tabs= kind==='page'? (it.tabs||[]) : [it];
+  const n=tabs.reduce((a,t)=>a+((t.L||[]).length),0), tx=tabs.reduce((a,t)=>a+((t.tx||[]).filter(x=>rtText(x.h||'').trim()).length),0);
   sheet(box=>{
     box.appendChild(el('h2',null,'Delete “'+(it.n||'Untitled')+'”?'));
-    box.appendChild(el('p',null, n? 'The '+n+(n===1?' panel':' panels')+' on this '+kind+' come off your board with it. What is inside them — tasks, notes, projects — is not deleted.' : 'This '+kind+' is empty.'));
+    const bits=[];
+    if(kind==='page' && tabs.length>1) bits.push('Its '+tabs.length+' pages go with it.');
+    if(tx) bits.push('The '+tx+(tx===1?' piece':' pieces')+' of writing typed on '+(kind==='page'?'its pages':'this page')+' are deleted.');
+    if(n) bits.push('The '+n+(n===1?' panel':' panels')+' come off your board. What is inside them — tasks, notes, projects — is not deleted.');
+    box.appendChild(el('p',null, bits.length? bits.join(' ') : 'This '+word+' is empty.'));
     const acts=el('div','modal-acts');
     const c=el('button','btn ghost','Cancel'); c.type='button'; c.addEventListener('click', closeSheet);
-    const d=el('button','btn danger','Delete the '+(kind==='page'?'Page':'Tab')); d.type='button'; d.addEventListener('click', ()=>{ closeSheet(); go(); });
+    const d=el('button','btn danger','Delete the '+(kind==='page'?'Section':'Page')); d.type='button'; d.addEventListener('click', ()=>{ closeSheet(); go(); });
     acts.appendChild(c); acts.appendChild(d); box.appendChild(acts);
   });
 }
@@ -13958,10 +14116,13 @@ function nbStack(){ return window.innerWidth<760; }
 function nbCanvas(tb){
   const L=nbL();
   const cv=el('div','nbcanvas'+(nbStack()?' nbstack':''));
-  if(!L.length){
+  const LN=nbLoose(tb);
+  if(!Array.isArray(tb.tx)) tb.tx=[];
+  nbClickToType(cv, tb);
+  if(!L.length && !LN.length && !tb.tx.length){
     const e=el('div','nbempty');
-    e.appendChild(emptyBox('Nothing on this '+(nbTop()?'tab':'page')+' yet.','Click Add a Panel to put something here, or drag a panel onto this '+(nbTop()?'tab':'page')+' from another one.'));
-    cv.appendChild(e); return cv;
+    e.appendChild(emptyBox('Click anywhere and start typing.','Or use Add a Panel and Add a Post-It up top, or drag a panel onto this '+(nbTop()?'page':'board')+' from another one.'));
+    cv.appendChild(e);
   }
   /* new panels go below everything else */
   let bottom=0; L.forEach(r=>{ const w=r.r[0]; if(w.nby!=null) bottom=Math.max(bottom, w.nby+(w.nbh||360)); });
@@ -13983,11 +14144,13 @@ function nbCanvas(tb){
     }
     cv.appendChild(n);
   });
+  nbLooseDraw(cv, LN);
+  nbTextDraw(cv, tb);
   if(!nbStack()) requestAnimationFrame(()=> nbFit(cv));
   return cv;
 }
 function nbFit(cv){
-  let h=0; cv.querySelectorAll('.nbp').forEach(p=>{ h=Math.max(h, p.offsetTop+p.offsetHeight); });
+  let h=0; cv.querySelectorAll('.nbp, .nbloose, .nbtext').forEach(p=>{ h=Math.max(h, p.offsetTop+p.offsetHeight); });
   cv.style.height=Math.max(560, h+160)+'px';
 }
 function nbDrag(n, w, cv, L, nextZ){
@@ -14018,7 +14181,7 @@ function nbDrag(n, w, cv, L, nextZ){
       const swallow=c=>{ c.stopPropagation(); c.preventDefault(); document.removeEventListener('click', swallow, true); };
       document.addEventListener('click', swallow, true); setTimeout(()=> document.removeEventListener('click', swallow, true), 300);
       if(target){ target.classList.remove('droptarget'); nbSendTo(w, L, target.dataset.kind, target.dataset.id); return; }
-      w.nbx=+(n.offsetLeft/W*100).toFixed(2); w.nby=Math.round(n.offsetTop/8)*8;
+      w.nbx=+(n.offsetLeft/W*100).toFixed(2); w.nby=Math.round(n.offsetTop);
       n.style.left=w.nbx+'%'; n.style.top=w.nby+'px';
       saveMine(); nbFit(cv);
     };
@@ -14033,7 +14196,7 @@ function nbResize(handle, n, w, cv){
     const mv=ev=>{ ev.preventDefault(); const nw=Math.max(240, Math.min(W-n.offsetLeft, ow+ev.clientX-sx)), nh=Math.max(120, oh+ev.clientY-sy);
       n.style.width=(nw/W*100)+'%'; n.style.height=nh+'px'; n.classList.add('fixedh'); };
     const up=()=>{ document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); n.classList.remove('nbmoving');
-      w.nbw=+(n.offsetWidth/W*100).toFixed(2); w.nbh=Math.round(n.offsetHeight/8)*8; saveMine(); nbFit(cv); };
+      w.nbw=+(n.offsetWidth/W*100).toFixed(2); w.nbh=Math.round(n.offsetHeight); saveMine(); nbFit(cv); };
     document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
   });
   handle.addEventListener('dblclick', e=>{ e.stopPropagation(); w.nbh=null; saveMine(); vMine($('#app-mine')); });
@@ -14054,6 +14217,231 @@ function nbSendTo(w, L, kind, id){
   toast('Moved to '+(label||'that '+kind)+'.');
 }
 window.addEventListener('resize', ()=>{ if(!nbOn() || S.tab!=='mine') return; clearTimeout(nbOn._t); nbOn._t=setTimeout(()=>{ const r=$('#app-mine'); if(r) vMine(r); }, 250); });
+
+/* ============ POST-ITS STUCK ANYWHERE (Oct 19) ============
+   Jonna: "do the postits have to be on the notepad or can I select they're free floating
+   and I can stick them anywhere I want on My Board". On a Free-Form or Notebook board a
+   post-it can sit straight on the board — no panel around it. Drag it by the dots at its
+   top, size it by its corner, drop it on another tab or page to move it there. Where it
+   sits is kept on the post-it itself (`loose`, `ltab`, `lx` as a share of the width,
+   `ly`, `lw`, `lh` in pixels, `lz` for which is on top), so clearing it or making it a
+   task takes it off the board with nothing left behind, and Undo puts it back where it was.
+   On the rows Board it shows in the Note Wall panel like any other post-it. */
+function nbTabIds(){ const N=nbEnsure(), ids={}; N.pages.forEach(pg=> (pg.tabs||[]).forEach(t=>{ ids[t.id]=1; })); return ids; }
+function nbLoose(tb){
+  const N=nbEnsure(), first=((N.pages[0]||{}).tabs||[])[0], ids=nbTabIds();
+  return (S.notes||[]).filter(n=> n.loose && n.board===S.me && ((n.ltab && ids[n.ltab])? n.ltab : first && first.id)===tb.id);
+}
+function nbLooseSave(n, patch){
+  const cur=(S.notes||[]).find(x=>x.id===n.id) || n;
+  Object.assign(n, patch);
+  return put('notes', Object.assign({}, cur, patch));
+}
+function nbLooseTop(){ let z=500; (S.notes||[]).forEach(n=>{ if(n.loose && n.lz) z=Math.max(z, n.lz); }); return z; }
+function nbLooseDraw(cv, list){
+  list.forEach(n=>{
+    const wr=el('div','nbloose'); wr.dataset.nid=n.id;
+    const st=noteSticky(n);
+    wr.appendChild(st);
+    if(!nbStack()){
+      wr.style.left=(n.lx!=null? n.lx : 2)+'%'; wr.style.top=(n.ly||0)+'px'; wr.style.width=(n.lw||230)+'px';
+      if(n.lh) st.style.minHeight=n.lh+'px';
+      wr.style.zIndex=String(n.lz||500);
+      const sz=el('div','nbsize'); sz.title='Drag to resize'; wr.appendChild(sz);
+      nbLooseDrag(wr, n, cv);
+      nbLooseSize(sz, wr, st, n, cv);
+    }
+    cv.appendChild(wr);
+  });
+}
+function nbLooseDrag(wr, n, cv){
+  wr.addEventListener('pointerdown', e=>{
+    const g=e.target.closest && e.target.closest('.dgrip'); if(!g || !wr.contains(g)) return;
+    if(e.pointerType==='mouse' && e.button!==0) return;
+    e.stopPropagation(); e.preventDefault();
+    const z=nbLooseTop()+1; wr.style.zIndex=String(z);
+    const sx=e.clientX, sy=e.clientY, ox=wr.offsetLeft, oy=wr.offsetTop, W=cv.clientWidth;
+    let moving=false, target=null;
+    const mv=ev=>{
+      const dx=ev.clientX-sx, dy=ev.clientY-sy;
+      if(!moving && Math.hypot(dx,dy)<4) return;
+      if(!moving){ moving=true; wr.classList.add('nbmoving'); try{ wr.setPointerCapture(e.pointerId); }catch(x){} }
+      ev.preventDefault();
+      const nx=Math.max(0, Math.min(W-60, ox+dx)), ny=Math.max(0, oy+dy);
+      wr.style.left=(nx/W*100)+'%'; wr.style.top=ny+'px';
+      const under=document.elementsFromPoint(ev.clientX, ev.clientY).find(x=> x.classList && x.classList.contains('nbt'));
+      if(target && target!==under) target.classList.remove('droptarget');
+      target = under && !under.classList.contains('on') ? under : null;
+      if(target) target.classList.add('droptarget');
+    };
+    const up=()=>{
+      document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up);
+      wr.classList.remove('nbmoving');
+      if(!moving){ if(z!==(n.lz||0)) nbLooseSave(n, {lz:z}); return; }
+      if(target){ target.classList.remove('droptarget');
+        const N=nbEnsure(); let dest='';
+        if(target.dataset.kind==='tab') dest=target.dataset.id;
+        else { const pg=N.pages.find(p=>p.id===target.dataset.id); if(pg){ const t=(pg.tabs||[]).find(t=>t.id===N.ct[pg.id]) || (pg.tabs||[])[0]; dest=t && t.id; } }
+        if(dest){ nbLooseSave(n, {ltab:dest, lx:2, ly:0, lz:z}); toast('Post-it moved.'); vMine($('#app-mine')); return; }
+      }
+      nbLooseSave(n, {lx:+(wr.offsetLeft/W*100).toFixed(2), ly:Math.round(wr.offsetTop), lz:z});
+      nbFit(cv);
+    };
+    document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
+  }, true);
+}
+function nbLooseSize(handle, wr, st, n, cv){
+  handle.addEventListener('pointerdown', e=>{
+    e.stopPropagation(); e.preventDefault();
+    const sx=e.clientX, sy=e.clientY, ow=wr.offsetWidth, oh=st.offsetHeight, W=cv.clientWidth;
+    wr.classList.add('nbmoving');
+    const mv=ev=>{ ev.preventDefault();
+      wr.style.width=Math.max(160, Math.min(W-wr.offsetLeft, ow+ev.clientX-sx))+'px';
+      st.style.minHeight=Math.max(120, oh+ev.clientY-sy)+'px'; };
+    const up=()=>{ document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); wr.classList.remove('nbmoving');
+      nbLooseSave(n, {lw:Math.round(wr.offsetWidth), lh:Math.round(st.offsetHeight)}); nbFit(cv); };
+    document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
+  });
+  handle.addEventListener('dblclick', e=>{ e.stopPropagation(); st.style.minHeight=''; wr.style.width='230px'; nbLooseSave(n, {lw:230, lh:0}); });
+}
+/* a new post-it, stuck near the top of what is on screen */
+async function nbAddPostIt(){
+  if(!S.me){ toast('Pick your name in the top right corner first.'); return; }
+  const tb=nbTab(), cv=document.querySelector('#app-mine .nbcanvas');
+  let y=0, x=4;
+  if(cv){ const r=cv.getBoundingClientRect(); y=Math.max(0, Math.round(80-r.top)); x=+(Math.min(70, 30+Math.random()*30)).toFixed(2); }
+  const n={t:'', by:S.me, board:S.me, r:'', at:Date.now(), col:STICKY_COLS[Math.floor(Math.random()*STICKY_COLS.length)],
+           loose:1, ltab:tb.id, lx:x, ly:y, lw:230, lz:nbLooseTop()+1};
+  const id=await put('notes', n);
+  setTimeout(()=>{ const t=document.querySelector('.nbloose[data-nid="'+id+'"] .stx-r'); if(t) t.focus(); }, 150);
+}
+
+/* ============ CLICK ANYWHERE AND TYPE (Oct 19) ============
+   Like OneNote: click an empty spot on a page and a box opens right there for typing,
+   with the same formatting toolbar as every note. Drag a box by the bar along its top,
+   widen it by its right edge. What is typed is kept when you click Save (the button shows
+   once something has changed, like a post-it); unsaved words survive the page redrawing.
+   A box you click into and leave empty is not kept. Kept on the page itself (tb.tx: id,
+   h = the formatted text, x = share of the width, y, w in pixels, z). */
+const NB_TXT_DRAFT={};
+function nbClickToType(cv, tb){
+  cv.addEventListener('click', e=>{
+    if(e.target!==cv && !e.target.closest('.nbempty')) return;
+    if(e.detail>1) return;
+    const r=cv.getBoundingClientRect();
+    const box={id:nbId('tx'), h:'', x:+(Math.max(0, Math.min(88, (e.clientX-r.left)/r.width*100))).toFixed(2), y:Math.max(0, Math.round(e.clientY-r.top-14)), w:340, z:nbTxtTop(tb)+1};
+    tb.tx.push(box);
+    const em=cv.querySelector('.nbempty'); if(em) em.remove();
+    const node=nbTextBox(cv, tb, box, true);
+    cv.appendChild(node);
+    setTimeout(()=>{ const ed=node.querySelector('.rte'); if(ed) ed.focus(); }, 30);
+  });
+}
+function nbTxtTop(tb){ let z=200; (tb.tx||[]).forEach(b=>{ if(b.z) z=Math.max(z, b.z); }); return z; }
+function nbTextDraw(cv, tb){ (tb.tx||[]).forEach(b=> cv.appendChild(nbTextBox(cv, tb, b, false))); }
+function nbTextBox(cv, tb, box, fresh){
+  const wr=el('div','nbtext'+(fresh?' fresh':'')); wr.dataset.tx=box.id;
+  if(!nbStack()){ wr.style.left=box.x+'%'; wr.style.top=box.y+'px'; wr.style.width=(box.w||340)+'px'; wr.style.zIndex=String(box.z||200); }
+  const bar=el('div','nbtbar'); bar.title='Drag to move';
+  const sv=el('button','nbtsave','Save'); sv.type='button'; sv.title='Keep what you typed';
+  const del=el('button','nbtdel','×'); del.type='button'; del.title='Delete this box'; del.setAttribute('aria-label','Delete this box');
+  bar.appendChild(el('span','nbtgrip')); bar.appendChild(sv); bar.appendChild(del);
+  wr.appendChild(bar);
+  const ed=rtEditor(NB_TXT_DRAFT[box.id]!=null? NB_TXT_DRAFT[box.id] : (box.h||''), fresh? 'Type here…' : '', 2);
+  ed.classList.add('rtslim','nbted'); ed.querySelector('.rtx').style.minHeight='24px';
+  wr.appendChild(ed);
+  const wh=el('div','nbtw'); wh.title='Drag to make it wider or narrower'; wr.appendChild(wh);
+  const saved=()=> rtEditor(box.h||'').value;
+  let base=saved();
+  const dirty=()=> ed.value!==base;
+  const paint=()=>{ const d=dirty(); wr.classList.toggle('unsaved', d); sv.hidden=!d; if(d) NB_TXT_DRAFT[box.id]=ed.value; else delete NB_TXT_DRAFT[box.id]; };
+  paint();
+  ed.addEventListener('input', paint);
+  const save=()=>{ box.h=ed.value; base=saved(); delete NB_TXT_DRAFT[box.id]; paint(); saveMine(); };
+  sv.addEventListener('mousedown', e=> e.preventDefault());
+  sv.addEventListener('click', e=>{ e.stopPropagation(); save(); toast('Saved.'); });
+  const drop=()=>{ tb.tx=(tb.tx||[]).filter(b=>b.id!==box.id); delete NB_TXT_DRAFT[box.id]; wr.remove(); saveMine(); };
+  del.addEventListener('mousedown', e=> e.preventDefault());
+  del.addEventListener('click', e=>{ e.stopPropagation();
+    if(!ed.value.trim() && !(box.h||'').trim()){ drop(); return; }
+    if(!del.dataset.c){ del.dataset.c='1'; del.textContent='Delete?'; del.classList.add('arm'); setTimeout(()=>{ if(del.isConnected){ delete del.dataset.c; del.textContent='×'; del.classList.remove('arm'); } }, 4000); return; }
+    const kept=JSON.parse(JSON.stringify(box)); kept.h=ed.value||box.h;
+    drop(); undoToast('Box deleted.', ()=>{ tb.tx.push(kept); saveMine(); vMine($('#app-mine')); }); });
+  /* one you clicked into and left empty is not kept */
+  wr.addEventListener('focusout', e=>{ if(e.relatedTarget && wr.contains(e.relatedTarget)) return;
+    setTimeout(()=>{ if(wr.contains(document.activeElement) || wr.querySelector('.rtpop')) return;
+      if(!ed.value.trim() && !(box.h||'').trim()) drop(); }, 0); });
+  wr.addEventListener('focusin', ()=>{ const z=nbTxtTop(tb)+1; if((box.z||0)<z-1){ box.z=z; wr.style.zIndex=String(z); } });
+  if(!nbStack()){
+    /* move by the bar */
+    bar.addEventListener('pointerdown', e=>{
+      if(e.target.closest('button')) return; if(e.pointerType==='mouse' && e.button!==0) return;
+      e.preventDefault(); e.stopPropagation();
+      const sx=e.clientX, sy=e.clientY, ox=wr.offsetLeft, oy=wr.offsetTop, W=cv.clientWidth; let moving=false, target=null;
+      box.z=nbTxtTop(tb)+1; wr.style.zIndex=String(box.z);
+      const mv=ev=>{ const dx=ev.clientX-sx, dy=ev.clientY-sy;
+        if(!moving && Math.hypot(dx,dy)<3) return;
+        if(!moving){ moving=true; wr.classList.add('nbmoving'); }
+        wr.style.left=(Math.max(0, Math.min(W-60, ox+dx))/W*100)+'%'; wr.style.top=Math.max(0, oy+dy)+'px';
+        const under=document.elementsFromPoint(ev.clientX, ev.clientY).find(x=> x.classList && x.classList.contains('nbt'));
+        if(target && target!==under) target.classList.remove('droptarget');
+        target = under && !under.classList.contains('on') ? under : null; if(target) target.classList.add('droptarget'); };
+      const up=()=>{ document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); wr.classList.remove('nbmoving');
+        if(!moving){ saveMine(); return; }
+        if(target){ target.classList.remove('droptarget');
+          const N=nbEnsure(); let dest=null;
+          if(target.dataset.kind==='tab'){ dest=nbPage().tabs.find(t=>t.id===target.dataset.id); }
+          else { const pg=N.pages.find(p=>p.id===target.dataset.id); if(pg) dest=(pg.tabs||[]).find(t=>t.id===N.ct[pg.id]) || (pg.tabs||[])[0]; }
+          if(dest && dest!==tb){ if(dirty()) box.h=ed.value; tb.tx=tb.tx.filter(b=>b.id!==box.id); if(!Array.isArray(dest.tx)) dest.tx=[];
+            box.x=4; box.y=0; dest.tx.push(box); saveMine(); vMine($('#app-mine')); toast('Moved to '+(dest.n||'that page')+'.'); return; } }
+        box.x=+(wr.offsetLeft/W*100).toFixed(2); box.y=Math.round(wr.offsetTop); saveMine(); nbFit(cv); };
+      document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
+    });
+    /* widen by the right edge */
+    wh.addEventListener('pointerdown', e=>{
+      e.preventDefault(); e.stopPropagation();
+      const sx=e.clientX, ow=wr.offsetWidth, W=cv.clientWidth; wr.classList.add('nbmoving');
+      const mv=ev=>{ wr.style.width=Math.max(160, Math.min(W-wr.offsetLeft, ow+ev.clientX-sx))+'px'; };
+      const up=()=>{ document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); wr.classList.remove('nbmoving');
+        box.w=Math.round(wr.offsetWidth); saveMine(); };
+      document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
+    });
+  }
+  return wr;
+}
+
+/* ============ DRAG A POST-IT OFF THE NOTE WALL (Oct 19) ============
+   Jonna said yes to dragging a post-it out of a Note Wall panel and sticking it anywhere.
+   On a Free-Form or Notebook board, drag a post-it by its dots: once the pointer leaves its
+   panel a copy follows it, and letting go on the board sticks it right there (it comes off
+   the Note Wall). Let go back inside the panel and it just reorders, as before. Only
+   post-its on your own board, or ones you wrote, can be stuck on your board. */
+function nbOutMove(drag, e, over){
+  if(!nbOn() || nbStack() || !drag.item.classList.contains('sticky')) return false;
+  const panel=drag.box.closest('.nbp'); if(!panel) return false;
+  const inPanel=over && panel.contains(over);
+  const cv=over && over.closest && over.closest('.nbcanvas');
+  const out=!inPanel && !!cv;
+  if(out && !drag.ghost){
+    const g=drag.item.cloneNode(true); g.classList.add('nbghost'); g.classList.remove('dragging','editing');
+    g.style.width=drag.item.offsetWidth+'px'; document.body.appendChild(g); drag.ghost=g;
+    drag.gdx=Math.min(30, drag.item.offsetWidth/2); drag.gdy=10;
+  }
+  if(drag.ghost){ drag.ghost.style.left=(e.clientX-drag.gdx)+'px'; drag.ghost.style.top=(e.clientY-drag.gdy)+'px'; drag.ghost.hidden=!out; }
+  drag.out=out; drag.item.classList.toggle('leaving', out);
+  return out;
+}
+function nbOutDrop(d, e){
+  d.item.classList.remove('leaving');
+  const n=(S.notes||[]).find(x=>x.id===d.item.dataset.nid); if(!n) return;
+  if(!(n.board===S.me || n.by===S.me)){ toast('Only post-its on your board, or ones you wrote, can be stuck on it.'); vMine($('#app-mine')); return; }
+  const cv=document.elementsFromPoint(e.clientX, e.clientY).find(x=> x.classList && x.classList.contains('nbcanvas')); if(!cv){ vMine($('#app-mine')); return; }
+  const r=cv.getBoundingClientRect();
+  const lx=+(Math.max(0, Math.min(90, (e.clientX-d.gdx-r.left)/r.width*100))).toFixed(2), ly=Math.max(0, Math.round(e.clientY-d.gdy-r.top));
+  const patch={loose:1, board:S.me, ltab:nbTab().id, lx:lx, ly:ly, lw:Math.max(200, Math.round(d.item.offsetWidth)), lz:nbLooseTop()+1};
+  nbLooseSave(n, patch).then(()=>{ vMine($('#app-mine')); });
+  toast(n.board===S.me? 'Stuck on your board.' : 'Taken off the team wall and stuck on your board.');
+}
 
 /* ============ TODAY'S WORKGROUP MEETINGS ============
    The same "today" feed as Meeting Trackers: which workgroups meet today, when (Eastern
@@ -14290,13 +14678,15 @@ const STICKY_COLS=['y','b','g','p','o'];
    team's note wall. Put on someone's board, it carries `board` (their person id) and
    shows on that person's My Board, not on the team wall. */
 function wallNotes(){ return S.notes.filter(n=> !n.board); }
-function boardNotes(who){ return S.notes.filter(n=> n.board && n.board===who); }
+/* a post-it stuck straight on your Free-Form or Notebook board is not also in your Note Wall panel */
+function stuckOnMine(n){ return !!(n.loose && n.board===S.me && typeof nbOn==='function' && nbOn()); }
+function boardNotes(who){ return S.notes.filter(n=> n.board && n.board===who && !stuckOnMine(n)); }
 const NOTE_FILTERS=[{v:'all',n:'Both'},{v:'mine',n:'My Board'},{v:'team',n:'Team Wall'}];
 function panelNotes(w){
   const f=(w && w.nf) || 'all';
   if(f==='mine') return boardNotes(S.me);
   if(f==='team') return wallNotes();
-  return S.notes.filter(n=> !n.board || n.board===S.me);
+  return S.notes.filter(n=> (!n.board || n.board===S.me) && !stuckOnMine(n));
 }
 /* the Note Wall panel on My Board */
 function noteWallPanel(w, b){
@@ -14477,6 +14867,7 @@ function sortCommit(item, from){
   const itemOf=g=> g.closest('[data-sid]');
   document.addEventListener('pointerdown', e=>{
     const g=e.target.closest && e.target.closest('.dgrip'); if(!g) return;
+    if(g.closest('.nbloose')) return;   /* a post-it stuck on the board moves freely, not in a list */
     const item=itemOf(g); if(!item || !item.parentElement) return;
     e.preventDefault(); e.stopPropagation();
     drag={g, item, box:item.parentElement, id:e.pointerId, start:[...item.parentElement.children].indexOf(item), moved:false};
@@ -14488,6 +14879,8 @@ function sortCommit(item, from){
     e.preventDefault();
     if(!drag.moved){ drag.moved=true; drag.item.classList.add('dragging'); drag.box.classList.add('sorting'); }
     const over=document.elementFromPoint(e.clientX, e.clientY);
+    /* a post-it dragged out of its Note Wall panel onto a Free-Form or Notebook board (Oct 19) */
+    if(typeof nbOutMove==='function' && nbOutMove(drag, e, over)) return;
     /* lists that share a data-xgroup (the lists of one Sync Up space) take each other's rows */
     const G=drag.box.dataset && drag.box.dataset.xgroup;
     const okBox=b=> b===drag.box || (!!G && !!b && !!b.dataset && b.dataset.xgroup===G);
@@ -14510,6 +14903,7 @@ function sortCommit(item, from){
     const d=drag; drag=null;
     d.item.classList.remove('dragging'); d.box.classList.remove('sorting');
     S.dragSort=0;
+    if(d.ghost){ d.ghost.remove(); if(d.out && e && typeof nbOutDrop==='function'){ nbOutDrop(d, e); return; } }
     const moved=d.item.parentElement!==d.box;
     const now=[...d.item.parentElement.children].indexOf(d.item);
     if(d.moved) d.item.dataset.justDragged='1';
@@ -14529,6 +14923,7 @@ function sortCommit(item, from){
   /* keyboard: arrow keys move it one place */
   document.addEventListener('keydown', e=>{
     const g=e.target.closest && e.target.closest('.dgrip'); if(!g) return;
+    if(g.closest('.nbloose')) return;
     const item=itemOf(g); if(!item) return;
     const back=e.key==='ArrowUp'||e.key==='ArrowLeft', fwd=e.key==='ArrowDown'||e.key==='ArrowRight';
     if(e.key==='Enter' || e.key===' '){ e.preventDefault(); e.stopPropagation(); return; }
@@ -16124,6 +16519,114 @@ function vaultEdit(wrap, draw){
   acts.appendChild(sv);
   wrap.appendChild(acts);
   setTimeout(()=> tx.focus(), 80);
+}
+
+/* ============ A TEAM PROJECT, OPENED (Oct 19) ============
+   Jonna: "when I click on a card, I don't understand the first right rail screen, it should
+   open up to the list of tasks in date order."
+   The right rail now opens on the project's open tasks, soonest first, under plain
+   headings — Past Due, Due This Week, Coming Up, No Date Yet. Each row says which part it
+   is in. By Part (the old view: one row per part, click in for its tasks) is one click
+   away, and whichever you pick is remembered. Done tasks stay folded at the bottom. */
+const ROCK_VIEWS=[{v:'date',n:'In Date Order'},{v:'parts',n:'By Part'}];
+function rockPanel(r, dupWs){
+  const head = (()=>{ const m=S.tasks.filter(t=>t.r===r.id);
+    return r.status+(r.lead? ' · lead '+pname(r.lead):'')+' · '+m.filter(t=>t.s==='Done').length+' of '+m.length+' done'; })();
+  panel(r.name, head, body=>{
+    /* worked out inside build, so stepping back after finishing a task shows the list as it is now */
+    const view=(S.bset && S.bset.rockView)||'date';
+    const mine=S.tasks.filter(t=>t.r===r.id);
+    const open=mine.filter(t=>t.s!=='Done'), done=mine.filter(t=>t.s==='Done');
+
+    const top=el('div','rkptop');
+    const add=el('button','btn','Add a Task'); add.type='button';
+    add.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>'; add.appendChild(el('span',null,'Add a Task'));
+    add.addEventListener('click', ()=> editTask({t:'', o:S.me||'', r:r.id, w:'', s:'Not Started', p:'Normal', due:'', notes:'', rail:0,
+      ord:(S.tasks.length+1)*10, at:Date.now()}));
+    top.appendChild(add);
+    top.appendChild(el('span','spacer'));
+    top.appendChild(btnRow(ROCK_VIEWS, view, 'tiny', v=>{ S.bset=S.bset||{}; S.bset.rockView=v; try{ saveMine(); }catch(e){} drawPanel(); }));
+    body.appendChild(top);
+
+    const pr=el('div','rkpprog');
+    const pb=el('div','pbar'); const bi=el('i'); bi.style.width=(mine.length? Math.round(done.length/mine.length*100):0)+'%'; pb.appendChild(bi);
+    pr.appendChild(pb);
+    pr.appendChild(el('span',null, open.length+' open · '+done.length+' done'));
+    body.appendChild(pr);
+
+    if(view==='parts') rockByPart(body, r, mine, dupWs);
+    else rockByDate(body, r, open);
+
+    if(done.length) body.appendChild(doneFold(done, true));
+    if(r.desc){
+      const ab=el('details','rkpabout'); ab.appendChild(el('summary',null,'What This Project Is'));
+      ab.appendChild(rtView(r.desc,'rkd')); body.appendChild(ab);
+    }
+    const acts=el('div','rowacts');
+    const wh=el('button','btn ghost','Who Is Doing What'); wh.type='button';
+    wh.title='Put someone on a task here without giving up being accountable for it';
+    wh.addEventListener('click', ()=> assignPanel(r.id)); acts.appendChild(wh);
+    acts.appendChild(el('span','spacer'));
+    const ed=el('button','btn ghost','Edit This Team Project'); ed.type='button';
+    ed.addEventListener('click', ()=> editRock(r)); acts.appendChild(ed);
+    body.appendChild(acts);
+  });
+}
+/* open tasks, soonest first, under plain headings */
+function rockByDate(body, r, open){
+  if(!open.length){ body.appendChild(emptyBox('Nothing open on this project.','Click Add a Task to put the next thing on it.')); return; }
+  const byDue=(a,b)=> String(a.due).localeCompare(String(b.due)) || (a.p==='High'?0:1)-(b.p==='High'?0:1) || (a.ord||0)-(b.ord||0);
+  const dated=open.filter(t=> days(t.due)!==null).sort(byDue);
+  const groups=[
+    {n:'Past Due',      cls:'late', xs:dated.filter(t=> days(t.due)<0)},
+    {n:'Due This Week', cls:'',     xs:dated.filter(t=>{ const d=days(t.due); return d>=0 && d<=7; })},
+    {n:'Coming Up',     cls:'',     xs:dated.filter(t=> days(t.due)>7)},
+    {n:'No Date Yet',   cls:'',     xs:open.filter(t=> days(t.due)===null).sort((a,b)=>(a.ord||0)-(b.ord||0))}
+  ];
+  groups.forEach(g=>{
+    if(!g.xs.length) return;
+    const h=el('h3','sect-t rkpg'+(g.cls?' '+g.cls:'')); h.appendChild(document.createTextNode(g.n)); h.appendChild(el('span','rkpn', String(g.xs.length)));
+    body.appendChild(h);
+    const rows=el('div','rows rkprows');
+    g.xs.forEach(t=>{
+      const row=taskRow(t);
+      /* the project is already the heading of this panel — say the part and the date instead */
+      const sm=row.querySelector('.t small');
+      if(sm) sm.textContent=[(r.ws||[]).indexOf(t.w)>=0? t.w : 'Not in a Part', t.due? fmtD(t.due) : '', t.rail? 'Running Rail' : ''].filter(Boolean).join(' · ');
+      rows.appendChild(row);
+    });
+    body.appendChild(rows);
+  });
+}
+/* the parts, each opening to its own tasks (the way it used to open) */
+function rockByPart(body, r, mine, dupWs){
+  const ws=el('div','ws');
+  (r.ws||[]).forEach(w=>{
+    const ts = mine.filter(t=>t.w===w && t.s!=='Done');
+    const done = mine.filter(t=>t.w===w && t.s==='Done').length;
+    const who = Array.from(new Set(ts.map(t=>t.o))).filter(Boolean);
+    const row=el('button','wsr'+(dupWs && dupWs[r.id+'||'+w]?' dup':'')); row.type='button';
+    const wn=el('span','wn'); wn.appendChild(document.createTextNode(w));
+    wn.appendChild(el('small',null, ts.length? ts.length+(ts.length===1?' open task':' open tasks')+(done?' · '+done+' done':'')
+                     : (done? done+' done, nothing open' : 'nothing here yet')));
+    row.appendChild(wn);
+    const wr=el('span','wr');
+    if(who.length>1) wr.appendChild(el('span','chip ch-warn', who.length+' people'));
+    const avs=el('span','avs'); who.slice(0,4).forEach(id=>avs.appendChild(avatar(id,'xs'))); wr.appendChild(avs);
+    row.appendChild(wr);
+    row.addEventListener('click', ()=> wsPanel(r, w));
+    ws.appendChild(row);
+  });
+  const loose = mine.filter(t=> (r.ws||[]).indexOf(t.w)<0);
+  if(loose.length){
+    const lo=loose.filter(t=>t.s!=='Done'), ld=loose.length-lo.length;
+    const row=el('button','wsr'); row.type='button';
+    const wn=el('span','wn'); wn.appendChild(document.createTextNode('Not in a Part'));
+    wn.appendChild(el('small',null, (lo.length? lo.length+(lo.length===1?' open task':' open tasks') : 'nothing open')+(ld? ' · '+ld+' done' : '')));
+    row.appendChild(wn); row.addEventListener('click', ()=> wsPanel(r, null)); ws.appendChild(row);
+  }
+  if(!(r.ws||[]).length && !loose.length) ws.appendChild(emptyBox('No parts yet.','Edit this team project to add the parts people divide up.'));
+  body.appendChild(ws);
 }
 
 /* ============ rail search sources ============ */
