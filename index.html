@@ -2239,6 +2239,9 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .syldc{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-bottom:1px solid var(--rule);background:color-mix(in srgb,var(--bad,#b42318) 8%,var(--surface));font-size:12.5px;color:var(--ink)}
 .syldcb{display:flex;justify-content:flex-end;gap:6px}
 .syldcb .btn{white-space:nowrap;min-width:max-content}
+.syc[data-dragall]{user-select:none;-webkit-user-select:none;cursor:grab}
+.syc[data-dragall]:active{cursor:grabbing}
+.syc[data-dragall] .pchk{cursor:pointer}
 
 /* ---------- expenses: snap a receipt ---------- */
 .rcpt .ph{background:none;border-bottom:0;padding:0;justify-content:center}
@@ -11455,15 +11458,19 @@ function syList(s, L){
   /* Oct 12: drag a card by its grip to put it higher or lower, or onto another list in
      this space (dragsort.js; the lists share data-xgroup). The order on screen is saved. */
   box.dataset.xhost='1';
-  body.dataset.xgroup='sy-'+s.id;
+  /* Oct 21: every list on the Sync Ups page shares one group, so a card can go to a list in
+     another space too — it then belongs to that space (and its people) */
+  body.dataset.xgroup='sy-all';
   body.__onSort=(ids, moved)=>{
     S.syForce=1;   /* redraw even if the add-a-card box still has focus */
-    const ch=[];
+    const ch=[]; let crossed=null;
     ids.forEach((id,i)=>{ const c=syCard(id); if(!c) return; const p={};
       if((+c.ord||0)!==(i+1)*10) p.ord=(i+1)*10;
       if(c.list!==L.id) p.list=L.id;
+      if((c.sync||'')!==s.id){ p.sync=s.id; crossed=c; }
       if(Object.keys(p).length) ch.push([c,p]); });
     ch.forEach(([c,p])=> sySaveItem(c, p));
+    if(crossed) toast('Moved to '+(s.name||'that space')+' — the people in that space see it now.');
     if(!ch.length) syRefresh();
   };
   box.appendChild(body);
@@ -11486,6 +11493,8 @@ function syNextOrd(sid, lid){
 function syCardRow(s, c){
   const row=el('div','syc'+(c.done?' done':'')+(S.syOpen===c.id && panelOpen()?' open':''));
   row.dataset.cid=c.id; row.dataset.sid=c.id; row.tabIndex=0; row.setAttribute('role','button');
+  row.dataset.dragall='1';   /* Oct 21: grab the card anywhere to drag it, not only by its dots */
+  row.title='Click to open · drag to move it to another list';
   row.appendChild(dgrip('Drag to move this card, or onto another list'));
   const ck=el('button','pchk'+(c.done?' on':'')); ck.type='button';
   ck.innerHTML='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
@@ -15012,16 +15021,27 @@ function sortCommit(item, from){
   let drag=null;
   const itemOf=g=> g.closest('[data-sid]');
   document.addEventListener('pointerdown', e=>{
-    const g=e.target.closest && e.target.closest('.dgrip'); if(!g) return;
+    let g=e.target.closest && e.target.closest('.dgrip');
+    /* Oct 21: an item marked data-dragall (a Sync Ups card) can be grabbed anywhere on it;
+       the drag only starts once the pointer has moved, so a plain click still opens it */
+    let soft=false;
+    if(!g){
+      const it=e.target.closest && e.target.closest('[data-dragall]');
+      if(!it || e.pointerType==='touch' || (e.pointerType==='mouse' && e.button!==0)) return;
+      if(e.target.closest('button,a,input,select,textarea,label,[contenteditable]')) return;
+      g=it.querySelector('.dgrip') || it; soft=true;
+    }
     if(g.closest('.nbloose')) return;   /* a post-it stuck on the board moves freely, not in a list */
     const item=itemOf(g); if(!item || !item.parentElement) return;
-    e.preventDefault(); e.stopPropagation();
-    drag={g, item, box:item.parentElement, id:e.pointerId, start:[...item.parentElement.children].indexOf(item), moved:false};
-    try{ g.setPointerCapture(e.pointerId); }catch(x){}
+    if(!soft){ e.preventDefault(); }
+    e.stopPropagation();
+    drag={g, item, box:item.parentElement, id:e.pointerId, start:[...item.parentElement.children].indexOf(item), moved:false, soft:soft, sx:e.clientX, sy:e.clientY};
+    if(!soft){ try{ g.setPointerCapture(e.pointerId); }catch(x){} }
     S.dragSort=1;
   }, true);
   document.addEventListener('pointermove', e=>{
     if(!drag || e.pointerId!==drag.id) return;
+    if(drag.soft && !drag.moved){ if(Math.hypot(e.clientX-drag.sx, e.clientY-drag.sy)<6) return; try{ getSelection().removeAllRanges(); }catch(x){} }
     e.preventDefault();
     if(!drag.moved){ drag.moved=true; drag.item.classList.add('dragging'); drag.box.classList.add('sorting'); }
     const over=document.elementFromPoint(e.clientX, e.clientY);
