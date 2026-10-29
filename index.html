@@ -2115,6 +2115,13 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .syc.done .syct > span{color:var(--ink-3);text-decoration:line-through;text-decoration-color:var(--border-strong)}
 .sycr{display:flex;align-items:center;gap:5px;flex:0 0 auto;flex-wrap:wrap;justify-content:flex-end}
 .syqa{margin:0 8px 8px}
+/* Oct 29: ticked-off cards fold shut at the foot of their own list, so a list stays as
+   short as the work still open on it — the same Done fold used everywhere else in Team HQ. */
+.sydonefold{margin:0;border-top:1px solid var(--rule)}
+.sydonefold .donefh{padding:8px 12px}
+.sydonefold .donefh:focus-visible{outline-offset:-2px}
+.sydonerows{padding:0 8px 8px}
+.sydonerows .syc{cursor:pointer}
 .syfold{border-top:1px solid var(--rule)}
 .syfold > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:11px 16px;font-weight:700;font-size:13.5px;color:var(--ink)}
 .syfold > summary::-webkit-details-marker{display:none}
@@ -11504,9 +11511,12 @@ function syList(s, L){
   if(S.syRenameList===L.id) setTimeout(()=>{ if(S.syRenameList!==L.id || !nm.isConnected) return; S.syRenameList=null; rename(); }, 30);
   hw.appendChild(hd); box.appendChild(hw);
   const body=el('div','sylb');
-  const sorted=cards.slice().sort((a,b)=> (a.done?1:0)-(b.done?1:0) || (a.ord||0)-(b.ord||0));
-  sorted.forEach(c=> body.appendChild(syCardRow(s, c)));
-  if(!cards.length) body.appendChild(el('div','syempty','Nothing here yet.'));
+  /* Oct 29: only the open cards sit on the list itself. The ticked-off ones go into a Done
+     fold underneath it, shut until you click it, so a list cannot run on forever. */
+  const openCards=cards.filter(c=>!c.done).sort((a,b)=> (a.ord||0)-(b.ord||0));
+  const doneCards=cards.filter(c=>c.done);
+  openCards.forEach(c=> body.appendChild(syCardRow(s, c)));
+  if(!openCards.length) body.appendChild(el('div','syempty', doneCards.length? 'Nothing open here.' : 'Nothing here yet.'));
   /* Oct 12: drag a card by its grip to put it higher or lower, or onto another list in
      this space (dragsort.js; the lists share data-xgroup). The order on screen is saved. */
   box.dataset.xhost='1';
@@ -11526,6 +11536,7 @@ function syList(s, L){
     if(!ch.length) syRefresh();
   };
   box.appendChild(body);
+  if(doneCards.length) box.appendChild(syDoneFold(s, L, doneCards));
   const qa=el('div','quickadd syqa');
   qa.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>';
   const i=inp('text','','Add a card and press Enter…'); i.dataset.syqa=L.id;
@@ -11536,6 +11547,34 @@ function syList(s, L){
     syPut('syncitems', syNewItem(s, 'card', {list:L.id, t:v, ord:syNextOrd(s.id, L.id)}));
   });
   qa.appendChild(i); box.appendChild(qa);
+  return box;
+}
+/* Oct 29: the ticked-off cards of one list, folded shut under it. Newest first, and it
+   remembers whether you left it open while you are on the page (like Past Syncs). The
+   cards in here are not draggable — they are finished, and the list above is what sorts. */
+function syDoneFold(s, L, list){
+  const key=L.id+':done';
+  const shown=!!(S.openSyncs && S.openSyncs[key]);
+  const box=el('div','donefold sydonefold'+(shown?' open':''));
+  const h=el('button','donefh'); h.type='button'; h.setAttribute('aria-expanded', String(shown));
+  h.appendChild(el('span','dfc','\u203a'));
+  h.appendChild(document.createTextNode('Done ('+list.length+')'));
+  h.title= shown? 'Fold the finished cards away' : 'See the cards you have ticked off';
+  const rows=el('div','sylb sydonerows'); rows.hidden=!shown;
+  list.slice().sort((a,c)=> (c.doneAt||c.at||0)-(a.doneAt||a.at||0)).forEach(c=>{
+    const r=syCardRow(s, c);
+    delete r.dataset.dragall;
+    const g=r.querySelector('.dgrip'); if(g) g.remove();
+    r.title='Click to open';
+    rows.appendChild(r); });
+  h.addEventListener('click', ()=>{
+    const on=rows.hidden;
+    rows.hidden=!on; box.classList.toggle('open', on);
+    h.setAttribute('aria-expanded', String(on));
+    h.title= on? 'Fold the finished cards away' : 'See the cards you have ticked off';
+    if(!S.openSyncs) S.openSyncs={};
+    if(on) S.openSyncs[key]=1; else delete S.openSyncs[key]; });
+  box.appendChild(h); box.appendChild(rows);
   return box;
 }
 function syNextOrd(sid, lid){
