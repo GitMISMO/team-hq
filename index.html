@@ -3113,6 +3113,52 @@ input[type=password]{background:var(--surface);color:var(--ink);border:1px solid
 .nrrow .nrc{font-size:12.5px;color:var(--ink-2);flex:1 1 auto}
 .nrrow .btn{white-space:nowrap;min-width:max-content}
 
+/* the Add button beside a quick-add box */
+.qaadd{flex:0 0 auto;align-self:center;margin-left:6px;border:0;border-radius:5px;background:var(--navy,#0d314c);color:#fff;font:inherit;font-size:12px;font-weight:700;padding:5px 12px;cursor:pointer;white-space:nowrap;min-width:max-content}
+.qaadd:hover{filter:brightness(1.12)}
+.qaadd:focus-visible{outline:2px solid var(--sky,#74bfeb);outline-offset:2px}
+:root[data-theme="dark"] .qaadd{background:#2f6688}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .qaadd{background:#2f6688}}
+@media (pointer:coarse){.qaadd{padding:8px 14px;font-size:13px}}
+.quickadd input,input[data-qaw]{min-width:0}
+.qawrap{display:flex;align-items:center;gap:0;width:100%}
+.qawrap > input{flex:1 1 auto}
+
+/* ---------- Help ---------- */
+.hq .mast-right #help-btn{margin-top:0}
+.hq .mast-right #help-btn[aria-current]{color:#fff;font-weight:600;background:var(--navy-mid);box-shadow:inset 3px 0 0 var(--sky)}
+:root[data-theme="dark"] .hq .mast-right #help-btn[aria-current]{background:#14486e}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hq .mast-right #help-btn[aria-current]{background:#14486e}}
+.hq .mast-right #help-btn[aria-current] .ti{stroke:var(--sky);opacity:1}
+body.railmini .hq .mast-right #help-btn[aria-current]{background:var(--sky);box-shadow:none}
+body.railmini .hq .mast-right #help-btn[aria-current] .ti{stroke:var(--navy-deep,#06202f)}
+#app-help{max-width:980px}
+.hbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+.hbar .hq-q{flex:1 1 260px;min-width:0;border:1px solid var(--border-strong);border-radius:6px;padding:8px 10px;font:inherit;font-size:13.5px;background:var(--surface);color:var(--ink)}
+.hbar .hq-q:focus{outline:2px solid var(--c1);outline-offset:-1px}
+.hbar .btn{white-space:nowrap;min-width:max-content}
+.hlist{display:flex;flex-direction:column;gap:10px}
+.hsec{background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow)}
+.hsec[hidden]{display:none}
+.hsec > summary{list-style:none;cursor:pointer;display:flex;flex-direction:column;gap:2px;padding:13px 16px 13px 38px;position:relative;border-radius:8px}
+.hsec > summary::-webkit-details-marker{display:none}
+.hsec > summary::before{content:"";position:absolute;left:16px;top:18px;width:7px;height:7px;border-right:2px solid var(--ink-3);border-bottom:2px solid var(--ink-3);transform:rotate(-45deg);transition:transform .15s}
+.hsec[open] > summary::before{transform:rotate(45deg);top:16px}
+.hsec > summary:hover{background:var(--surface-2)}
+.hsec > summary:focus-visible{outline:2px solid var(--c1);outline-offset:-2px}
+.hst{font-size:15px;font-weight:700;color:var(--ink)}
+.hsd{font-size:12.5px;color:var(--ink-2)}
+.hbody{padding:2px 18px 16px 38px;font-size:13.5px;line-height:1.6;color:var(--ink);border-top:1px solid var(--rule)}
+.hbody h4{margin:14px 0 4px;font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2)}
+.hbody p{margin:10px 0}
+.hbody ul,.hbody ol{margin:8px 0;padding-left:22px}
+.hbody li{margin:4px 0}
+.hbody li ul{margin:4px 0}
+.hbody i{color:var(--ink-2)}
+.hk{display:inline-block;min-width:18px;padding:0 5px;border:1px solid var(--border-strong);border-bottom-width:2px;border-radius:4px;background:var(--surface-2);font-size:11.5px;font-weight:600;line-height:1.5;text-align:center}
+.hnone{color:var(--ink-3);font-size:13px;padding:12px 2px}
+@media(max-width:620px){.hbody{padding:2px 14px 14px 18px}.hsec > summary{padding:12px 14px 12px 34px}.hsec > summary::before{left:14px}}
+
 #rs-account{flex:0 0 auto;display:inline-flex;align-items:center}
 #rs-account .rs-who,#rs-account .rs-signin{border-radius:4px}
 </style>
@@ -3210,6 +3256,10 @@ c57 -33 76 -84 76 -200 0 -116 -19 -167 -76 -200 -32 -19 -52 -20 -294 -20
       <span>Expenses</span></button>
   </nav>
   <div class="mast-right">
+    <button class="theme-btn" id="help-btn" type="button" title="Help">
+      <svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.5a2.5 2.5 0 113.4 2.4c-.6.3-.9.8-.9 1.4v.5M12 17.2v.1"/></svg>
+      <span>Help</span>
+    </button>
     <button class="theme-btn" id="theme-btn" type="button">
       <svg class="ti ti-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6.4 6.4 0 009 9 9 9 0 11-9-9z"/></svg>
       <svg class="ti ti-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.1"/><path d="M12 2.4v2.3M12 19.3v2.3M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.4 12h2.3M19.3 12h2.3M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>
@@ -3228,6 +3278,7 @@ c57 -33 76 -84 76 -200 0 -116 -19 -167 -76 -200 -32 -19 -52 -20 -294 -20
   <section class="view" id="app-agenda" hidden></section>
   <section class="view" id="app-syncs" hidden></section>
   <section class="view" id="app-expenses" hidden></section>
+  <section class="view" id="app-help" hidden></section>
 </main>
 
 <button class="scrim" id="scrim" type="button" aria-label="Close the panel" hidden></button>
@@ -4816,6 +4867,7 @@ function show(tab){
   $$('.hq nav button[data-hq]').forEach(b=>{
     if(b.dataset.hq===tab) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current');
   });
+  { const hb=document.getElementById('help-btn'); if(hb){ if(tab==='help') hb.setAttribute('aria-current','page'); else hb.removeAttribute('aria-current'); } }
   $$('main .view').forEach(v=> v.hidden = (v.id !== 'app-'+tab));
   render(tab);
   try{ window.scrollTo({top:0,behavior:'instant'}); }catch(e){ window.scrollTo(0,0); }
@@ -4825,7 +4877,7 @@ function render(tab){
   if(!S.ready) return;
   { const a=document.activeElement; if(a && a.closest && a.closest('.sticky.editing')){ S.pendRender=1; return; } }
   if(S.dragSort){ S.pendRender=1; return; }
-  const fn = {today:vToday, mine:vMine, rocks:vRocks, plans:vPlans, dates:vDates, agenda:vAgenda, syncs:vSyncs, expenses:vExpenses}[tab];
+  const fn = {today:vToday, mine:vMine, rocks:vRocks, plans:vPlans, dates:vDates, agenda:vAgenda, syncs:vSyncs, expenses:vExpenses, help:vHelp}[tab];
   if(fn) fn(document.getElementById('app-'+tab));
 }
 function badges(){
@@ -16898,6 +16950,431 @@ function notePanelPick(L, done){
   });
 }
 
+/* ============ ADD BUTTONS ON QUICK-ADD BOXES (Oct 29) ============
+   Jonna: "im unable to add anything to the sync list from mobile". Every quick-add box
+   ("Add a card and press Enter…", tasks, plan items, steps, projects) only listened for the
+   Enter key, and many phone keyboards never send one a page can see — Android keyboards
+   report every key as "Unidentified" while a word is being typed. Each of those boxes now
+   gets an Add button beside it as soon as something is typed (tap it, or press Enter as
+   before), and the keyboard's own Return key is told to read "Done". The button simply
+   presses Enter for you, so every box keeps exactly the behaviour it had. */
+function qaEnhance(i){
+  if(!i || i.dataset.qaw) return; i.dataset.qaw='1';
+  i.setAttribute('enterkeyhint','done');
+  const b=document.createElement('button'); b.type='button'; b.className='qaadd'; b.textContent='Add'; b.hidden=true;
+  b.setAttribute('aria-label','Add it');
+  const paint=()=>{ b.hidden=!i.value.trim(); };
+  i.addEventListener('input', paint);
+  b.addEventListener('pointerdown', e=> e.preventDefault());   /* keep the box (and the phone keyboard) open */
+  b.addEventListener('click', e=>{ e.stopPropagation();
+    if(!i.value.trim()){ i.focus(); return; }
+    i.dispatchEvent(new KeyboardEvent('keydown', {key:'Enter', code:'Enter', keyCode:13, which:13, bubbles:true, cancelable:true}));
+    setTimeout(paint, 30); });
+  /* some phone keyboards send their Return as a key the page can't name; treat it as Enter */
+  i.addEventListener('keydown', e=>{ i.__sawEnter = (e.key==='Enter'); }, true);
+  i.addEventListener('keyup', e=>{ const enter=(e.key==='Enter' || e.keyCode===13 || e.which===13);
+    if(enter && !i.__sawEnter && i.value.trim()) b.click(); i.__sawEnter=false; });
+  /* side by side with the box: inside a row already, or in a small row of their own */
+  const par=i.parentElement, d=par? getComputedStyle(par).display : '';
+  if(par && !/flex|grid/.test(d)){ const w=document.createElement('span'); w.className='qawrap'; par.insertBefore(w, i); w.appendChild(i); }
+  i.insertAdjacentElement('afterend', b);
+}
+function qaScan(root){
+  (root||document).querySelectorAll('input[type=text][placeholder*="press Enter"]').forEach(qaEnhance);
+}
+new MutationObserver(ms=>{ for(const m of ms) for(const n of m.addedNodes){ if(n.nodeType!==1) continue;
+  if(n.matches && n.matches('input[type=text][placeholder*="press Enter"]')) qaEnhance(n); else if(n.querySelectorAll) qaScan(n); } })
+  .observe(document.documentElement, {childList:true, subtree:true});
+qaScan();
+
+/* ============ HELP (Oct 29) ============
+   Jonna: "can you also create full documentation on how the system works, using, etc. add it
+   to a help button at the bottom of the left nav bar like all the other systems".
+   A Help button sits at the foot of the left menu, above Dark Mode. It opens the Help page:
+   a search box, and one section per part of Team HQ — closed to start, click a heading to
+   open it. The rail's search finds help sections too. Written in plain words, with the
+   exact names of the buttons you will see. Keep it in step with the build: when a feature
+   changes, change its section here. */
+const HELP_SECS = [
+{id:'start', t:'Getting Started', d:'What Team HQ is for, finding your way around, and signing in.', h:`
+<p><b>Team HQ is the team's one place to see what everyone is working on</b> — so two people don't end up doing the same thing, good ideas get parked instead of half-done, and key dates aren't buried in someone's inbox.</p>
+<h4>Signing In</h4>
+<p>On <b>resources.mismo.org/team-hq</b> you sign in with the same MISMO sign-in as the other tools. Your initials at the top right show who you are signed in as. On the Claude copy, pick your name with <b>Who Are You?</b> at the top right.</p>
+<h4>Finding Your Way Around</h4>
+<ul>
+<li><b>The left menu</b> has the sections: Today, My Board, Team Projects, Plans, Key Dates, Team Meeting, Sync Ups and Expenses. <b>Help</b> and <b>Dark Mode</b> sit at the bottom.</li>
+<li><b>Narrow the menu</b> with the arrow at its top (or press <span class="hk">\\</span>) to leave just the icons. Team HQ remembers your choice.</li>
+<li><b>Search</b> at the top of the menu finds tasks, team projects, parts, people, dates, plans, notes, expenses and these help sections. Press <span class="hk">Ctrl</span>+<span class="hk">K</span> (<span class="hk">⌘</span>+<span class="hk">K</span> on a Mac) to jump to it from anywhere.</li>
+<li><b>Add a Task</b> and <b>Jot It Down</b> sit in the navy bar across the top on every page.</li>
+<li><b>The right-hand pane.</b> Almost anything you click — a task, a project, a note, a card — opens in a pane on the right. The arrows at its top right make it wider or put it back. The × closes it; a back arrow steps out one level when you have opened something from inside something else.</li>
+</ul>`},
+
+{id:'today', t:'Today', d:'Where the team stands right now.', h:`
+<p>Today is the team's front page.</p>
+<ul>
+<li><b>The navy band</b> shows the date and five numbers: <b>Traveling</b>, <b>Active Projects</b> (with all open tasks under it), <b>Possible Overlaps</b>, <b>Past Due</b> and <b>Working Days Left</b> in the year (weekdays, minus MISMO holidays). Click a number to go to what it counts.</li>
+<li><b>Ask</b> — type a question about the team (“Who is overloaded right now?”) and Team HQ answers from what is on it.</li>
+<li><b>Counting Down</b> — the key dates that are pinned, with days to go.</li>
+<li><b>Where My Team Is Today</b> — a card for each person: their status, their working day (with their Outlook meetings when Outlook is connected) and how loaded they are. Click a card to see their work, <b>Add a Task for</b> them, or <b>Send a Nudge</b>.</li>
+<li><b>Who Is Doing What</b> — put someone on a task, or take them off, in one place.</li>
+<li><b>The note wall</b> — the team's post-its (see <i>Jot It Down and Post-Its</i>).</li>
+</ul>`},
+
+{id:'tasks', t:'Tasks', d:'Adding a task, and what each field means.', h:`
+<h4>Add a Task</h4>
+<ol>
+<li>Click <b>Add a Task</b> in the navy bar at the top (or the <b>Add a task</b> box on a panel).</li>
+<li>Fill in what you know — only <b>Task</b> is needed.</li>
+<li>Click <b>Save</b>.</li>
+</ol>
+<h4>The Fields</h4>
+<ul>
+<li><b>Accountable</b> — the one person answerable for it getting done.</li>
+<li><b>Who Is Working It</b> — anyone doing the hands-on work. They can be different from the person accountable; the accountable person then sees it under <i>What I Am Watching</i>.</li>
+<li><b>Status</b> — Not Started, In Progress, Waiting on Someone or Done.</li>
+<li><b>Priority</b> — High, Normal or Low.</li>
+<li><b>Due Date</b> — when it is due. Past due tasks show how many days late.</li>
+<li><b>Team Project</b> and <b>Part Of</b> — which team project and which part of it the task belongs to. This is what lets Team HQ spot two people working the same part.</li>
+<li><b>Running Rail</b> — tick it for an ongoing responsibility rather than a one-off (a weekly report, an inbox you watch).</li>
+<li><b>Already Handled Elsewhere</b> — whether the work is already automated or partly covered somewhere else.</li>
+<li><b>Notes</b> — anything the next person would need to know, with formatting (see <i>Formatting Your Notes</i>).</li>
+<li><b>Time Set Aside for It</b> — block time on your calendar for the task. On resources.mismo.org, <b>Your Day in Outlook</b> shows your meetings that day so you can pick a free stretch, and the time is added to your Outlook calendar.</li>
+<li><b>Files</b> — attach anything up to 4 MB; click a file to look at it or download it.</li>
+</ul>
+<h4>Finishing a Task</h4>
+<p>Set <b>Status</b> to <b>Done</b> and click <b>Save</b>. Finished tasks fold away under <b>Done (n)</b> at the bottom of a list, newest first.</p>`},
+
+{id:'jot', t:'Jot It Down and Post-Its', d:'Getting a thought down fast, and post-its you can type on.', h:`
+<h4>Jot It Down</h4>
+<ol>
+<li>Click <b>Jot It Down</b> in the navy bar at the top.</li>
+<li>Type it the way you would on a sticky note — or click the microphone and say it.</li>
+<li>Choose where it goes:
+<ul><li><b>Put It on My Board</b> (or someone else's board, picked under <b>Whose Board</b>) — a post-it on that board.</li>
+<li><b>Park It</b> — onto the team's note wall on Today. No owner, no date, no pressure.</li></ul></li>
+</ol>
+<p>Have the details already? Use <b>Add a Task</b> instead.</p>
+<h4>Post-Its</h4>
+<ul>
+<li><b>Click a post-it and type.</b> The formatting toolbar shows while you type. A <b>Save</b> button appears once you have changed something — click it to keep your words.</li>
+<li><b>The colored dot</b> changes its color. <b>Make It a Task</b> turns it into a task (the first line is the task, the rest goes in its notes) and takes it off the wall once the task is saved. <b>×</b> clears it (click twice; there is an Undo).</li>
+<li><b>Drag a post-it by the dots at its top</b> to put it in a different order.</li>
+<li><b>A post-it you add and leave blank</b> removes itself.</li>
+<li>On a <b>Free-Form</b> or <b>Notebook</b> board, post-its can sit anywhere — see <i>My Board: Free-Form and Notebook</i>.</li>
+</ul>`},
+
+{id:'board', t:'My Board: Panels and Settings', d:'Your own page — what is on it is up to you.', h:`
+<p><b>My Board is yours alone.</b> It starts with My Tasks; you add what else you want.</p>
+<h4>Add a Panel</h4>
+<ol>
+<li>Click <b>Add a Panel</b> in the navy band on My Board.</li>
+<li>Pick a group on the left (My Work, Projects and Plans, The Team, Dates and Meetings, Notes and Ideas, Numbers and Systems) or search.</li>
+<li>Point at a panel to see it drawn with your own data, then click <b>Add It to My Board</b>.</li>
+</ol>
+<h4>Moving and Shaping Panels</h4>
+<ul>
+<li><b>Drag a panel by its heading</b> to move it.</li>
+<li><b>Click the heading</b> to fold a panel down to its heading, or open it again.</li>
+<li><b>The gear on a panel</b> has its own settings: its size, its color and style, whether it starts open or collapsed, what it shows, and <b>Take It Off My Board</b>. Taking a panel off never deletes what is in it.</li>
+</ul>
+<h4>My Board Settings (the Gear in the Navy Band)</h4>
+<ul>
+<li><b>Layout</b> — <b>Arrange My Board As</b> Board, Free-Form or Notebook (next section); <b>When the Board Opens</b>: every panel Open or Collapsed; whether panels side by side match their heights.</li>
+<li><b>Opening Things</b> — whether a task, note or project opens in the right-hand pane, as a drop-down under its row, or both.</li>
+<li><b>Appearance</b> — Plain or Bold panels, automatic colors, shuffle or clear every color.</li>
+<li><b>Tasks</b> — show tasks as Rows, Cards or Sticky Notes.</li>
+<li><b>Top Band</b> — show or hide the navy band, and pick up to four numbers for it.</li>
+</ul>
+<p>Point at any setting to see a picture of what it does before you click.</p>
+<h4>Your Status</h4>
+<p>The status button in the navy band (for example <b>Around</b>) sets yours — see <i>Your Status, Working Hours and Nudges</i>.</p>`},
+
+{id:'layouts', t:'My Board: Free-Form and Notebook', d:'Panels anywhere, writing on the board, sections and pages like OneNote.', h:`
+<p>Pick a layout in <b>My Board Settings → Layout → Arrange My Board As</b>:</p>
+<ul>
+<li><b>Board</b> — panels in rows down the page.</li>
+<li><b>Free-Form</b> — one open board. Drag panels anywhere by their heading, size them from the bottom-right corner, overlap them. Nothing snaps to a grid.</li>
+<li><b>Notebook</b> — Free-Form, laid out like OneNote: colored <b>sections</b> across the top, that section's <b>pages</b> down the left.</li>
+</ul>
+<p><b>Switching layouts keeps your things.</b> Anything the other layout is missing comes across when you switch.</p>
+<h4>Writing on the Board</h4>
+<ul>
+<li><b>Double-click an empty spot</b> to write right there, or click <b>Add Text</b> in the navy band.</li>
+<li>Drag a text box by the thin bar along its top; widen it from its right edge. <b>Save</b> appears once you type. <b>×</b> deletes it (asks first if it has words, and there is an Undo).</li>
+<li>A box you click into and leave empty disappears.</li>
+</ul>
+<h4>Post-Its on the Board</h4>
+<ul>
+<li><b>Add a Post-It</b> in the navy band puts one straight on the board. Drag it by its dots, size it from its corner.</li>
+<li><b>Drag a post-it out of a Note Wall panel</b> onto the board to stick it there.</li>
+<li>Jot It Down → <b>Put It on My Board</b> sticks it at the top right of the page you are on.</li>
+</ul>
+<h4>Sections and Pages (Notebook)</h4>
+<ul>
+<li><b>Add a Section</b> / <b>Add a Page</b> make new ones. A new page opens with its title ready to type.</li>
+<li>Each page shows a big <b>title</b> (type over it to rename the page) and the date and time it was made.</li>
+<li>On the section you are on: the <b>pencil</b> renames it, the <b>color dot</b> picks its color, <b>×</b> deletes it.</li>
+<li>On the page you are on: the <b>›</b> arrow tucks it under the page above as a subpage (<b>‹</b> brings it back out).</li>
+<li>Drag sections and pages to reorder them. Drop a panel, post-it or text box on another section or page to move it there.</li>
+</ul>
+<h4>A Board as Long as You Need</h4>
+<p>Drag anything toward the bottom of the window and the page scrolls and the board grows with it.</p>
+<p><b>Writing typed on the board is not private</b> — keep passwords in the <i>Locked Note</i>.</p>`},
+
+{id:'notes', t:'My Notes', d:'Long-form notes on your board, archived when you are done with them.', h:`
+<ol>
+<li>Add the <b>My Notes</b> panel to your board (Add a Panel → Notes and Ideas). It always shows <b>your</b> notes.</li>
+<li>Click <b>Add a Note</b>, give it a <b>Title</b>, write the <b>Note</b> and click <b>Save</b>.</li>
+<li>Click any note to open it again.</li>
+</ol>
+<ul>
+<li><b>Drag notes by their dots</b> to put them in order.</li>
+<li><b>Archive</b> takes a note off the list but keeps it. Archived notes sit under <b>Archived (n)</b> at the foot of the panel; open one and click <b>Bring It Back</b> to return it.</li>
+<li><b>Make It a Task</b> puts the note on the board as a task; the note stays, marked as a task.</li>
+<li><b>Want a separate set of notes?</b> Add My Notes again and choose <b>Start a Separate Notes Section</b>. Rename a panel in its gear → Name.</li>
+<li>If a yellow box says <b>notes of yours are not on this board</b>, nothing was deleted — click <b>Put It Back</b>.</li>
+</ul>
+<p><b>My Notes are not private</b> — anyone with access to Team HQ could get to them. Use the <i>Locked Note</i> for anything sensitive.</p>`},
+
+{id:'vault', t:'Locked Note', d:'A note locked with a passphrase only you know — for passwords and logins.', h:`
+<p>The Locked Note is scrambled in your browser with your passphrase before it is saved. What is stored can't be read by the team, an admin, GitHub or Claude.</p>
+<h4>Set It Up</h4>
+<ol>
+<li>Add the <b>Locked Note</b> panel (Add a Panel → Notes and Ideas).</li>
+<li>Click <b>Set It Up</b>, type a passphrase of at least 10 characters twice (four random words work well), and click <b>Lock It With This Passphrase</b>.</li>
+<li>Write your note and click <b>Save</b>. A table works well: Site · Username · Password.</li>
+</ol>
+<h4>Using It</h4>
+<ul>
+<li><b>Unlock</b> on the panel asks for your passphrase. The panel itself never shows what is inside.</li>
+<li>It <b>locks itself after 10 quiet minutes</b> (saving anything you typed first), when you click <b>Lock Now</b>, or when you close the page.</li>
+<li><b>Change Passphrase</b> is inside the open note.</li>
+</ul>
+<p><b>Write your passphrase down somewhere safe, away from Team HQ.</b> If it is forgotten nobody can open the note, and what is in it cannot be got back.</p>`},
+
+{id:'myprojects', t:'My Projects', d:'Your own bigger pieces of work, with steps.', h:`
+<p>For your own projects — bigger than a task, smaller than a team project.</p>
+<ol>
+<li>Add the <b>My Projects</b> panel (Add a Panel → My Work) and click <b>Add a Project</b>.</li>
+<li>Fill in <b>Project Name</b>, <b>Where It Stands</b>, <b>Priority</b>, dates, <b>What Done Looks Like</b>, and its <b>Steps</b> (each its own line with a done box and date).</li>
+<li>Link tasks from your board under <b>Tasks from Your Board</b> — their status counts toward the progress bar.</li>
+<li>Click <b>Save</b>.</li>
+</ol>
+<p>The filter at the top of the panel shows Open, Done or All.</p>`},
+
+{id:'rocks', t:'Team Projects', d:'The big efforts everything rolls up to, and where work doubles up.', h:`
+<p>Team projects are the umbrella efforts tasks roll up to. Each is split into <b>parts</b> people divide up.</p>
+<ul>
+<li><b>The filters</b> at the top show Active, Next Up, Someday, Done or All. <b>Someday</b> is a real place to park a good idea that is not a priority now.</li>
+<li><b>Click a project</b> to open its tasks, soonest first, under <b>Past Due</b>, <b>Due This Week</b>, <b>Coming Up</b> and <b>No Date Yet</b>. <b>Add a Task</b> adds one to it.</li>
+<li><b>By Part</b> (at the top of the pane) shows one row per part with who has open work in it. Team HQ remembers which view you used last.</li>
+<li><b>Overlap Check</b> flags a part where two or more people have open work, so you can check nobody is covering the same ground.</li>
+<li><b>Who Is Doing What</b> puts someone on a task without changing who is accountable.</li>
+</ul>
+<h4>Editing a Team Project</h4>
+<ol>
+<li>Open the project and click <b>Edit This Team Project</b>.</li>
+<li>Set its name, status, lead and <b>What It Is</b>.</li>
+<li>Under <b>The Parts</b>, pick from <b>Add a Part…</b> (parts used on other projects, common parts, or type your own). Drag parts to reorder. Renaming a part takes its tasks with it.</li>
+<li>Click <b>Save</b>.</li>
+</ol>`},
+
+{id:'plans', t:'Plans', d:'Onboarding, handovers and checklists, with a view for leadership.', h:`
+<h4>Start a Plan</h4>
+<ol>
+<li>On <b>Plans</b>, click <b>Start a New Plan</b>.</li>
+<li>Start blank, or copy a plan you already have (sections and items come across with every tick cleared).</li>
+<li>Give it a name, kind, who it is for, who runs it and a start date.</li>
+</ol>
+<h4>Working the Plan</h4>
+<ul>
+<li><b>Sections</b> hold the items. Each can have a day window (Day 1 is the start date) and an <b>owner</b>. The pencil on a section opens its details; <b>Add a Section</b> adds one.</li>
+<li><b>The order of sections is their priority</b> — top is highest. Drag a section by its dots to change it.</li>
+<li><b>Show Sections</b>: In Priority Order, or By Owner (each person's sections grouped together). Each plan remembers your choice.</li>
+<li><b>Items</b>: click one to open it — status, owner, target date, notes. <b>Put It on the Board</b> makes it a task whose status then drives the item.</li>
+<li><b>Plan Details</b> changes the plan itself.</li>
+</ul>
+<h4>Leadership View and Private Notes</h4>
+<ul>
+<li><b>Leadership View</b> shows progress by section, what is behind and what is coming up, and <b>Download a Progress Report</b>.</li>
+<li><b>My Private Notes</b> on a plan are seen only by you — never on the Leadership View or the report.</li>
+</ul>`},
+
+{id:'dates', t:'Key Dates', d:'The team calendar, countdowns, and finding a time to meet.', h:`
+<ul>
+<li><b>Three views</b>: <b>The List</b>, <b>A Month</b> (a calendar showing who is away each day) and <b>Who Is Free</b>.</li>
+<li><b>Add a date</b> with its kind (Travel, Summit, Holiday and the rest — <b>+ Add a Kind</b> makes a new one), the people involved, where, and a note.</li>
+<li><b>Repeating dates</b> roll forward on their own: every month on a date or weekday, every year on a date or in a month. A repeating date can last several days.</li>
+<li><b>Pin</b> a date to put it in <b>Counting Down</b> on Today.</li>
+<li><b>Travel, Summit, Out of Office</b> and similar dates with people tagged mark those people as away for exactly those days.</li>
+</ul>
+<h4>Find a Time</h4>
+<ol>
+<li>On <b>Key Dates → Who Is Free</b>, use <b>Find a Time</b> (also on the Who Is Free panel).</li>
+<li>Pick who needs to be there, <b>How Long</b>, and how far to look ahead.</li>
+<li>Team HQ lists the stretches each day when they are all free — inside everyone's working hours, around their Outlook meetings, holidays and travel.</li>
+<li>Click a stretch, choose the start time, and <b>Open the Invitation in Outlook</b> (or <b>Copy the Time</b>).</li>
+</ol>`},
+
+{id:'agenda', t:'Team Meeting', d:'The shared agenda, and what people have asked for.', h:`
+<ol>
+<li>On <b>Team Meeting</b>, pick the meeting and click <b>Put Something On</b>.</li>
+<li>Say what you want to raise, what kind (Discuss, Decide and so on), how long, and who is raising it.</li>
+<li>Add <b>Anything to Read First?</b>, <b>Files to Read First</b>, and background under <b>About This Topic</b>.</li>
+<li>Click <b>Save</b>.</li>
+</ol>
+<ul>
+<li><b>Drag topics by their dots</b> to set the running order — everyone sees the same order.</li>
+<li>During or after the meeting, open a topic to note <b>What Was Decided?</b> and tick <b>Covered</b>. Topics not covered can be carried over.</li>
+<li><b>Worth Raising</b> lists things Team HQ has spotted (late tasks, overlaps). Click one to put it on the agenda.</li>
+<li><b>What People Have Asked For</b> — panels, numbers and changes the team has asked for, and where each stands.</li>
+</ul>`},
+
+{id:'syncs', t:'Sync Ups', d:'Regular sync-ups between a few people, seen only by them.', h:`
+<p>A <b>space</b> is for a regular sync-up between a few people. Only the people in a space can see it.</p>
+<h4>Start a Space</h4>
+<ol>
+<li>Click <b>Start a Shared Space</b>.</li>
+<li>Name it, pick who is in it and the day or days you meet.</li>
+<li>Click <b>Start the Space</b>.</li>
+</ol>
+<h4>Lists and Cards</h4>
+<ul>
+<li>Each space has <b>lists</b> (to start: Topics, each person's To Dos, Parked for Later). Click a list's name to rename it; <b>Add a List</b> adds one; the bin on a list's heading deletes it (its cards move to the next list).</li>
+<li><b>Add a card</b>: type in the box at the foot of a list and press <b>Enter</b> or tap <b>Add</b>.</li>
+<li><b>Drag a card</b> anywhere on it to move it up or down, onto another list, or into another space (it then belongs to that space and its people).</li>
+<li><b>Click a card</b> to open it: open/done, owner, due date, notes and <b>steps</b>. <b>Put It on the Board</b> makes a team task from it.</li>
+<li>Fold a list with the arrow on its heading; drag lists and spaces by their dots to reorder them.</li>
+</ul>
+<h4>Log This Week's Sync</h4>
+<p>After you meet, click <b>Log This Week's Sync</b> to record what you talked about, what was decided and action items (which become cards). Past syncs fold open below the lists.</p>`},
+
+{id:'expenses', t:'Expenses', d:'Snap a receipt — Team HQ fills in the rest.', h:`
+<ol>
+<li>On <b>Expenses</b>, click or drop onto <b>Snap a Receipt</b> — one or several photos or PDFs. Each becomes its own expense, saved straight away.</li>
+<li>Team HQ reads the receipt and fills in what it can: the business, date, amounts, expense type and a note. Filled-in fields carry a <b>From the Receipt</b> tag until you change them.</li>
+<li>Check it, add anything missing (an expense missing details shows <b>Needs Details</b>) and click <b>Save</b>.</li>
+</ol>
+<ul>
+<li>Nothing is required — a receipt alone is enough to save.</li>
+<li><b>MBA's travel policy</b> is built in: receipts over $25 (meals over $15), meal caps, and the rest. Anything outside policy is flagged.</li>
+<li><b>After a trip</b> with no expenses claimed, Team HQ reminds you, with <b>Add Them</b> or <b>Already Claimed</b>.</li>
+<li><b>Who sees what:</b> each person sees only their own. Jonna and Vanessa see everyone's and process them in DataBasics.</li>
+</ul>`},
+
+{id:'status', t:'Your Status, Working Hours and Nudges', d:'Letting the team know where you are.', h:`
+<ul>
+<li><b>Set your status</b> with the status button in the navy band on My Board: Around, In a Meeting, Heads Down, Traveling or Out of Office, with a short note and an optional <b>Until</b> date that clears it for you.</li>
+<li><b>A Key Date can set it for you</b> — a trip with you tagged shows you as Traveling for exactly those days.</li>
+<li><b>My Working Hours</b> (under your status) sets your hours and time zone. Outside them, the team sees when you are back.</li>
+<li><b>Nudges</b> — open someone's card on Today and click <b>Send a Nudge</b> for a gentle reminder or a note. It lands on their board with a <b>Got It</b> button. Everyone can see nudges, so keep them to what you would say out loud.</li>
+</ul>`},
+
+{id:'outlook', t:'Outlook and Your Calendar', d:'What Team HQ reads from Outlook, and what it adds to it.', h:`
+<p>On resources.mismo.org, once your Outlook is connected:</p>
+<ul>
+<li>Your card on Today shows your working day with your meetings, and <b>In a Meeting · Until …</b> while you are in one. Private meetings show without a name.</li>
+<li><b>Find a Time</b> and <b>Who Is Free</b> work around everyone's meetings.</li>
+<li>Time you set aside for a task is added to your Outlook calendar.</li>
+</ul>
+<p>Someone whose Outlook isn't connected shows <b>Outlook not connected</b>. To connect yours, ask Jonna.</p>`},
+
+{id:'format', t:'Formatting Your Notes', d:'Bold, bullets, colors, tables and links in any notes box.', h:`
+<p>Every notes box has a toolbar:</p>
+<ul>
+<li><b>B</b>, <i>I</i>, <u>U</u> and <s>S</s> — bold, italic, underline, strike through (<span class="hk">Ctrl</span>+<span class="hk">B</span>/<span class="hk">I</span>/<span class="hk">U</span> work too).</li>
+<li><b>Bullets</b> and <b>Numbering</b> — <span class="hk">Tab</span> tucks a bullet in a level.</li>
+<li><b>Text Color</b> and <b>Highlight</b>.</li>
+<li><b>Table</b> — pick the size on the grid. Inside a table, the same button adds or deletes rows and columns; <span class="hk">Tab</span> moves cell to cell.</li>
+<li><b>Link</b> (or <span class="hk">Ctrl</span>+<span class="hk">K</span>) — link selected words to a web or email address. Typing an address makes it a link on its own. <span class="hk">Ctrl</span>+click opens a link while you are writing.</li>
+<li><b>Clear Formatting</b> takes formatting off the selected words.</li>
+</ul>`},
+
+{id:'ask', t:'Ask and Plan My Day', d:'Questions about the team, and a plan for your day.', h:`
+<ul>
+<li><b>Ask</b> on Today answers questions about what is on Team HQ — who is overloaded, what is at risk this week, where people are doubling up.</li>
+<li><b>Plan My Day</b> is a My Board panel: it reads your board and tells you what to do first, in what order, and what can wait.</li>
+</ul>
+<p>Both use Claude. Sync Ups and private notes are never included.</p>`},
+
+{id:'saving', t:'Saving and Undo', d:'When things save, and how to take something back.', h:`
+<ul>
+<li><b>Anything you type needs Save.</b> A line says <b>Unsaved changes — click Save to keep them</b> until you do. <b>Cancel</b> leaves without changing anything.</li>
+<li><b>Quick actions save straight away</b>: ticking a box, dragging something into a new place, adding with the Add box, and changing a setting.</li>
+<li><b>Deleting</b> asks you to click twice. Many deletes then offer <b>Undo</b> in the note at the bottom left for a few seconds.</li>
+<li><b>If a save doesn't go through</b> (on resources.mismo.org), Team HQ keeps your change and tries again on its own, and says what went wrong in plain words.</li>
+</ul>`},
+
+{id:'privacy', t:'Who Sees What', d:'What is shared with the team, and what is just yours.', h:`
+<ul>
+<li><b>Seen by the whole team:</b> tasks, team projects, plans (except private notes), key dates, the team meeting, the team note wall, statuses and nudges.</li>
+<li><b>Your own layout:</b> My Board — how it is arranged is yours. But My Notes, My Projects, post-its and writing typed on your board are kept in the team's shared store, so they are <b>not private</b>.</li>
+<li><b>Only the people in it:</b> a Sync Ups space.</li>
+<li><b>Only you and the people processing them:</b> expenses (Jonna and Vanessa process them).</li>
+<li><b>Only you:</b> your private notes on a plan, and your <b>Locked Note</b> (which even an admin can't read).</li>
+</ul>`},
+
+{id:'phone', t:'On a Phone', d:'Using Team HQ on a small screen.', h:`
+<ul>
+<li>The left menu narrows to icons. Tap the arrow at its top to see the names.</li>
+<li>Panels and lists stack into one column; a Free-Form board lists its panels top to bottom.</li>
+<li><b>Adding with a quick-add box</b> (“Add a card and press Enter…”): type, then tap the <b>Add</b> button that appears beside the box — or your keyboard's Return or Done key.</li>
+<li>Drag things by their six dots.</li>
+</ul>`},
+
+{id:'trouble', t:'When Something Isn’t Right', d:'Common questions and what to do.', h:`
+<ul>
+<li><b>“My notes have gone.”</b> Nothing was deleted. Look for the yellow box on My Board and click <b>Put It Back</b>, or Add a Panel → My Notes, which puts your notes back.</li>
+<li><b>“I can't add from my phone.”</b> Type in the box, then tap <b>Add</b>.</li>
+<li><b>“A change I was told about isn't there.”</b> Refresh the page. On resources.mismo.org a new version takes about a minute to arrive after it is uploaded.</li>
+<li><b>“I can't find something.”</b> Use the Search at the top of the left menu.</li>
+<li><b>“Someone shows Outlook not connected.”</b> Their Outlook hasn't been hooked up yet — ask Jonna.</li>
+<li><b>Anything else</b> — ask Jonna, or use <b>Ask for It</b> under Add a Panel to request a change.</li>
+</ul>`}
+];
+
+function vHelp(root){
+  root.textContent='';
+  const hd=el('div','vhead hhead');
+  const tw=el('div'); tw.appendChild(el('h1',null,'Help'));
+  tw.appendChild(el('p','vsub','How Team HQ works and how to use it. Click a heading to open it, or search.'));
+  hd.appendChild(tw); root.appendChild(hd);
+  const bar=el('div','hbar');
+  const q=inp('search','', 'Search the help'); q.setAttribute('aria-label','Search the help'); q.className='hq-q';
+  const all=el('button','btn ghost sm','Open All'); all.type='button';
+  const none=el('button','btn ghost sm','Close All'); none.type='button';
+  bar.appendChild(q); bar.appendChild(all); bar.appendChild(none); root.appendChild(bar);
+  const list=el('div','hlist'); root.appendChild(list);
+  const found=el('p','hnone','Nothing in the help matches that. Try another word.'); found.hidden=true; root.appendChild(found);
+  const items=HELP_SECS.map(s=>{
+    const d=document.createElement('details'); d.className='hsec'; d.id='help-'+s.id;
+    const sm=document.createElement('summary');
+    sm.appendChild(el('span','hst', s.t)); sm.appendChild(el('span','hsd', s.d));
+    d.appendChild(sm);
+    const b=el('div','hbody'); b.innerHTML=s.h; d.appendChild(b);
+    list.appendChild(d);
+    return {s:s, d:d, txt:(s.t+' '+s.d+' '+b.textContent).toLowerCase()};
+  });
+  all.addEventListener('click', ()=> items.forEach(x=>{ if(!x.d.hidden) x.d.open=true; }));
+  none.addEventListener('click', ()=> items.forEach(x=>{ x.d.open=false; }));
+  q.addEventListener('input', ()=>{
+    const v=q.value.trim().toLowerCase(); let n=0;
+    items.forEach(x=>{ const hit=!v || v.split(/\s+/).every(w=> x.txt.indexOf(w)>=0); x.d.hidden=!hit; if(hit) n++; x.d.open= !!v && hit && n<=3; });
+    found.hidden=n>0;
+  });
+  if(S.helpOpen){ const it=items.find(x=>x.s.id===S.helpOpen); S.helpOpen='';
+    if(it){ it.d.open=true; setTimeout(()=> it.d.scrollIntoView({block:'start', behavior:'smooth'}), 60); } }
+}
+/* the Help button at the foot of the left menu */
+(function(){
+  const b=document.getElementById('help-btn'); if(!b) return;
+  b.addEventListener('click', ()=>{
+    show('help');
+    if(window.matchMedia('(max-width:900px)').matches && !document.body.classList.contains('railmini')){ const h=document.getElementById('rail-hide'); if(h) h.click(); }
+  });
+})();
+function helpOpen(id){ S.helpOpen=id; show('help'); }
+
 /* ============ rail search sources ============ */
 window.__search = function(t, push, goTab){
   try{ S.tasks.forEach(x=>{ if(norm(x.t).indexOf(t)<0) return;
@@ -16919,6 +17396,9 @@ window.__search = function(t, push, goTab){
     push('Plan Items', x.t, p.title, ()=>{ S.planOpen=p.id; S.planMode='work'; S.openSecs[p.id+':'+x.sec]=true; S.planScroll=x.id; goTab('plans'); itemPanel(p.id, x.id); }); }); }catch(e){}
   try{ S.notes.forEach(x=>{ if(norm(rtText(x.t)).indexOf(t)<0) return;
     push('Notes', rtText(x.t).replace(/\s+/g,' ').slice(0,120), 'on the note wall by '+pname(x.by), ()=>{ goTab('today'); }); }); }catch(e){}
+  /* Oct 29: the help sections are found too */
+  try{ HELP_SECS.forEach(x=>{ if(norm(x.t+' '+x.d+' '+x.h.replace(/<[^>]*>/g,' ')).indexOf(t)<0) return;
+    push('Help', x.t, x.d, ()=> helpOpen(x.id)); }); }catch(e){}
 };
 window.__show = show;
 window.__setStatus = setStatus; window.__gaps = expenseGaps; window.__fyStart = ()=>isoOf(fyStart()); window.__mtg = {next:nextMtg, after:afterMtg, clash:mtgClash, series:mtgSeries}; window.__blkWait = blocksWaiting; window.__ask2 = askSheet; window.__editAsk = editAsk; window.__bw = buildWidget; window.__ask = askOverwrite; window.__edit = editTask; window.__editRock = editRock; window.__editDate = editDate; window.__saveMine = saveMine; window.__drop = drop; window.__put = put; window.__dOn = datesOn;
