@@ -3550,7 +3550,7 @@ function statusOf(p){
 
 /* ---------- the views ---------- */
 const VIEWS={
-  day:{t:'My Dashboard', i:'home'}, inbox:{t:'Inbox', i:'inbox'}, mine:{t:'My Tasks', i:'mine'}, cal:{t:'Calendar', i:'cal'}, all:{t:'All Tasks', i:'all'}, people:{t:'People', i:'ppl'} };
+  day:{t:'My Dashboard', i:'home'}, inbox:{t:'Inbox', i:'inbox'}, mine:{t:'My Tasks', i:'mine'}, cal:{t:'Calendar', i:'cal'}, people:{t:'People', i:'ppl'} };
 function viewKind(v){ v=v||ui.view; if(v.indexOf('p:')===0) return 'project'; if(v.indexOf('u:')===0) return 'person'; if(v.indexOf('c:')===0) return 'classic'; return v; }
 function myOpen(){ return S.tasks.filter(t=>isOpen(t) && doers(t).indexOf(me())>=0); }
 function myAsks(){ return (S.asks||[]).filter(a=>a.state!=='Built' && a.state!=='Not Doing' && (me()==='jonna' || a.by===me())); }
@@ -3593,7 +3593,6 @@ function drawRail(){
   const calB=add(railBtn('cal','Calendar', ic('cal')), firstClassic);
   placeBoardBtn(calB);
   add(railLbl('Team'), firstClassic);
-  add(railBtn('all','All Tasks', ic('all')), firstClassic);
   add(railBtn('people','People', ic('ppl')), firstClassic);
   markRail();
 }
@@ -3607,6 +3606,7 @@ function markRail(){
 
 /* ---------- moving between views ---------- */
 function open(key){
+  if(key==='all') key='mine'; /* All Tasks is gone; My Tasks is the list */
   if(key.indexOf('c:')===0){ openClassic(key.slice(2)); return; }
   ui.view=key; ui.ws=''; ui.q=''; sel=-1; save();
   document.documentElement.classList.add('nx-show'); shell.hidden=false;
@@ -3633,7 +3633,7 @@ function paint(){
     if(k==='day') vDash();
     else if(k==='inbox') vInbox();
     else if(k==='mine') vList('mine');
-    else if(k==='all') vList('all');
+    else if(k==='all') vList('mine');
     else if(k==='project') vProject(ui.view.slice(2));
     else if(k==='person') vPerson(ui.view.slice(2));
     else if(k==='cal') vCal();
@@ -4010,8 +4010,53 @@ function vList(kind){
     const p=h('select','nx-sel'); p.setAttribute('aria-label','Team Project'); p.appendChild(new Option('All Projects','')); activeRocks().forEach(r=>p.appendChild(new Option(r.name,r.id))); p.appendChild(new Option('No Team Project','-')); p.value=ui.proj||''; p.addEventListener('change', ()=>{ ui.proj=p.value; save(); paint(); }); ctl.push(p); }
   ctl.push(filterBox(), groupSel(key, defG, ['status','due','project','person']), doneToggle(), modeSeg(key, defM));
   header(VIEWS[kind].t, ic(VIEWS[kind].i), L.filter(isOpen).length+' open', ctl);
+  if(kind==='mine'){ const sb=syncBand(); if(sb) body.appendChild(sb); }
   withPeek(taskView(L, g, m, key, {empty: ui.q ? 'Nothing matches “'+ui.q+'”.' : 'Nothing open. Nice.', noProj: false}), L, m);
 }
+
+/* ---------- Sync Up to-dos ----------
+   A card given to someone in a Sync Up — its Who is set, or it sits in that person's "… To Dos" list —
+   shows on their My Tasks. It stays a Sync Up card: ticking it here ticks it there. The ones you
+   handed to others in your Sync Ups show underneath, so you can see what is out with whom. */
+const SYC={items:null, syncs:null, sub:false};
+function syncSrc(){ const SY=window.__sy; if(SY && typeof SY==='object' && SY.started && SY.syncsSeen) return {items:SY.items||[], syncs:SY.syncs||[]};
+  if(SYC.items && SYC.syncs) return {items:SYC.items, syncs:SYC.syncs}; startSync(); return null; }
+function startSync(){ if(SYC.sub) return; const R=window.__hqRelay; if(!S.db || !S.db.collection) return; try{ if(R && R.syncMode && R.syncMode()!=='shared') return; }catch(e){} SYC.sub=true;
+  const take=col=>snap=>{ const list=(snap && snap.docs ? snap.docs : []).map(d=>{ let b; try{ b=JSON.parse(JSON.stringify(d.data()||{})); }catch(e){ b={}; } b.id=d.id; return b; }); if(col==='syncs') SYC.syncs=list; else SYC.items=list; SYC.at=Date.now(); };
+  try{ S.db.collection('syncs').onSnapshot(take('syncs'), ()=>{}); }catch(e){} try{ S.db.collection('syncitems').onSnapshot(take('syncitems'), ()=>{}); }catch(e){} }
+const myKey=()=>{ try{ const R=window.__hqRelay; return String((R && R.myEmail && R.myEmail())||'').toLowerCase(); }catch(e){ return ''; } };
+const byKey=k=>{ k=String(k||'').toLowerCase(); if(!k) return null; if(k==='me' || (k===myKey() && k)) return person(me()); return S.people.find(p=>String(p.email||'').toLowerCase()===k) || S.people.find(p=>{ const w=String(p.name||'').toLowerCase().replace(/[^a-z\s-]/g,'').split(/\s+/).filter(Boolean); return !p.email && w.length>1 && k.split('@')[0]===w[0][0]+w[w.length-1]; }) || null; };
+function listOwner(s, id){ const l=(s.lists||[]).find(x=>x.id===id); if(!l) return null; const m=/^(.+?)[’']s\s+to[\s-]*dos?$/i.exec(String(l.name||'').trim()); if(!m) return null; const nm=m[1].trim().toLowerCase();
+  return S.people.find(p=>{ const w=String(p.name||'').toLowerCase().split(/\s+/).filter(Boolean); return w[0]===nm || w.map(x=>x[0]).join('')===nm; }) || null; }
+function syncTodos(){ const src=syncSrc(); if(!src) return null; const out=[];
+  src.items.forEach(c=>{ if((c.kind||'card')!=='card' || c.done || c.arch) return; const s=src.syncs.find(z=>z.id===c.sync); if(!s) return; const o=c.who ? byKey(c.who) : listOwner(s, c.list); if(!o) return; out.push({c, s, o}); });
+  return out.sort((a,b)=>(a.c.due||'9999').localeCompare(b.c.due||'9999') || (a.c.at||0)-(b.c.at||0)); }
+const syncSig=()=>{ const L=syncTodos(); return L ? L.map(x=>x.c.id+(x.c.due||'')+x.o.id).join(',') : 'n'; };
+function syncDone(c){ const N=window.__notes||{}; const cur=(N.card && N.card(c.id)) || c; const nx=Object.assign({}, cur, {done:true, doneAt:Date.now(), doneBy:S.me||''});
+  if(SYC.items){ const i=SYC.items.findIndex(z=>z.id===c.id); if(i>=0) SYC.items[i]=nx; } try{ const SY=window.__sy; if(SY && Array.isArray(SY.items)){ const j=SY.items.findIndex(z=>z.id===c.id); if(j>=0) SY.items[j]=nx; } }catch(e){}
+  const SY=window.__sy; let pr;
+  if(SY && SY.mode) pr=N.put(nx);
+  else { const body=Object.assign({}, nx); delete body.id; try{ pr=S.db.collection('syncitems').doc(nx.id).set(body); }catch(e){ pr=Promise.reject(e); } }
+  Promise.resolve(pr).then(()=>toast('Done — ticked off in your Sync Up too.'), ()=>toast('That didn’t save. Try again in a moment.')); paint(); }
+function syncBand(){
+  const L=syncTodos(); if(!L || !L.length) return null;
+  const mine=L.filter(x=>x.o.id===me()), out=L.filter(x=>x.o.id!==me());
+  if(!mine.length && !out.length) return null;
+  const box=h('section','nx-syb');
+  const part=(title, list, theirs)=>{ if(!list.length) return; const k=theirs?'syo':'sym'; const shut=!!ui.fold[k];
+    const hd=btn('nx-sybh'+(shut?' shut':''), null, ()=>{ ui.fold[k]=!shut; save(); paint(); });
+    hd.innerHTML=ic('down','cv'); hd.appendChild(h('b',null,title)); hd.appendChild(h('span','nx-cnt',String(list.length))); box.appendChild(hd);
+    if(shut) return;
+    list.forEach(({c,s,o})=>{ const r=h('div','nx-syr');
+      if(!theirs){ const ck=btn('nx-syck', null, e=>{ e.stopPropagation(); syncDone(c); }); ck.title='Mark done'; ck.setAttribute('aria-label','Mark “'+(c.t||'')+'” done'); r.appendChild(ck); }
+      else r.appendChild(av(o.id, 22));
+      const tx=h('div','tx'); tx.appendChild(h('b',null,c.t||'Untitled')); const meta=h('small',null, (theirs?first(o.id)+' · ':'')+(s.name||'Sync Up')); tx.appendChild(meta); r.appendChild(tx);
+      if(c.due){ const dd=days(c.due); r.appendChild(h('span','nx-syd'+(dd<0?' bad':dd<=1?' warn':''), dd<0?(-dd)+'d late':dd===0?'Today':dd===1?'Tomorrow':fmt(c.due))); }
+      r.addEventListener('click', ()=>openClassic('syncs')); r.title='Open in Sync Ups';
+      box.appendChild(r); }); };
+  part('From Your Sync Ups', mine, false);
+  part('Handed Off in Your Sync Ups', out, true);
+  return box; }
 
 /* ---------- a TEAM PROJECT ---------- */
 function vProject(id){
@@ -4273,7 +4318,7 @@ function tile(cfg, i, L){
     meta.go=()=>openClassic('agenda'); }
   else if(cfg.t==='wins'){ const W=S.tasks.filter(t=>!isOpen(t)).sort((a,b)=>(b.at||0)-(a.at||0)).slice(0, SZ==='b'?8:tall?6:3);
     W.forEach(t=>{ const r=h('div','nx-wn'); const d=doers(t)[0]; if(d) r.appendChild(av(d,22)); const tx=h('span',null,t.t); r.appendChild(tx); el.appendChild(r); }); if(!W.length) el.appendChild(h('div','st-sub','Nothing finished yet.'));
-    meta.go=()=>{ ui.showDone=true; save(); open('all'); }; }
+    meta.go=()=>{ ui.showDone=true; save(); open('mine'); }; }
   else if(cfg.t==='board'){ let names=[]; try{ const Lb=(S.nb&&S.nb.pages&&S.nb.pages[0]&&S.nb.pages[0].tabs&&S.nb.pages[0].tabs[0]&&S.nb.pages[0].tabs[0].L)||S.layout||[]; Lb.forEach(r=>(r.r||[]).forEach(c=>names.push(c.t))); }catch(e){}
     const NM={mytasks:'My Tasks',mynote:'My Notes',mtoday:'Meeting Trackers',links:'My Systems',vault:'Locked Note'}; const g=h('div','nx-bgrid'); [...new Set(names)].slice(0,6).forEach(n=>g.appendChild(h('span',null,NM[n]||n.replace(/^./,c=>c.toUpperCase())))); el.appendChild(g);
     el.appendChild(h('div','st-next', 'Your own board — free-form, notebook or rows'));
@@ -4519,7 +4564,7 @@ function setOn(v){ ui.on=v; save(); paintSwitch();
 /* ---------- keep it live ---------- */
 let lastSig='';
 function hsh(str){ let x=0; for(let i=0;i<str.length;i++){ x=((x<<5)-x+str.charCodeAt(i))|0; } return x; }
-const sig=()=>[S.tasks.length, hsh(S.tasks.map(t=>[t.id,t.at,t.s,t.due,t.w,t.r,t.o,(t.d||[]).join(','),t.p,t.t,(t.notes||'').length].join('|')).join('~')), (S.asks||[]).length, (S.asks||[]).map(a=>a.state).join(''), (S.nudges||[]).filter(n=>!n.done).length, S.rocks.length, (window.__hqx&&window.__hqx.sig?window.__hqx.sig():''), Object.keys((window.__cal&&window.__cal.CAL&&window.__cal.CAL.by)||{}).length, (window.__cal&&window.__cal.CAL&&window.__cal.CAL.at)||0].join(':');
+const sig=()=>[S.tasks.length, hsh(S.tasks.map(t=>[t.id,t.at,t.s,t.due,t.w,t.r,t.o,(t.d||[]).join(','),t.p,t.t,(t.notes||'').length].join('|')).join('~')), (S.asks||[]).length, (S.asks||[]).map(a=>a.state).join(''), (S.nudges||[]).filter(n=>!n.done).length, S.rocks.length, (window.__hqx&&window.__hqx.sig?window.__hqx.sig():''), (ui.view==='mine'?syncSig():''), Object.keys((window.__cal&&window.__cal.CAL&&window.__cal.CAL.by)||{}).length, (window.__cal&&window.__cal.CAL&&window.__cal.CAL.at)||0].join(':');
 function busy(){ if(drag || tdrag!=null || menuEl || document.querySelector('.hqx-ov')) return true; const a=document.activeElement; return !!(a && (a.tagName==='INPUT' || a.tagName==='SELECT' || a.tagName==='TEXTAREA') && (shell && shell.contains(a))); }
 const live=setInterval(()=>{ if(!ui.on || document.hidden) return; const s=sig(); if(s===lastSig) return; if(busy()) return; lastSig=s; drawRail(); paint(); }, 1200);
 const clock=setInterval(()=>{ if(!ui.on || document.hidden || busy()) return; drawRail(); if(shell && !shell.hidden && (viewKind()==='day' || viewKind()==='person')) paint(); }, 60e3);
@@ -4531,7 +4576,7 @@ document.addEventListener('click', onRailClick, true);
 const onKey=e=>{ if(!ui.on || !shell || shell.hidden) return; const a=document.activeElement; if(a && (a.tagName==='INPUT'||a.tagName==='TEXTAREA'||a.tagName==='SELECT'||a.isContentEditable)) return;
   if(e.metaKey||e.ctrlKey||e.altKey) return; if(document.querySelector('dialog[open], .modal.open, .ed-ov:not([hidden])')) return;
   const k=e.key.toLowerCase();
-  const m={'1':'day','2':'inbox','3':'mine','4':'cal','5':'all','6':'people'}[k]; if(m){ open(m); e.preventDefault(); return; }
+  const m={'1':'day','2':'inbox','3':'mine','4':'cal','5':'people'}[k]; if(m){ open(m); e.preventDefault(); return; }
   if(k==='c'){ const i=head.querySelector('.nx-qa input'); if(i){ e.preventDefault(); i.focus(); } return; }
   if(k==='/'){ const i=head.querySelector('.nx-find') || head.querySelector('.nx-qa input'); if(i){ e.preventDefault(); i.focus(); } return; }
   const rows=[...body.querySelectorAll('.nx-row[data-id]')].filter(r=>r.offsetParent);
@@ -4858,6 +4903,13 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-mrow.unread .tp b,.nx-mrow.unread .sj{font-weight:800}
 .nx-mrow .ag{margin-left:auto;flex:0 0 auto;font-size:11px;color:var(--ink-3)}
 .nx-mrow .sj{font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nx-syb{margin:0 0 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);overflow:hidden}
+.nx-sybh{display:flex;align-items:center;gap:8px;width:100%;padding:9px 14px;border:0;border-bottom:1px solid var(--rule);background:var(--surface-2);font:inherit;color:var(--ink);cursor:pointer;text-align:left}
+.nx-sybh b{font-size:13px}.nx-sybh .cv{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.4;transition:transform .15s}.nx-sybh.shut .cv{transform:rotate(-90deg)}
+.nx-syr{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--rule);cursor:pointer}.nx-syr:last-child{border-bottom:0}.nx-syr:hover{background:var(--surface-2)}
+.nx-syr .tx{flex:1;min-width:0;display:flex;flex-direction:column}.nx-syr .tx b{font-size:13.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nx-syr .tx small{font-size:11.5px;color:var(--ink-3)}
+.nx-syck{flex:0 0 auto;width:18px;height:18px;padding:0;border:2px solid var(--border-strong);border-radius:4px;background:var(--surface);cursor:pointer}.nx-syck:hover{border-color:var(--good,#2bb673);background:var(--sky-wash)}
+.nx-syd{flex:0 0 auto;font-size:11.5px;font-weight:700;color:var(--ink-3)}.nx-syd.bad{color:var(--bad)}.nx-syd.warn{color:#c77700}
 .nx-mrow{position:relative}.nx-mrow .ac{flex:0 0 auto;display:flex;gap:4px}.nx-mrow .nx-ib{width:26px;height:26px}.nx-mrow .nx-ib svg{width:15px;height:15px}
 .nx-mrow .ox{display:none}
 @media(hover:hover){.nx-mrow:hover .ox,.nx-mrow:focus-within .ox{display:inline-flex}}
