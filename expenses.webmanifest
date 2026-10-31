@@ -1,0 +1,17 @@
+{
+  "name": "MISMO Expenses",
+  "short_name": "Expenses",
+  "description": "Snap a receipt and it's done — Team HQ Expenses.",
+  "id": "/team-hq/?app=expenses",
+  "start_url": "/team-hq/?app=expenses",
+  "scope": "/team-hq/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d314c",
+  "theme_color": "#0d314c",
+  "icons": [
+    { "src": "/team-hq/expenses-icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/team-hq/expenses-icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/team-hq/expenses-icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
