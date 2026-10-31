@@ -38,9 +38,9 @@ const css=document.createElement('style'); css.id='skin-css'; css.textContent=`
 /* ===== MISMO Media treatment, every tab ===== */
 :root{--band:#0d314c;--band-line:rgba(116,191,235,.28);--band-tile:rgba(255,255,255,.07);--hot:#f3a59b}
 :root[data-theme="dark"]{--band:#0a2433;--band-tile:rgba(255,255,255,.05)}
-.view > .vhead{align-items:flex-end;gap:14px;margin-bottom:2px}
-.view > .vhead .grow::before{content:"Team HQ";display:block;margin-bottom:2px;font-size:10.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3)}
-.view > .vhead h1{font-size:27px;font-weight:700;line-height:1.15;letter-spacing:-.012em;color:var(--ink)}
+.view > .vhead,.view > .pv2 > .vhead{align-items:flex-end;gap:14px;margin-bottom:2px}
+.view > .vhead .grow::before,.view > .pv2 > .vhead .grow::before{content:"Team HQ";display:block;margin-bottom:2px;font-size:10.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3)}
+.view > .vhead h1,.view > .pv2 > .vhead h1{font-size:27px;font-weight:700;line-height:1.15;letter-spacing:-.012em;color:var(--ink)}
 .view > .vhead p{margin-top:3px;font-size:13.5px;color:var(--ink-2)}
 .headline{background:var(--band);border:1px solid var(--band-line);padding:16px 18px 18px;gap:14px}
 .headline .hl-date{font-size:10.5px;font-weight:700;letter-spacing:.11em;color:var(--sky)}
@@ -106,7 +106,7 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed color-mix(in srgb,va
 /* ===== phones ===== */
 @media (max-width:640px){
   main{padding-inline:12px}
-  .view > .vhead h1{font-size:23px}
+  .view > .vhead h1,.view > .pv2 > .vhead h1{font-size:23px}
   .headline{padding:14px}
   .headline .hl-say{font-size:15px}
   .tile b{font-size:23px}
