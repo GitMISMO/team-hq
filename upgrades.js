@@ -1316,9 +1316,11 @@ function paint(){
 mo=new MutationObserver(()=>{ const n=root.querySelector(':scope > .hb'); if(!n || n!==root.firstElementChild) paint(); });
 mo.observe(root, {childList:true});
 timer=setInterval(()=>{ if(!root.hidden && !document.hidden) paint(); }, 60e3);
+let calSig=''; const calSigNow=()=>{ const C=window.__cal && window.__cal.CAL; return C ? Object.keys(C.by||{}).length+':'+(C.at||'') : ''; };
+calSig=calSigNow(); const calTimer=setInterval(()=>{ const s=calSigNow(); if(s!==calSig){ calSig=s; paint(); } }, 1500);
 paint();
 window.__hub={ paint, openPal, closePal, version:'1.0',
-  destroy(){ if(mo) mo.disconnect(); mo=null; clearInterval(timer); document.removeEventListener('keydown', onKey); closePal(); css.remove(); const n=root.querySelector(':scope > .hb'); n && n.remove(); } };
+  destroy(){ if(mo) mo.disconnect(); mo=null; clearInterval(timer); clearInterval(calTimer); document.removeEventListener('keydown', onKey); closePal(); css.remove(); const n=root.querySelector(':scope > .hb'); n && n.remove(); } };
 })();
 
 });
@@ -1592,7 +1594,9 @@ function paint(){
 mo=new MutationObserver(()=>{ if(isFree() && (!root.querySelector(':scope > .ft') || root.children.length>2)) paint(); });
 mo.observe(root, {childList:true});
 paint();
-window.__ft={ paint, version:'1.0', destroy(){ if(mo) mo.disconnect(); mo=null; css.remove(); const n=root.querySelector(':scope > .ft'); n && n.remove(); if(isFree() && window.__show) window.__show('dates'); } };
+let calSig=''; const calSigNow=()=>{ const C=window.__cal && window.__cal.CAL; return C ? Object.keys(C.by||{}).length+':'+(C.at||'') : ''; };
+calSig=calSigNow(); const calTimer=setInterval(()=>{ const s=calSigNow(); if(s!==calSig){ calSig=s; for(const k in coverEnd) delete coverEnd[k]; if(isFree()) paint(); } }, 1500);
+window.__ft={ paint, version:'1.0', destroy(){ if(mo) mo.disconnect(); mo=null; clearInterval(calTimer); css.remove(); const n=root.querySelector(':scope > .ft'); n && n.remove(); if(isFree() && window.__show) window.__show('dates'); } };
 })();
 
 });
