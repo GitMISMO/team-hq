@@ -2871,9 +2871,54 @@ const css=h('style'); css.id='td-css'; css.textContent=`
 .td-legend i.bar{width:26px;height:10px;border-radius:3px}
 .td-legend i.ld{width:6px;height:12px;border-radius:2px 2px 0 0}
 #app-today > .td-hidden{display:none!important}
+#app-today > .headline{display:none!important}
+.td-team .rowflex{flex-wrap:wrap;gap:8px}
+.td-seg{display:inline-flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:var(--surface)}
+.td-seg button{height:32px;padding:0 12px;border:0;background:transparent;font:inherit;font-size:12.5px;font-weight:700;color:var(--ink-2);cursor:pointer}
+.td-seg button+button{border-left:1px solid var(--border)}.td-seg button.on{background:var(--navy,#0d314c);color:#fff}
+.td-team .pcard.td-off{display:none}
+.td-pn{display:flex;gap:12px;margin-top:6px;font-size:11.5px;color:var(--ink-3)}.td-pn b{font-size:13px;color:var(--ink);margin-right:3px}.td-pn .bad b{color:var(--bad)}
+.td-pa{display:flex;gap:6px;margin-top:8px}
+.td-pa span{display:inline-flex;align-items:center;height:26px;padding:0 9px;border:1px solid var(--border);border-radius:5px;background:var(--surface);font-size:11.5px;font-weight:700;color:var(--c1);cursor:pointer}
+.td-pa span:hover,.td-pa span:focus-visible{border-color:var(--c1);background:var(--sky-wash);outline:none}
+.td-mp{display:inline-block;margin-left:6px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--c1)}
 @media(max-width:640px){.td-card{flex-basis:72%}.td-row{grid-template-columns:110px 1fr}}
 `;
 document.head.appendChild(css);
+
+/* ---------- People, folded into Where My Team Is Today ----------
+   Each card also carries what the People page showed — open, late and lead counts, a way into the
+   person's own page and Find a Time — and the section can show everyone or just My People. */
+const doersOf=t=>(t.d && t.d.length) ? t.d : (t.o ? [t.o] : []);
+const isOpenT=t=>!/^done$/i.test(String(t.s||''));
+function blendPeople(){
+  const hd=[...root.querySelectorAll('h2,h3')].find(x=>/^Where My Team Is Today$/i.test((x.textContent||'').trim())); if(!hd) return;
+  const sec=hd.closest('.rowflex') ? hd.closest('.rowflex').parentElement : hd.parentElement; if(!sec) return; sec.classList.add('td-team');
+  const x=window.__hqx, mine=x && x.myPeople ? x.myPeople() : [];
+  const bar=hd.closest('.rowflex');
+  if(bar && !bar.querySelector('.td-seg')){ const seg=h('div','td-seg');
+    [['all','Everyone'],['mine','My People']].forEach(([k,l])=>{ const b=btn((ui.who||'all')===k?'on':'', l+(k==='mine'&&mine.length?' ('+mine.length+')':''), ()=>{ if(k==='mine' && !mine.length && x && x.pickPeople){ x.pickPeople(); return; } ui.who=k; save(); blendPeople(); }); b.dataset.k=k; seg.appendChild(b); });
+    if(x && x.pickPeople){ const ch=btn('', 'Choose', ()=>x.pickPeople()); ch.title='Choose My People — your direct reports, or anyone you keep an eye on'; seg.appendChild(ch); }
+    bar.insertBefore(seg, bar.children[1]||null); }
+  if(bar) bar.querySelectorAll('.td-seg button[data-k]').forEach(b=>{ b.classList.toggle('on', (ui.who||'all')===b.dataset.k); if(b.dataset.k==='mine') b.textContent='My People'+(mine.length?' ('+mine.length+')':''); });
+  const t0=today(); const late=t=>{ const d=pd(t.due); return d && d<t0; };
+  sec.querySelectorAll('.pcard').forEach(c=>{
+    const nm=((c.querySelector('.pm b')||{}).textContent||'').trim(); const p=S.people.find(z=>z.name===nm); if(!p) return;
+    c.classList.toggle('td-off', ui.who==='mine' && mine.length>0 && mine.indexOf(p.id)<0);
+    const pm=c.querySelector('.pm'); if(!pm) return;
+    const open=S.tasks.filter(t=>isOpenT(t) && doersOf(t).indexOf(p.id)>=0), lt=open.filter(late).length, leads=(S.rocks||[]).filter(r=>(r.status||'Active')==='Active' && r.lead===p.id).length;
+    const sig=open.length+':'+lt+':'+leads; if(c.dataset.blend===sig) return; c.dataset.blend=sig;
+    c.querySelectorAll('.td-pn,.td-pa').forEach(z=>z.remove());
+    const nb=pm.querySelector('b'); if(nb && mine.indexOf(p.id)>=0 && !nb.querySelector('.td-mp')){ nb.appendChild(h('span','td-mp','My People')); }
+    const n=h('div','td-pn'); [[open.length,'open',''],[lt,'late',lt?'bad':''],[leads, leads===1?'project':'projects','']].forEach(([v,l,cl])=>{ const sp=h('span',cl); sp.appendChild(h('b',null,String(v))); sp.append(l); n.appendChild(sp); }); pm.appendChild(n);
+    const a=h('div','td-pa'); const act=(label, fn, tip)=>{ const sp=h('span',null,label); sp.setAttribute('role','button'); sp.tabIndex=0; sp.title=tip; sp.addEventListener('click', e=>{ e.stopPropagation(); e.preventDefault(); fn(); }); sp.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.stopPropagation(); e.preventDefault(); fn(); } }); a.appendChild(sp); };
+    act('Their Work', ()=>{ if(window.__nx && window.__nx.open) window.__nx.open('u:'+p.id); }, 'Everything '+first(p.id)+' has on, by project and due date');
+    if(p.id!==S.me) act('Find a Time', ()=>{ try{ const k2='tools:team-hq:mismo.teamhq.ft'; const cur=JSON.parse(localStorage.getItem(k2)||'{}'); cur.who=[S.me, p.id]; localStorage.setItem(k2, JSON.stringify(cur)); }catch(e){} window.__show && window.__show('findtime'); }, 'See when you and '+first(p.id)+' are both free');
+    pm.appendChild(a); });
+}
+let blendT=null; const moB=new MutationObserver(()=>{ clearTimeout(blendT); blendT=setTimeout(()=>{ if(!root.hidden) blendPeople(); }, 60); });
+moB.observe(root, {childList:true, subtree:true});
+window.addEventListener('hq:people', ()=>{ root.querySelectorAll('.pcard').forEach(c=>{ delete c.dataset.blend; }); blendPeople(); });
 
 /* ---------- wiring ---------- */
 let mo=null;
@@ -2904,8 +2949,8 @@ const mo3=datesRoot ? new MutationObserver(()=>rollForward()) : null;
 if(datesRoot){ mo3.observe(datesRoot, {childList:true, subtree:true}); rollForward(); }
 let calSig=''; const calSigNow=()=>{ const C=window.__cal && window.__cal.CAL; return C ? Object.keys(C.by||{}).length+':'+(C.at||'') : ''; };
 calSig=calSigNow(); const calTimer=setInterval(()=>{ const s=calSigNow(); if(s!==calSig){ calSig=s; if(!root.hidden) paint(); } }, 1500);
-paint();
-window.__td={ paint, version:'1.0', destroy(){ if(mo) mo.disconnect(); mo=null; mo3 && mo3.disconnect(); clearInterval(calTimer); css.remove(); const n=root.querySelector(':scope > .td-wrap'); n && n.remove(); [...root.querySelectorAll('.td-hidden')].forEach(c=>c.classList.remove('td-hidden')); } };
+paint(); blendPeople();
+window.__td={ paint, version:'1.1', destroy(){ if(mo) mo.disconnect(); mo=null; moB.disconnect(); mo3 && mo3.disconnect(); clearInterval(calTimer); css.remove(); const n=root.querySelector(':scope > .td-wrap'); n && n.remove(); [...root.querySelectorAll('.td-hidden')].forEach(c=>c.classList.remove('td-hidden')); } };
 })();
 
 });
@@ -3634,7 +3679,7 @@ function statusOf(p){
 
 /* ---------- the views ---------- */
 const VIEWS={
-  day:{t:'My Dashboard', i:'home'}, inbox:{t:'Inbox', i:'inbox'}, mine:{t:'My Tasks', i:'mine'}, cal:{t:'Calendar', i:'cal'}, people:{t:'People', i:'ppl'} };
+  day:{t:'My Dashboard', i:'home'}, inbox:{t:'Inbox', i:'inbox'}, mine:{t:'My Tasks', i:'mine'}, cal:{t:'Calendar', i:'cal'} };
 function viewKind(v){ v=v||ui.view; if(v.indexOf('p:')===0) return 'project'; if(v.indexOf('u:')===0) return 'person'; if(v.indexOf('c:')===0) return 'classic'; return v; }
 function myOpen(){ return S.tasks.filter(t=>isOpen(t) && doers(t).indexOf(me())>=0); }
 function myAsks(){ return (S.asks||[]).filter(a=>a.state!=='Built' && a.state!=='Not Doing' && (me()==='jonna' || a.by===me())); }
@@ -3677,7 +3722,6 @@ function drawRail(){
   const calB=add(railBtn('cal','Calendar', ic('cal')), firstClassic);
   placeBoardBtn(calB);
   add(railLbl('Team'), firstClassic);
-  add(railBtn('people','People', ic('ppl')), firstClassic);
   markRail();
 }
 function markRail(){
@@ -3691,6 +3735,7 @@ function markRail(){
 /* ---------- moving between views ---------- */
 function open(key){
   if(key==='all') key='mine'; /* All Tasks is gone; My Tasks is the list */
+  if(key==='people'){ openClassic('today'); setTimeout(()=>{ const t=document.querySelector('#app-today .td-team'); if(t) t.scrollIntoView({block:'start', behavior:'smooth'}); }, 150); return; } /* People now lives in Today's Where My Team Is Today */
   if(key.indexOf('c:')===0){ openClassic(key.slice(2)); return; }
   ui.view=key; ui.ws=''; ui.q=''; sel=-1; save();
   document.documentElement.classList.add('nx-show'); shell.hidden=false;
