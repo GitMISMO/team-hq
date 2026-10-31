@@ -3946,8 +3946,7 @@ function openSystem(k, go){ const x=X(); if(x && x.openSys) x.openSys(k, go, {on
 const em=t=>{ const e=h('em'); e.textContent=t; return e; };
 function vDash(){
   const now=new Date(), hr=now.getHours();
-  const cz=btn('nx-mini', null, ()=>{ dashEdit = dashEdit ? null : dashLayout(); paint(); }); cz.innerHTML=ic('gear')+'<span>'+(dashEdit?'Customizing…':'Customize')+'</span>';
-  header('My Dashboard', ic('home'), WDL[now.getDay()]+', '+MON[now.getMonth()]+' '+now.getDate(), [cz]);
+  header('My Dashboard', ic('home'), WDL[now.getDay()]+', '+MON[now.getMonth()]+' '+now.getDate());
   const pg=h('div','nx-dash'); body.appendChild(pg);
   pg.appendChild(dashHero(now, hr));
   pg.appendChild(dashWeek());
