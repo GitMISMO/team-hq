@@ -4376,6 +4376,23 @@ document.addEventListener('keydown', onKey);
 const onResize=()=>{ if(ui.on && shell && !shell.hidden && !busy()){ clearTimeout(onResize._t); onResize._t=setTimeout(paint, 150); } };
 window.addEventListener('resize', onResize);
 
+
+/* ---------- My Board's Add a Panel: leave out what My Dashboard already has ---------- */
+const DASH_HAS=['My Tasks','Due This Week','Plan My Day','Team Projects List','Where My Team Is Today','Who Is Free','Countdowns','What People Have Asked For','Meeting Trackers: Workgroup Meetings','Sponsorship Portal','Meeting Trackers','Service Orders and Agreements','Financial System','CMS','Member 360','New Certifications','My Systems'];
+function trimPanels(){
+  if(!ui.on) return;
+  document.querySelectorAll('.pgxleft').forEach(left=>{
+    left.querySelectorAll('button.pgxrow').forEach(r=>{ const t=((r.querySelector('b')||{}).textContent||'').trim(); if(DASH_HAS.indexOf(t)>=0 && !r.classList.contains('sel')) r.style.display='none'; });
+    const hidden=[];
+    left.querySelectorAll('.pgxsec').forEach(sec=>{ const any=[...sec.querySelectorAll('button.pgxrow')].some(r=>r.style.display!=='none'); sec.style.display=any?'':'none'; if(!any){ const hd=(sec.firstElementChild&&sec.firstElementChild.textContent||'').trim().toLowerCase(); hidden.push(hd); } });
+    const box=left.closest('[role=dialog], dialog') || left.parentElement;
+    box.querySelectorAll('button.pgxcat').forEach(c=>{ const n=c.textContent.trim().toLowerCase(); if(hidden.some(hd=>hd.indexOf(n)===0)) c.style.display='none'; });
+    if(!left.querySelector('.nx-pgxnote')){ const n=h('div','nx-pgxnote'); n.appendChild(h('span',null,'Your tasks, your day, your team, key dates, asks and every MISMO system live on My Dashboard now — these are the things only your board does.')); const b=btn('nx-mini','Add a Tile to My Dashboard', ()=>{ const x=box.querySelector('.pgxclose'); if(x) x.click(); dashEdit=dashLayout(); open('day'); setTimeout(openCatalog, 60); }); n.appendChild(b); left.insertBefore(n, left.firstChild); }
+  });
+}
+const onPgx=()=>{ if(!ui.on) return; setTimeout(trimPanels, 30); setTimeout(trimPanels, 250); };
+document.addEventListener('click', onPgx, true);
+
 /* ---------- styles ---------- */
 const css=h('style'); css.id='nx-css'; css.textContent=`
 html.nx-show body{overflow:hidden}
@@ -4657,6 +4674,8 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .st-tile.sz-b .st-big{font-size:52px}
 @media(max-width:900px){.st-tile.sz-b,.st-tile.sz-w{grid-column:span 2}}
 @media(max-width:640px){.st-tile.sz-w,.st-tile.sz-b{grid-column:auto}.st-tile.sz-t,.st-tile.sz-b{grid-row:auto}}
+.nx-pgxnote{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px;padding:10px 12px;border:1px solid var(--border);border-left:3px solid var(--c1);border-radius:6px;background:var(--sky-wash);font-size:12.5px;color:var(--ink-2)}
+.nx-pgxnote span{flex:1 1 280px}
 /* email, people, week */
 .nx-mrow{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--rule);background:var(--surface);cursor:pointer}
 .nx-mrow:last-child{border-bottom:0}.nx-mrow:hover{background:var(--surface-2)}
@@ -4953,7 +4972,7 @@ const mo=new MutationObserver(()=>placeSwitch()); const topEl=document.querySele
 /* it always opens on My Dashboard */
 if(ui.on){ build(); document.documentElement.classList.add('nx-on'); drawRail(); open('day'); lastSig=sig(); try{ window.__hub && window.__hub.paint(); }catch(e){} }
 window.__nx={ version:'2.1', paint, open, setOn, parse:parseQuick, ui, pinTile,
-  destroy(){ clearInterval(live); clearInterval(clock); mo.disconnect(); railMo.disconnect(); document.removeEventListener('keydown', onKey); document.removeEventListener('click', onRailClick, true); window.removeEventListener('resize', onResize);
+  destroy(){ clearInterval(live); clearInterval(clock); mo.disconnect(); railMo.disconnect(); document.removeEventListener('keydown', onKey); document.removeEventListener('click', onRailClick, true); document.removeEventListener('click', onPgx, true); window.removeEventListener('resize', onResize);
     railNodes.forEach(n=>n.remove()); restoreBoardBtn(); if(shell) shell.remove(); if(tabbar) tabbar.remove(); if(sw) sw.remove(); closeMenus(); if(toastEl) toastEl.remove(); css.remove(); document.documentElement.classList.remove('nx-on','nx-show','nx-dragging'); } };
 })();
 
