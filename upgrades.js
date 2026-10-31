@@ -171,19 +171,47 @@ const symbol=k=>'<svg class="hqx-sym" viewBox="0 0 48 48" aria-hidden="true">'+(
 const CK='tools:team-hq:mismo.teamhq.syscount';
 let counts={}; try{ counts=JSON.parse(localStorage.getItem(CK)||'{}')||{}; }catch(e){}
 function readNav(doc){ const out={}; try{ doc.querySelectorAll('.hq nav button, nav button').forEach(b=>{ const t=(b.textContent||'').replace(/\s+/g,' ').trim(); const m=/^(.*?)\s*(\d+)$/.exec(t); const label=(m?m[1]:t).trim(); if(label && label.length>1 && !/^(help|dark mode|light mode|theme|sign out|log out|menu|close)$/i.test(label)) out[label]=m?+m[2]:null; /* no number on the menu item means nothing to count, not zero */ }); }catch(e){} return out; }
-function storeCounts(k, nav){ if(!nav || !Object.keys(nav).length) return; counts[k]={at:Date.now(), nav}; try{ localStorage.setItem(CK, JSON.stringify(counts)); }catch(e){} try{ window.dispatchEvent(new Event('hq:counts')); }catch(e){} }
-function countFor(k, go){ const c=counts[k]; if(!c || !go || !Object.prototype.hasOwnProperty.call(c.nav, go)) return null; return {n:c.nav[go], at:c.at}; }
+/* the page that is showing, and the sections on it that say how many items they hold ("Dues Deals to Confirm · 10 items") */
+function curNav(doc){ try{ const b=doc.querySelector('nav button[aria-current]:not([aria-current="false"]), nav a[aria-current]:not([aria-current="false"]), nav [role=tab][aria-selected="true"], button.navbtn[aria-selected="true"]') || [...doc.querySelectorAll('nav button, nav a, button.navbtn')].find(z=>/(^|\s)(on|active|is-active|current|sel|selected)(\s|$)/.test(z.className||'')); return b ? (b.textContent||'').replace(/\s+/g,' ').trim().replace(/\s*\d+$/,'') : ''; }catch(e){ return ''; } }
+function readSecs(doc){ const out={}; try{ doc.querySelectorAll('h2,h3').forEach(hd=>{ if(hd.offsetParent===null) return; const name=(hd.textContent||'').replace(/\s+/g,' ').trim(); const nx=hd.nextElementSibling; if(!name || !nx) return; const m=/^(\d[\d,]*)\s+items?\b\s*(.*)$/i.exec((nx.textContent||'').replace(/\s+/g,' ').trim()); if(!m) return; out[name]={n:+m[1].replace(/,/g,''), x:m[2].replace(/^[·\-–—:\s]+/,'').trim().slice(0,60)}; }); }catch(e){} return out; }
+/* scroll a page inside a frame to a section without moving Team HQ itself */
+function scrollToSec(doc, sec){ const hd=[...doc.querySelectorAll('h2,h3')].find(z=>(z.textContent||'').replace(/\s+/g,' ').trim()===sec); if(!hd) return false;
+  let el=hd.parentElement; const win=doc.defaultView;
+  while(el && el!==doc.body && el!==doc.documentElement){ const cs=win.getComputedStyle(el); if(/(auto|scroll)/.test(cs.overflowY) && el.scrollHeight>el.clientHeight+4){ el.scrollTop+=hd.getBoundingClientRect().top-el.getBoundingClientRect().top-8; return true; } el=el.parentElement; }
+  const se=doc.scrollingElement||doc.documentElement; se.scrollTop+=hd.getBoundingClientRect().top-8; return true; }
+const HIDECSS='.hqtop,body>header.mast,body>header.hqtop,body>.topbar>.masthead,body>.masthead,body>header.masthead{display:none!important}:root{--hq-h:0px!important;--mast-h:0px!important;--masthead-h:0px!important}body{padding-top:0!important}';
+/* drive a frame: hide its masthead, open the tab, go to the section, keep its counts fresh */
+function driveFrame(fr, k, go, sec, done){
+  fr.addEventListener('load', ()=>{ let doc=null; try{ doc=fr.contentDocument; }catch(e){} if(!doc) return;
+    try{ const st=doc.createElement('style'); st.textContent=HIDECSS+(fr.classList.contains('nx-minif')?'html,body{scrollbar-width:none}::-webkit-scrollbar{display:none}':''); doc.head.appendChild(st); }catch(e){}
+    let g=go, sc=sec, tries=0, user=false; const stop=()=>{ user=true; }; try{ doc.addEventListener('pointerdown', stop, true); doc.addEventListener('keydown', stop, true); doc.addEventListener('wheel', stop, {capture:true, passive:true}); }catch(e){}
+    const step=()=>{ tries++; if(!fr.isConnected && tries>2) return; if(user){ g=null; sc=null; }
+      if(g){ const b=[...doc.querySelectorAll('.hq nav button, nav button, nav a, [role=tab]')].find(z=>(z.textContent||'').replace(/\s+/g,' ').trim().replace(/\s*\d+$/,'')===g);
+        /* slow apps redraw once their data is in, so keep at it until the tab really is the one showing */
+        if(b){ const on=b.getAttribute('aria-selected')==='true' || (b.hasAttribute('aria-current') && b.getAttribute('aria-current')!=='false') || /(^|\s)(on|active|is-active|current|selected)(\s|$)/.test(b.className||'');
+          if(on){ if(sc && scrollToSec(doc, sc) && tries>=30) sc=null; if(tries>=30) g=null; } else if(tries%2===1) b.click(); } }
+      else if(sc && tries>1 && scrollToSec(doc, sc) && tries>=30) sc=null;
+      snapSys(k, doc);
+      if(tries<50 && (g || sc || tries<8)) setTimeout(step, 700); else done && done();
+      if(tries===8 && !g && !sc) done && done(); };
+    step();
+    const iv=setInterval(()=>{ if(!fr.isConnected){ clearInterval(iv); return; } if(!document.hidden){ snapSys(k, doc); if(sec) scrollToSec(doc, sec); } }, 90e3);
+  }); }
+function snapSys(k, doc){ if(!doc) return; const nav=readNav(doc); const pg=curNav(doc), sc=readSecs(doc); const old=counts[k]||{}; const sec=Object.assign({}, old.sec||{}); if(pg && Object.keys(sc).length) sec[pg]=sc; if(!Object.keys(nav).length && !(pg && Object.keys(sc).length)) return; counts[k]={at:Date.now(), nav:Object.keys(nav).length ? nav : (old.nav||{}), sec}; try{ localStorage.setItem(CK, JSON.stringify(counts)); }catch(e){} try{ window.dispatchEvent(new Event('hq:counts')); }catch(e){} }
+function storeCounts(k, nav){ if(!nav || !Object.keys(nav).length) return; counts[k]=Object.assign({}, counts[k]||{}, {at:Date.now(), nav}); try{ localStorage.setItem(CK, JSON.stringify(counts)); }catch(e){} try{ window.dispatchEvent(new Event('hq:counts')); }catch(e){} }
+function countFor(k, go, sec){ const c=counts[k]; if(!c || !go) return null; if(sec){ const s=c.sec && c.sec[go] && c.sec[go][sec]; return s ? {n:s.n, x:s.x, at:c.at} : null; } if(!c.nav || !Object.prototype.hasOwnProperty.call(c.nav, go)) return null; return {n:c.nav[go], at:c.at}; }
+function secsOf(k, go){ const c=counts[k]; return c && c.sec && c.sec[go] ? Object.keys(c.sec[go]).map(n=>({n, c:c.sec[go][n].n})) : []; }
 function navOf(k){ const c=counts[k]; return c ? Object.keys(c.nav) : []; }
 let pane=null;
-function closeSys(){ if(!pane) return; const p=pane; pane=null; try{ storeCounts(p.k, readNav(p.fr.contentDocument)); }catch(e){} p.el.classList.add('out'); setTimeout(()=>p.el.remove(), 200); document.removeEventListener('keydown', p.esc); document.documentElement.classList.remove('hqx-sys-on'); }
+function closeSys(){ if(!pane) return; const p=pane; pane=null; try{ snapSys(p.k, p.fr.contentDocument); }catch(e){} p.el.classList.add('out'); setTimeout(()=>p.el.remove(), 200); document.removeEventListener('keydown', p.esc); document.documentElement.classList.remove('hqx-sys-on'); }
 function openSys(k, go, opt){
-  opt=opt||{}; const s=typeof k==='object' ? k : SYS.find(x=>x.k===k); if(!s) return;
+  opt=opt||{}; const s=typeof k==='object' ? k : SYS.find(x=>x.k===k); if(!s) return; let sec=opt.sec||null;
   if(pane) closeSys();
   const el=h('div','hqx-sys'); const scrim=h('div','hqx-scrim'); scrim.addEventListener('click', closeSys); el.appendChild(scrim);
   const box=h('div','hqx-pane'); box.setAttribute('role','dialog'); box.setAttribute('aria-label', s.n); box.style.setProperty('--k', s.c||'#74bfeb');
   const hd=h('div','hqx-ph'); const ic=h('span','ic'); ic.innerHTML=symbol(s.k); hd.appendChild(ic);
-  const tt=h('div','tt'); tt.appendChild(h('b',null,s.n)); const sub=h('small',null, go ? go : (s.d||'')); tt.appendChild(sub); hd.appendChild(tt);
-  if(opt.onPin){ const pin=h('button','hqx-pb','Make This a Dashboard Tile'); pin.type='button'; pin.addEventListener('click', ()=>{ let cur=''; try{ const fd=pane.fr.contentDocument; const b=fd.querySelector('nav button[aria-current], nav a[aria-current]') || [...fd.querySelectorAll('nav button, nav a')].find(z=>/(^|\s)(on|active|is-active|current|sel|selected)(\s|$)/.test(z.className||'')); if(b) cur=(b.textContent||'').replace(/\s+/g,' ').trim().replace(/\s*\d+$/,''); }catch(e){} opt.onPin(s.k, cur); pin.textContent='On Your Dashboard ✓'; pin.disabled=true; }); hd.appendChild(pin); }
+  const tt=h('div','tt'); tt.appendChild(h('b',null,s.n)); const sub=h('small',null, go ? go+(sec?' › '+sec:'') : (s.d||'')); tt.appendChild(sub); hd.appendChild(tt);
+  if(opt.onPin){ const pin=h('button','hqx-pb','Make This a Dashboard Tile'); pin.type='button'; pin.addEventListener('click', ()=>{ let cur=''; try{ cur=curNav(pane.fr.contentDocument); }catch(e){} opt.onPin(s.k, cur); pin.textContent='On Your Dashboard ✓'; pin.disabled=true; }); hd.appendChild(pin); }
   const nt=h('a','hqx-pb ghost','Open in a New Tab'); nt.href=s.u; nt.target='_blank'; nt.rel='noopener'; hd.appendChild(nt);
   const x=h('button','hqx-px','×'); x.type='button'; x.setAttribute('aria-label','Close and go back to Team HQ'); x.title='Close (Esc)'; x.addEventListener('click', closeSys); hd.appendChild(x);
   box.appendChild(hd);
@@ -192,17 +220,7 @@ function openSys(k, go, opt){
   el.appendChild(box); document.body.appendChild(el); document.documentElement.classList.add('hqx-sys-on');
   const esc=e=>{ if(e.key==='Escape') closeSys(); }; document.addEventListener('keydown', esc);
   pane={el, fr, k:s.k, esc};
-  fr.addEventListener('load', ()=>{
-    let doc=null; try{ doc=fr.contentDocument; }catch(e){}
-    if(doc){ try{ const st=doc.createElement('style'); st.textContent='.hqtop,body>header.mast,body>header.hqtop{display:none!important}:root{--hq-h:0px!important;--mast-h:0px!important;--masthead-h:0px!important}body{padding-top:0!important}'; doc.head.appendChild(st); }catch(e){} }
-    let tries=0; const step=()=>{ tries++; if(!pane || pane.fr!==fr) return;
-      const nav=doc ? readNav(doc) : {};
-      if(go && doc){ const b=[...doc.querySelectorAll('.hq nav button, nav button')].find(z=>(z.textContent||'').replace(/\s+/g,' ').trim().replace(/\s*\d+$/,'')===go); if(b){ if(!b.hasAttribute('aria-current')) b.click(); go=null; } }
-      if(Object.keys(nav).length) storeCounts(s.k, nav);
-      if(tries<12 && (go || tries<8)) setTimeout(step, 700); else ld.remove();
-      if(tries>2) ld.classList.add('done'); };
-    step();
-  });
+  driveFrame(fr, s.k, go, sec, ()=>ld.remove()); setTimeout(()=>ld.classList.add('done'), 2400);
 }
 const css2=document.createElement('style'); css2.id='hqx-css2'; css2.textContent=`
 .hqx-sym{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
@@ -384,7 +402,7 @@ loadDone().then(()=>kick());
 
 loadMail(true);
 const timer=setInterval(()=>{ if(!document.hidden) loadMail(true); }, 5*60e3);
-window.__hqx={ version:'1.2', MAIL, loadMail, ACT, mailItems, mailAct, pickFolder, bookDialog, personEmail, lastErr, waitingCount, loadDone, ago, myPeople, setMyPeople, pickPeople, statusOf, dayLoad, nextWorkday, SYS, SHORT, canOpen, figsFor, symbol, openSys, closeSys, countFor, navOf, sig:()=>MAIL.state+':'+MAIL.at+':'+MAIL.items.length+':'+myPeople().join(',')+':'+ACT.on+':'+acts().map(z=>z.id+(z.fin?'f':'')+(z.err?'e':'')).join(','),
+window.__hqx={ version:'1.2', MAIL, loadMail, ACT, mailItems, mailAct, pickFolder, bookDialog, personEmail, lastErr, waitingCount, loadDone, ago, myPeople, setMyPeople, pickPeople, statusOf, dayLoad, nextWorkday, SYS, SHORT, canOpen, figsFor, symbol, openSys, closeSys, countFor, secsOf, navOf, driveFrame, sig:()=>MAIL.state+':'+MAIL.at+':'+MAIL.items.length+':'+myPeople().join(',')+':'+ACT.on+':'+acts().map(z=>z.id+(z.fin?'f':'')+(z.err?'e':'')).join(','),
   destroy(){ clearInterval(timer); clearTimeout(actT); closeSys(); css.remove(); css2.remove(); css3.remove(); } };
 })();
 
@@ -3628,6 +3646,7 @@ let sel=-1;
 function paint(){
   if(!shell || shell.hidden) return;
   const k=viewKind(); const sy=body.scrollTop; const sl=body.querySelector('.nx-sl, .nx-dl'); const sly=sl?sl.scrollTop:0; peekEl=null;
+  parkMinis(); pendMini=[];
   head.textContent=''; body.textContent=''; body.className='nx-body nx-v-'+k;
   try{
     if(k==='day') vDash();
@@ -3641,6 +3660,7 @@ function paint(){
     else if(k==='people') vPeople();
     else vDash();
   }catch(e){ console.error(e); body.appendChild(h('p','nx-empty','Something went wrong drawing this view.')); }
+  try{ placeMinis(); }catch(e){ console.error(e); }
   body.scrollTop=sy; const sl2=body.querySelector('.nx-sl, .nx-dl'); if(sl2) sl2.scrollTop=sly;
   drawTabbar();
 }
@@ -4149,7 +4169,7 @@ function sizeOf(cfg, i, L){ if(cfg.sz) return cfg.sz; if(cfg.w===2) return 'w';
   if(cfg.t==='sys'){ const n=L.slice(0,i).filter(z=>z.t==='sys').length; return ['s','w','t','s','b','s','w'][n%7]; }
   return MIXDEF[cfg.t] || 's'; }
 function pinTile(k, go){ const L=dashLayout(); const i=L.findIndex(z=>z.t==='sys' && z.s===k && (z.go||'')===(go||'')); const had=i>=0; const t=had ? L.splice(i,1)[0] : {t:'sys', s:k, go:go||''}; L.splice(0,0,t); saveDash(L); toast((had?'Moved to the top of your dashboard':'Added to your dashboard')+(go?': '+go:''), null); if(viewKind()==='day' && !dashEdit) paint(); }
-function openSystem(k, go){ const x=X(); if(x && x.openSys) x.openSys(k, go, {onPin:pinTile}); }
+function openSystem(k, go, sec){ const x=X(); if(x && x.openSys) x.openSys(k, go, {onPin:pinTile, sec:sec||''}); }
 const em=t=>{ const e=h('em'); e.textContent=t; return e; };
 function vDash(){
   const now=new Date(), hr=now.getHours();
@@ -4336,28 +4356,55 @@ function tile(cfg, i, L){
   el.addEventListener('keydown', e=>{ if((e.key==='Enter'||e.key===' ') && e.target===el && !dashEdit){ e.preventDefault(); go(); } });
   return el;
 }
+/* ---------- mini live views: a system's page, scaled down inside its tile ----------
+   Each one stays loaded while you use the dashboard: on a repaint it is parked and moved back
+   (moveBefore keeps the page alive in browsers that have it), never reloaded. */
+const MINI=new Map(); let pendMini=[]; let miniHold=null;
+function holdEl(){ if(!miniHold || !miniHold.isConnected){ miniHold=h('div','nx-minihold'); miniHold.setAttribute('aria-hidden','true'); document.body.appendChild(miniHold); } return miniHold; }
+function mvEl(parent, el){ if(parent.moveBefore && el.isConnected && parent.isConnected){ try{ parent.moveBefore(el, null); return; }catch(e){} } parent.appendChild(el); }
+function parkMinis(){ MINI.forEach(m=>{ if(m.el.isConnected && m.el.parentElement!==holdEl()) mvEl(holdEl(), m.el); }); }
+function fitMini(m){ const w=m.el.clientWidth, hh=m.el.clientHeight; if(!w || !hh) return; const base=w>520?1280:1100, sc=w/base; m.fr.style.width=base+'px'; m.fr.style.height=Math.ceil(hh/sc)+'px'; m.fr.style.transform='scale('+sc.toFixed(4)+')'; }
+function placeMinis(){ const used=new Set(), x=X();
+  pendMini.forEach(p=>{ if(!p.slot.isConnected) return; let m=MINI.get(p.key);
+    if(!m){ const w=h('div','nx-miniw'); const fr=h('iframe','nx-minif'); fr.src=p.s.u; fr.title=p.s.n+' (preview)'; fr.tabIndex=-1; fr.setAttribute('aria-hidden','true'); w.appendChild(fr);
+      const ld=h('div','nx-minild'); ld.appendChild(h('i')); w.appendChild(ld); fr.addEventListener('load', ()=>setTimeout(()=>ld.remove(), 1600));
+      if(x && x.driveFrame) x.driveFrame(fr, p.s.k, p.go, p.sec); m={el:w, fr}; MINI.set(p.key, m);
+      try{ m.ro=new ResizeObserver(()=>fitMini(m)); m.ro.observe(w); }catch(e){} }
+    mvEl(p.slot, m.el); fitMini(m); used.add(p.key); m.seen=Date.now(); });
+  pendMini=[];
+  MINI.forEach((m,k)=>{ if(!used.has(k) && Date.now()-(m.seen||0)>5*60e3){ try{ m.ro && m.ro.disconnect(); }catch(e){} m.el.remove(); MINI.delete(k); } }); }
 function sysMeta(cfg){ const x=X(); const s=x && x.SYS.find(z=>z.k===cfg.s); if(!s) return null;
   const meta={n:s.n, lab:(x.SHORT[s.k]||s.n), k:s.c};
   meta.draw=(el, top, SZ)=>{
-    if(cfg.go) top.appendChild(h('span','st-pill', cfg.go));
+    if(cfg.go) top.appendChild(h('span','st-pill', cfg.sec || cfg.go));
+    if(cfg.mini!==false && SZ!=='s' && !phone()){
+      const cs=cfg.go && cfg.sec ? x.countFor(s.k, cfg.go, cfg.sec) : null, cn=cfg.go ? x.countFor(s.k, cfg.go) : null, cc=cs || (cn && cn.n>0 ? cn : null);
+      if(cc) top.appendChild(h('span','st-pill hot', cc.n+(cfg.sec ? (cc.n===1?' item':' items') : '')));
+      el.classList.add('has-mini'); const slot=h('div','nx-minislot'); el.appendChild(slot);
+      pendMini.push({slot, key:s.k+'|'+(cfg.go||'')+'|'+(cfg.sec||''), s, go:cfg.go||'', sec:cfg.sec||''});
+      const nt=h('div','st-next'); nt.append('Live from '+(x.SHORT[s.k]||s.n)+(cfg.go?' · '+(cfg.sec||cfg.go):'')); nt.appendChild(h('b','opn',' Open →')); el.appendChild(nt); return; }
     const body2=h('div','nx-sysb'); const sym=h('div','nx-sym'); sym.innerHTML=x.symbol(s.k); body2.appendChild(sym);
     const val=h('div','nx-sysv');
-    const c0=cfg.go && x.countFor(s.k, cfg.go); const c=c0 && c0.n>0 ? c0 : null; /* a page whose menu item has no number (Overview, Home) has nothing to count — never show it as 0 */
+    const cs=cfg.go && cfg.sec ? x.countFor(s.k, cfg.go, cfg.sec) : null; const c0=cs || (cfg.go && x.countFor(s.k, cfg.go)); const c=cs ? cs : (c0 && c0.n>0 ? c0 : null); /* a page whose menu item has no number (Overview, Home) has nothing to count — never show it as 0 */
     const figs=x.figsFor(s.k); const fig=cfg.f ? figs.find(f=>f.id===cfg.f) : (c ? null : figs[0]);
-    if(c){ const b=h('div','st-big'); b.append(String(c.n)); b.appendChild(h('small',null, cfg.go)); val.appendChild(b); }
+    if(c){ const b=h('div','st-big'); b.append(String(c.n)); b.appendChild(h('small',null, cfg.sec ? (c.n===1?'item':'items') : cfg.go)); val.appendChild(b); if(cfg.sec) val.appendChild(h('div','st-sub', cfg.sec+(c.x?' · '+c.x:''))); }
+    else if(cfg.sec){ val.appendChild(h('div','st-sub', cfg.sec+' in '+cfg.go+'. Its count shows here after the next time you open it.')); }
     else if(fig){ const b=h('div','st-big'); b.append(String(fig.v)); val.appendChild(b); val.appendChild(h('div','st-sub', fig.n)); }
     else if(cfg.go){ val.appendChild(h('div','st-sub', c0 ? 'Opens straight to '+cfg.go+'. Nothing to count there — pick a page with a number, like a queue, in Settings to see one here.' : 'Opens straight to '+cfg.go+'. Its count shows here after the first time you open it.')); }
     else val.appendChild(h('div','st-sub', s.d));
     body2.appendChild(val); el.appendChild(body2);
-    if(SZ==='t' || SZ==='b'){ const rest=figs.filter(f=>f!==fig); const nv=x.navOf(s.k).filter(n=>n!==cfg.go && (x.countFor(s.k,n)||{}).n>0); const ls=h('div','nx-kl2'); rest.slice(0,4).forEach(f=>{ const r=h('div','kr'); r.appendChild(h('b',null,String(f.v))); r.appendChild(h('span',null,f.n)); ls.appendChild(r); }); nv.slice(0, Math.max(0, 5-rest.length)).forEach(n=>{ const r=h('div','kr'); r.appendChild(h('b',null,String(x.countFor(s.k,n).n))); r.appendChild(h('span',null,n)); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) openSystem(s.k, n); }); ls.appendChild(r); }); if(ls.childNodes.length) el.appendChild(ls); else el.appendChild(h('div','st-sub', s.d)); }
+    if(SZ==='t' || SZ==='b'){ const rest=figs.filter(f=>f!==fig); const nv=x.navOf(s.k).filter(n=>n!==cfg.go && (x.countFor(s.k,n)||{}).n>0); const ls=h('div','nx-kl2'); rest.slice(0,4).forEach(f=>{ const r=h('div','kr'); r.appendChild(h('b',null,String(f.v))); r.appendChild(h('span',null,f.n)); ls.appendChild(r); }); const sl=cfg.go ? x.secsOf(s.k, cfg.go).filter(z=>z.n!==cfg.sec && z.c>0) : []; let room=Math.max(0, 5-rest.length); sl.slice(0, room).forEach(z=>{ const r=h('div','kr'); r.appendChild(h('b',null,String(z.c))); r.appendChild(h('span',null,z.n)); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) openSystem(s.k, cfg.go, z.n); }); ls.appendChild(r); }); room=Math.max(0, room-sl.length);
+    nv.slice(0, room).forEach(n=>{ const r=h('div','kr'); r.appendChild(h('b',null,String(x.countFor(s.k,n).n))); r.appendChild(h('span',null,n)); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) openSystem(s.k, n); }); ls.appendChild(r); }); if(ls.childNodes.length) el.appendChild(ls); else el.appendChild(h('div','st-sub', s.d)); }
     const nt=h('div','st-next'); nt.append(c ? 'Checked '+x.ago(c.at) : c0 && !fig ? 'Checked '+x.ago(c0.at) : fig && fig.asof ? 'As of '+fmt(fig.asof) : 'Opens right here'); nt.appendChild(h('b','opn',' Open →')); el.appendChild(nt);
   };
-  meta.go=()=>openSystem(s.k, cfg.go||'');
+  meta.go=()=>openSystem(s.k, cfg.go||'', cfg.sec||'');
   return meta; }
 function sysSettings(cfg, anchor){ const x=X(); const s=x.SYS.find(z=>z.k===cfg.s); const items=[];
-  const nav=x.navOf(s.k); if(nav.length){ items.push({node:h('div','nx-ml','Opens To')}); items.push({label:'Its Home Page', on:!cfg.go, fn:()=>{ cfg.go=''; paint(); }}); nav.forEach(n=>items.push({label:n, on:cfg.go===n, fn:()=>{ cfg.go=n; cfg.f=''; paint(); }})); }
+  const nav=x.navOf(s.k); if(nav.length){ items.push({node:h('div','nx-ml','Opens To')}); items.push({label:'Its Home Page', on:!cfg.go, fn:()=>{ cfg.go=''; cfg.sec=''; paint(); }}); nav.forEach(n=>{ const cn=x.countFor(s.k,n); items.push({label:n, hint:cn && cn.n>0 ? String(cn.n) : '', on:cfg.go===n && !cfg.sec, fn:()=>{ cfg.go=n; cfg.sec=''; cfg.f=''; paint(); }}); }); }
+  if(cfg.go){ const sl=x.secsOf(s.k, cfg.go); if(sl.length){ items.push({node:h('div','nx-ml','A Section of '+cfg.go)}); sl.forEach(z=>items.push({label:z.n, hint:String(z.c), on:cfg.sec===z.n, fn:()=>{ cfg.sec=z.n; cfg.f=''; paint(); }})); } else items.push({node:h('div','nx-ml','Open '+cfg.go+' once and its sections show up here to pick from')}); }
   else items.push({node:h('div','nx-ml','Open '+(x.SHORT[s.k]||s.n)+' once and its pages show up here to pick from')});
   const figs=x.figsFor(s.k); if(figs.length){ items.push({node:h('div','nx-ml','Number to Show')}); figs.forEach(f=>items.push({label:f.n, hint:String(f.v), on:cfg.f===f.id, fn:()=>{ cfg.f=f.id; paint(); }})); }
+  items.push({node:h('div','nx-ml','Show')}); items.push({label:'A Mini Live View of the Page', hint:'wide and tall sizes', on:cfg.mini!==false, fn:()=>{ cfg.mini=true; paint(); }}); items.push({label:'The Number', on:cfg.mini===false, fn:()=>{ cfg.mini=false; paint(); }});
   popMenu(anchor, items, (x.SHORT[s.k]||s.n)); if(menuEl) menuEl.classList.add('tall'); }
 function openCatalog(){
   const x=X(); if(!dashEdit) dashEdit=dashLayout();
@@ -4844,6 +4891,15 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-wn{display:flex;gap:8px;align-items:center;font-size:12.5px;min-width:0}.nx-wn span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nx-wn .av{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;font-weight:700;font-size:9px}
 .nx-bgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.nx-bgrid span{padding:7px 9px;border-radius:6px;background:rgba(255,255,255,.07);border:1px solid var(--st-line);font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .nx-sysb{display:flex;gap:16px;align-items:center;min-width:0}
+.st-tile.has-mini{padding-bottom:12px}
+.nx-minislot{position:relative;flex:1 1 auto;min-height:150px;border-radius:8px;overflow:hidden;border:1px solid var(--st-line);background:var(--ground,#f4f7fa);box-shadow:inset 0 0 0 1px rgba(0,0,0,.04)}
+.st-tile.sz-t .nx-minislot,.st-tile.sz-b .nx-minislot{min-height:280px}
+.nx-miniw{position:absolute;inset:0;overflow:hidden}
+.nx-minif{position:absolute;left:0;top:0;border:0;transform-origin:0 0;pointer-events:none;background:var(--ground,#f4f7fa)}
+.nx-minild{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--ground,#f4f7fa);transition:opacity .3s}
+.nx-minild i{width:18px;height:18px;border-radius:50%;border:2.5px solid var(--border);border-top-color:var(--c1);animation:hqxSpin .8s linear infinite}
+.st-tile.has-mini:hover .nx-minislot{border-color:color-mix(in srgb,var(--k) 60%,transparent)}
+.nx-minihold{position:fixed;left:-30000px;top:0;width:640px;height:420px;overflow:hidden;pointer-events:none;visibility:hidden}
 .nx-sym{flex:0 0 auto;width:64px;height:64px;padding:10px;border-radius:14px;background:color-mix(in srgb,var(--k) 16%,transparent);border:1px solid color-mix(in srgb,var(--k) 40%,transparent);color:var(--k);transition:transform .25s}
 .st-tile:hover .nx-sym{transform:scale(1.06) rotate(-3deg)}
 .nx-sysv{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
