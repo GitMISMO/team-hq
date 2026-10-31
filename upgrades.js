@@ -45,7 +45,9 @@ function loadMail(force){
   MAIL.state='loading';
   MAIL.p=R.readOther('team-hq','mail-'+S.me).then(d=>{
     MAIL.data=d||null; const list=d ? (Array.isArray(d) ? d : (d.msgs||d.mail||d.value||d.items||[])) : [];
-    MAIL.items=list.map(norm).sort((a,b)=>b.at-a.at); MAIL.state=d ? 'ok' : 'none'; MAIL.at=Date.now(); MAIL.sent=d && Date.parse(d.at||'') || 0; return MAIL;
+    /* leave out automatic replies, out-of-office notes, bounce-backs and meeting responses — not email anyone needs to look at */
+    const NOISE=/^\s*(automatic reply|auto[- ]?reply|autoreply|out of (the )?office|ooo\b|undeliverable|delivery (status notification|has failed)|mail delivery failed|accepted:|declined:|tentative:|tentatively accepted:|canceled:|cancelled:|read:|not read:|recall:)/i;
+    MAIL.items=list.map(norm).filter(m=>!NOISE.test(m.subject)).sort((a,b)=>b.at-a.at); MAIL.state=d ? 'ok' : 'none'; MAIL.at=Date.now(); MAIL.sent=d && Date.parse(d.at||'') || 0; return MAIL;
   }).catch(()=>{ MAIL.state='none'; MAIL.at=Date.now(); return MAIL; });
   return MAIL.p;
 }
