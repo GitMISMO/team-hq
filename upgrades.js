@@ -12,6 +12,581 @@
 (function(){
 'use strict';
 var MODS=[];
+/* ===== hqx.js ===== */
+MODS.push(function(){
+/* Shared bits for My Board and the new Team HQ:
+   - Email to Look At: each person's own Power Automate flow drops their flagged, important and
+     unread-from-people mail into the relay as "mail-<their id>", the same way the Outlook calendar
+     flow drops "cal-<their id>". Only the subject, sender, time, a short preview and the Outlook link
+     are kept — never the body. This reads it and tidies whatever shape the flow sends.
+     Expected: { at:"2026-11-02T13:05:00Z", msgs:[ {subject, from, fromEmail, received, link, flagged, important, unread, preview} ] }
+     The Outlook connector's own field names (receivedDateTime, webLink, isRead, importance, flag, bodyPreview) work too.
+   - My People: the people someone keeps an eye on (their direct reports, or anyone), saved with
+     their board settings so it follows them to every device. */
+(function(){
+'use strict';
+if(window.__hqx && window.__hqx.destroy) window.__hqx.destroy();
+const S=window.__S; if(!S) return;
+const MAIL={state:'idle', at:0, data:null, items:[]};
+const str=v=>v==null?'':String(v);
+function norm(m){
+  const from=m.from && typeof m.from==='object' ? ((m.from.emailAddress||m.from).name || (m.from.emailAddress||m.from).address) : (m.from||m.f||m.sender||'');
+  const fromEmail=m.fromEmail || (m.from && typeof m.from==='object' ? (m.from.emailAddress||m.from).address : '') || '';
+  const flag=m.flagged!=null ? !!m.flagged : m.flag && typeof m.flag==='object' ? /flagged/i.test(m.flag.flagStatus||'') : !!m.flag;
+  const imp=m.important!=null ? !!m.important : /high/i.test(str(m.importance||m.imp));
+  const unread=m.unread!=null ? !!m.unread : m.isRead!=null ? !m.isRead : false;
+  const at=Date.parse(m.received||m.receivedDateTime||m.at||m.date||'') || 0;
+  return { id:str(m.id||m.link||m.webLink||m.subject+at), subject:str(m.subject||m.s||'(no subject)'), from:str(from), fromEmail:str(fromEmail), at, link:str(m.link||m.webLink||m.u||''), flagged:flag, important:imp, unread, preview:str(m.preview||m.bodyPreview||m.pv||'').slice(0,180) };
+}
+function loadMail(force){
+  const R=window.__hqRelay; if(!R || !R.readOther || !S.me) return Promise.resolve(MAIL);
+  if(MAIL.state==='loading') return MAIL.p;
+  if(!force && MAIL.at && Date.now()-MAIL.at<4*60e3) return Promise.resolve(MAIL);
+  MAIL.state='loading';
+  MAIL.p=R.readOther('team-hq','mail-'+S.me).then(d=>{
+    MAIL.data=d||null; const list=d ? (Array.isArray(d) ? d : (d.msgs||d.mail||d.value||d.items||[])) : [];
+    MAIL.items=list.map(norm).sort((a,b)=>b.at-a.at); MAIL.state=d ? 'ok' : 'none'; MAIL.at=Date.now(); MAIL.sent=d && Date.parse(d.at||'') || 0; return MAIL;
+  }).catch(()=>{ MAIL.state='none'; MAIL.at=Date.now(); return MAIL; });
+  return MAIL.p;
+}
+const ago=ms=>{ const m=Math.round((Date.now()-ms)/60e3); if(m<1) return 'just now'; if(m<60) return m+'m ago'; const hh=Math.round(m/60); if(hh<24) return hh+'h ago'; const d=Math.round(hh/24); return d===1?'yesterday':d+'d ago'; };
+function myPeople(){ const b=S.bset||{}; const L=Array.isArray(b.hqPeople) ? b.hqPeople : []; return L.filter(id=>S.people.some(p=>p.id===id) && id!==S.me); }
+function setMyPeople(L){ if(!S.bset) S.bset={}; S.bset.hqPeople=L.slice(); try{ window.__saveMine && window.__saveMine(); }catch(e){} try{ window.dispatchEvent(new Event('hq:people')); }catch(e){} }
+
+/* ---------- where someone is right now, from Outlook and Key Dates ---------- */
+const WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const today=()=>{ const d=new Date(); d.setHours(0,0,0,0); return d; };
+const addD=(d,n)=>{ const x=new Date(d); x.setDate(x.getDate()+n); return x; };
+function etAt(day, hour){ let t=Date.UTC(day.getFullYear(), day.getMonth(), day.getDate(), hour+5, 0); const e=+new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York', hour:'numeric', hourCycle:'h23'}).format(t); return t+(hour-e)*3600e3; }
+const tm=ms=>{ const d=new Date(ms); let hh=d.getHours(), mm=d.getMinutes(); const ap=hh<12?'a':'p'; hh=hh%12||12; return hh+(mm?':'+String(mm).padStart(2,'0'):'')+ap; };
+function holiday(d){ try{ const r=window.__t && window.__t.holidayOn(d); return r ? (typeof r==='string'?r:(r.n||r.t||r.name||'Holiday')) : ''; }catch(e){ return ''; } }
+const workday=d=>d.getDay()%6!==0 && !holiday(d);
+function nextWorkday(d){ let x=new Date(d); for(let i=0;i<10 && !workday(x);i++) x=addD(x,1); return x; }
+const cal=id=>{ const by=(window.__cal && window.__cal.CAL && window.__cal.CAL.by)||{}; return Array.isArray(by[id]) ? by[id] : null; };
+function dayLoad(id, day){ const ev=cal(id); if(!ev) return null; const ws=etAt(day,9), we=etAt(day,17);
+  const E=ev.filter(e=>e.s<+day+864e5 && e.e>+day && e.show!=='free' && e.show!=='oof' && !e.all);
+  const busy=E.reduce((n,e)=>n+Math.max(0,Math.min(e.e,we)-Math.max(e.s,ws))/60e3,0);
+  return {n:E.length, busy, free:Math.max(0,480-busy)}; }
+function statusOf(p){
+  const now=Date.now(), ev=cal(p.id), d=today();
+  let kd=[]; try{ kd=(window.__dOn ? window.__dOn(d) : []).filter(x=>/travel|out of office|pto|vacation/i.test((x.k||'')+' '+(x.t||'')) && (x.who||[]).indexOf(p.id)>=0); }catch(e){}
+  if(d.getDay()%6===0){ const nw=nextWorkday(d), L=dayLoad(p.id, nw); return {k:'off', t:WD[nw.getDay()]+': '+(L ? L.n+(L.n===1?' meeting':' meetings') : 'back'), s:''}; }
+  const hol=holiday(d); if(hol) return {k:'off', t:hol, s:''};
+  if(kd.length) return {k:'away', t:/travel/i.test(kd[0].k||'')?'Traveling':'Out', s:kd[0].t};
+  if(!ev) return {k:'unk', t:'No calendar', s:''};
+  const oof=ev.find(e=>e.show==='oof' && e.s<=now && e.e>now); if(oof) return {k:'away', t:'Out', s:'until '+tm(oof.e)};
+  const ws=etAt(d,9), we=etAt(d,17); if(now<ws) return {k:'off', t:'Not in yet', s:''}; if(now>we) return {k:'off', t:'Done for the day', s:''};
+  const cur=ev.find(e=>e.s<=now && e.e>now && e.show!=='free' && !e.all);
+  if(cur) return {k:'busy', t:'In a meeting', s:'until '+tm(cur.e)};
+  const nx=ev.filter(e=>e.s>now && e.show!=='free' && !e.all).sort((a,b)=>a.s-b.s)[0];
+  return {k:'free', t:'Free', s: nx && nx.s<we ? 'until '+tm(nx.s) : 'rest of day'};
+}
+
+/* ---------- choose My People ---------- */
+function h(tag, cls, txt){ const e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e; }
+function pickPeople(){
+  const cur=myPeople(); const chosen=new Set(cur);
+  const ov=h('div','hqx-ov'); const box=h('div','hqx-box'); box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true'); box.setAttribute('aria-label','Choose My People');
+  box.appendChild(h('h2',null,'Choose My People'));
+  box.appendChild(h('p',null,'Your direct reports, or anyone whose day and work you want in view. Only you see this list.'));
+  const g=h('div','hqx-g');
+  S.people.slice().sort((a,b)=>(a.ord||0)-(b.ord||0)).filter(p=>p.id!==S.me).forEach(p=>{
+    const b=h('button','hqx-p'+(chosen.has(p.id)?' on':'')); b.type='button';
+    const a=h('span','av'); a.textContent=p.name.split(/\s+/).map(w=>w[0]).slice(0,2).join(''); a.style.background='var(--c'+(((p.color||0)%7)+1)+')'; b.appendChild(a);
+    const t=h('span','tx'); t.appendChild(h('b',null,p.name)); t.appendChild(h('small',null,p.role||'')); b.appendChild(t);
+    b.appendChild(h('i','ck')); b.addEventListener('click', ()=>{ if(chosen.has(p.id)) chosen.delete(p.id); else chosen.add(p.id); b.classList.toggle('on'); });
+    g.appendChild(b); });
+  box.appendChild(g);
+  const ft=h('div','hqx-ft'); const close=()=>{ ov.remove(); document.removeEventListener('keydown', esc); };
+  const c=h('button','btn ghost','Cancel'); c.type='button'; c.addEventListener('click', close);
+  const sv=h('button','btn','Save My People'); sv.type='button'; sv.addEventListener('click', ()=>{ setMyPeople(S.people.filter(p=>chosen.has(p.id)).map(p=>p.id)); close(); });
+  ft.appendChild(c); ft.appendChild(sv); box.appendChild(ft); ov.appendChild(box);
+  ov.addEventListener('click', e=>{ if(e.target===ov) close(); });
+  const esc=e=>{ if(e.key==='Escape') close(); }; document.addEventListener('keydown', esc);
+  document.body.appendChild(ov); setTimeout(()=>{ const f=box.querySelector('.hqx-p'); f && f.focus(); }, 30);
+}
+const css=document.createElement('style'); css.id='hqx-css'; css.textContent=`
+.hqx-ov{position:fixed;inset:0;z-index:400;background:rgba(6,32,47,.45);display:flex;align-items:center;justify-content:center;padding:16px}
+.hqx-box{width:min(560px,100%);max-height:calc(100vh - 32px);overflow:auto;background:var(--surface);border:1px solid var(--border-strong);border-radius:10px;box-shadow:0 24px 60px rgba(6,32,47,.35);padding:20px 22px}
+.hqx-box h2{margin:0 0 4px;font-size:19px;color:var(--ink)}.hqx-box>p{margin:0 0 14px;font-size:13px;color:var(--ink-2)}
+.hqx-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(230px,100%),1fr));gap:8px}
+.hqx-p{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);font:inherit;text-align:left;color:var(--ink);cursor:pointer}
+.hqx-p:hover{border-color:var(--border-strong)}.hqx-p.on{border-color:var(--c1);background:var(--sky-wash)}
+.hqx-p .av{flex:0 0 auto;width:32px;height:32px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px}
+.hqx-p .tx{flex:1;min-width:0;display:flex;flex-direction:column}.hqx-p .tx b{font-size:13.5px}.hqx-p .tx small{font-size:11.5px;color:var(--ink-3)}
+.hqx-p .ck{flex:0 0 auto;width:18px;height:18px;border-radius:4px;border:2px solid var(--border-strong)}
+.hqx-p.on .ck{background:var(--c1) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/14px no-repeat;border-color:var(--c1)}
+.hqx-ft{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+`;
+document.head.appendChild(css);
+
+loadMail(true);
+const timer=setInterval(()=>{ if(!document.hidden) loadMail(true); }, 5*60e3);
+window.__hqx={ version:'1.0', MAIL, loadMail, ago, myPeople, setMyPeople, pickPeople, statusOf, dayLoad, nextWorkday, sig:()=>MAIL.state+':'+MAIL.at+':'+MAIL.items.length+':'+myPeople().join(','),
+  destroy(){ clearInterval(timer); css.remove(); } };
+})();
+
+});
+/* ===== hqx.js ===== */
+MODS.push(function(){
+/* Shared bits for My Board and the new Team HQ:
+   - Email to Look At: each person's own Power Automate flow drops their flagged, important and
+     unread-from-people mail into the relay as "mail-<their id>", the same way the Outlook calendar
+     flow drops "cal-<their id>". Only the subject, sender, time, a short preview and the Outlook link
+     are kept — never the body. This reads it and tidies whatever shape the flow sends.
+     Expected: { at:"2026-11-02T13:05:00Z", msgs:[ {subject, from, fromEmail, received, link, flagged, important, unread, preview} ] }
+     The Outlook connector's own field names (receivedDateTime, webLink, isRead, importance, flag, bodyPreview) work too.
+   - My People: the people someone keeps an eye on (their direct reports, or anyone), saved with
+     their board settings so it follows them to every device. */
+(function(){
+'use strict';
+if(window.__hqx && window.__hqx.destroy) window.__hqx.destroy();
+const S=window.__S; if(!S) return;
+const MAIL={state:'idle', at:0, data:null, items:[]};
+const str=v=>v==null?'':String(v);
+function norm(m){
+  const from=m.from && typeof m.from==='object' ? ((m.from.emailAddress||m.from).name || (m.from.emailAddress||m.from).address) : (m.from||m.f||m.sender||'');
+  const fromEmail=m.fromEmail || (m.from && typeof m.from==='object' ? (m.from.emailAddress||m.from).address : '') || '';
+  const flag=m.flagged!=null ? !!m.flagged : m.flag && typeof m.flag==='object' ? /flagged/i.test(m.flag.flagStatus||'') : !!m.flag;
+  const imp=m.important!=null ? !!m.important : /high/i.test(str(m.importance||m.imp));
+  const unread=m.unread!=null ? !!m.unread : m.isRead!=null ? !m.isRead : false;
+  const at=Date.parse(m.received||m.receivedDateTime||m.at||m.date||'') || 0;
+  return { id:str(m.id||m.link||m.webLink||m.subject+at), subject:str(m.subject||m.s||'(no subject)'), from:str(from), fromEmail:str(fromEmail), at, link:str(m.link||m.webLink||m.u||''), flagged:flag, important:imp, unread, preview:str(m.preview||m.bodyPreview||m.pv||'').slice(0,180) };
+}
+function loadMail(force){
+  const R=window.__hqRelay; if(!R || !R.readOther || !S.me) return Promise.resolve(MAIL);
+  if(MAIL.state==='loading') return MAIL.p;
+  if(!force && MAIL.at && Date.now()-MAIL.at<4*60e3) return Promise.resolve(MAIL);
+  MAIL.state='loading';
+  MAIL.p=R.readOther('team-hq','mail-'+S.me).then(d=>{
+    MAIL.data=d||null; const list=d ? (Array.isArray(d) ? d : (d.msgs||d.mail||d.value||d.items||[])) : [];
+    MAIL.items=list.map(norm).sort((a,b)=>b.at-a.at); MAIL.state=d ? 'ok' : 'none'; MAIL.at=Date.now(); MAIL.sent=d && Date.parse(d.at||'') || 0; return MAIL;
+  }).catch(()=>{ MAIL.state='none'; MAIL.at=Date.now(); return MAIL; });
+  return MAIL.p;
+}
+const ago=ms=>{ const m=Math.round((Date.now()-ms)/60e3); if(m<1) return 'just now'; if(m<60) return m+'m ago'; const hh=Math.round(m/60); if(hh<24) return hh+'h ago'; const d=Math.round(hh/24); return d===1?'yesterday':d+'d ago'; };
+function myPeople(){ const b=S.bset||{}; const L=Array.isArray(b.hqPeople) ? b.hqPeople : []; return L.filter(id=>S.people.some(p=>p.id===id) && id!==S.me); }
+function setMyPeople(L){ if(!S.bset) S.bset={}; S.bset.hqPeople=L.slice(); try{ window.__saveMine && window.__saveMine(); }catch(e){} try{ window.dispatchEvent(new Event('hq:people')); }catch(e){} }
+
+/* ---------- where someone is right now, from Outlook and Key Dates ---------- */
+const WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const today=()=>{ const d=new Date(); d.setHours(0,0,0,0); return d; };
+const addD=(d,n)=>{ const x=new Date(d); x.setDate(x.getDate()+n); return x; };
+function etAt(day, hour){ let t=Date.UTC(day.getFullYear(), day.getMonth(), day.getDate(), hour+5, 0); const e=+new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York', hour:'numeric', hourCycle:'h23'}).format(t); return t+(hour-e)*3600e3; }
+const tm=ms=>{ const d=new Date(ms); let hh=d.getHours(), mm=d.getMinutes(); const ap=hh<12?'a':'p'; hh=hh%12||12; return hh+(mm?':'+String(mm).padStart(2,'0'):'')+ap; };
+function holiday(d){ try{ const r=window.__t && window.__t.holidayOn(d); return r ? (typeof r==='string'?r:(r.n||r.t||r.name||'Holiday')) : ''; }catch(e){ return ''; } }
+const workday=d=>d.getDay()%6!==0 && !holiday(d);
+function nextWorkday(d){ let x=new Date(d); for(let i=0;i<10 && !workday(x);i++) x=addD(x,1); return x; }
+const cal=id=>{ const by=(window.__cal && window.__cal.CAL && window.__cal.CAL.by)||{}; return Array.isArray(by[id]) ? by[id] : null; };
+function dayLoad(id, day){ const ev=cal(id); if(!ev) return null; const ws=etAt(day,9), we=etAt(day,17);
+  const E=ev.filter(e=>e.s<+day+864e5 && e.e>+day && e.show!=='free' && e.show!=='oof' && !e.all);
+  const busy=E.reduce((n,e)=>n+Math.max(0,Math.min(e.e,we)-Math.max(e.s,ws))/60e3,0);
+  return {n:E.length, busy, free:Math.max(0,480-busy)}; }
+function statusOf(p){
+  const now=Date.now(), ev=cal(p.id), d=today();
+  let kd=[]; try{ kd=(window.__dOn ? window.__dOn(d) : []).filter(x=>/travel|out of office|pto|vacation/i.test((x.k||'')+' '+(x.t||'')) && (x.who||[]).indexOf(p.id)>=0); }catch(e){}
+  if(d.getDay()%6===0){ const nw=nextWorkday(d), L=dayLoad(p.id, nw); return {k:'off', t:WD[nw.getDay()]+': '+(L ? L.n+(L.n===1?' meeting':' meetings') : 'back'), s:''}; }
+  const hol=holiday(d); if(hol) return {k:'off', t:hol, s:''};
+  if(kd.length) return {k:'away', t:/travel/i.test(kd[0].k||'')?'Traveling':'Out', s:kd[0].t};
+  if(!ev) return {k:'unk', t:'No calendar', s:''};
+  const oof=ev.find(e=>e.show==='oof' && e.s<=now && e.e>now); if(oof) return {k:'away', t:'Out', s:'until '+tm(oof.e)};
+  const ws=etAt(d,9), we=etAt(d,17); if(now<ws) return {k:'off', t:'Not in yet', s:''}; if(now>we) return {k:'off', t:'Done for the day', s:''};
+  const cur=ev.find(e=>e.s<=now && e.e>now && e.show!=='free' && !e.all);
+  if(cur) return {k:'busy', t:'In a meeting', s:'until '+tm(cur.e)};
+  const nx=ev.filter(e=>e.s>now && e.show!=='free' && !e.all).sort((a,b)=>a.s-b.s)[0];
+  return {k:'free', t:'Free', s: nx && nx.s<we ? 'until '+tm(nx.s) : 'rest of day'};
+}
+
+/* ---------- choose My People ---------- */
+function h(tag, cls, txt){ const e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e; }
+function pickPeople(){
+  const cur=myPeople(); const chosen=new Set(cur);
+  const ov=h('div','hqx-ov'); const box=h('div','hqx-box'); box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true'); box.setAttribute('aria-label','Choose My People');
+  box.appendChild(h('h2',null,'Choose My People'));
+  box.appendChild(h('p',null,'Your direct reports, or anyone whose day and work you want in view. Only you see this list.'));
+  const g=h('div','hqx-g');
+  S.people.slice().sort((a,b)=>(a.ord||0)-(b.ord||0)).filter(p=>p.id!==S.me).forEach(p=>{
+    const b=h('button','hqx-p'+(chosen.has(p.id)?' on':'')); b.type='button';
+    const a=h('span','av'); a.textContent=p.name.split(/\s+/).map(w=>w[0]).slice(0,2).join(''); a.style.background='var(--c'+(((p.color||0)%7)+1)+')'; b.appendChild(a);
+    const t=h('span','tx'); t.appendChild(h('b',null,p.name)); t.appendChild(h('small',null,p.role||'')); b.appendChild(t);
+    b.appendChild(h('i','ck')); b.addEventListener('click', ()=>{ if(chosen.has(p.id)) chosen.delete(p.id); else chosen.add(p.id); b.classList.toggle('on'); });
+    g.appendChild(b); });
+  box.appendChild(g);
+  const ft=h('div','hqx-ft'); const close=()=>{ ov.remove(); document.removeEventListener('keydown', esc); };
+  const c=h('button','btn ghost','Cancel'); c.type='button'; c.addEventListener('click', close);
+  const sv=h('button','btn','Save My People'); sv.type='button'; sv.addEventListener('click', ()=>{ setMyPeople(S.people.filter(p=>chosen.has(p.id)).map(p=>p.id)); close(); });
+  ft.appendChild(c); ft.appendChild(sv); box.appendChild(ft); ov.appendChild(box);
+  ov.addEventListener('click', e=>{ if(e.target===ov) close(); });
+  const esc=e=>{ if(e.key==='Escape') close(); }; document.addEventListener('keydown', esc);
+  document.body.appendChild(ov); setTimeout(()=>{ const f=box.querySelector('.hqx-p'); f && f.focus(); }, 30);
+}
+const css=document.createElement('style'); css.id='hqx-css'; css.textContent=`
+.hqx-ov{position:fixed;inset:0;z-index:400;background:rgba(6,32,47,.45);display:flex;align-items:center;justify-content:center;padding:16px}
+.hqx-box{width:min(560px,100%);max-height:calc(100vh - 32px);overflow:auto;background:var(--surface);border:1px solid var(--border-strong);border-radius:10px;box-shadow:0 24px 60px rgba(6,32,47,.35);padding:20px 22px}
+.hqx-box h2{margin:0 0 4px;font-size:19px;color:var(--ink)}.hqx-box>p{margin:0 0 14px;font-size:13px;color:var(--ink-2)}
+.hqx-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(230px,100%),1fr));gap:8px}
+.hqx-p{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);font:inherit;text-align:left;color:var(--ink);cursor:pointer}
+.hqx-p:hover{border-color:var(--border-strong)}.hqx-p.on{border-color:var(--c1);background:var(--sky-wash)}
+.hqx-p .av{flex:0 0 auto;width:32px;height:32px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px}
+.hqx-p .tx{flex:1;min-width:0;display:flex;flex-direction:column}.hqx-p .tx b{font-size:13.5px}.hqx-p .tx small{font-size:11.5px;color:var(--ink-3)}
+.hqx-p .ck{flex:0 0 auto;width:18px;height:18px;border-radius:4px;border:2px solid var(--border-strong)}
+.hqx-p.on .ck{background:var(--c1) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/14px no-repeat;border-color:var(--c1)}
+.hqx-ft{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+`;
+document.head.appendChild(css);
+
+loadMail(true);
+const timer=setInterval(()=>{ if(!document.hidden) loadMail(true); }, 5*60e3);
+window.__hqx={ version:'1.0', MAIL, loadMail, ago, myPeople, setMyPeople, pickPeople, statusOf, dayLoad, nextWorkday, sig:()=>MAIL.state+':'+MAIL.at+':'+MAIL.items.length+':'+myPeople().join(','),
+  destroy(){ clearInterval(timer); css.remove(); } };
+})();
+
+});
+/* ===== hqx.js ===== */
+MODS.push(function(){
+/* Shared bits for My Board and the new Team HQ:
+   - Email to Look At: each person's own Power Automate flow drops their flagged, important and
+     unread-from-people mail into the relay as "mail-<their id>", the same way the Outlook calendar
+     flow drops "cal-<their id>". Only the subject, sender, time, a short preview and the Outlook link
+     are kept — never the body. This reads it and tidies whatever shape the flow sends.
+     Expected: { at:"2026-11-02T13:05:00Z", msgs:[ {subject, from, fromEmail, received, link, flagged, important, unread, preview} ] }
+     The Outlook connector's own field names (receivedDateTime, webLink, isRead, importance, flag, bodyPreview) work too.
+   - My People: the people someone keeps an eye on (their direct reports, or anyone), saved with
+     their board settings so it follows them to every device. */
+(function(){
+'use strict';
+if(window.__hqx && window.__hqx.destroy) window.__hqx.destroy();
+const S=window.__S; if(!S) return;
+const MAIL={state:'idle', at:0, data:null, items:[]};
+const str=v=>v==null?'':String(v);
+function norm(m){
+  const from=m.from && typeof m.from==='object' ? ((m.from.emailAddress||m.from).name || (m.from.emailAddress||m.from).address) : (m.from||m.f||m.sender||'');
+  const fromEmail=m.fromEmail || (m.from && typeof m.from==='object' ? (m.from.emailAddress||m.from).address : '') || '';
+  const flag=m.flagged!=null ? !!m.flagged : m.flag && typeof m.flag==='object' ? /flagged/i.test(m.flag.flagStatus||'') : !!m.flag;
+  const imp=m.important!=null ? !!m.important : /high/i.test(str(m.importance||m.imp));
+  const unread=m.unread!=null ? !!m.unread : m.isRead!=null ? !m.isRead : false;
+  const at=Date.parse(m.received||m.receivedDateTime||m.at||m.date||'') || 0;
+  return { id:str(m.id||m.link||m.webLink||m.subject+at), subject:str(m.subject||m.s||'(no subject)'), from:str(from), fromEmail:str(fromEmail), at, link:str(m.link||m.webLink||m.u||''), flagged:flag, important:imp, unread, preview:str(m.preview||m.bodyPreview||m.pv||'').slice(0,180) };
+}
+function loadMail(force){
+  const R=window.__hqRelay; if(!R || !R.readOther || !S.me) return Promise.resolve(MAIL);
+  if(MAIL.state==='loading') return MAIL.p;
+  if(!force && MAIL.at && Date.now()-MAIL.at<4*60e3) return Promise.resolve(MAIL);
+  MAIL.state='loading';
+  MAIL.p=R.readOther('team-hq','mail-'+S.me).then(d=>{
+    MAIL.data=d||null; const list=d ? (Array.isArray(d) ? d : (d.msgs||d.mail||d.value||d.items||[])) : [];
+    MAIL.items=list.map(norm).sort((a,b)=>b.at-a.at); MAIL.state=d ? 'ok' : 'none'; MAIL.at=Date.now(); MAIL.sent=d && Date.parse(d.at||'') || 0; return MAIL;
+  }).catch(()=>{ MAIL.state='none'; MAIL.at=Date.now(); return MAIL; });
+  return MAIL.p;
+}
+const ago=ms=>{ const m=Math.round((Date.now()-ms)/60e3); if(m<1) return 'just now'; if(m<60) return m+'m ago'; const hh=Math.round(m/60); if(hh<24) return hh+'h ago'; const d=Math.round(hh/24); return d===1?'yesterday':d+'d ago'; };
+function myPeople(){ const b=S.bset||{}; const L=Array.isArray(b.hqPeople) ? b.hqPeople : []; return L.filter(id=>S.people.some(p=>p.id===id) && id!==S.me); }
+function setMyPeople(L){ if(!S.bset) S.bset={}; S.bset.hqPeople=L.slice(); try{ window.__saveMine && window.__saveMine(); }catch(e){} try{ window.dispatchEvent(new Event('hq:people')); }catch(e){} }
+
+/* ---------- where someone is right now, from Outlook and Key Dates ---------- */
+const WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const today=()=>{ const d=new Date(); d.setHours(0,0,0,0); return d; };
+const addD=(d,n)=>{ const x=new Date(d); x.setDate(x.getDate()+n); return x; };
+function etAt(day, hour){ let t=Date.UTC(day.getFullYear(), day.getMonth(), day.getDate(), hour+5, 0); const e=+new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York', hour:'numeric', hourCycle:'h23'}).format(t); return t+(hour-e)*3600e3; }
+const tm=ms=>{ const d=new Date(ms); let hh=d.getHours(), mm=d.getMinutes(); const ap=hh<12?'a':'p'; hh=hh%12||12; return hh+(mm?':'+String(mm).padStart(2,'0'):'')+ap; };
+function holiday(d){ try{ const r=window.__t && window.__t.holidayOn(d); return r ? (typeof r==='string'?r:(r.n||r.t||r.name||'Holiday')) : ''; }catch(e){ return ''; } }
+const workday=d=>d.getDay()%6!==0 && !holiday(d);
+function nextWorkday(d){ let x=new Date(d); for(let i=0;i<10 && !workday(x);i++) x=addD(x,1); return x; }
+const cal=id=>{ const by=(window.__cal && window.__cal.CAL && window.__cal.CAL.by)||{}; return Array.isArray(by[id]) ? by[id] : null; };
+function dayLoad(id, day){ const ev=cal(id); if(!ev) return null; const ws=etAt(day,9), we=etAt(day,17);
+  const E=ev.filter(e=>e.s<+day+864e5 && e.e>+day && e.show!=='free' && e.show!=='oof' && !e.all);
+  const iv=E.map(e=>[Math.max(e.s,ws),Math.min(e.e,we)]).filter(x=>x[1]>x[0]).sort((x,y)=>x[0]-y[0]); let busy=0, cs=0, ce=0; iv.forEach(([a,b])=>{ if(a>ce){ busy+=ce-cs; cs=a; ce=b; } else ce=Math.max(ce,b); }); busy=(busy+ce-cs)/60e3;
+  return {n:E.length, busy, free:Math.max(0,480-busy)}; }
+function statusOf(p){
+  const now=Date.now(), ev=cal(p.id), d=today();
+  let kd=[]; try{ kd=(window.__dOn ? window.__dOn(d) : []).filter(x=>/travel|out of office|pto|vacation/i.test((x.k||'')+' '+(x.t||'')) && (x.who||[]).indexOf(p.id)>=0); }catch(e){}
+  if(d.getDay()%6===0){ const nw=nextWorkday(d), L=dayLoad(p.id, nw); return {k:'off', t:WD[nw.getDay()]+': '+(L ? L.n+(L.n===1?' meeting':' meetings') : 'back'), s:''}; }
+  const hol=holiday(d); if(hol) return {k:'off', t:hol, s:''};
+  if(kd.length) return {k:'away', t:/travel/i.test(kd[0].k||'')?'Traveling':'Out', s:kd[0].t};
+  if(!ev) return {k:'unk', t:'No calendar', s:''};
+  const oof=ev.find(e=>e.show==='oof' && e.s<=now && e.e>now); if(oof) return {k:'away', t:'Out', s:'until '+tm(oof.e)};
+  const ws=etAt(d,9), we=etAt(d,17); if(now<ws) return {k:'off', t:'Not in yet', s:''}; if(now>we) return {k:'off', t:'Done for the day', s:''};
+  const cur=ev.find(e=>e.s<=now && e.e>now && e.show!=='free' && !e.all);
+  if(cur) return {k:'busy', t:'In a meeting', s:'until '+tm(cur.e)};
+  const nx=ev.filter(e=>e.s>now && e.show!=='free' && !e.all).sort((a,b)=>a.s-b.s)[0];
+  return {k:'free', t:'Free', s: nx && nx.s<we ? 'until '+tm(nx.s) : 'rest of day'};
+}
+
+/* ---------- choose My People ---------- */
+function h(tag, cls, txt){ const e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e; }
+function pickPeople(){
+  const cur=myPeople(); const chosen=new Set(cur);
+  const ov=h('div','hqx-ov'); const box=h('div','hqx-box'); box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true'); box.setAttribute('aria-label','Choose My People');
+  box.appendChild(h('h2',null,'Choose My People'));
+  box.appendChild(h('p',null,'Your direct reports, or anyone whose day and work you want in view. Only you see this list.'));
+  const g=h('div','hqx-g');
+  S.people.slice().sort((a,b)=>(a.ord||0)-(b.ord||0)).filter(p=>p.id!==S.me).forEach(p=>{
+    const b=h('button','hqx-p'+(chosen.has(p.id)?' on':'')); b.type='button';
+    const a=h('span','av'); a.textContent=p.name.split(/\s+/).map(w=>w[0]).slice(0,2).join(''); a.style.background='var(--c'+(((p.color||0)%7)+1)+')'; b.appendChild(a);
+    const t=h('span','tx'); t.appendChild(h('b',null,p.name)); t.appendChild(h('small',null,p.role||'')); b.appendChild(t);
+    b.appendChild(h('i','ck')); b.addEventListener('click', ()=>{ if(chosen.has(p.id)) chosen.delete(p.id); else chosen.add(p.id); b.classList.toggle('on'); });
+    g.appendChild(b); });
+  box.appendChild(g);
+  const ft=h('div','hqx-ft'); const close=()=>{ ov.remove(); document.removeEventListener('keydown', esc); };
+  const c=h('button','btn ghost','Cancel'); c.type='button'; c.addEventListener('click', close);
+  const sv=h('button','btn','Save My People'); sv.type='button'; sv.addEventListener('click', ()=>{ setMyPeople(S.people.filter(p=>chosen.has(p.id)).map(p=>p.id)); close(); });
+  ft.appendChild(c); ft.appendChild(sv); box.appendChild(ft); ov.appendChild(box);
+  ov.addEventListener('click', e=>{ if(e.target===ov) close(); });
+  const esc=e=>{ if(e.key==='Escape') close(); }; document.addEventListener('keydown', esc);
+  document.body.appendChild(ov); setTimeout(()=>{ const f=box.querySelector('.hqx-p'); f && f.focus(); }, 30);
+}
+const css=document.createElement('style'); css.id='hqx-css'; css.textContent=`
+.hqx-ov{position:fixed;inset:0;z-index:400;background:rgba(6,32,47,.45);display:flex;align-items:center;justify-content:center;padding:16px}
+.hqx-box{width:min(560px,100%);max-height:calc(100vh - 32px);overflow:auto;background:var(--surface);border:1px solid var(--border-strong);border-radius:10px;box-shadow:0 24px 60px rgba(6,32,47,.35);padding:20px 22px}
+.hqx-box h2{margin:0 0 4px;font-size:19px;color:var(--ink)}.hqx-box>p{margin:0 0 14px;font-size:13px;color:var(--ink-2)}
+.hqx-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(230px,100%),1fr));gap:8px}
+.hqx-p{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);font:inherit;text-align:left;color:var(--ink);cursor:pointer}
+.hqx-p:hover{border-color:var(--border-strong)}.hqx-p.on{border-color:var(--c1);background:var(--sky-wash)}
+.hqx-p .av{flex:0 0 auto;width:32px;height:32px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px}
+.hqx-p .tx{flex:1;min-width:0;display:flex;flex-direction:column}.hqx-p .tx b{font-size:13.5px}.hqx-p .tx small{font-size:11.5px;color:var(--ink-3)}
+.hqx-p .ck{flex:0 0 auto;width:18px;height:18px;border-radius:4px;border:2px solid var(--border-strong)}
+.hqx-p.on .ck{background:var(--c1) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/14px no-repeat;border-color:var(--c1)}
+.hqx-ft{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+`;
+document.head.appendChild(css);
+
+loadMail(true);
+const timer=setInterval(()=>{ if(!document.hidden) loadMail(true); }, 5*60e3);
+window.__hqx={ version:'1.0', MAIL, loadMail, ago, myPeople, setMyPeople, pickPeople, statusOf, dayLoad, nextWorkday, sig:()=>MAIL.state+':'+MAIL.at+':'+MAIL.items.length+':'+myPeople().join(','),
+  destroy(){ clearInterval(timer); css.remove(); } };
+})();
+
+});
+/* ===== hqx.js ===== */
+MODS.push(function(){
+/* Shared bits for My Board and the new Team HQ:
+   - Email to Look At: each person's own Power Automate flow drops their flagged, important and
+     unread-from-people mail into the relay as "mail-<their id>", the same way the Outlook calendar
+     flow drops "cal-<their id>". Only the subject, sender, time, a short preview and the Outlook link
+     are kept — never the body. This reads it and tidies whatever shape the flow sends.
+     Expected: { at:"2026-11-02T13:05:00Z", msgs:[ {subject, from, fromEmail, received, link, flagged, important, unread, preview} ] }
+     The Outlook connector's own field names (receivedDateTime, webLink, isRead, importance, flag, bodyPreview) work too.
+   - My People: the people someone keeps an eye on (their direct reports, or anyone), saved with
+     their board settings so it follows them to every device. */
+(function(){
+'use strict';
+if(window.__hqx && window.__hqx.destroy) window.__hqx.destroy();
+const S=window.__S; if(!S) return;
+const MAIL={state:'idle', at:0, data:null, items:[]};
+const str=v=>v==null?'':String(v);
+function norm(m){
+  const from=m.from && typeof m.from==='object' ? ((m.from.emailAddress||m.from).name || (m.from.emailAddress||m.from).address) : (m.from||m.f||m.sender||'');
+  const fromEmail=m.fromEmail || (m.from && typeof m.from==='object' ? (m.from.emailAddress||m.from).address : '') || '';
+  const flag=m.flagged!=null ? !!m.flagged : m.flag && typeof m.flag==='object' ? /flagged/i.test(m.flag.flagStatus||'') : !!m.flag;
+  const imp=m.important!=null ? !!m.important : /high/i.test(str(m.importance||m.imp));
+  const unread=m.unread!=null ? !!m.unread : m.isRead!=null ? !m.isRead : false;
+  const at=Date.parse(m.received||m.receivedDateTime||m.at||m.date||'') || 0;
+  return { id:str(m.id||m.link||m.webLink||m.subject+at), subject:str(m.subject||m.s||'(no subject)'), from:str(from), fromEmail:str(fromEmail), at, link:str(m.link||m.webLink||m.u||''), flagged:flag, important:imp, unread, preview:str(m.preview||m.bodyPreview||m.pv||'').slice(0,180) };
+}
+function loadMail(force){
+  const R=window.__hqRelay; if(!R || !R.readOther || !S.me) return Promise.resolve(MAIL);
+  if(MAIL.state==='loading') return MAIL.p;
+  if(!force && MAIL.at && Date.now()-MAIL.at<4*60e3) return Promise.resolve(MAIL);
+  MAIL.state='loading';
+  MAIL.p=R.readOther('team-hq','mail-'+S.me).then(d=>{
+    MAIL.data=d||null; const list=d ? (Array.isArray(d) ? d : (d.msgs||d.mail||d.value||d.items||[])) : [];
+    MAIL.items=list.map(norm).sort((a,b)=>b.at-a.at); MAIL.state=d ? 'ok' : 'none'; MAIL.at=Date.now(); MAIL.sent=d && Date.parse(d.at||'') || 0; return MAIL;
+  }).catch(()=>{ MAIL.state='none'; MAIL.at=Date.now(); return MAIL; });
+  return MAIL.p;
+}
+const ago=ms=>{ const m=Math.round((Date.now()-ms)/60e3); if(m<1) return 'just now'; if(m<60) return m+'m ago'; const hh=Math.round(m/60); if(hh<24) return hh+'h ago'; const d=Math.round(hh/24); return d===1?'yesterday':d+'d ago'; };
+function myPeople(){ const b=S.bset||{}; const L=Array.isArray(b.hqPeople) ? b.hqPeople : []; return L.filter(id=>S.people.some(p=>p.id===id) && id!==S.me); }
+function setMyPeople(L){ if(!S.bset) S.bset={}; S.bset.hqPeople=L.slice(); try{ window.__saveMine && window.__saveMine(); }catch(e){} try{ window.dispatchEvent(new Event('hq:people')); }catch(e){} }
+
+/* ---------- where someone is right now, from Outlook and Key Dates ---------- */
+const WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const today=()=>{ const d=new Date(); d.setHours(0,0,0,0); return d; };
+const addD=(d,n)=>{ const x=new Date(d); x.setDate(x.getDate()+n); return x; };
+function etAt(day, hour){ let t=Date.UTC(day.getFullYear(), day.getMonth(), day.getDate(), hour+5, 0); const e=+new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York', hour:'numeric', hourCycle:'h23'}).format(t); return t+(hour-e)*3600e3; }
+const tm=ms=>{ const d=new Date(ms); let hh=d.getHours(), mm=d.getMinutes(); const ap=hh<12?'a':'p'; hh=hh%12||12; return hh+(mm?':'+String(mm).padStart(2,'0'):'')+ap; };
+function holiday(d){ try{ const r=window.__t && window.__t.holidayOn(d); return r ? (typeof r==='string'?r:(r.n||r.t||r.name||'Holiday')) : ''; }catch(e){ return ''; } }
+const workday=d=>d.getDay()%6!==0 && !holiday(d);
+function nextWorkday(d){ let x=new Date(d); for(let i=0;i<10 && !workday(x);i++) x=addD(x,1); return x; }
+const cal=id=>{ const by=(window.__cal && window.__cal.CAL && window.__cal.CAL.by)||{}; return Array.isArray(by[id]) ? by[id] : null; };
+function dayLoad(id, day){ const ev=cal(id); if(!ev) return null; const ws=etAt(day,9), we=etAt(day,17);
+  const E=ev.filter(e=>e.s<+day+864e5 && e.e>+day && e.show!=='free' && e.show!=='oof' && !e.all);
+  const iv=E.map(e=>[Math.max(e.s,ws),Math.min(e.e,we)]).filter(x=>x[1]>x[0]).sort((x,y)=>x[0]-y[0]); let busy=0, cs=0, ce=0; iv.forEach(([a,b])=>{ if(a>ce){ busy+=ce-cs; cs=a; ce=b; } else ce=Math.max(ce,b); }); busy=(busy+ce-cs)/60e3;
+  return {n:E.length, busy, free:Math.max(0,480-busy)}; }
+function statusOf(p){
+  const now=Date.now(), ev=cal(p.id), d=today();
+  let kd=[]; try{ kd=(window.__dOn ? window.__dOn(d) : []).filter(x=>/travel|out of office|pto|vacation/i.test((x.k||'')+' '+(x.t||'')) && (x.who||[]).indexOf(p.id)>=0); }catch(e){}
+  if(d.getDay()%6===0){ const nw=nextWorkday(d), L=dayLoad(p.id, nw); return {k:'off', t:WD[nw.getDay()]+': '+(L ? L.n+(L.n===1?' meeting':' meetings') : 'back'), s:''}; }
+  const hol=holiday(d); if(hol) return {k:'off', t:hol, s:''};
+  if(kd.length) return {k:'away', t:/travel/i.test(kd[0].k||'')?'Traveling':'Out', s:kd[0].t};
+  if(!ev) return {k:'unk', t:'No calendar', s:''};
+  const oof=ev.find(e=>e.show==='oof' && e.s<=now && e.e>now); if(oof) return {k:'away', t:'Out', s:'until '+tm(oof.e)};
+  const ws=etAt(d,9), we=etAt(d,17); if(now<ws) return {k:'off', t:'Not in yet', s:''}; if(now>we) return {k:'off', t:'Done for the day', s:''};
+  const cur=ev.find(e=>e.s<=now && e.e>now && e.show!=='free' && !e.all);
+  if(cur) return {k:'busy', t:'In a meeting', s:'until '+tm(cur.e)};
+  const nx=ev.filter(e=>e.s>now && e.show!=='free' && !e.all).sort((a,b)=>a.s-b.s)[0];
+  return {k:'free', t:'Free', s: nx && nx.s<we ? 'until '+tm(nx.s) : 'rest of day'};
+}
+
+/* ---------- choose My People ---------- */
+function h(tag, cls, txt){ const e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e; }
+function pickPeople(){
+  const cur=myPeople(); const chosen=new Set(cur);
+  const ov=h('div','hqx-ov'); const box=h('div','hqx-box'); box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true'); box.setAttribute('aria-label','Choose My People');
+  box.appendChild(h('h2',null,'Choose My People'));
+  box.appendChild(h('p',null,'Your direct reports, or anyone whose day and work you want in view. Only you see this list.'));
+  const g=h('div','hqx-g');
+  S.people.slice().sort((a,b)=>(a.ord||0)-(b.ord||0)).filter(p=>p.id!==S.me).forEach(p=>{
+    const b=h('button','hqx-p'+(chosen.has(p.id)?' on':'')); b.type='button';
+    const a=h('span','av'); a.textContent=p.name.split(/\s+/).map(w=>w[0]).slice(0,2).join(''); a.style.background='var(--c'+(((p.color||0)%7)+1)+')'; b.appendChild(a);
+    const t=h('span','tx'); t.appendChild(h('b',null,p.name)); t.appendChild(h('small',null,p.role||'')); b.appendChild(t);
+    b.appendChild(h('i','ck')); b.addEventListener('click', ()=>{ if(chosen.has(p.id)) chosen.delete(p.id); else chosen.add(p.id); b.classList.toggle('on'); });
+    g.appendChild(b); });
+  box.appendChild(g);
+  const ft=h('div','hqx-ft'); const close=()=>{ ov.remove(); document.removeEventListener('keydown', esc); };
+  const c=h('button','btn ghost','Cancel'); c.type='button'; c.addEventListener('click', close);
+  const sv=h('button','btn','Save My People'); sv.type='button'; sv.addEventListener('click', ()=>{ setMyPeople(S.people.filter(p=>chosen.has(p.id)).map(p=>p.id)); close(); });
+  ft.appendChild(c); ft.appendChild(sv); box.appendChild(ft); ov.appendChild(box);
+  ov.addEventListener('click', e=>{ if(e.target===ov) close(); });
+  const esc=e=>{ if(e.key==='Escape') close(); }; document.addEventListener('keydown', esc);
+  document.body.appendChild(ov); setTimeout(()=>{ const f=box.querySelector('.hqx-p'); f && f.focus(); }, 30);
+}
+const css=document.createElement('style'); css.id='hqx-css'; css.textContent=`
+.hqx-ov{position:fixed;inset:0;z-index:400;background:rgba(6,32,47,.45);display:flex;align-items:center;justify-content:center;padding:16px}
+.hqx-box{width:min(560px,100%);max-height:calc(100vh - 32px);overflow:auto;background:var(--surface);border:1px solid var(--border-strong);border-radius:10px;box-shadow:0 24px 60px rgba(6,32,47,.35);padding:20px 22px}
+.hqx-box h2{margin:0 0 4px;font-size:19px;color:var(--ink)}.hqx-box>p{margin:0 0 14px;font-size:13px;color:var(--ink-2)}
+.hqx-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(230px,100%),1fr));gap:8px}
+.hqx-p{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);font:inherit;text-align:left;color:var(--ink);cursor:pointer}
+.hqx-p:hover{border-color:var(--border-strong)}.hqx-p.on{border-color:var(--c1);background:var(--sky-wash)}
+.hqx-p .av{flex:0 0 auto;width:32px;height:32px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px}
+.hqx-p .tx{flex:1;min-width:0;display:flex;flex-direction:column}.hqx-p .tx b{font-size:13.5px}.hqx-p .tx small{font-size:11.5px;color:var(--ink-3)}
+.hqx-p .ck{flex:0 0 auto;width:18px;height:18px;border-radius:4px;border:2px solid var(--border-strong)}
+.hqx-p.on .ck{background:var(--c1) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/14px no-repeat;border-color:var(--c1)}
+.hqx-ft{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+`;
+document.head.appendChild(css);
+
+loadMail(true);
+const timer=setInterval(()=>{ if(!document.hidden) loadMail(true); }, 5*60e3);
+window.__hqx={ version:'1.0', MAIL, loadMail, ago, myPeople, setMyPeople, pickPeople, statusOf, dayLoad, nextWorkday, sig:()=>MAIL.state+':'+MAIL.at+':'+MAIL.items.length+':'+myPeople().join(','),
+  destroy(){ clearInterval(timer); css.remove(); } };
+})();
+
+});
+/* ===== hqx.js ===== */
+MODS.push(function(){
+/* Shared bits for My Board and the new Team HQ:
+   - Email to Look At: each person's own Power Automate flow drops their flagged, important and
+     unread-from-people mail into the relay as "mail-<their id>", the same way the Outlook calendar
+     flow drops "cal-<their id>". Only the subject, sender, time, a short preview and the Outlook link
+     are kept — never the body. This reads it and tidies whatever shape the flow sends.
+     Expected: { at:"2026-11-02T13:05:00Z", msgs:[ {subject, from, fromEmail, received, link, flagged, important, unread, preview} ] }
+     The Outlook connector's own field names (receivedDateTime, webLink, isRead, importance, flag, bodyPreview) work too.
+   - My People: the people someone keeps an eye on (their direct reports, or anyone), saved with
+     their board settings so it follows them to every device. */
+(function(){
+'use strict';
+if(window.__hqx && window.__hqx.destroy) window.__hqx.destroy();
+const S=window.__S; if(!S) return;
+const MAIL={state:'idle', at:0, data:null, items:[]};
+const str=v=>v==null?'':String(v);
+function norm(m){
+  const from=m.from && typeof m.from==='object' ? ((m.from.emailAddress||m.from).name || (m.from.emailAddress||m.from).address) : (m.from||m.f||m.sender||'');
+  const fromEmail=m.fromEmail || (m.from && typeof m.from==='object' ? (m.from.emailAddress||m.from).address : '') || '';
+  const flag=m.flagged!=null ? !!m.flagged : m.flag && typeof m.flag==='object' ? /flagged/i.test(m.flag.flagStatus||'') : !!m.flag;
+  const imp=m.important!=null ? !!m.important : /high/i.test(str(m.importance||m.imp));
+  const unread=m.unread!=null ? !!m.unread : m.isRead!=null ? !m.isRead : false;
+  const at=Date.parse(m.received||m.receivedDateTime||m.at||m.date||'') || 0;
+  return { id:str(m.id||m.link||m.webLink||m.subject+at), subject:str(m.subject||m.s||'(no subject)'), from:str(from), fromEmail:str(fromEmail), at, link:str(m.link||m.webLink||m.u||''), flagged:flag, important:imp, unread, preview:str(m.preview||m.bodyPreview||m.pv||'').slice(0,180) };
+}
+function loadMail(force){
+  const R=window.__hqRelay; if(!R || !R.readOther || !S.me) return Promise.resolve(MAIL);
+  if(MAIL.state==='loading') return MAIL.p;
+  if(!force && MAIL.at && Date.now()-MAIL.at<4*60e3) return Promise.resolve(MAIL);
+  MAIL.state='loading';
+  MAIL.p=R.readOther('team-hq','mail-'+S.me).then(d=>{
+    MAIL.data=d||null; const list=d ? (Array.isArray(d) ? d : (d.msgs||d.mail||d.value||d.items||[])) : [];
+    MAIL.items=list.map(norm).sort((a,b)=>b.at-a.at); MAIL.state=d ? 'ok' : 'none'; MAIL.at=Date.now(); MAIL.sent=d && Date.parse(d.at||'') || 0; return MAIL;
+  }).catch(()=>{ MAIL.state='none'; MAIL.at=Date.now(); return MAIL; });
+  return MAIL.p;
+}
+const ago=ms=>{ const m=Math.round((Date.now()-ms)/60e3); if(m<1) return 'just now'; if(m<60) return m+'m ago'; const hh=Math.round(m/60); if(hh<24) return hh+'h ago'; const d=Math.round(hh/24); return d===1?'yesterday':d+'d ago'; };
+function myPeople(){ const b=S.bset||{}; const L=Array.isArray(b.hqPeople) ? b.hqPeople : []; return L.filter(id=>S.people.some(p=>p.id===id) && id!==S.me); }
+function setMyPeople(L){ if(!S.bset) S.bset={}; S.bset.hqPeople=L.slice(); try{ window.__saveMine && window.__saveMine(); }catch(e){} try{ window.dispatchEvent(new Event('hq:people')); }catch(e){} }
+
+/* ---------- where someone is right now, from Outlook and Key Dates ---------- */
+const WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const today=()=>{ const d=new Date(); d.setHours(0,0,0,0); return d; };
+const addD=(d,n)=>{ const x=new Date(d); x.setDate(x.getDate()+n); return x; };
+function etAt(day, hour){ let t=Date.UTC(day.getFullYear(), day.getMonth(), day.getDate(), hour+5, 0); const e=+new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York', hour:'numeric', hourCycle:'h23'}).format(t); return t+(hour-e)*3600e3; }
+const tm=ms=>{ const d=new Date(ms); let hh=d.getHours(), mm=d.getMinutes(); const ap=hh<12?'a':'p'; hh=hh%12||12; return hh+(mm?':'+String(mm).padStart(2,'0'):'')+ap; };
+function holiday(d){ try{ const r=window.__t && window.__t.holidayOn(d); return r ? (typeof r==='string'?r:(r.n||r.t||r.name||'Holiday')) : ''; }catch(e){ return ''; } }
+const workday=d=>d.getDay()%6!==0 && !holiday(d);
+function nextWorkday(d){ let x=new Date(d); for(let i=0;i<10 && !workday(x);i++) x=addD(x,1); return x; }
+const cal=id=>{ const by=(window.__cal && window.__cal.CAL && window.__cal.CAL.by)||{}; return Array.isArray(by[id]) ? by[id] : null; };
+function dayLoad(id, day){ const ev=cal(id); if(!ev) return null; const ws=etAt(day,9), we=etAt(day,17);
+  const E=ev.filter(e=>e.s<+day+864e5 && e.e>+day && e.show!=='free' && e.show!=='oof' && !e.all);
+  const iv=E.map(e=>[Math.max(e.s,ws),Math.min(e.e,we)]).filter(x=>x[1]>x[0]).sort((x,y)=>x[0]-y[0]); let busy=0, cs=0, ce=0; iv.forEach(([a,b])=>{ if(a>ce){ busy+=ce-cs; cs=a; ce=b; } else ce=Math.max(ce,b); }); busy=(busy+ce-cs)/60e3;
+  return {n:E.length, busy, free:Math.max(0,480-busy)}; }
+function statusOf(p){
+  const now=Date.now(), ev=cal(p.id), d=today();
+  let kd=[]; try{ kd=(window.__dOn ? window.__dOn(d) : []).filter(x=>/travel|out of office|pto|vacation/i.test((x.k||'')+' '+(x.t||'')) && (x.who||[]).indexOf(p.id)>=0); }catch(e){}
+  if(d.getDay()%6===0){ const nw=nextWorkday(d), L=dayLoad(p.id, nw); return {k:'off', t:WD[nw.getDay()]+': '+(L ? L.n+(L.n===1?' meeting':' meetings') : 'back'), s:''}; }
+  const hol=holiday(d); if(hol) return {k:'off', t:hol, s:''};
+  if(kd.length) return {k:'away', t:/travel/i.test(kd[0].k||'')?'Traveling':'Out', s:kd[0].t};
+  if(!ev) return {k:'unk', t:'No calendar', s:''};
+  const oof=ev.find(e=>e.show==='oof' && e.s<=now && e.e>now); if(oof) return {k:'away', t:'Out', s:'until '+tm(oof.e)};
+  const ws=etAt(d,9), we=etAt(d,17); if(now<ws) return {k:'off', t:'Not in yet', s:''}; if(now>we) return {k:'off', t:'Done for the day', s:''};
+  const cur=ev.find(e=>e.s<=now && e.e>now && e.show!=='free' && !e.all);
+  if(cur) return {k:'busy', t:'In a meeting', s:'until '+tm(cur.e)};
+  const nx=ev.filter(e=>e.s>now && e.show!=='free' && !e.all).sort((a,b)=>a.s-b.s)[0];
+  return {k:'free', t:'Free', s: nx && nx.s<we ? 'until '+tm(nx.s) : 'rest of day'};
+}
+
+/* ---------- choose My People ---------- */
+function h(tag, cls, txt){ const e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e; }
+function pickPeople(){
+  const cur=myPeople(); const chosen=new Set(cur);
+  const ov=h('div','hqx-ov'); const box=h('div','hqx-box'); box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true'); box.setAttribute('aria-label','Choose My People');
+  box.appendChild(h('h2',null,'Choose My People'));
+  box.appendChild(h('p',null,'Your direct reports, or anyone whose day and work you want in view. Only you see this list.'));
+  const g=h('div','hqx-g');
+  S.people.slice().sort((a,b)=>(a.ord||0)-(b.ord||0)).filter(p=>p.id!==S.me).forEach(p=>{
+    const b=h('button','hqx-p'+(chosen.has(p.id)?' on':'')); b.type='button';
+    const a=h('span','av'); a.textContent=p.name.split(/\s+/).map(w=>w[0]).slice(0,2).join(''); a.style.background='var(--c'+(((p.color||0)%7)+1)+')'; b.appendChild(a);
+    const t=h('span','tx'); t.appendChild(h('b',null,p.name)); t.appendChild(h('small',null,p.role||'')); b.appendChild(t);
+    b.appendChild(h('i','ck')); b.addEventListener('click', ()=>{ if(chosen.has(p.id)) chosen.delete(p.id); else chosen.add(p.id); b.classList.toggle('on'); });
+    g.appendChild(b); });
+  box.appendChild(g);
+  const ft=h('div','hqx-ft'); const close=()=>{ ov.remove(); document.removeEventListener('keydown', esc); };
+  const c=h('button','btn ghost','Cancel'); c.type='button'; c.addEventListener('click', close);
+  const sv=h('button','btn','Save My People'); sv.type='button'; sv.addEventListener('click', ()=>{ setMyPeople(S.people.filter(p=>chosen.has(p.id)).map(p=>p.id)); close(); });
+  ft.appendChild(c); ft.appendChild(sv); box.appendChild(ft); ov.appendChild(box);
+  ov.addEventListener('click', e=>{ if(e.target===ov) close(); });
+  const esc=e=>{ if(e.key==='Escape') close(); }; document.addEventListener('keydown', esc);
+  document.body.appendChild(ov); setTimeout(()=>{ const f=box.querySelector('.hqx-p'); f && f.focus(); }, 30);
+}
+const css=document.createElement('style'); css.id='hqx-css'; css.textContent=`
+.hqx-ov{position:fixed;inset:0;z-index:400;background:rgba(6,32,47,.45);display:flex;align-items:center;justify-content:center;padding:16px}
+.hqx-box{width:min(560px,100%);max-height:calc(100vh - 32px);overflow:auto;background:var(--surface);border:1px solid var(--border-strong);border-radius:10px;box-shadow:0 24px 60px rgba(6,32,47,.35);padding:20px 22px}
+.hqx-box h2{margin:0 0 4px;font-size:19px;color:var(--ink)}.hqx-box>p{margin:0 0 14px;font-size:13px;color:var(--ink-2)}
+.hqx-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(230px,100%),1fr));gap:8px}
+.hqx-p{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);font:inherit;text-align:left;color:var(--ink);cursor:pointer}
+.hqx-p:hover{border-color:var(--border-strong)}.hqx-p.on{border-color:var(--c1);background:var(--sky-wash)}
+.hqx-p .av{flex:0 0 auto;width:32px;height:32px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px}
+.hqx-p .tx{flex:1;min-width:0;display:flex;flex-direction:column}.hqx-p .tx b{font-size:13.5px}.hqx-p .tx small{font-size:11.5px;color:var(--ink-3)}
+.hqx-p .ck{flex:0 0 auto;width:18px;height:18px;border-radius:4px;border:2px solid var(--border-strong)}
+.hqx-p.on .ck{background:var(--c1) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/14px no-repeat;border-color:var(--c1)}
+.hqx-ft{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+`;
+document.head.appendChild(css);
+
+loadMail(true);
+const timer=setInterval(()=>{ if(!document.hidden) loadMail(true); }, 5*60e3);
+window.__hqx={ version:'1.0', MAIL, loadMail, ago, myPeople, setMyPeople, pickPeople, statusOf, dayLoad, nextWorkday, sig:()=>MAIL.state+':'+MAIL.at+':'+MAIL.items.length+':'+myPeople().join(','),
+  destroy(){ clearInterval(timer); css.remove(); } };
+})();
+
+});
 /* ===== skin.js ===== */
 MODS.push(function(){
 /* Team HQ skin — the MISMO Media look across every tab, the restyled My Board,
@@ -1018,7 +1593,7 @@ function draw(){
 }
 /* ---------- one workspace, switched by tabs, instead of a long scroll ---------- */
 function wsTabs(){
-  const T=[['day','My Day'],['week','My Week'],['tasks','My Tasks'],['projects','My Projects'],['systems','My Systems']];
+  const T=[['day','My Day'],['week','My Week'],['tasks','My Tasks'],['mail','My Email'],['projects','My Projects'],['people','My People'],['systems','My Systems']];
   const A=asksForMe(), N=nudgesForMe().filter(n=>!(me()===ASK_OWNER && n.k==='Asked For'));
   if(A.length || N.length) T.splice(0,0,['asks', me()===ASK_OWNER ? 'Asks for You' : 'Asks and Nudges']);
   return T;
@@ -1028,6 +1603,8 @@ function badge(k){
   if(k==='asks'){ const n=asksForMe().filter(a=>a.state==='New').length + nudgesForMe().filter(x=>!(me()===ASK_OWNER && x.k==='Asked For')).length; return n; }
   if(k==='projects'){ return S.rocks.filter(r=>(r.status||'Active')==='Active').filter(r=>r.lead===me() || S.tasks.some(t=>t.r===r.id && isOpen(t) && doers(t).indexOf(me())>=0)).length; }
   if(k==='day'){ const P=dayPlan(workDay()); return P.ev ? P.ev.length : 0; }
+  if(k==='mail'){ const X=window.__hqx; return X && X.MAIL.state==='ok' ? X.MAIL.items.filter(m=>m.flagged || m.important || m.unread).length : 0; }
+  if(k==='people'){ const X=window.__hqx; return X ? X.myPeople().length : 0; }
   return 0;
 }
 function workspace(){
@@ -1039,7 +1616,7 @@ function workspace(){
   box.appendChild(nav);
   const body=h('div','hb-wsb'); body.dataset.tab=ui.tab;
   let inner=null;
-  try{ inner = ui.tab==='day' ? dayCard() : ui.tab==='week' ? myWeek() : ui.tab==='tasks' ? tasksView() : ui.tab==='projects' ? (myProjects() || emptyNote('You don\u2019t lead or have open work in an active Team Project.')) : ui.tab==='asks' ? (forYou() || emptyNote('Nothing waiting for you.')) : launch(); }catch(e){ console.error(e); inner=emptyNote('Something went wrong showing this. Try another tab.'); }
+  try{ inner = ui.tab==='day' ? dayCard() : ui.tab==='week' ? myWeek() : ui.tab==='tasks' ? tasksView() : ui.tab==='projects' ? (myProjects() || emptyNote('You don\u2019t lead or have open work in an active Team Project.')) : ui.tab==='asks' ? (forYou() || emptyNote('Nothing waiting for you.')) : ui.tab==='mail' ? mailView() : ui.tab==='people' ? peopleView() : launch(); }catch(e){ console.error(e); inner=emptyNote('Something went wrong showing this. Try another tab.'); }
   body.appendChild(inner);
   box.appendChild(body);
   /* swipe between tabs on a phone */
@@ -1051,6 +1628,64 @@ function workspace(){
 }
 function setTab(k){ ui.tab=k; saveUi(); paint(); const ws=document.querySelector('.hb-ws'); if(ws){ const r=ws.getBoundingClientRect(); if(r.top<60 || r.top>window.innerHeight*.6) ws.scrollIntoView({behavior:'smooth', block:'start'}); } }
 function emptyNote(t){ const d=h('div','hb-empty-ws'); d.appendChild(h('p','hb-empty',t)); return d; }
+/* ---------- My Email: the mail worth a look, from the person's own Outlook flow ---------- */
+function mailView(){
+  const X=window.__hqx, c=h('div','box hb-mail');
+  const hd=h('div','hb-ch'); hd.appendChild(h('h3','sect-t','Email to Look At'));
+  const r=h('div','hb-mr');
+  if(X && X.MAIL.state==='ok'){ ['all','flagged','important','unread'].forEach(k=>{ const n=k==='all'?X.MAIL.items.length:X.MAIL.items.filter(m=>m[k]).length; const b=btn('hb-chip'+((ui.mf||'all')===k?' on':''), null, ()=>{ ui.mf=k; paint(); }); b.appendChild(h('span',null,{all:'All',flagged:'Flagged',important:'Important',unread:'Unread'}[k])); b.appendChild(h('b',null,String(n))); r.appendChild(b); }); }
+  const rf=btn('btn ghost','Refresh', ()=>{ X && X.loadMail(true).then(paint); }); r.appendChild(rf);
+  const ol=h('a','btn ghost'); ol.href='https://outlook.office.com/mail/'; ol.target='_blank'; ol.rel='noopener'; ol.innerHTML=svg('out')+'<span>Open Outlook</span>'; r.appendChild(ol);
+  hd.appendChild(r); c.appendChild(hd);
+  if(!X || X.MAIL.state==='loading' || X.MAIL.state==='idle'){ c.appendChild(emptyNote('Checking your email…')); return c; }
+  if(X.MAIL.state!=='ok'){
+    const w=h('div','hb-mcon'); w.innerHTML=svg('ask','big');
+    const t=h('div','tx'); t.appendChild(h('b',null,'Your email isn’t connected yet'));
+    t.appendChild(h('p',null,'Once your Outlook email flow is on, what you’ve flagged, anything marked important and unread mail from people show up here — the subject, who sent it, when, and a link straight to it in Outlook. Never the message itself.'));
+    t.appendChild(h('p','hb-mnote', me()===ASK_OWNER ? 'Turn it on with the same kind of Power Automate flow that sends your calendar here.' : 'Ask Jonna to turn it on for you — it takes a few minutes.'));
+    if(me()!==ASK_OWNER){ const a=btn('btn','Ask to Turn It On', ()=>window.__ask2 && window.__ask2()); t.appendChild(a); }
+    w.appendChild(t); c.appendChild(w); return c; }
+  const L=X.MAIL.items.filter(m=>(ui.mf||'all')==='all' || m[ui.mf]);
+  if(X.MAIL.sent) c.appendChild(h('p','hb-msent','From Outlook '+X.ago(X.MAIL.sent)));
+  if(!L.length){ c.appendChild(emptyNote('Nothing here. Inbox under control.')); return c; }
+  const list=h('div','hb-ml');
+  L.slice(0,40).forEach(m=>{ const row=h('div','hb-mrow'+(m.unread?' unread':''));
+    const ic=h('span','mi'+(m.flagged?' flag':m.important?' imp':'')); ic.textContent=m.flagged?'⚑':m.important?'!':'•'; ic.title=m.flagged?'Flagged':m.important?'Important':'Unread'; row.appendChild(ic);
+    const tx=h('div','tx'); const top=h('div','tp'); top.appendChild(h('b',null,m.from||'Someone')); top.appendChild(h('span','ag', m.at?X.ago(m.at):'')); tx.appendChild(top);
+    tx.appendChild(h('div','sj', m.subject)); if(m.preview) tx.appendChild(h('div','pv', m.preview)); row.appendChild(tx);
+    const acts=h('div','ac');
+    if(m.link){ const o=h('a','btn ghost'); o.href=m.link; o.target='_blank'; o.rel='noopener'; o.textContent='Open'; acts.appendChild(o); }
+    acts.appendChild(btn('btn ghost','Make It a Task', ()=>editTask({t:m.subject, o:me(), d:[me()], r:'', w:'', s:'Not Started', p:m.important?'High':'Normal', due:'', notes:'From '+(m.from||'')+(m.link?' — '+m.link:''), rail:0, ord:(S.tasks.length+1)*10, at:Date.now()})));
+    row.appendChild(acts); list.appendChild(row); });
+  c.appendChild(list);
+  return c;
+}
+/* ---------- My People: direct reports, or anyone they keep an eye on ---------- */
+function peopleView(){
+  const X=window.__hqx, c=h('div','box hb-ppl');
+  const hd=h('div','hb-ch'); hd.appendChild(h('h3','sect-t','My People'));
+  const ed=btn('btn ghost', X && X.myPeople().length ? 'Change My People' : 'Choose My People', ()=>X && X.pickPeople()); hd.appendChild(ed); c.appendChild(hd);
+  const ids=X ? X.myPeople() : [];
+  if(!ids.length){ const w=h('div','hb-mcon'); const t=h('div','tx'); t.appendChild(h('b',null,'Keep your people in view'));
+    t.appendChild(h('p',null,'Pick your direct reports, or anyone you work closely with. You’ll see where each of them is right now, how full their day is, what’s late and what’s next — and can find a time or hand them a task in one click.'));
+    t.appendChild(btn('btn','Choose My People', ()=>X && X.pickPeople())); w.appendChild(t); c.appendChild(w); return c; }
+  const g=h('div','hb-pg2');
+  ids.forEach(id=>{ const p=person(id); if(!p) return; const s=X.statusOf(p), wd=X.nextWorkday(today()), L=X.dayLoad(id, wd);
+    const open=S.tasks.filter(t=>isOpen(t) && doers(t).indexOf(id)>=0).sort(byDue), lt=open.filter(t=>t.due && days(t.due)<0);
+    const k=h('div','hb-pcard '+s.k);
+    const top=h('div','hd'); const aw=h('span','aw'); aw.appendChild(av(id,38)); aw.appendChild(h('i','dot')); top.appendChild(aw);
+    const nm=h('div','nm'); nm.appendChild(h('b',null,p.name)); nm.appendChild(h('small',null,s.t+(s.s?' · '+s.s:''))); top.appendChild(nm); k.appendChild(top);
+    if(L){ const ld=h('div','ld'); ld.appendChild(h('span',null,(+wd===+today()?'Today':WDL[wd.getDay()])+': '+L.n+(L.n===1?' meeting':' meetings')+' · '+hrs(L.free)+' free')); const br=h('div','br'); const f=h('i'); f.style.width=Math.min(100,L.busy/480*100)+'%'; br.appendChild(f); ld.appendChild(br); k.appendChild(ld); }
+    const nums=h('div','nums'); [[open.length,'open',''],[lt.length,'late',lt.length?'bad':''],[S.rocks.filter(r=>(r.status||'Active')==='Active' && r.lead===id).length,'leads','']].forEach(([n,l,cl])=>{ const x=h('span','n '+cl); x.appendChild(h('b',null,String(n))); x.appendChild(h('small',null,l)); nums.appendChild(x); }); k.appendChild(nums);
+    const nx=open.filter(t=>t.due).slice(0,3); if(nx.length){ const ul=h('div','nxl'); nx.forEach(t=>{ const b=btn('hb-due'+(days(t.due)<0?' late':''), null, ()=>editTask(t)); b.textContent=fmt(t.due)+' · '+t.t; ul.appendChild(b); }); k.appendChild(ul); }
+    const acts=h('div','ac');
+    acts.appendChild(btn('btn ghost','Their Work', ()=>{ if(window.__nx && window.__nx.ui && window.__nx.ui.on){ window.__nx.open('u:'+id); } else goTab('rocks'); }));
+    acts.appendChild(btn('btn ghost','Find a Time', ()=>{ try{ const k2='tools:team-hq:mismo.teamhq.ft'; const cur=JSON.parse(localStorage.getItem(k2)||'{}'); cur.who=[me(), id]; localStorage.setItem(k2, JSON.stringify(cur)); }catch(e){} goTab('findtime'); }));
+    acts.appendChild(btn('btn ghost','Add a Task', ()=>editTask({t:'', o:id, d:[id], r:'', w:'', s:'Not Started', p:'Normal', due:'', notes:'', rail:0, ord:(S.tasks.length+1)*10, at:Date.now()})));
+    k.appendChild(acts); g.appendChild(k); });
+  c.appendChild(g);
+  return c;
+}
 /* ---------- quick actions as one compact bar ---------- */
 function actionBar(){
   const bar=h('div','hb-bar');
@@ -1502,6 +2137,39 @@ const css=h('style'); css.id='hb-css'; css.textContent=`
 .hb-clear{font-size:12px;color:var(--good);font-weight:600}
 .hb-wdf{padding:6px 10px;border-top:1px solid var(--rule);font-size:11px;font-weight:700;color:var(--good);background:color-mix(in srgb,var(--good) 7%,var(--surface))}
 .hb-pg2{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(260px,100%),1fr));gap:10px}
+.hb-mr{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-left:auto}
+.hb-mr .btn{display:inline-flex;align-items:center;gap:6px}.hb-mr .btn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2}
+.hb-chip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border:1px solid var(--border);border-radius:4px;background:var(--surface);font:inherit;font-size:12.5px;font-weight:600;color:var(--ink-2);cursor:pointer}
+.hb-chip b{font-size:11px;color:var(--ink-3)}.hb-chip.on{background:var(--navy);border-color:var(--navy);color:#fff}.hb-chip.on b{color:var(--sky)}
+.hb-mcon{display:flex;gap:16px;align-items:flex-start;padding:16px;border:1.5px dashed var(--border-strong);border-radius:8px;background:var(--surface-2)}
+.hb-mcon svg.big{flex:0 0 auto;width:40px;height:40px;fill:none;stroke:var(--c1);stroke-width:1.6}
+.hb-mcon .tx b{display:block;font-size:15px;margin-bottom:4px}.hb-mcon .tx p{margin:0 0 8px;font-size:13px;color:var(--ink-2);max-width:680px;line-height:1.5}
+.hb-mnote{font-weight:600;color:var(--ink)!important}
+.hb-msent{margin:0 0 6px;font-size:11.5px;color:var(--ink-3)}
+.hb-ml{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.hb-mrow{display:flex;align-items:flex-start;gap:12px;padding:10px 14px;border-bottom:1px solid var(--rule);background:var(--surface)}
+.hb-mrow:last-child{border-bottom:0}.hb-mrow:hover{background:var(--surface-2)}
+.hb-mrow .mi{flex:0 0 auto;width:22px;height:22px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:var(--ink-3);background:var(--surface-3)}
+.hb-mrow .mi.flag{color:#fff;background:var(--bad)}.hb-mrow .mi.imp{color:#fff;background:#e8833a}
+.hb-mrow .tx{flex:1;min-width:0}.hb-mrow .tp{display:flex;gap:8px;align-items:baseline}.hb-mrow .tp b{font-size:13px;font-weight:600}.hb-mrow.unread .tp b{font-weight:800}
+.hb-mrow .ag{margin-left:auto;font-size:11.5px;color:var(--ink-3);white-space:nowrap}
+.hb-mrow .sj{font-size:13.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hb-mrow.unread .sj{font-weight:700}
+.hb-mrow .pv{font-size:12px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hb-mrow .ac{flex:0 0 auto;display:flex;gap:6px;align-self:center}
+.hb-pcard{display:flex;flex-direction:column;gap:10px;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:8px}
+.hb-pcard .hd{display:flex;align-items:center;gap:10px}.hb-pcard .aw{position:relative;display:inline-flex}
+.hb-pcard .av{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;font-weight:700}
+.hb-pcard .dot{position:absolute;right:-1px;bottom:-1px;width:12px;height:12px;border-radius:50%;border:2px solid var(--surface);background:#9aa9b6}
+.hb-pcard.free .dot{background:#2bb673}.hb-pcard.busy .dot{background:#e0533f}.hb-pcard.away .dot{background:#e8a33a}
+.hb-pcard .nm b{display:block;font-size:14.5px}.hb-pcard .nm small{font-size:12px;color:var(--ink-3)}
+.hb-pcard.free .nm small{color:var(--good)}.hb-pcard.busy .nm small{color:var(--bad)}
+.hb-pcard .ld span{font-size:12px;font-weight:600;color:var(--ink-2)}
+.hb-pcard .br{height:5px;border-radius:3px;background:var(--surface-3);overflow:hidden;margin-top:4px}.hb-pcard .br i{display:block;height:100%;background:linear-gradient(90deg,var(--sky),var(--c1))}
+.hb-pcard .nums{display:flex;gap:6px}.hb-pcard .n{display:inline-flex;align-items:baseline;gap:4px;padding:3px 9px;border:1px solid var(--rule);border-radius:5px;background:var(--surface-2)}
+.hb-pcard .n b{font-size:15px}.hb-pcard .n small{font-size:11px;color:var(--ink-3)}.hb-pcard .n.bad b{color:var(--bad)}
+.hb-pcard .nxl{display:flex;flex-direction:column;gap:4px}
+.hb-pcard .ac{display:flex;flex-wrap:wrap;gap:6px}
+@media(max-width:640px){.hb-mrow{flex-wrap:wrap}.hb-mrow .ac{flex:1 1 100%;justify-content:flex-end}.hb-mr{margin-left:0}}
 .hb-pc{position:relative;display:flex;flex-direction:column;gap:7px;text-align:left;padding:12px 14px 12px 17px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font:inherit;color:var(--ink);cursor:pointer;overflow:hidden;transition:transform .14s,box-shadow .14s,border-color .14s}
 .hb-pc::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--rc)}
 .hb-pc:hover{transform:translateY(-2px);border-color:var(--rc);box-shadow:0 10px 22px rgba(13,49,76,.12)}
@@ -1565,7 +2233,7 @@ function paint(){
 mo=new MutationObserver(()=>{ const n=root.querySelector(':scope > .hb'); if(!n || n!==root.firstElementChild) paint(); });
 mo.observe(root, {childList:true});
 timer=setInterval(()=>{ if(!root.hidden && !document.hidden) paint(); }, 60e3);
-let calSig=''; const calSigNow=()=>{ const C=window.__cal && window.__cal.CAL; return C ? Object.keys(C.by||{}).length+':'+(C.at||'') : ''; };
+let calSig=''; const calSigNow=()=>{ const C=window.__cal && window.__cal.CAL; return (C ? Object.keys(C.by||{}).length+':'+(C.at||'') : '')+'|'+(window.__hqx && window.__hqx.sig ? window.__hqx.sig() : ''); };
 calSig=calSigNow(); const calTimer=setInterval(()=>{ const s=calSigNow(); if(s!==calSig){ calSig=s; paint(); } }, 1500);
 paint();
 window.__hub={ paint, openPal, closePal, version:'1.0',
@@ -2957,6 +3625,9 @@ const save=()=>{ try{ localStorage.setItem(KEY, JSON.stringify({on:ui.on, view:u
 function h(tag, cls, txt){ const e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e; }
 function btn(cls, txt, fn){ const b=h('button', cls, txt); b.type='button'; if(fn) b.addEventListener('click', fn); return b; }
 const I={
+  week:'<rect x="3" y="5" width="18" height="15" rx="2"/><path d="M3 10h18M8.5 10v10M14 10v10M8 3v4M16 3v4"/>',
+  ppl:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.6"/><path d="M15.5 14.2c3 .2 5.5 2.6 5.5 5.8"/>',
+  mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/>',
   day:'<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/>',
   inbox:'<path d="M3 13l2.5-8h13L21 13v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 13h5l1.5 2.5h5L16 13h5"/>',
   mine:'<circle cx="12" cy="12" r="9"/><path d="M8 12.3l2.7 2.7L16.2 9.5"/>',
@@ -3048,6 +3719,7 @@ function sIcon(s){
 
 /* ---------- people, right now ---------- */
 function statusOf(p){
+  if(window.__hqx && window.__hqx.statusOf) return window.__hqx.statusOf(p);
   const now=Date.now(), ev=cal(p.id), d=today();
   const kd=keyDatesOn(d).filter(x=>/travel|out of office|pto|vacation/i.test((x.k||'')+' '+(x.t||'')) && (x.who||[]).indexOf(p.id)>=0);
   if(d.getDay()%6===0){ const nw=nextWorkday(d), n=(ev||[]).filter(e=>e.s>=+nw && e.s<+nw+864e5 && e.show!=='free' && !e.all).length; return {k:'off', t:WD[nw.getDay()]+': '+(ev ? n+(n===1?' meeting':' meetings') : 'back'), s:''}; }
@@ -3064,7 +3736,7 @@ function statusOf(p){
 
 /* ---------- the views ---------- */
 const VIEWS={
-  day:{t:'My Day', i:'day'}, inbox:{t:'Inbox', i:'inbox'}, mine:{t:'My Tasks', i:'mine'}, cal:{t:'Calendar', i:'cal'}, all:{t:'All Tasks', i:'all'} };
+  day:{t:'My Day', i:'day'}, week:{t:'My Week', i:'week'}, inbox:{t:'Inbox', i:'inbox'}, mine:{t:'My Tasks', i:'mine'}, cal:{t:'Calendar', i:'cal'}, all:{t:'All Tasks', i:'all'}, people:{t:'People', i:'ppl'} };
 function viewKind(v){ v=v||ui.view; if(v.indexOf('p:')===0) return 'project'; if(v.indexOf('u:')===0) return 'person'; if(v.indexOf('c:')===0) return 'classic'; return v; }
 function myOpen(){ return S.tasks.filter(t=>isOpen(t) && doers(t).indexOf(me())>=0); }
 function myAsks(){ return (S.asks||[]).filter(a=>a.state!=='Built' && a.state!=='Not Doing' && (me()==='jonna' || a.by===me())); }
@@ -3088,27 +3760,28 @@ function railBtn(key, label, icon, extra){ const b=btn('nx-rb'); b.dataset.nx=ke
   b.innerHTML=(icon||'')+'<span>'+label+'</span>'+(extra||''); b.addEventListener('click', e=>{ e.preventDefault(); e.stopPropagation(); open(key); closeRailOnPhone(); }); return b; }
 function closeRailOnPhone(){ if(window.matchMedia('(max-width:900px)').matches && window.__rail && window.__rail.hide) window.__rail.hide(); }
 function railLbl(txt, foldKey){ const l=h('div','nx-rl'); if(foldKey){ const b=btn('nx-rlb', null, ()=>{ ui.fold[foldKey]=!ui.fold[foldKey]; save(); drawRail(); }); b.innerHTML='<span>'+txt+'</span>'+ic('down', ui.fold[foldKey]?'shut':''); l.appendChild(b); } else l.appendChild(h('span',null,txt)); return l; }
+let mineHome=null;
+function placeBoardBtn(after){ const nav=navEl(), mb=nav && nav.querySelector('button[data-hq="mine"]'); if(!mb || !after) return;
+  if(!mineHome) mineHome={next:mb.nextElementSibling};
+  if(after.nextSibling!==mb) nav.insertBefore(mb, after.nextSibling); }
+function restoreBoardBtn(){ const nav=navEl(), mb=nav && nav.querySelector('button[data-hq="mine"]'); if(mb && mineHome && mineHome.next && mineHome.next.parentNode===nav) nav.insertBefore(mb, mineHome.next); mineHome=null; }
 function drawRail(){
   const nav=navEl(); if(!nav) return;
   railNodes.forEach(n=>n.remove()); railNodes=[];
-  const firstClassic=nav.querySelector('button[data-hq]');
-  const add=(n, before)=>{ railNodes.push(n); if(before) nav.insertBefore(n, before); else nav.appendChild(n); };
+  const firstClassic=[...nav.querySelectorAll('button[data-hq]')].find(b=>b.dataset.hq!=='mine');
+  const add=(n, before)=>{ railNodes.push(n); if(before) nav.insertBefore(n, before); else nav.appendChild(n); return n; };
   const inboxN=myAsks().length+myNudges().length;
   add(railLbl('You'), firstClassic);
-  add(railBtn('day','My Day', ic('day')), firstClassic);
+  const dayB=add(railBtn('day','My Day', ic('day')), firstClassic);
+  placeBoardBtn(dayB);
+  add(railBtn('week','My Week', ic('week')), firstClassic);
   add(railBtn('inbox','Inbox', ic('inbox'), inboxN ? '<b class="nx-badge hot">'+inboxN+'</b>' : ''), firstClassic);
   const mineN=myOpen().length;
   add(railBtn('mine','My Tasks', ic('mine'), mineN ? '<b class="nx-badge">'+mineN+'</b>' : ''), firstClassic);
   add(railBtn('cal','Calendar', ic('cal')), firstClassic);
   add(railLbl('Team'), firstClassic);
   add(railBtn('all','All Tasks', ic('all')), firstClassic);
-  /* every Team Project, right in the rail */
-  add(railLbl('Team Projects', 'proj'));
-  if(!ui.fold.proj) activeRocks().forEach(r=>{ const n=S.tasks.filter(t=>t.r===r.id && isOpen(t)).length, late=S.tasks.filter(t=>t.r===r.id && isOpen(t) && t.due && days(t.due)<0).length;
-    const b=railBtn('p:'+r.id, r.name, '<i class="nx-sq" style="background:'+rcol(r)+'"></i>', '<b class="nx-badge'+(late?' late':'')+'" title="'+n+' open'+(late?', '+late+' late':'')+'">'+n+'</b>'); b.classList.add('sub'); add(b); });
-  add(railLbl('People', 'ppl'));
-  if(!ui.fold.ppl) people().forEach(p=>{ const s=statusOf(p); const a=av(p.id,18); a.classList.add('nx-rav');
-    const b=railBtn('u:'+p.id, p.id===me() ? first(p.id)+' (You)' : p.name, '<span class="nx-avw">'+a.outerHTML+'<i class="nx-dot '+s.k+'"></i></span>'); b.classList.add('sub'); b.title=p.name+' · '+s.t+(s.s?' '+s.s:''); add(b); });
+  add(railBtn('people','People', ic('ppl')), firstClassic);
   markRail();
 }
 function markRail(){
@@ -3151,6 +3824,8 @@ function paint(){
     else if(k==='project') vProject(ui.view.slice(2));
     else if(k==='person') vPerson(ui.view.slice(2));
     else if(k==='cal') vCal();
+    else if(k==='week') vWeek();
+    else if(k==='people') vPeople();
     else vDay();
   }catch(e){ console.error(e); body.appendChild(h('p','nx-empty','Something went wrong drawing this view.')); }
   body.scrollTop=sy; const sl2=body.querySelector('.nx-sl, .nx-dl'); if(sl2) sl2.scrollTop=sly;
@@ -3415,6 +4090,7 @@ function vDay(){
   L.appendChild(list);
   /* below the list: your Team Projects at a glance, and what the team just finished */
   const lower=h('div','nx-lower');
+  lower.appendChild(mailPanel(5)); lower.appendChild(peoplePanel());
   const R2=activeRocks().filter(r=>r.lead===me() || S.tasks.some(t=>t.r===r.id && isOpen(t) && doers(t).indexOf(me())>=0));
   const pj=h('section','nx-panel'); const ph=h('div','nx-gh'); ph.appendChild(h('b',null,'My Team Projects')); ph.appendChild(h('span','nx-cnt',String(R2.length))); pj.appendChild(ph);
   if(!R2.length) pj.appendChild(h('div','nx-drope','You’re not on a Team Project right now.'));
@@ -3494,6 +4170,8 @@ function vInbox(){
     if(!asks.length && !nudges.length) it.appendChild(h('div','nx-drope','All clear. New asks land here the moment someone sends one.'));
     asks.sort((a,b)=>(b.at||0)-(a.at||0)).forEach(a=>it.appendChild(askRow(a)));
     nudges.forEach(n=>{ const r=h('div','nx-row nx-ask'); if(n.by) r.appendChild(av(n.by,22)); r.appendChild(h('span','nx-tt', n.m||n.k)); r.appendChild(h('span','nx-sp')); r.appendChild(btn('nx-mini','Done', ()=>put('nudges', Object.assign({}, n, {done:1})))); it.appendChild(r); }); }, asks.length?'warn':'');
+  const xm=X(); if(xm && xm.MAIL.state==='ok'){ const mi=xm.MAIL.items.filter(m=>m.flagged || m.important || m.unread); sec('mail','Email to Look At', mi.length, it=>{ if(!mi.length) it.appendChild(h('div','nx-drope','Nothing flagged or waiting.')); mi.slice(0,15).forEach(m=>it.appendChild(mailRow(m))); }); }
+  else { sec('mail','Email to Look At', 0, it=>{ const c=mailPanel(); c.querySelector('.nx-gh').remove(); it.appendChild(c); }); }
   const waiting=myOpen().filter(t=>st(t)==='Waiting on Someone').sort(byDue);
   sec('wait','Waiting on Someone', waiting.length, it=>{ if(!waiting.length) it.appendChild(h('div','nx-drope','Nothing of yours is waiting on anyone.')); waiting.forEach(t=>it.appendChild(row(t))); });
   const watch=S.tasks.filter(t=>isOpen(t) && t.o===me() && doers(t).indexOf(me())<0).sort(byDue);
@@ -3571,6 +4249,126 @@ function vPerson(id){
   Rc.appendChild(dayPanel(id, true));
 }
 
+
+/* ---------- email and people, shared by My Day, Inbox and People ---------- */
+const X=()=>window.__hqx;
+function mailRow(m){ const x=X(); const r=h('div','nx-mrow'+(m.unread?' unread':''));
+  const ic2=h('span','mi'+(m.flagged?' flag':m.important?' imp':'')); ic2.textContent=m.flagged?'⚑':m.important?'!':'•'; ic2.title=m.flagged?'Flagged':m.important?'Important':'Unread'; r.appendChild(ic2);
+  const tx=h('div','tx'); const tp=h('div','tp'); tp.appendChild(h('b',null,m.from||'Someone')); tp.appendChild(h('span','ag', m.at?x.ago(m.at):'')); tx.appendChild(tp); tx.appendChild(h('div','sj', m.subject)); r.appendChild(tx);
+  const ac=h('div','ac');
+  const mk=btn('nx-ib', null, e=>{ e.stopPropagation(); newTask({t:m.subject, p:m.important?'High':'Normal', notes:'From '+(m.from||'')+(m.link?' — '+m.link:'')}); }); mk.innerHTML=ic('plus'); mk.title='Make it a task'; ac.appendChild(mk);
+  r.appendChild(ac);
+  if(m.link){ r.addEventListener('click', ()=>window.open(m.link, '_blank', 'noopener')); r.title='Open in Outlook'; }
+  return r; }
+function mailPanel(limit){
+  const x=X(); const pn=h('section','nx-panel'); const gh=h('div','nx-gh'); gh.appendChild(h('b',null,'Email to Look At'));
+  const items=x && x.MAIL.state==='ok' ? x.MAIL.items.filter(m=>m.flagged || m.important || m.unread) : [];
+  if(x && x.MAIL.state==='ok') gh.appendChild(h('span','nx-cnt', String(items.length)));
+  const ol=h('a','nx-add'); ol.href='https://outlook.office.com/mail/'; ol.target='_blank'; ol.rel='noopener'; ol.innerHTML=ic('ext'); ol.title='Open Outlook'; gh.appendChild(ol);
+  pn.appendChild(gh);
+  if(!x || x.MAIL.state==='loading' || x.MAIL.state==='idle'){ pn.appendChild(h('div','nx-drope','Checking your email…')); return pn; }
+  if(x.MAIL.state!=='ok'){ const c=h('div','nx-connect'); c.innerHTML=ic('mail'); const t=h('div'); t.appendChild(h('b',null,'Connect your Outlook email'));
+    t.appendChild(h('span',null,'Flagged, important and unread mail from people will show here — subject, sender and a link. Never the message itself.'));
+    if(me()!=='jonna') t.appendChild(btn('nx-mini','Ask to Turn It On', ()=>window.__ask2 && window.__ask2()));
+    c.appendChild(t); pn.appendChild(c); return pn; }
+  if(!items.length){ pn.appendChild(h('div','nx-drope','Nothing flagged or waiting. Inbox under control.')); return pn; }
+  items.slice(0, limit||6).forEach(m=>pn.appendChild(mailRow(m)));
+  if(items.length>(limit||6)) pn.appendChild(btn('nx-morel', 'See all '+items.length+' on My Board', ()=>{ try{ const k='tools:team-hq:mismo.teamhq.hub'; const u=JSON.parse(localStorage.getItem(k)||'{}'); u.tab='mail'; localStorage.setItem(k, JSON.stringify(u)); }catch(e){} openClassic('mine'); }));
+  return pn; }
+function personCard(p, big){
+  const s=statusOf(p), x=X(), wd=nextWorkday(today()), L=x && x.dayLoad ? x.dayLoad(p.id, wd) : null;
+  const open_=S.tasks.filter(t=>isOpen(t) && doers(t).indexOf(p.id)>=0).sort(byDue), late=open_.filter(t=>t.due && days(t.due)<0).length;
+  const c=h('div','nx-pc2 '+s.k+(big?' big':'')); c.style.setProperty('--pc', pcol(p));
+  const top=h('button','tp'); top.type='button'; top.addEventListener('click', ()=>open('u:'+p.id));
+  const w=h('span','nx-avw'); w.appendChild(av(p.id, big?40:32)); w.appendChild(h('i','nx-dot '+s.k)); top.appendChild(w);
+  const nm=h('span','nm'); nm.appendChild(h('b',null,p.id===me()?p.name+' (You)':p.name)); nm.appendChild(h('small',null, s.t+(s.s?' · '+s.s:''))); top.appendChild(nm); c.appendChild(top);
+  if(L){ const ld=h('div','ld'); ld.appendChild(h('span',null,(+wd===+today()?'Today':WDL[wd.getDay()])+' · '+L.n+(L.n===1?' meeting':' meetings')+' · '+(Math.round(L.free/30)/2)+'h free')); const br=h('div','br'); const f=h('i'); f.style.width=Math.min(100,L.busy/480*100)+'%'; br.appendChild(f); ld.appendChild(br); c.appendChild(ld); }
+  const nums=h('div','nums'); [[open_.length,'open',''],[late,'late',late?'bad':''],[activeRocks().filter(r=>r.lead===p.id).length,'leads','']].forEach(([n,l,cl])=>{ const b=h('span','n '+cl); b.appendChild(h('b',null,String(n))); b.appendChild(h('small',null,l)); nums.appendChild(b); }); c.appendChild(nums);
+  if(big){ const nx=open_.filter(t=>t.due).slice(0,3); if(nx.length){ const l=h('div','nxl'); nx.forEach(t=>{ const r=row(t,{noWs:true, noProj:true}); l.appendChild(r); }); c.appendChild(l); } }
+  const acts=h('div','acts');
+  if(p.id!==me()) acts.appendChild(btn('nx-mini','Find a Time', ()=>{ try{ const k2='tools:team-hq:mismo.teamhq.ft'; const cur=JSON.parse(localStorage.getItem(k2)||'{}'); cur.who=[me(), p.id]; localStorage.setItem(k2, JSON.stringify(cur)); }catch(e){} openClassic('findtime'); }));
+  acts.appendChild(btn('nx-mini', p.id===me()?'Add a Task':'Hand Them a Task', ()=>newTask({o:p.id, d:[p.id]})));
+  c.appendChild(acts);
+  return c; }
+function peoplePanel(){
+  const x=X(), ids=x ? x.myPeople() : [];
+  const pn=h('section','nx-panel'); const gh=h('div','nx-gh'); gh.appendChild(h('b',null,'My People')); if(ids.length) gh.appendChild(h('span','nx-cnt',String(ids.length)));
+  const ch=btn('nx-add', null, ()=>x && x.pickPeople()); ch.innerHTML=ic('plus'); ch.title='Choose My People'; gh.appendChild(ch); pn.appendChild(gh);
+  if(!ids.length){ const c=h('div','nx-connect'); c.innerHTML=ic('ppl'); const t=h('div'); t.appendChild(h('b',null,'Keep your people in view')); t.appendChild(h('span',null,'Pick your direct reports, or anyone you work closely with.')); t.appendChild(btn('nx-mini','Choose My People', ()=>x && x.pickPeople())); c.appendChild(t); pn.appendChild(c); return pn; }
+  ids.forEach(id=>{ const p=person(id); if(!p) return; const s=statusOf(p), op=S.tasks.filter(t=>isOpen(t) && doers(t).indexOf(id)>=0), lt=op.filter(t=>t.due && days(t.due)<0).length;
+    const r=btn('nx-win', null, ()=>open('u:'+id)); const w=h('span','nx-avw'); w.appendChild(av(id,24)); w.appendChild(h('i','nx-dot '+s.k)); r.appendChild(w);
+    const tx=h('span','tx'); tx.appendChild(h('b',null,p.name)); tx.appendChild(h('small',null, s.t+(s.s?' · '+s.s:''))); r.appendChild(tx);
+    r.appendChild(h('span','ago'+(lt?' bad':''), op.length+' open'+(lt?' · '+lt+' late':''))); pn.appendChild(r); });
+  return pn; }
+
+/* ---------- PEOPLE ---------- */
+function vPeople(){
+  const x=X(), ids=x ? x.myPeople() : [];
+  header('People', ic('ppl'), 'Where everyone is, how full their day is, and what they’re carrying', [btn('nx-mini', ids.length?'Change My People':'Choose My People', ()=>x && x.pickPeople())]);
+  const wrap=h('div','nx-ppl');
+  if(ids.length){ wrap.appendChild(h('div','nx-sec','My People')); const g=h('div','nx-pgrid big'); ids.forEach(id=>{ const p=person(id); if(p) g.appendChild(personCard(p, true)); }); wrap.appendChild(g); }
+  else { const pr=btn('nx-pprompt', null, ()=>x && x.pickPeople()); pr.innerHTML=ic('ppl')+'<span><b>Keep your people in view</b><small>Choose your direct reports, or anyone you work closely with — they’ll sit at the top here and on My Day and My Board.</small></span><em>Choose My People</em>'; wrap.appendChild(pr); }
+  wrap.appendChild(h('div','nx-sec', ids.length?'Everyone Else':'The Team'));
+  const g2=h('div','nx-pgrid'); people().filter(p=>ids.indexOf(p.id)<0).forEach(p=>g2.appendChild(personCard(p, false))); wrap.appendChild(g2);
+  /* the week at a glance: how full each person's calendar is, day by day */
+  const t0=today(); let mon=addD(t0, -((t0.getDay()+6)%7)); if(t0.getDay()===6 || t0.getDay()===0) mon=addD(mon,7);
+  const D=[0,1,2,3,4].map(i=>addD(mon,i));
+  wrap.appendChild(h('div','nx-sec','The Week at a Glance · hours in meetings'));
+  const hm=h('div','nx-heat'); hm.appendChild(h('span','hh'));
+  D.forEach(d=>{ const c=h('span','hh'+(+d===+t0?' on':'')); c.textContent=WD[d.getDay()]+' '+d.getDate(); hm.appendChild(c); }); hm.appendChild(h('span','hh','Due This Week'));
+  const order=ids.concat(people().map(p=>p.id).filter(i=>ids.indexOf(i)<0));
+  order.forEach(id=>{ const p=person(id); if(!p) return; const nm=btn('hn', null, ()=>open('u:'+id)); nm.appendChild(av(id,22)); nm.appendChild(h('span',null,first(id))); hm.appendChild(nm);
+    D.forEach(d=>{ const L=x && x.dayLoad ? x.dayLoad(id, d) : null, hol=holiday(d); const c=h('span','hc'); if(hol){ c.textContent='Off'; c.classList.add('off'); } else if(!L){ c.textContent='—'; c.classList.add('na'); } else { const hr=L.busy/60; c.textContent=(Math.round(hr*2)/2)+'h'; c.style.setProperty('--a', Math.min(1, hr/7).toFixed(2)); c.title=first(id)+' · '+WDL[d.getDay()]+': '+L.n+' meetings, '+(Math.round(L.free/30)/2)+'h free'; if(hr>=6) c.classList.add('full'); } hm.appendChild(c); });
+    const due=S.tasks.filter(t=>isOpen(t) && doers(t).indexOf(id)>=0 && t.due && pd(t.due)>=D[0] && pd(t.due)<=D[4]).length; const late=S.tasks.filter(t=>isOpen(t) && doers(t).indexOf(id)>=0 && t.due && days(t.due)<0).length;
+    const dc=h('span','hd'); dc.textContent=due+' due'+(late?' · '+late+' late':''); if(late) dc.classList.add('bad'); hm.appendChild(dc); });
+  wrap.appendChild(hm);
+  body.appendChild(wrap);
+}
+
+/* ---------- MY WEEK: plan it by dragging (Sunsama-style) ---------- */
+function vWeek(){
+  const t0=today(); let mon=addD(t0, -((t0.getDay()+6)%7)); if(t0.getDay()===6 || t0.getDay()===0) mon=addD(mon,7); mon=addD(mon, 7*(ui.ww||0));
+  const D=[0,1,2,3,4].map(i=>addD(mon,i)), fri=D[4];
+  const nv=h('div','nx-seg'); const pv=btn('nx-sg', null, ()=>{ ui.ww=(ui.ww||0)-1; paint(); }); pv.innerHTML=ic('left'); pv.setAttribute('aria-label','Previous week'); nv.appendChild(pv);
+  nv.appendChild(btn('nx-sg'+(!ui.ww?' on':''), 'This Week', ()=>{ ui.ww=0; paint(); }));
+  const nx=btn('nx-sg', null, ()=>{ ui.ww=(ui.ww||0)+1; paint(); }); nx.innerHTML=ic('right'); nx.setAttribute('aria-label','Next week'); nv.appendChild(nx);
+  const M=myOpen().sort(byDue);
+  const inWeek=M.filter(t=>t.due && pd(t.due)>=D[0] && pd(t.due)<=fri);
+  const x=X(); let meet=0, free=0; D.forEach(d=>{ const L=x && x.dayLoad ? x.dayLoad(me(), d) : null; if(L){ meet+=L.n; free+=L.free; } });
+  header('My Week', ic('week'), MON[D[0].getMonth()]+' '+D[0].getDate()+' – '+MON[fri.getMonth()]+' '+fri.getDate()+' · '+inWeek.length+' planned · '+meet+' meetings · '+(Math.round(free/30)/2)+'h open', [nv]);
+  const wk=h('div','nx-week');
+  /* the backlog: late and undated, ready to drop onto a day */
+  const lateL=M.filter(t=>t.due && days(t.due)<0 && pd(t.due)<D[0]), undated=M.filter(t=>!t.due), later=M.filter(t=>t.due && pd(t.due)>fri);
+  const bl=h('section','nx-wcol back'); const bh=h('div','nx-wh'); bh.appendChild(h('b',null,'To Plan')); bh.appendChild(h('small',null, phone() ? 'tap a date to plan it' : 'drag onto a day')); bl.appendChild(bh);
+  const bb=h('div','nx-wb');
+  const sub=(title, L, tone)=>{ if(!L.length) return; bb.appendChild(h('div','nx-wsub'+(tone?' '+tone:''), title+' · '+L.length)); L.forEach(t=>bb.appendChild(card(t,{}))); };
+  sub('Overdue', lateL, 'bad'); sub('No Date', undated); sub('Later', later.slice(0,12));
+  if(!lateL.length && !undated.length && !later.length) bb.appendChild(h('div','nx-drope','Everything has a day. Nice.'));
+  bl.appendChild(bb);
+  bl.addEventListener('dragover', e=>{ if(drag){ e.preventDefault(); bl.classList.add('nx-over'); } }); bl.addEventListener('dragleave', e=>{ if(!bl.contains(e.relatedTarget)) bl.classList.remove('nx-over'); });
+  bl.addEventListener('drop', e=>{ e.preventDefault(); bl.classList.remove('nx-over'); if(drag){ const t=drag; drag=null; if(t.due) change(t, {due:''}, 'Back to To Plan: '+t.t); } });
+  wk.appendChild(bl);
+  D.forEach(d=>{ const isT=+d===+t0, key=iso(d), hol=holiday(d), L=x && x.dayLoad ? x.dayLoad(me(), d) : null;
+    const col=h('section','nx-wcol'+(isT?' today':'')+(d<t0?' past':'')+(hol?' hol':''));
+    const hd=h('div','nx-wh'); const tt=h('div','tt'); tt.appendChild(h('small',null,WD[d.getDay()])); tt.appendChild(h('b',null,String(d.getDate()))); hd.appendChild(tt);
+    const info=h('div','inf'); if(hol) info.appendChild(h('span','hol',hol)); else if(L){ info.appendChild(h('span',null, L.n+(L.n===1?' meeting':' meetings')+' · '+(Math.round(L.free/30)/2)+'h open')); const br=h('div','br'); const f=h('i'); f.style.width=Math.min(100,L.busy/480*100)+'%'; br.appendChild(f); info.appendChild(br); }
+    hd.appendChild(info);
+    const a=btn('nx-add', null, ()=>newTask({due:key})); a.innerHTML=ic('plus'); a.title='Add a task for '+WDL[d.getDay()]; hd.appendChild(a);
+    col.appendChild(hd);
+    const kd=keyDatesOn(d); if(kd.length){ const k=h('div','nx-wkd'); kd.forEach(z=>k.appendChild(btn('kd', z.t, ()=>window.__editDate && window.__editDate(z)))); col.appendChild(k); }
+    const b=h('div','nx-wb'); const T=M.filter(t=>t.due===key);
+    T.forEach(t=>b.appendChild(card(t,{})));
+    const doneT=S.tasks.filter(t=>!isOpen(t) && t.due===key && doers(t).indexOf(me())>=0); if(doneT.length) b.appendChild(h('div','nx-wdone', '✓ '+doneT.length+' done'));
+    if(!T.length) b.appendChild(h('div','nx-drope', hol ? 'Day off' : 'Drop a task here'));
+    col.appendChild(b);
+    const ev=(cal(me())||[]).filter(e=>e.s<+d+864e5 && e.e>+d && e.show!=='free' && !e.all).sort((a2,b2)=>a2.s-b2.s);
+    if(ev.length){ const mm=h('div','nx-wev'); mm.appendChild(h('div','nx-wsub','On the Calendar')); ev.forEach(e=>{ const r=h('div','ev'+(e.e<Date.now()?' past':'')+(e.show==='tentative'?' tent':'')); r.appendChild(h('span','t',tm(e.s))); r.appendChild(h('span','n',e.t||'Busy')); r.title=(e.t||'Busy')+' · '+tmL(e.s)+'–'+tmL(e.e); mm.appendChild(r); }); col.appendChild(mm); }
+    col.addEventListener('dragover', e=>{ if(drag){ e.preventDefault(); col.classList.add('nx-over'); } }); col.addEventListener('dragleave', e=>{ if(!col.contains(e.relatedTarget)) col.classList.remove('nx-over'); });
+    col.addEventListener('drop', e=>{ e.preventDefault(); col.classList.remove('nx-over'); if(drag){ const t=drag; drag=null; if(t.due!==key) change(t, {due:key}, 'Planned for '+WDL[d.getDay()]+': '+t.t); } });
+    wk.appendChild(col); });
+  body.appendChild(wk);
+}
+
 /* ---------- CALENDAR: the week ---------- */
 function vCal(){
   const t0=today(); let mon=addD(t0, -((t0.getDay()+6)%7)); if(t0.getDay()===6 || t0.getDay()===0) mon=addD(mon,7); mon=addD(mon, 7*(ui.tw||0));
@@ -3610,7 +4408,7 @@ function vCal(){
 
 /* ---------- phones: a bottom tab bar and a sheet with everything ---------- */
 function drawTabbar(){ if(!tabbar) return; tabbar.textContent='';
-  [['day','My Day','day'],['mine','My Tasks','mine'],['cal','Calendar','cal'],['inbox','Inbox','inbox']].forEach(([k,l,i])=>{ const b=btn('nx-tb'+(ui.view===k?' on':''), null, ()=>open(k)); b.dataset.k=k; b.innerHTML=ic(i)+'<span>'+l+'</span>'; if(k==='inbox'){ const n=myAsks().length+myNudges().length; if(n) b.insertAdjacentHTML('beforeend','<b class="nx-badge hot">'+n+'</b>'); } tabbar.appendChild(b); });
+  [['day','My Day','day'],['c:mine','My Board','all'],['week','My Week','week'],['inbox','Inbox','inbox']].forEach(([k,l,i])=>{ const b=btn('nx-tb'+(ui.view===k?' on':''), null, ()=>open(k)); b.dataset.k=k; b.innerHTML=ic(i)+'<span>'+l+'</span>'; if(k==='inbox'){ const n=myAsks().length+myNudges().length; if(n) b.insertAdjacentHTML('beforeend','<b class="nx-badge hot">'+n+'</b>'); } tabbar.appendChild(b); });
   const m=btn('nx-tb', null, openMenuSheet); m.innerHTML=ic('menu')+'<span>Everything</span>'; tabbar.appendChild(m);
 }
 function openMenuSheet(){
@@ -3618,9 +4416,7 @@ function openMenuSheet(){
   const grp=(t)=>menuEl.appendChild(h('div','nx-ml',t));
   const item=(label, fn, iconHtml)=>{ const b=btn('nx-mi', null, ()=>{ closeMenus(); fn(); }); b.innerHTML=(iconHtml||'')+'<span>'+label+'</span>'; menuEl.appendChild(b); };
   grp('You'); Object.keys(VIEWS).forEach(k=>item(VIEWS[k].t, ()=>open(k), ic(VIEWS[k].i)));
-  grp('Team Pages'); [...document.querySelectorAll('.hq.rail nav button[data-hq]')].filter(b=>['today','mine'].indexOf(b.dataset.hq)<0).forEach(b=>{ const s=b.querySelector('svg'); item(b.textContent.trim(), ()=>openClassic(b.dataset.hq), s?s.outerHTML:''); });
-  grp('Team Projects'); activeRocks().forEach(r=>item(r.name, ()=>open('p:'+r.id), '<i class="nx-sq" style="background:'+rcol(r)+'"></i>'));
-  grp('People'); people().forEach(p=>item(p.name, ()=>open('u:'+p.id), av(p.id,20).outerHTML));
+  grp('Team Pages'); [...document.querySelectorAll('.hq.rail nav button[data-hq]')].forEach(b=>{ const s=b.querySelector('svg'); item(b.textContent.trim(), ()=>openClassic(b.dataset.hq), s?s.outerHTML:''); });
   grp('Switch'); item('Classic Team HQ', ()=>setOn(false));
   document.body.appendChild(menuEl);
   setTimeout(()=>document.addEventListener('click', function off(e){ if(menuEl && !menuEl.contains(e.target)){ closeMenus(); document.removeEventListener('click', off); } }), 0);
@@ -3633,12 +4429,12 @@ function placeSwitch(){ const r=document.querySelector('.hqtop-r'); if(!r || r.q
 function paintSwitch(){ if(!sw) return; sw.innerHTML='<span class="tg'+(ui.on?' on':'')+'"><i></i></span><span class="lb">New Team HQ</span>'; sw.setAttribute('aria-pressed', String(ui.on)); }
 function setOn(v){ ui.on=v; save(); paintSwitch();
   if(v){ if(!shell) build(); document.documentElement.classList.add('nx-on'); drawRail(); if(viewKind()==='classic') openClassic(ui.view.slice(2)); else open(ui.view); }
-  else { hideApp(); document.documentElement.classList.remove('nx-on'); railNodes.forEach(n=>n.remove()); railNodes=[]; window.__show && window.__show(S.tab && S.tab.indexOf('nx')<0 ? S.tab : 'today'); } }
+  else { hideApp(); document.documentElement.classList.remove('nx-on'); railNodes.forEach(n=>n.remove()); railNodes=[]; restoreBoardBtn(); window.__show && window.__show(S.tab && S.tab.indexOf('nx')<0 ? S.tab : 'today'); } }
 
 /* ---------- keep it live ---------- */
 let lastSig='';
 function hsh(str){ let x=0; for(let i=0;i<str.length;i++){ x=((x<<5)-x+str.charCodeAt(i))|0; } return x; }
-const sig=()=>[S.tasks.length, hsh(S.tasks.map(t=>[t.id,t.at,t.s,t.due,t.w,t.r,t.o,(t.d||[]).join(','),t.p,t.t,(t.notes||'').length].join('|')).join('~')), (S.asks||[]).length, (S.asks||[]).map(a=>a.state).join(''), (S.nudges||[]).filter(n=>!n.done).length, S.rocks.length, Object.keys((window.__cal&&window.__cal.CAL&&window.__cal.CAL.by)||{}).length, (window.__cal&&window.__cal.CAL&&window.__cal.CAL.at)||0].join(':');
+const sig=()=>[S.tasks.length, hsh(S.tasks.map(t=>[t.id,t.at,t.s,t.due,t.w,t.r,t.o,(t.d||[]).join(','),t.p,t.t,(t.notes||'').length].join('|')).join('~')), (S.asks||[]).length, (S.asks||[]).map(a=>a.state).join(''), (S.nudges||[]).filter(n=>!n.done).length, S.rocks.length, (window.__hqx&&window.__hqx.sig?window.__hqx.sig():''), Object.keys((window.__cal&&window.__cal.CAL&&window.__cal.CAL.by)||{}).length, (window.__cal&&window.__cal.CAL&&window.__cal.CAL.at)||0].join(':');
 function busy(){ if(drag || menuEl) return true; const a=document.activeElement; return !!(a && (a.tagName==='INPUT' || a.tagName==='SELECT' || a.tagName==='TEXTAREA') && (shell && shell.contains(a))); }
 const live=setInterval(()=>{ if(!ui.on || document.hidden) return; const s=sig(); if(s===lastSig) return; if(busy()) return; lastSig=s; drawRail(); paint(); }, 1200);
 const clock=setInterval(()=>{ if(!ui.on || document.hidden || busy()) return; drawRail(); if(shell && !shell.hidden && (viewKind()==='day' || viewKind()==='person')) paint(); }, 60e3);
@@ -3650,7 +4446,7 @@ document.addEventListener('click', onRailClick, true);
 const onKey=e=>{ if(!ui.on || !shell || shell.hidden) return; const a=document.activeElement; if(a && (a.tagName==='INPUT'||a.tagName==='TEXTAREA'||a.tagName==='SELECT'||a.isContentEditable)) return;
   if(e.metaKey||e.ctrlKey||e.altKey) return; if(document.querySelector('dialog[open], .modal.open, .ed-ov:not([hidden])')) return;
   const k=e.key.toLowerCase();
-  const m={'1':'day','2':'inbox','3':'mine','4':'cal','5':'all'}[k]; if(m){ open(m); e.preventDefault(); return; }
+  const m={'1':'day','2':'week','3':'inbox','4':'mine','5':'cal','6':'all','7':'people'}[k]; if(m){ open(m); e.preventDefault(); return; }
   if(k==='c'){ const i=head.querySelector('.nx-qa input'); if(i){ e.preventDefault(); i.focus(); } return; }
   if(k==='/'){ const i=head.querySelector('.nx-find') || head.querySelector('.nx-qa input'); if(i){ e.preventDefault(); i.focus(); } return; }
   const rows=[...body.querySelectorAll('.nx-row[data-id]')].filter(r=>r.offsetParent);
@@ -3672,7 +4468,6 @@ const css=h('style'); css.id='nx-css'; css.textContent=`
 html.nx-show body{overflow:hidden}
 html.nx-show main{visibility:hidden}
 html.nx-on .mob-bar{display:none!important}
-html.nx-on .hq nav button[data-hq="today"],html.nx-on .hq nav button[data-hq="mine"]{display:none}
 .nx{position:fixed;top:calc(var(--hq-h) + env(safe-area-inset-top,0px));left:var(--rail-w,240px);right:0;bottom:0;z-index:90;display:flex;flex-direction:column;background:var(--ground);font-variant-numeric:tabular-nums;transition:left .2s cubic-bezier(.4,0,.2,1)}
 body.railmini .nx{left:var(--rail-mini,62px)}
 @media(max-width:900px){body:not(.railmini) .nx{left:var(--rail-mini,62px)}}
@@ -3816,6 +4611,82 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-card .nx-due{margin-left:auto;min-width:0}
 .nx-card .nx-pull{display:none!important}
 .nx-col .nx-drope{padding:16px 8px;border:1.5px dashed var(--border-strong);border-radius:6px;text-align:center;background:transparent}
+/* email, people, week */
+.nx-mrow{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--rule);background:var(--surface);cursor:pointer}
+.nx-mrow:last-child{border-bottom:0}.nx-mrow:hover{background:var(--surface-2)}
+.nx-mrow .mi{flex:0 0 auto;width:20px;height:20px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:var(--ink-3);background:var(--surface-3)}
+.nx-mrow .mi.flag{color:#fff;background:var(--bad)}.nx-mrow .mi.imp{color:#fff;background:#e8833a}
+.nx-mrow .tx{flex:1;min-width:0}.nx-mrow .tp{display:flex;gap:8px;align-items:baseline}.nx-mrow .tp b{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nx-mrow.unread .tp b,.nx-mrow.unread .sj{font-weight:800}
+.nx-mrow .ag{margin-left:auto;flex:0 0 auto;font-size:11px;color:var(--ink-3)}
+.nx-mrow .sj{font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nx-mrow .ac{flex:0 0 auto}.nx-mrow .nx-ib{width:26px;height:26px}
+.nx-items>.nx-panel{border:0;border-radius:0}
+.nx-connect{display:flex;gap:12px;align-items:flex-start;padding:14px}
+.nx-connect>svg{flex:0 0 auto;width:28px;height:28px;fill:none;stroke:var(--c1);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.nx-connect>div{display:flex;flex-direction:column;align-items:flex-start;gap:6px}.nx-connect b{font-size:13.5px;color:var(--ink)}.nx-connect span{font-size:12.5px;color:var(--ink-2);line-height:1.45}
+.nx-morel{display:block;width:100%;padding:8px 14px;border:0;border-top:1px solid var(--rule);background:var(--surface);font:inherit;font-size:12.5px;font-weight:700;color:var(--c1);text-align:left;cursor:pointer}
+.nx-win .ago.bad{color:var(--bad)}.nx-win .nx-avw .av{font-size:9px}
+.nx-ppl{padding:6px 20px 30px}
+.nx-sec{margin:14px 0 8px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.nx-pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(250px,100%),1fr));gap:10px}
+.nx-pgrid.big{grid-template-columns:repeat(auto-fill,minmax(min(330px,100%),1fr))}
+.nx-pc2{display:flex;flex-direction:column;gap:9px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:inset 0 3px 0 var(--pc);transition:box-shadow .15s,transform .15s}
+.nx-pc2:hover{transform:translateY(-1px);box-shadow:inset 0 3px 0 var(--pc),0 8px 20px rgba(13,49,76,.10)}
+.nx-pc2 .tp{display:flex;align-items:center;gap:10px;padding:0;border:0;background:none;font:inherit;text-align:left;color:var(--ink);cursor:pointer}
+.nx-pc2 .av{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;font-weight:700}
+.nx-pc2 .nm{display:flex;flex-direction:column;min-width:0}.nx-pc2 .nm b{font-size:14px}.nx-pc2 .nm small{font-size:12px;color:var(--ink-3)}
+.nx-pc2.free .nm small{color:var(--good)}.nx-pc2.busy .nm small{color:var(--bad)}.nx-pc2.away .nm small{color:var(--warn)}
+.nx-pc2 .ld span{font-size:12px;font-weight:600;color:var(--ink-2)}
+.nx-pc2 .br,.nx-wh .br{height:5px;border-radius:3px;background:var(--surface-3);overflow:hidden;margin-top:4px}.nx-pc2 .br i,.nx-wh .br i{display:block;height:100%;background:linear-gradient(90deg,var(--sky),var(--c1))}
+.nx-pc2 .nums{display:flex;gap:6px}.nx-pc2 .n{display:inline-flex;align-items:baseline;gap:4px;padding:3px 9px;border:1px solid var(--rule);border-radius:5px;background:var(--surface-2)}
+.nx-pc2 .n b{font-size:15px}.nx-pc2 .n small{font-size:11px;color:var(--ink-3)}.nx-pc2 .n.bad b{color:var(--bad)}
+.nx-pc2 .nxl{border:1px solid var(--rule);border-radius:6px;overflow:hidden}.nx-pc2 .nxl .nx-row{min-height:34px;padding:0 10px 0 6px;font-size:12.5px}
+.nx-pc2 .acts{display:flex;flex-wrap:wrap;gap:6px}
+.nx-pprompt{display:flex;align-items:center;gap:14px;width:100%;margin:10px 0 4px;padding:14px 16px;border:1.5px dashed var(--c1);border-radius:8px;background:var(--sky-wash);font:inherit;text-align:left;color:var(--ink);cursor:pointer}
+.nx-pprompt>svg{flex:0 0 auto;width:30px;height:30px;fill:none;stroke:var(--c1);stroke-width:1.7;stroke-linecap:round}
+.nx-pprompt span{flex:1;display:flex;flex-direction:column;gap:2px}.nx-pprompt b{font-size:14px}.nx-pprompt small{font-size:12.5px;color:var(--ink-2)}
+.nx-pprompt em{font-style:normal;flex:0 0 auto;padding:7px 12px;border-radius:6px;background:var(--navy);color:#fff;font-size:12.5px;font-weight:700}
+.nx-heat{display:grid;grid-template-columns:minmax(120px,1.2fr) repeat(5,minmax(60px,1fr)) minmax(100px,1fr);gap:4px;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow-x:auto}
+.nx-heat .hh{font-size:11px;font-weight:700;color:var(--ink-3);text-align:center;padding:2px 0}.nx-heat .hh.on{color:var(--c1)}
+.nx-heat .hn{display:flex;align-items:center;gap:8px;padding:2px 4px;border:0;border-radius:5px;background:none;font:inherit;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;text-align:left}
+.nx-heat .hn:hover{background:var(--surface-2)}.nx-heat .hn .av{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;font-weight:700}
+.nx-heat .hc{display:flex;align-items:center;justify-content:center;height:30px;border-radius:5px;font-size:12px;font-weight:700;color:var(--ink);background:color-mix(in srgb,var(--c1) calc(var(--a,0) * 70%),var(--surface-2))}
+.nx-heat .hc.full{color:#fff}.nx-heat .hc.off{background:var(--warn-soft);color:var(--warn)}.nx-heat .hc.na{color:var(--ink-3)}
+.nx-heat .hd{display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--ink-2)}.nx-heat .hd.bad{color:var(--bad)}
+.nx-week{display:grid;grid-template-columns:minmax(190px,1.1fr) repeat(5,minmax(150px,1fr));gap:10px;padding:14px 20px 30px;align-items:start}
+.nx-wcol{display:flex;flex-direction:column;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;min-height:340px;transition:background .15s,box-shadow .15s}
+.nx-wcol.back{background:var(--surface);border-style:dashed}
+.nx-wcol.today{border-color:var(--c1);box-shadow:0 0 0 1px var(--c1)}
+.nx-wcol.past{opacity:.75}.nx-wcol.hol{background:var(--warn-soft)}
+.nx-wh{display:flex;align-items:center;gap:8px;padding:9px 10px;border-bottom:1px solid var(--rule)}
+.nx-wh>b{font-size:13.5px}.nx-wh>small{font-size:11.5px;color:var(--ink-3)}
+.nx-wh .tt{display:flex;flex-direction:column;align-items:center;line-height:1.05;min-width:30px}.nx-wh .tt small{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}.nx-wh .tt b{font-size:19px}
+.nx-wcol.today .nx-wh .tt b{color:var(--c1)}
+.nx-wh .inf{flex:1;min-width:0;font-size:11px;font-weight:600;color:var(--ink-3)}.nx-wh .hol{color:var(--warn);font-weight:700}
+.nx-wkd{display:flex;flex-direction:column;gap:3px;padding:6px 8px 0}
+.nx-wkd .kd{display:block;width:100%;padding:3px 7px;border:0;border-radius:4px;background:color-mix(in srgb,var(--c2) 15%,var(--surface));box-shadow:inset 3px 0 0 var(--c2);font:inherit;font-size:11.5px;font-weight:600;color:var(--ink);text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.nx-wb{display:flex;flex-direction:column;gap:6px;padding:8px}
+.nx-wb .nx-row.nx-card .nx-pj{margin-left:0}
+.nx-wb .nx-drope{padding:14px 8px;border:1.5px dashed var(--border-strong);border-radius:6px;text-align:center;background:transparent}
+.nx-wsub{margin:4px 2px 0;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}.nx-wsub.bad{color:var(--bad)}
+.nx-wev{display:flex;flex-direction:column;gap:3px;padding:2px 8px 10px}
+.nx-wev .ev{display:flex;gap:6px;align-items:baseline;padding:4px 7px;border-radius:4px;background:var(--surface);border-left:3px solid var(--c1);font-size:11.5px;min-width:0}
+.nx-wev .ev .t{flex:0 0 auto;font-weight:700;color:var(--c1);font-size:10.5px}.nx-wev .ev .n{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
+.nx-wev .ev.past{opacity:.5}.nx-wev .ev.tent{border-left-style:dashed}
+.nx-wdone{font-size:11.5px;font-weight:700;color:var(--good);padding:2px 4px}
+@media(max-width:640px){.nx-pprompt{display:flex;align-items:center;gap:14px;width:100%;margin:10px 0 4px;padding:14px 16px;border:1.5px dashed var(--c1);border-radius:8px;background:var(--sky-wash);font:inherit;text-align:left;color:var(--ink);cursor:pointer}
+.nx-pprompt>svg{flex:0 0 auto;width:30px;height:30px;fill:none;stroke:var(--c1);stroke-width:1.7;stroke-linecap:round}
+.nx-pprompt span{flex:1;display:flex;flex-direction:column;gap:2px}.nx-pprompt b{font-size:14px}.nx-pprompt small{font-size:12.5px;color:var(--ink-2)}
+.nx-pprompt em{font-style:normal;flex:0 0 auto;padding:7px 12px;border-radius:6px;background:var(--navy);color:#fff;font-size:12.5px;font-weight:700}
+.nx-heat{display:grid;grid-template-columns:minmax(120px,1.2fr) repeat(5,minmax(60px,1fr)) minmax(100px,1fr);gap:4px;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow-x:auto}
+.nx-heat .hh{font-size:11px;font-weight:700;color:var(--ink-3);text-align:center;padding:2px 0}.nx-heat .hh.on{color:var(--c1)}
+.nx-heat .hn{display:flex;align-items:center;gap:8px;padding:2px 4px;border:0;border-radius:5px;background:none;font:inherit;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;text-align:left}
+.nx-heat .hn:hover{background:var(--surface-2)}.nx-heat .hn .av{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;font-weight:700}
+.nx-heat .hc{display:flex;align-items:center;justify-content:center;height:30px;border-radius:5px;font-size:12px;font-weight:700;color:var(--ink);background:color-mix(in srgb,var(--c1) calc(var(--a,0) * 70%),var(--surface-2))}
+.nx-heat .hc.full{color:#fff}.nx-heat .hc.off{background:var(--warn-soft);color:var(--warn)}.nx-heat .hc.na{color:var(--ink-3)}
+.nx-heat .hd{display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--ink-2)}.nx-heat .hd.bad{color:var(--bad)}
+.nx-week{grid-template-columns:minmax(0,1fr);padding:12px;min-width:0}.nx-wcol.back{order:9}.nx-wcol{min-height:0}.nx-ppl{padding:4px 12px 24px}}
 /* split + peek */
 .nx-body.has-split{overflow:hidden;display:flex;flex-direction:column}
 .nx-body.has-split>.nx-pband{flex:0 0 auto}
@@ -4036,7 +4907,7 @@ const mo=new MutationObserver(()=>placeSwitch()); const topEl=document.querySele
 if(ui.on){ build(); document.documentElement.classList.add('nx-on'); drawRail(); if(viewKind()==='classic') { markRail(); } else open(ui.view); lastSig=sig(); }
 window.__nx={ version:'2.0', paint, open, setOn, parse:parseQuick, ui,
   destroy(){ clearInterval(live); clearInterval(clock); mo.disconnect(); railMo.disconnect(); document.removeEventListener('keydown', onKey); document.removeEventListener('click', onRailClick, true); window.removeEventListener('resize', onResize);
-    railNodes.forEach(n=>n.remove()); if(shell) shell.remove(); if(tabbar) tabbar.remove(); if(sw) sw.remove(); closeMenus(); if(toastEl) toastEl.remove(); css.remove(); document.documentElement.classList.remove('nx-on','nx-show','nx-dragging'); } };
+    railNodes.forEach(n=>n.remove()); restoreBoardBtn(); if(shell) shell.remove(); if(tabbar) tabbar.remove(); if(sw) sw.remove(); closeMenus(); if(toastEl) toastEl.remove(); css.remove(); document.documentElement.classList.remove('nx-on','nx-show','nx-dragging'); } };
 })();
 
 });
