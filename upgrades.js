@@ -587,7 +587,7 @@ function matrix(L){
   });
   t.appendChild(tb);
   const tf=h('tfoot'), fr=h('tr'); fr.appendChild(h('td','nm','Open Tasks Across These Projects'));
-  ppl.forEach(p=>{ const td=h('td','ft'); td.appendChild(h('b',null,String(tot[p.id]||0))); if(totLate[p.id]) td.appendChild(h('span','lt2', totLate[p.id]+' late')); fr.appendChild(td); });
+  ppl.forEach(p=>{ const td=h('td','pv2-ft'); td.appendChild(h('b',null,String(tot[p.id]||0))); if(totLate[p.id]) td.appendChild(h('span','lt2', totLate[p.id]+' late')); fr.appendChild(td); });
   fr.appendChild(h('td','tot', String(L.reduce((n,r)=>n+stats(r).open.length,0)))); tf.appendChild(fr); t.appendChild(tf);
   const lg=h('div','pv2-legend'); lg.appendChild(h('span','hint','Each square is how many open tasks that person is doing in that project. Darker means more. Red corner is past due. Click any square to see just their tasks.'));
   w.appendChild(lg);
@@ -811,7 +811,7 @@ const css=h('style'); css.id='pv2-css'; css.textContent=`
 .pv2-c .lt{position:absolute;top:4px;right:5px;font-size:10px;font-weight:700;line-height:1.4;color:#fff;background:var(--bad);border-radius:3px;padding:0 4px}
 .pv2-mx .tot{padding:0 14px;font-weight:700;color:var(--ink-2);border-left:1px solid var(--rule)}
 .pv2-mx tfoot td{background:var(--surface-2);padding:9px 4px}
-.pv2-mx tfoot .ft b{display:block;font-size:15px;color:var(--ink)}
+.pv2-mx tfoot .pv2-ft b{display:block;font-size:15px;color:var(--ink)}
 .pv2-mx .lt2{display:block;font-size:11px;font-weight:700;color:var(--bad)}
 /* panel */
 .pv2-scrim{position:fixed;left:0;right:0;bottom:0;top:calc(var(--hq-h) + env(safe-area-inset-top,0px));background:rgba(6,32,47,.32);opacity:0;pointer-events:none;transition:opacity .2s;z-index:96}
@@ -1010,6 +1010,7 @@ function draw(){
   const w=h('div','hb');
   w.appendChild(band());
   if(ui.open) w.appendChild(drill());
+  try{ const fy=forYou(); if(fy) w.appendChild(fy); }catch(e){ console.error(e); }
   const row=h('div','hb-row');
   row.appendChild(dayCard());
   row.appendChild(actions());
@@ -1041,13 +1042,14 @@ function band(){
   else say.append('Nothing of yours is late.');
   b.appendChild(say);
   const tiles=h('div','tiles one');
-  const tile=(k, n, label, small, cls)=>{ const t=btn('tile'+(cls?' '+cls:''), null, ()=>{ if(k==='meet'){ const s=document.querySelector('.hb-day'); s && s.scrollIntoView({behavior:'smooth', block:'center'}); return; } ui.open = ui.open===k ? '' : k; paint(); });
+  const tile=(k, n, label, small, cls)=>{ const t=btn('tile'+(cls?' '+cls:''), null, ()=>{ if(k==='meet'||k==='asks'){ const s=document.querySelector(k==='meet'?'.hb-day':'.hb-fy'); if(s) s.scrollIntoView({behavior:'smooth', block:'center'}); else if(k==='asks' && window.__ask2) window.__ask2(); return; } ui.open = ui.open===k ? '' : k; paint(); });
     t.setAttribute('aria-pressed', String(ui.open===k)); t.appendChild(h('b',null,String(n))); t.appendChild(h('span',null,label)); t.appendChild(h('small',null,small)); tiles.appendChild(t); };
   tile('mine', M.length, 'My Open Tasks', M.filter(t=>st(t)==='In Progress').length+' in progress');
   tile('late', L.length, 'Past Due', L.length ? 'oldest '+fmt(L[0].due) : 'nothing late', L.length?'bad':'');
   tile('week', W.length, 'Due This Week', 'next seven days', W.length?'warn':'');
   tile('watch', watching().length, 'I’m Accountable For', 'someone else is doing it');
   tile('meet', P.ev ? P.ev.length : '—', 'Meetings '+(isToday?'Today':WDL[wd.getDay()]), P.ev ? hrs(P.freeMin)+' free' : 'Outlook not connected');
+  if(me()===ASK_OWNER){ const oa=openAsks(), nw=oa.filter(a=>a.state==='New').length; tile('asks', oa.length, 'Asks for You', nw ? nw+' new to look at' : 'nothing new', nw?'warn':''); }
   b.appendChild(tiles);
   return b;
 }
@@ -1119,6 +1121,40 @@ function dayCard(){
   const out=S.people.filter(p=>p.id!==me()).filter(p=>{ const e=eventsOn(wd,p.id); return e && e.some(x=>x.show==='oof' && x.s<=P.ws+3600e3 && x.e>=P.we-3600e3); });
   if(out.length){ const o=h('span','hb-out'); o.append('Out: '); out.forEach(p=>o.appendChild(av(p.id,20))); foot.appendChild(o); }
   c.appendChild(foot);
+  return c;
+}
+
+/* ---------- For You: Ask for Something requests and nudges ---------- */
+const ASK_OWNER='jonna';
+const ASK_KIND={panel:'A Panel That Is Not There', number:'A Number I Cannot Find', change:'Something That Should Work Differently', other:'Something Else'};
+const ASK_C={'New':'var(--c1)', 'Looking at It':'var(--warn)', 'Built':'var(--good)', 'Not Doing':'var(--ink-3)'};
+const openAsks=()=>(S.asks||[]).filter(a=>a.state!=='Built' && a.state!=='Not Doing');
+const asksForMe=()=> me()===ASK_OWNER ? openAsks() : (S.asks||[]).filter(a=>a.by===me() && ((a.state!=='Built' && a.state!=='Not Doing') || (a.reply && Date.now()-(a.at||0)<30*864e5)));
+const nudgesForMe=()=>(S.nudges||[]).filter(n=>n.to===me() && !n.done).sort((a,b)=>(b.at||0)-(a.at||0));
+function ago(t){ if(!t) return ''; const m=Math.round((Date.now()-t)/60e3); if(m<60) return m<=1?'just now':m+' min ago'; const hh=Math.round(m/60); if(hh<24) return hh+(hh===1?' hour ago':' hours ago'); const d=Math.round(hh/24); return d===1?'yesterday':d+' days ago'; }
+function forYou(){
+  const owner=me()===ASK_OWNER;
+  const A=asksForMe().slice().sort((a,b)=>(a.state==='New'?0:1)-(b.state==='New'?0:1) || (b.at||0)-(a.at||0));
+  const N=nudgesForMe().filter(n=>!(owner && n.k==='Asked For'));
+  if(!A.length && !N.length) return null;
+  const c=h('div','box hb-fy'+((A.some(a=>a.state==='New')||N.length)?' hot':''));
+  const hd=h('div','hb-ch'); const nNew=A.filter(a=>a.state==='New').length;
+  hd.appendChild(h('h3','sect-t', owner ? 'Asks for You' : 'Your Asks and Nudges'));
+  if(owner && nNew) hd.appendChild(h('span','hb-new', nNew+' new'));
+  hd.appendChild(h('span','hb-hint', owner ? 'everything sent with Ask for Something lands here' : 'where your asks stand, and what people have asked of you'));
+  c.appendChild(hd);
+  const g=h('div','hb-fyl');
+  A.forEach(a=>{ const r=btn('hb-fyi', null, ()=>window.__editAsk && window.__editAsk(a)); r.style.setProperty('--sc', ASK_C[a.state]||'var(--c1)');
+    const top=h('div','tp'); if(a.by && owner) top.appendChild(av(a.by,22)); top.appendChild(h('b',null, a.t||'(no title)')); top.appendChild(h('span','st', a.state||'New')); r.appendChild(top);
+    r.appendChild(h('div','mt', (ASK_KIND[a.kind]||'Ask')+(owner && a.by ? ' · from '+first(a.by) : '')+' · '+ago(a.at)));
+    if(a.reply && !owner) r.appendChild(h('div','rp', 'Reply: '+String(a.reply).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim()));
+    g.appendChild(r); });
+  N.forEach(n=>{ const r=h('div','hb-fyi nudge'); r.style.setProperty('--sc','var(--c2)');
+    const top=h('div','tp'); if(n.by) top.appendChild(av(n.by,22)); top.appendChild(h('b',null, n.m||n.k||'A nudge')); r.appendChild(top);
+    r.appendChild(h('div','mt', (n.k||'Nudge')+(n.by?' · from '+first(n.by):'')+' · '+ago(n.at)));
+    const ok=btn('btn ghost hb-ok','Done', ()=>{ if(window.__put){ window.__put('nudges', Object.assign({}, n, {done:1})); } }); r.appendChild(ok);
+    g.appendChild(r); });
+  c.appendChild(g);
   return c;
 }
 
@@ -1324,6 +1360,18 @@ const css=h('style'); css.id='hb-css'; css.textContent=`
 .hb-dfoot{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:10px;font-size:12.5px;color:var(--ink-2)}
 .hb-out{display:inline-flex;align-items:center;gap:4px;font-weight:600}
 .hb-acts .sect-t{margin-bottom:12px}
+.hb-fy.hot{border-left:3px solid var(--warn)}
+.hb-new{font-size:11.5px;font-weight:700;color:#fff;background:var(--warn);border-radius:4px;padding:1px 8px}
+.hb-fyl{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(320px,100%),1fr));gap:8px}
+.hb-fyi{position:relative;display:flex;flex-direction:column;gap:5px;text-align:left;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--sc);border-radius:6px;font:inherit;color:var(--ink);cursor:pointer}
+.hb-fyi.nudge{cursor:default;padding-right:74px}
+.hb-fyi:hover{border-color:var(--border-strong);border-left-color:var(--sc);box-shadow:var(--shadow)}
+.hb-fyi .tp{display:flex;align-items:center;gap:8px;min-width:0}
+.hb-fyi .tp b{flex:1;min-width:0;font-size:13.5px;line-height:1.35}
+.hb-fyi .st{flex:0 0 auto;font-size:11px;font-weight:700;color:#fff;background:var(--sc);border-radius:3px;padding:1px 7px;white-space:nowrap}
+.hb-fyi .mt{font-size:12px;color:var(--ink-3)}
+.hb-fyi .rp{font-size:12.5px;color:var(--ink-2);background:var(--surface-2);border-radius:4px;padding:6px 8px}
+.hb-ok{position:absolute;top:10px;right:10px;padding:4px 10px}
 .hb-wk{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
 @media(max-width:900px){.hb-wk{grid-auto-flow:column;grid-template-columns:none;grid-auto-columns:minmax(200px,72%);overflow-x:auto;padding-bottom:6px}}
 .hb-wd{display:flex;flex-direction:column;min-width:0;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;overflow:hidden}
@@ -1604,9 +1652,9 @@ function flash(msg){ const t=h('div','ft-toast', msg); document.body.appendChild
 
 /* ---------- styles ---------- */
 const css=h('style'); css.id='ft-css'; css.textContent=`
-.ft{display:flex;flex-direction:column;gap:16px;margin-top:18px;font-variant-numeric:tabular-nums;
+div.ft{display:flex;flex-direction:column;gap:16px;margin-top:18px;font-variant-numeric:tabular-nums;
   --free:#d9efe5;--some:#fbecc9;--busy:#f3d6d2;--unk:#eef3f7;--pick:#0d314c;--pick-ink:#fff}
-:root[data-theme="dark"] .ft{--free:#16463a;--some:#4a3b17;--busy:#4b2422;--unk:#173547;--pick:#74bfeb;--pick-ink:#06202f}
+:root[data-theme="dark"] div.ft{--free:#16463a;--some:#4a3b17;--busy:#4b2422;--unk:#173547;--pick:#74bfeb;--pick-ink:#06202f}
 .ft .btn{white-space:nowrap;min-width:max-content;text-decoration:none}
 .ft-row{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
 .ft-row.two{display:grid;grid-template-columns:auto minmax(240px,1fr);gap:16px;align-items:end;margin-bottom:0}
