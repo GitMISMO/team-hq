@@ -32,7 +32,7 @@ const str=v=>v==null?'':String(v);
 function norm(m){
   const from=m.from && typeof m.from==='object' ? ((m.from.emailAddress||m.from).name || (m.from.emailAddress||m.from).address) : (m.from||m.f||m.sender||'');
   const fromEmail=m.fromEmail || (m.from && typeof m.from==='object' ? (m.from.emailAddress||m.from).address : '') || '';
-  const flag=m.flagged!=null ? !!m.flagged : m.flag && typeof m.flag==='object' ? /flagged/i.test(m.flag.flagStatus||'') : !!m.flag;
+  const flag=m.flagged!=null ? !!m.flagged : m.flag && typeof m.flag==='object' ? /^flagged$/i.test(m.flag.flagStatus||'') : !!m.flag;
   const imp=m.important!=null ? !!m.important : /high/i.test(str(m.importance||m.imp));
   const unread=m.unread!=null ? !!m.unread : m.isRead!=null ? !m.isRead : false;
   const at=Date.parse(m.received||m.receivedDateTime||m.at||m.date||'') || 0;
