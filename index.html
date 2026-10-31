@@ -214,13 +214,60 @@
       var before = f.loaded ? JSON.stringify(f.server) : null;
       f.server = got.content; f.sha = got.sha; f.loaded = true; f.loadedAt = now(); f.view = null;
       f.loading = null;
+      cachePut(f);
       restoreKept(f);
       if (before !== JSON.stringify(f.server)) notify(f, false);
       return f;
     }, function (e) { f.loading = null; throw e; });
     return f.loading;
   }
-  function ensure(f) { return f.loaded ? Promise.resolve(f) : load(f); }
+  /* ---------- open fast ----------
+     The first time a file is wanted, show what this browser saw last time straight away,
+     and fetch the real copy right behind it; anything that changed fills in a moment
+     later. Only Team HQ's own shared files are kept, per person, in this browser
+     (IndexedDB); Sync Ups, expenses and private notes are always read fresh. A save made
+     on a stale copy is caught by the usual sha check and replayed on the fresh one. */
+  var cacheDb = null;
+  function cdb() {
+    if (cacheDb) return cacheDb;
+    cacheDb = new Promise(function (res) {
+      try { var q = indexedDB.open('hq-cache', 1);
+        q.onupgradeneeded = function () { q.result.createObjectStore('files'); };
+        q.onsuccess = function () { res(q.result); }; q.onerror = function () { res(null); };
+      } catch (e) { res(null); }
+    });
+    return cacheDb;
+  }
+  function cacheable(f) { return f.proj === PROJECT && !SYNC[f.name] && f.name !== 'expenses' && !!myId(); }
+  function cacheKey(f) { return myId() + '|' + f.k; }
+  function cacheGet(f) {
+    if (!cacheable(f)) return Promise.resolve(null);
+    return cdb().then(function (db) {
+      if (!db) return null;
+      return new Promise(function (res) {
+        try { var q = db.transaction('files').objectStore('files').get(cacheKey(f));
+          q.onsuccess = function () { res(q.result || null); }; q.onerror = function () { res(null); };
+        } catch (e) { res(null); }
+      });
+    });
+  }
+  function cachePut(f) {
+    if (!cacheable(f) || !f.server) return;
+    var v = { c: f.server, sha: f.sha, at: now() };
+    cdb().then(function (db) { if (!db) return; try { db.transaction('files', 'readwrite').objectStore('files').put(v, cacheKey(f)); } catch (e) {} });
+  }
+  function ensure(f) {
+    if (f.loaded) return Promise.resolve(f);
+    if (f.cacheTried) return load(f);
+    f.cacheTried = true;
+    return Promise.race([cacheGet(f), new Promise(function (r) { setTimeout(function () { r(null); }, 400); })]).then(function (c) {
+      if (f.loaded) return f;
+      if (!c || !c.c) return load(f);
+      f.server = normalise(c.c); f.sha = c.sha || null; f.loaded = true; f.loadedAt = 0; f.view = null; f.fromCache = true;
+      load(f).catch(function () {});
+      return f;
+    });
+  }
 
   function applyOps(content, ops) {
     ops.forEach(function (op) {
@@ -17584,5 +17631,5 @@ boot().then(()=>{ paintWho(); renderAll();
 })();
 </script>
 
-<script src="upgrades.js?v=20261031f" defer></script>
+<script src="upgrades.js?v=20261031g" defer></script>
 </body></html>
