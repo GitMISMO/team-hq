@@ -200,10 +200,14 @@ function driveFrame(fr, k, go, sec, done){
 /* ---------- system snapshots ----------
    The headline numbers, gauges and section counts on a system's tab, read in the background in a hidden
    copy of the page and kept in this browser, so a dashboard tile can show them the Team HQ way. */
-const DK='tools:team-hq:mismo.teamhq.sysdata2';
+const DK='tools:team-hq:mismo.teamhq.sysdata3';
 let SD={}; try{ SD=JSON.parse(localStorage.getItem(DK)||'{}')||{}; }catch(e){}
 const sdKey=(k,go)=>k+'|'+(go||'');
 const cleanT=x=>String(x||'').replace(/\s+/g,' ').trim();
+/* the words in an element as written (not as styled — no ALL CAPS from CSS), with a space between pieces */
+const SMALLW=/^(a|an|the|and|but|or|nor|for|so|yet|as|at|by|in|of|on|to|up|via|with|vs)$/;
+function tcase(s){ return String(s).toLowerCase().split(' ').map((w,i,a)=>(i>0 && i<a.length-1 && SMALLW.test(w)) ? w : w.replace(/^[a-z]/,c=>c.toUpperCase())).join(' '); }
+function words(el){ if(!el) return ''; const out=[]; const w=el.ownerDocument.createTreeWalker(el, 4); let n; while((n=w.nextNode())){ const p=n.parentElement; if(p && /^(SCRIPT|STYLE)$/.test(p.tagName)) continue; out.push(n.nodeValue); } return out.join(' '); }
 const VAL=/^[−\-+]?\(?\$?\s?\d[\d,]*(\.\d+)?\)?\s?[KMB]?%?$/;
 function extract(doc){
   const win=doc.defaultView; const out={figs:[], gauges:[], secs:readSecs(doc), at:Date.now()};
@@ -220,13 +224,15 @@ function extract(doc){
     const v=pick(/(^|\s|-)g?val(ue)?(\s|$)/), b=pick(/(^|\s|-)g?bud(get)?(\s|$)|target|goal/);
     if(nm) out.gauges.push({n:nm.slice(0,40), p:+pm[1], v:VAL.test(v)?v:'', b:VAL.test(b)?b:''}); });
   const seen=new Set();
-  doc.querySelectorAll('b,strong,span,div,p,h1,h2,h3,h4,dd').forEach(e=>{ if(out.figs.length>=10 || e.children.length) return; const tv=cleanT(e.textContent); if(!tv || tv.length>16 || !VAL.test(tv) || !vis(e)) return;
+  const scan=minFs=>doc.querySelectorAll('b,strong,span,div,p,h1,h2,h3,h4,dd').forEach(e=>{ if(out.figs.length>=10 || e.children.length) return; const tv=cleanT(e.textContent); if(!tv || tv.length>16 || !VAL.test(tv) || !vis(e)) return;
     if(e.closest('[class*="gauge"],[role=meter],nav,table,button.navbtn,[role=tab],.hqtop,.masthead,time,[class*="cal"],[class*="countdown"],[class*="clock"],[class*="timer"],[class*="week"],[class*="date"]')) return;
-    if((parseFloat(win.getComputedStyle(e).fontSize)||0)<19) return;
-    const box=e.parentElement; if(!box) return; const tx=[...box.children].filter(z=>z!==e).map(z=>cleanT(z.innerText||z.textContent)).filter(z=>z && z.length<100 && !VAL.test(z));
-    let label=tx[0]||''; const sub=tx[1]||''; if(!label){ const pl=box.previousElementSibling; label=pl ? cleanT(pl.innerText||pl.textContent) : ''; }
-    if(!label || label.length>48 || label.length<3 || /^[a-z][a-z\s]*$/.test(label) || /^(today|tomorrow|yesterday|sun|mon|tue|wed|thu|fri|sat|sunday|monday|tuesday|wednesday|thursday|friday|saturday|days?|hrs?|hours?|mins?|minutes?|secs?|seconds?|weeks?|months?)$/i.test(label)) return; const key=label+'|'+tv; if(seen.has(key)) return; seen.add(key);
+    if((parseFloat(win.getComputedStyle(e).fontSize)||0)<minFs) return;
+    const box=e.parentElement; if(!box) return; const tx=[...box.children].filter(z=>z!==e).map(z=>cleanT(words(z))).filter(z=>z && z.length<100 && !VAL.test(z));
+    let label=tx[0]||''; const sub=tx[1]||''; if(!label){ const pl=box.previousElementSibling; label=pl ? cleanT(words(pl)) : ''; }
+    if(!label || label.length>48 || label.length<3 || /^[a-z][a-z\s]{0,3}$/.test(label) || /^(today|tomorrow|yesterday|sun|mon|tue|wed|thu|fri|sat|sunday|monday|tuesday|wednesday|thursday|friday|saturday|days?|hrs?|hours?|mins?|minutes?|secs?|seconds?|weeks?|months?)$/i.test(label)) return; const key=label+'|'+tv; if(seen.has(key)) return; seen.add(key);
+    if(!/[a-z]/.test(label) || /^[a-z]/.test(label)) label=tcase(label);
     const cl=String(box.className||''); out.figs.push({n:label, v:tv, s:sub.slice(0,90), tone:/(^|\s)(good|ok|up|pos)(\s|$)/.test(cl)?'good':/(^|\s)(bad|warn|late|down|neg|over)(\s|$)/.test(cl)?'bad':''}); });
+  scan(19); if(!out.figs.length) scan(15);
   /* pages built around a table: a summary line ("Revenue $3.9M · Expense $4.2M · Net …") and its Total / Net rows */
   const money=v=>{ v=cleanT(v).replace(/^-/,'−'); return /\.\d\d$/.test(v) && /\d{1,3},\d{3}/.test(v) ? v.replace(/\.\d\d$/,'') : v; };
   if(out.figs.length<6){ [...doc.querySelectorAll('table')].filter(vis).slice(0,2).forEach(tb=>{
@@ -248,12 +254,12 @@ const SQ=[]; let sBusy=false;
 function wantData(k, go, maxAge){ const d=SD[sdKey(k,go)]; if(d && Date.now()-d.at<(maxAge||20*60e3)) return; if(SQ.some(q=>q.k===k && q.go===(go||''))) return; SQ.push({k, go:go||''}); setTimeout(pump, 300); }
 function pump(){ if(sBusy || !SQ.length || document.hidden) return; const q=SQ.shift(); const s=SYS.find(z=>z.k===q.k); if(!s || !canOpen(s.k)){ pump(); return; } sBusy=true;
   const fr=h('iframe','hqx-bg'); fr.src=s.u; fr.setAttribute('aria-hidden','true'); fr.tabIndex=-1; fr.title=''; document.body.appendChild(fr);
-  let last='', stable=0, n=0; const fin=d=>{ if(d) keepData(q.k, q.go, d); else { const old=SD[sdKey(q.k,q.go)]; if(old){ old.at=Date.now()-15*60e3; } } fr.remove(); sBusy=false; setTimeout(pump, 500); };
+  let last='', stable=0, n=0; const fin=d=>{ if(d) keepData(q.k, q.go, d); else { const old=SD[sdKey(q.k,q.go)]; if(old && hasData(old)) old.at=Date.now()-15*60e3; else { SD[sdKey(q.k,q.go)]={figs:[], gauges:[], secs:{}, at:Date.now(), empty:true}; try{ localStorage.setItem(DK, JSON.stringify(SD)); }catch(e){} try{ window.dispatchEvent(new Event('hq:counts')); }catch(e){} } } fr.remove(); sBusy=false; setTimeout(pump, 500); };
   driveFrame(fr, q.k, q.go, '', null);
   const tick=()=>{ n++; let doc=null; try{ doc=fr.contentDocument; }catch(e){} if(!doc || doc.readyState!=='complete'){ if(n<50) setTimeout(tick, 1000); else fin(null); return; }
     const cur=curNav(doc); const onTab=!q.go || cur===q.go || (n>14 && !cur); let d=null; try{ d=extract(doc); }catch(e){}
     if(onTab && hasData(d)){ const sg=JSON.stringify([d.figs, d.gauges, d.secs]); if(sg===last) stable++; else { stable=0; last=sg; } if(stable>=2){ fin(d); return; } }
-    if(n<45) setTimeout(tick, 1000); else fin(onTab && hasData(d) ? d : null); };
+    if(n<45 && (n<22 || hasData(d))) setTimeout(tick, 1000); else fin(onTab && hasData(d) ? d : null); };
   setTimeout(tick, 2500); }
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) pump(); });
 function snapSys(k, doc){ if(!doc) return; const nav=readNav(doc); const pg=curNav(doc), sc=readSecs(doc); const old=counts[k]||{}; const sec=Object.assign({}, old.sec||{}); if(pg && Object.keys(sc).length) sec[pg]=sc; if(!Object.keys(nav).length && !(pg && Object.keys(sc).length)) return; counts[k]={at:Date.now(), nav:Object.keys(nav).length ? nav : (old.nav||{}), sec}; try{ localStorage.setItem(CK, JSON.stringify(counts)); }catch(e){} try{ window.dispatchEvent(new Event('hq:counts')); }catch(e){} }
@@ -3772,10 +3778,10 @@ let drag=null;
 
 /* ---------- little menus ---------- */
 let menuEl=null;
-function closeMenus(){ if(menuEl){ menuEl.remove(); menuEl=null; } }
+function closeMenus(){ if(menuEl){ const m=menuEl; menuEl=null; m.remove(); if(m._onClose) try{ m._onClose(); }catch(e){} } }
 function popMenu(anchor, items, title){
   closeMenus(); menuEl=h('div','nx-menu'+(phone()?' sheet':'')); if(title) menuEl.appendChild(h('div','nx-ml', title));
-  items.forEach(it=>{ if(it.node){ menuEl.appendChild(it.node); return; } const b=btn('nx-mi'+(it.on?' on':''), null, ()=>{ closeMenus(); it.fn(); }); b.innerHTML=(it.icon||'')+'<span>'+it.label+'</span>'+(it.hint?'<small>'+it.hint+'</small>':''); menuEl.appendChild(b); });
+  items.forEach(it=>{ if(it.node){ menuEl.appendChild(it.node); return; } const b=btn('nx-mi'+(it.on?' on':'')+(it.keep?' ck':''), null, ()=>{ if(it.keep){ it.fn(); b.classList.toggle('on', !!(it.isOn && it.isOn())); return; } closeMenus(); it.fn(); }); b.innerHTML=(it.icon||'')+'<span>'+it.label+'</span>'+(it.hint?'<small>'+it.hint+'</small>':''); menuEl.appendChild(b); });
   document.body.appendChild(menuEl);
   if(!phone()){ const r=anchor.getBoundingClientRect(), mh=menuEl.offsetHeight; let top=r.bottom+4; if(top+mh>innerHeight-8) top=Math.max(8, r.top-mh-4);
     menuEl.style.top=top+'px'; menuEl.style.left=Math.max(8, Math.min(innerWidth-menuEl.offsetWidth-8, r.left))+'px'; }
@@ -4216,7 +4222,7 @@ function dashDefault(){
   return L;
 }
 function dashLayout(){ const b=S.bset||{}; return Array.isArray(b[DK]) && b[DK].length ? b[DK].map(z=>Object.assign({}, z)) : dashDefault(); }
-function saveDash(L){ if(!S.bset) S.bset={}; S.bset[DK]=L.map(z=>{ const o={t:z.t}; ['s','go','f','sz'].forEach(k=>{ if(z[k]) o[k]=z[k]; }); return o; }); if(dashMixEdit!=null) S.bset.hqDashMix=dashMixEdit; try{ window.__saveMine && window.__saveMine(); }catch(e){} }
+function saveDash(L){ if(!S.bset) S.bset={}; S.bset[DK]=L.map(z=>{ const o={t:z.t}; ['s','go','f','sz','sec','lvl'].forEach(k=>{ if(z[k]) o[k]=z[k]; }); if(Array.isArray(z.pick) && z.pick.length) o.pick=z.pick.slice(); return o; }); if(dashMixEdit!=null) S.bset.hqDashMix=dashMixEdit; try{ window.__saveMine && window.__saveMine(); }catch(e){} }
 let dashEdit=null; /* the layout being customized, or null */
 let dashMixEdit=null; /* mixed or uniform sizes, while customizing */
 const SIZES=['s','w','t','b'], SZN={s:'Small',w:'Wide',t:'Tall',b:'Large'};
@@ -4306,14 +4312,26 @@ function dashWeek(){
   return wrap;
 }
 /* one tile */
+/* one tile's own menu: size, how much it shows, what it shows, take it off — no trip to the top */
+function sizeItems(cfg, sz, done){ return SIZES.map(k=>({label:SZN[k], hint:{s:'one box', w:'two across', t:'two down', b:'two by two'}[k], on:k===sz, fn:()=>{ delete cfg.w; cfg.sz=k; done(); }})); }
+function levelItems(cfg, done){ const lv=lvlOf(cfg); return [{label:'High Level', hint:'just the headline', on:lv==='hi', fn:()=>{ cfg.lvl='hi'; done(); }}, {label:'Detailed', hint:'more numbers and lists', on:lv==='det', fn:()=>{ cfg.lvl='det'; done(); }}]; }
+function tileMenu(cfg, i, L, sz, anchor){
+  const commit=()=>{ saveDash(L); paint(); };
+  let changed=false; const later=()=>{ changed=true; saveDash(L); };
+  const items=[{node:h('div','nx-ml','Size')}].concat(sizeItems(cfg, sz, commit), [{node:h('div','nx-ml','How Much to Show')}], levelItems(cfg, commit));
+  if(cfg.t==='sys') sysItems(cfg, commit, later).forEach(it=>items.push(it));
+  items.push({node:h('div','nx-msep')}); items.push({label:'Take This Tile Off', fn:()=>{ L.splice(i,1); commit(); toast('Tile taken off. Add it back any time from Customize.'); }});
+  const meta=cfg.t==='sys' ? sysMeta(cfg) : TILES[cfg.t];
+  popMenu(anchor, items, meta ? (meta.lab||meta.n) : 'This Tile'); if(menuEl){ menuEl.classList.add('tall','nx-tmenu'); menuEl._onClose=()=>{ if(changed) paint(); }; }
+}
 function tileShell(cfg, meta, i, L){
   const sz=sizeOf(cfg, i, L); const el=h('div','st-tile t-'+cfg.t+' sz-'+sz);
   el.style.setProperty('--k', meta.k); el.tabIndex=0; el.setAttribute('role','button'); el.setAttribute('aria-label', meta.n);
   if(dashEdit){ el.draggable=true; el.dataset.i=i;
     const ctl=h('div','nx-tctl');
-    const wb=btn('nx-tcb', SZN[sz], e=>{ e.stopPropagation(); delete cfg.w; cfg.sz=SIZES[(SIZES.indexOf(sz)+1)%SIZES.length]; paint(); }); wb.title='Change the size: Small, Wide, Tall, Large'; ctl.appendChild(wb);
-    const lv=lvlOf(cfg); const lb=btn('nx-tcb', lv==='hi'?'High Level':'Detailed', e=>{ e.stopPropagation(); cfg.lvl=lvlOf(cfg)==='hi'?'det':'hi'; paint(); }); lb.title='High Level shows just the headline; Detailed shows more'; ctl.appendChild(lb);
-    if(cfg.t==='sys'){ const sb=btn('nx-tcb','Settings', e=>{ e.stopPropagation(); sysSettings(cfg, sb); }); ctl.appendChild(sb); }
+    const wb=btn('nx-tcb', null, e=>{ e.stopPropagation(); popMenu(wb, sizeItems(cfg, sz, paint), 'Tile Size'); }); wb.innerHTML='<span class="lb">Size</span> '+SZN[sz]+' ▾'; wb.title='Pick the size for this tile'; ctl.appendChild(wb);
+    const lv=lvlOf(cfg); const lb=btn('nx-tcb', null, e=>{ e.stopPropagation(); popMenu(lb, levelItems(cfg, paint), 'How Much to Show'); }); lb.innerHTML='<span class="lb">Show</span> '+(lv==='hi'?'High Level':'Detailed')+' ▾'; lb.title='Pick how much this tile shows'; ctl.appendChild(lb);
+    if(cfg.t==='sys'){ const sb=btn('nx-tcb','Settings ▾', e=>{ e.stopPropagation(); sysSettings(cfg, sb); }); ctl.appendChild(sb); }
     const rm=btn('nx-tcb x','×', e=>{ e.stopPropagation(); L.splice(i,1); paint(); }); rm.title='Take this tile off'; rm.setAttribute('aria-label','Take '+meta.n+' off'); ctl.appendChild(rm);
     el.appendChild(ctl);
     el.addEventListener('dragstart', e=>{ tdrag=i; el.classList.add('dragging'); try{ e.dataTransfer.setData('text/plain', String(i)); e.dataTransfer.effectAllowed='move'; }catch(x){} });
@@ -4322,6 +4340,7 @@ function tileShell(cfg, meta, i, L){
     el.addEventListener('dragleave', ()=>el.classList.remove('tover'));
     el.addEventListener('drop', e=>{ e.preventDefault(); el.classList.remove('tover'); if(tdrag==null || tdrag===i) return; const [m]=L.splice(tdrag,1); L.splice(i,0,m); tdrag=null; paint(); });
   }
+  else { const g=btn('nx-tgear', null, e=>{ e.stopPropagation(); tileMenu(cfg, i, L, sz, g); }); g.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>'; g.title='Customize this tile'; g.setAttribute('aria-label','Customize '+meta.n); el.appendChild(g); }
   return el;
 }
 let tdrag=null;
@@ -4436,6 +4455,8 @@ function sysMeta(cfg){ const x=X(); const s=x && x.SYS.find(z=>z.k===cfg.s); if(
     const cs=cfg.go && cfg.sec ? x.countFor(s.k, cfg.go, cfg.sec) : null; const c0=cs || (cfg.go && x.countFor(s.k, cfg.go)); const c=cs ? cs : (c0 && c0.n>0 ? c0 : null);
     let F=d ? d.figs.slice() : [], G=d ? d.gauges.slice() : [];
     if(Array.isArray(cfg.pick) && cfg.pick.length){ F=F.filter(f=>cfg.pick.indexOf('f:'+f.n)>=0); G=G.filter(g=>cfg.pick.indexOf('g:'+g.n)>=0); }
+    if(d && !F.length && !G.length && !(Array.isArray(cfg.pick) && cfg.pick.length)){ /* a page with no headline numbers: use the counts on the system's own menu instead */
+      F=x.navOf(s.k).map(n=>({n, c:x.countFor(s.k,n)})).filter(z=>z.c && z.c.n>0 && z.n!==cfg.go).map(z=>({n:z.n, v:String(z.c.n), s:'', tone:''})); }
     const small=SZ==='s', wide=SZ==='w'||SZ==='b', tall=SZ==='t'||SZ==='b';
     const nF=small ? 1 : det ? (SZ==='b'?6:wide?4:tall?4:2) : (wide?3:tall?2:1), nG=small ? 0 : det ? (SZ==='b'?6:wide?4:tall?4:2) : (SZ==='b'?3:wide?3:tall?2:0);
     const head=h('div','nx-sysh'); const sym=h('div','nx-sym sm'); sym.innerHTML=x.symbol(s.k); head.appendChild(sym);
@@ -4444,6 +4465,7 @@ function sysMeta(cfg){ const x=X(); const s=x && x.SYS.find(z=>z.k===cfg.s); if(
     else if(F.length){ lead.appendChild(figEl(F[0], true)); F=F.slice(1); }
     else if(G.length && small){ lead.appendChild(gaugeEl(G[0], false)); }
     else if(!d){ lead.appendChild(h('div','st-sub', cfg.go ? 'Getting the numbers from '+cfg.go+'…' : 'Getting the numbers…')); }
+    else if(d.empty){ lead.appendChild(h('div','st-sub', (cfg.go ? cfg.go+' has' : 'This page has')+' no headline numbers to show. Pick another page in this tile’s settings, or open it from here.')); }
     else lead.appendChild(h('div','st-sub', s.d));
     head.appendChild(lead); el.appendChild(head);
     if(!small){
@@ -4454,18 +4476,19 @@ function sysMeta(cfg){ const x=X(); const s=x && x.SYS.find(z=>z.k===cfg.s); if(
   };
   meta.go=()=>openSystem(s.k, cfg.go||'', cfg.sec||'');
   return meta; }
-function sysSettings(cfg, anchor){ const x=X(); const s=x.SYS.find(z=>z.k===cfg.s); const items=[];
-  const nav=x.navOf(s.k); if(nav.length){ items.push({node:h('div','nx-ml','Show This Page')}); items.push({label:'Its Home Page', on:!cfg.go, fn:()=>{ cfg.go=''; cfg.sec=''; cfg.pick=[]; paint(); }}); nav.forEach(n=>{ const cn=x.countFor(s.k,n); items.push({label:n, hint:cn && cn.n>0 ? String(cn.n) : '', on:cfg.go===n && !cfg.sec, fn:()=>{ cfg.go=n; cfg.sec=''; cfg.pick=[]; paint(); }}); }); }
+function sysSettings(cfg, anchor){ const x=X(); const s=x.SYS.find(z=>z.k===cfg.s); let changed=false; popMenu(anchor, sysItems(cfg, paint, ()=>{ changed=true; }), (x.SHORT[s.k]||s.n)); if(menuEl){ menuEl.classList.add('tall'); menuEl._onClose=()=>{ if(changed) paint(); }; } }
+function sysItems(cfg, done, later){ const x=X(); const s=x.SYS.find(z=>z.k===cfg.s); const items=[];
+  const nav=x.navOf(s.k); if(nav.length){ items.push({node:h('div','nx-ml','Show This Page')}); items.push({label:'Its Home Page', on:!cfg.go, fn:()=>{ cfg.go=''; cfg.sec=''; cfg.pick=[]; done(); }}); nav.forEach(n=>{ const cn=x.countFor(s.k,n); items.push({label:n, hint:cn && cn.n>0 ? String(cn.n) : '', on:cfg.go===n && !cfg.sec, fn:()=>{ cfg.go=n; cfg.sec=''; cfg.pick=[]; done(); }}); }); }
   else items.push({node:h('div','nx-ml','Open '+(x.SHORT[s.k]||s.n)+' once and its pages show up here to pick from')});
   const d=x.sysData(s.k, cfg.go||''); const pk=Array.isArray(cfg.pick) ? cfg.pick : [];
-  const tog=key=>{ const L=(Array.isArray(cfg.pick) ? cfg.pick : []).slice(); const i=L.indexOf(key); if(i>=0) L.splice(i,1); else L.push(key); cfg.pick=L; paint(); };
+  const tog=key=>{ const L=(Array.isArray(cfg.pick) ? cfg.pick : []).slice(); const i=L.indexOf(key); if(i>=0) L.splice(i,1); else L.push(key); cfg.pick=L; later(); };
   if(d && (d.figs.length || d.gauges.length)){ items.push({node:h('div','nx-ml','Numbers to Show'+(pk.length?'':' (all, in order)'))});
-    d.figs.forEach(f=>items.push({label:f.n, hint:f.v, on:pk.indexOf('f:'+f.n)>=0, fn:()=>tog('f:'+f.n)}));
-    d.gauges.forEach(g=>items.push({label:g.n+' Gauge', hint:g.p+'%', on:pk.indexOf('g:'+g.n)>=0, fn:()=>tog('g:'+g.n)}));
-    if(pk.length) items.push({label:'Show All of Them Again', fn:()=>{ cfg.pick=[]; paint(); }}); }
+    d.figs.forEach(f=>items.push({label:f.n, hint:f.v, keep:true, on:pk.indexOf('f:'+f.n)>=0, isOn:()=>(cfg.pick||[]).indexOf('f:'+f.n)>=0, fn:()=>tog('f:'+f.n)}));
+    d.gauges.forEach(g=>items.push({label:g.n+' Gauge', hint:g.p+'%', keep:true, on:pk.indexOf('g:'+g.n)>=0, isOn:()=>(cfg.pick||[]).indexOf('g:'+g.n)>=0, fn:()=>tog('g:'+g.n)}));
+    if(pk.length) items.push({label:'Show All of Them Again', fn:()=>{ cfg.pick=[]; done(); }}); }
   const secs=d && d.secs ? Object.keys(d.secs) : (cfg.go ? x.secsOf(s.k, cfg.go).map(z=>z.n) : []);
-  if(cfg.go && secs.length){ items.push({node:h('div','nx-ml','Or Count One Section')}); items.push({label:'None — Show the Numbers', on:!cfg.sec, fn:()=>{ cfg.sec=''; paint(); }}); secs.forEach(n=>{ const cc=x.countFor(s.k, cfg.go, n) || (d && d.secs[n]); items.push({label:n, hint:cc?String(cc.n):'', on:cfg.sec===n, fn:()=>{ cfg.sec=n; paint(); }}); }); }
-  popMenu(anchor, items, (x.SHORT[s.k]||s.n)); if(menuEl) menuEl.classList.add('tall'); }
+  if(cfg.go && secs.length){ items.push({node:h('div','nx-ml','Or Count One Section')}); items.push({label:'None — Show the Numbers', on:!cfg.sec, fn:()=>{ cfg.sec=''; done(); }}); secs.forEach(n=>{ const cc=x.countFor(s.k, cfg.go, n) || (d && d.secs[n]); items.push({label:n, hint:cc?String(cc.n):'', on:cfg.sec===n, fn:()=>{ cfg.sec=n; done(); }}); }); }
+  return items; }
 function openCatalog(){
   const x=X(); if(!dashEdit) dashEdit=dashLayout();
   const ov=h('div','hqx-ov'); const box=h('div','hqx-box nx-cat'); box.setAttribute('role','dialog'); box.setAttribute('aria-label','Add a Tile');
@@ -5255,6 +5278,18 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-cc .ob{position:absolute;width:4px;border-radius:2px;background:var(--pc);opacity:.8;z-index:1}
 .nx-cc .ce{position:absolute;z-index:2;display:flex;flex-direction:column;padding:3px 6px;border-radius:5px;background:color-mix(in srgb,var(--c1) 14%,var(--surface));border-left:3px solid var(--c1);color:var(--ink);font-size:11px;overflow:hidden}
 /* menus */
+.nx-tgear{position:absolute;top:10px;right:10px;z-index:3;width:28px;height:28px;padding:5px;border:1px solid rgba(255,255,255,.18);border-radius:6px;background:rgba(6,32,47,.55);color:rgba(255,255,255,.85);cursor:pointer;opacity:0;transition:opacity .15s}
+.nx-tgear svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.st-tile:hover .nx-tgear,.st-tile:focus-within .nx-tgear,.nx-tgear:focus-visible{opacity:1}.nx-tgear:hover{background:rgba(6,32,47,.85);color:#fff;border-color:rgba(116,191,235,.6)}
+@media(hover:none){.nx-tgear{opacity:.85}}
+.st-tile:hover .st-top .st-pill:last-child{margin-right:30px}
+.nx-tcb .lb{font-weight:500;opacity:.7}
+.nx-mi.ck::after{content:'';margin-left:auto;flex:0 0 auto;width:15px;height:15px;border:1.5px solid var(--border-strong);border-radius:3px}
+.nx-mi.ck.on::after{background:var(--c1) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/11px no-repeat;border-color:var(--c1)}
+.nx-mi.ck small{margin-left:auto}.nx-mi.ck::after{margin-left:8px}
+.nx-mi.on:not(.ck)::after{content:'✓';margin-left:auto;font-weight:800;color:var(--c1)}.nx-mi.on:not(.ck) small{margin-left:auto}.nx-mi.on:not(.ck) small+*{}
+.nx-msep{height:1px;margin:5px 4px;background:var(--rule)}
+.nx-tmenu{max-height:min(78vh,620px);overflow:auto}
 .nx-menu{position:fixed;z-index:210;min-width:220px;max-width:300px;padding:5px;background:var(--surface);border:1px solid var(--border-strong);border-radius:8px;box-shadow:0 16px 40px rgba(6,32,47,.22);animation:nxIn .12s ease}
 .nx-menu.sheet{left:10px;right:10px;max-width:none;bottom:calc(66px + env(safe-area-inset-bottom,0px));top:auto}
 .nx-menu.tall{max-height:72vh;overflow:auto}
