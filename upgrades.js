@@ -1233,9 +1233,11 @@ function figFor(k){ const f=(S.figures||[]).filter(x=>FIGSRC[x.src]===k && Strin
 /* ---------- the hub ---------- */
 function draw(){
   const w=h('div','hb');
-  w.appendChild(band());
+  /* in the new Team HQ, My Dashboard carries the numbers and tabs, so My Board is just the quick actions and your own board */
+  const slim=document.documentElement.classList.contains('nx-on');
+  if(!slim) w.appendChild(band());
   w.appendChild(actionBar());
-  w.appendChild(workspace());
+  if(!slim) w.appendChild(workspace());
   return w;
 }
 /* ---------- one workspace, switched by tabs, instead of a long scroll ---------- */
@@ -3386,7 +3388,7 @@ function statusOf(p){
 
 /* ---------- the views ---------- */
 const VIEWS={
-  day:{t:'My Dashboard', i:'home'}, week:{t:'My Week', i:'week'}, inbox:{t:'Inbox', i:'inbox'}, mine:{t:'My Tasks', i:'mine'}, cal:{t:'Calendar', i:'cal'}, all:{t:'All Tasks', i:'all'}, people:{t:'People', i:'ppl'} };
+  day:{t:'My Dashboard', i:'home'}, inbox:{t:'Inbox', i:'inbox'}, mine:{t:'My Tasks', i:'mine'}, cal:{t:'Calendar', i:'cal'}, all:{t:'All Tasks', i:'all'}, people:{t:'People', i:'ppl'} };
 function viewKind(v){ v=v||ui.view; if(v.indexOf('p:')===0) return 'project'; if(v.indexOf('u:')===0) return 'person'; if(v.indexOf('c:')===0) return 'classic'; return v; }
 function myOpen(){ return S.tasks.filter(t=>isOpen(t) && doers(t).indexOf(me())>=0); }
 function myAsks(){ return (S.asks||[]).filter(a=>a.state!=='Built' && a.state!=='Not Doing' && (me()==='jonna' || a.by===me())); }
@@ -3423,7 +3425,6 @@ function drawRail(){
   const inboxN=myAsks().length+myNudges().length;
   add(railLbl('You'), firstClassic);
   add(railBtn('day','My Dashboard', ic('home')), firstClassic);
-  add(railBtn('week','My Week', ic('week')), firstClassic);
   add(railBtn('inbox','Inbox', ic('inbox'), inboxN ? '<b class="nx-badge hot">'+inboxN+'</b>' : ''), firstClassic);
   const mineN=myOpen().length;
   add(railBtn('mine','My Tasks', ic('mine'), mineN ? '<b class="nx-badge">'+mineN+'</b>' : ''), firstClassic);
@@ -3915,10 +3916,11 @@ const TILES={
   keydate:{n:'Next Key Date', g:'Team', k:'#3CCB7F', d:'A countdown to what’s coming up'},
   meeting:{n:'Team Meeting', g:'Team', k:'#E86F5A', d:'Countdown to the next one and what’s on the agenda'},
   wins:{n:'Team Wins', g:'Team', k:'#3CCB7F', d:'What the team finished lately'},
-  board:{n:'My Board Panels', g:'Team', k:'#74BFEB', d:'Your notes, locked note and system panels'}
+  findtime:{n:'Find a Time', g:'Team', k:'#5AA9E6', d:'Who’s free now, and the next time you’re all free'},
+  board:{n:'My Board', g:'Team', k:'#74BFEB', d:'Your own board — free-form, notebook or rows'}
 };
 function dashDefault(){
-  const L=[{t:'day'},{t:'tasks'},{t:'email'},{t:'people'},{t:'projects'},{t:'keydate'},{t:'meeting'},{t:'load'}];
+  const L=[{t:'day'},{t:'tasks'},{t:'email'},{t:'findtime'},{t:'people'},{t:'projects'},{t:'keydate'},{t:'meeting'},{t:'load'}];
   if(myAsks().length) L.splice(3,0,{t:'asks'});
   let fav=[]; try{ fav=(JSON.parse(localStorage.getItem('tools:team-hq:mismo.teamhq.hub')||'{}').fav)||[]; }catch(e){}
   const x=X(); const sys=x ? x.SYS.filter(z=>x.canOpen(z.k)) : [];
@@ -3929,8 +3931,16 @@ function dashDefault(){
   return L;
 }
 function dashLayout(){ const b=S.bset||{}; return Array.isArray(b[DK]) && b[DK].length ? b[DK].map(z=>Object.assign({}, z)) : dashDefault(); }
-function saveDash(L){ if(!S.bset) S.bset={}; S.bset[DK]=L.map(z=>{ const o={t:z.t}; ['s','go','f','w'].forEach(k=>{ if(z[k]) o[k]=z[k]; }); return o; }); try{ window.__saveMine && window.__saveMine(); }catch(e){} }
+function saveDash(L){ if(!S.bset) S.bset={}; S.bset[DK]=L.map(z=>{ const o={t:z.t}; ['s','go','f','sz'].forEach(k=>{ if(z[k]) o[k]=z[k]; }); return o; }); if(dashMixEdit!=null) S.bset.hqDashMix=dashMixEdit; try{ window.__saveMine && window.__saveMine(); }catch(e){} }
 let dashEdit=null; /* the layout being customized, or null */
+let dashMixEdit=null; /* mixed or uniform sizes, while customizing */
+const SIZES=['s','w','t','b'], SZN={s:'Small',w:'Wide',t:'Tall',b:'Large'};
+const MIXDEF={day:'b',tasks:'t',email:'w',asks:'s',load:'w',people:'w',team:'w',projects:'t',keydate:'t',meeting:'w',wins:'t',board:'s',findtime:'w'};
+function dashMixed(){ if(dashMixEdit!=null) return dashMixEdit; const b=S.bset||{}; return b.hqDashMix===undefined ? true : !!b.hqDashMix; }
+function sizeOf(cfg, i, L){ if(cfg.sz) return cfg.sz; if(cfg.w===2) return 'w';
+  if(!dashMixed()) return cfg.t==='day' ? 'w' : 's';
+  if(cfg.t==='sys'){ const n=L.slice(0,i).filter(z=>z.t==='sys').length; return ['s','w','t','s','b','s','w'][n%7]; }
+  return MIXDEF[cfg.t] || 's'; }
 function pinTile(k, go){ const L=dashLayout(); const i=L.findIndex(z=>z.t==='sys' && z.s===k && (z.go||'')===(go||'')); const had=i>=0; const t=had ? L.splice(i,1)[0] : {t:'sys', s:k, go:go||''}; L.splice(0,0,t); saveDash(L); toast((had?'Moved to the top of your dashboard':'Added to your dashboard')+(go?': '+go:''), null); if(viewKind()==='day' && !dashEdit) paint(); }
 function openSystem(k, go){ const x=X(); if(x && x.openSys) x.openSys(k, go, {onPin:pinTile}); }
 const em=t=>{ const e=h('em'); e.textContent=t; return e; };
@@ -3944,11 +3954,14 @@ function vDash(){
   /* the tiles */
   const vb=h('div','nx-dvb'); vb.appendChild(h('h2',null,'Your Dashboard'));
   const r=h('div','nx-dvr');
-  if(dashEdit){ r.appendChild(btn('nx-mini', '+ Add a Tile', openCatalog)); r.appendChild(btn('nx-mini', 'Reset', ()=>{ dashEdit=dashDefault(); paint(); }));
-    r.appendChild(btn('nx-mini', 'Cancel', ()=>{ dashEdit=null; paint(); })); r.appendChild(btn('nx-mini pri', 'Save Layout', ()=>{ saveDash(dashEdit); dashEdit=null; toast('Your dashboard is saved', null); paint(); })); }
+  if(dashEdit){ r.appendChild(btn('nx-mini', '+ Add a Tile', openCatalog));
+    const mx=h('div','nx-seg'); [['mix','Mixed Sizes'],['same','All the Same']].forEach(([k,l])=>mx.appendChild(btn('nx-sg'+((dashMixed()?'mix':'same')===k?' on':''), l, ()=>{ dashMixEdit=k==='mix'; dashEdit.forEach(z=>{ delete z.sz; delete z.w; }); paint(); }))); r.appendChild(mx);
+    r.appendChild(btn('nx-mini', 'Shuffle Sizes', ()=>{ dashMixEdit=true; const pool=['s','s','w','t','b','w','s','t']; dashEdit.forEach(z=>{ delete z.w; z.sz=pool[Math.floor(Math.random()*pool.length)]; }); paint(); }));
+    r.appendChild(btn('nx-mini', 'Reset', ()=>{ dashEdit=dashDefault(); dashMixEdit=null; paint(); }));
+    r.appendChild(btn('nx-mini', 'Cancel', ()=>{ dashEdit=null; dashMixEdit=null; paint(); })); r.appendChild(btn('nx-mini pri', 'Save Layout', ()=>{ saveDash(dashEdit); dashEdit=null; dashMixEdit=null; toast('Your dashboard is saved', null); paint(); })); }
   else { r.appendChild(btn('nx-mini', '+ Add a Tile', ()=>{ dashEdit=dashLayout(); paint(); openCatalog(); })); r.appendChild(btn('nx-mini', null, ()=>{ dashEdit=dashLayout(); paint(); })).innerHTML=ic('gear')+'<span>Customize</span>'; }
   vb.appendChild(r); pg.appendChild(vb);
-  if(dashEdit) pg.appendChild(h('p','nx-dtip','Drag tiles to put them in order, make one wide or narrow, take off what you don’t need, then Save Layout. Open any system and use Make This a Dashboard Tile to pin the exact page you want — like an approval queue.'));
+  if(dashEdit) pg.appendChild(h('p','nx-dtip','Drag tiles to put them in order, click a tile’s size to make it Small, Wide, Tall or Large, take off what you don’t need, then Save Layout. Open any system and use Make This a Dashboard Tile to pin the exact page you want — like an approval queue.'));
   const grid=h('div','nx-tiles'+(dashEdit?' editing':''));
   const L=dashEdit || dashLayout();
   L.forEach((cfg, i)=>{ let el=null; try{ el=tile(cfg, i, L); }catch(e){ console.error(e); } if(el) grid.appendChild(el); });
@@ -3982,17 +3995,24 @@ function dashHero(now, hr){
   items.sort((a,b)=>a.o-b.o);
   if(!items.length) nd.appendChild(h('div','nx-nempty','Nothing due in the next seven days.'));
   items.slice(0,6).forEach(it=>{ const b=btn('nx-need', null, it.fn); b.style.setProperty('--k', it.k); b.appendChild(h('span',null,it.d)); b.appendChild(h('b',null,it.t)); nd.appendChild(b); });
-  const all=btn('nx-all', null, ()=>open('week')); all.textContent='Plan My Week →'; nd.appendChild(all);
+  const all=btn('nx-all', null, ()=>open('mine')); all.textContent='See All My Tasks →'; nd.appendChild(all);
   hero.appendChild(nd);
   return hero;
 }
+function nextShared(ids, mins){ const now=Date.now(); let d=today(); const C=ids.map(id=>({id, ev:cal(id)})).filter(c=>c.ev); if(!C.length) return null;
+  let best=null;
+  for(let k=0;k<15;k++,d=addD(d,1)){ if(!workday(d)) continue; let t=Math.max(etAt(d,9), now); t=Math.ceil(t/18e5)*18e5; const end=etAt(d,17);
+    for(; t+mins*6e4<=end; t+=18e5){ const e2=t+mins*6e4; const freeIds=C.filter(c=>!c.ev.some(e=>e.show!=='free' && !e.all && e.s<e2 && e.e>t)).map(c=>c.id);
+      if(freeIds.length===C.length) return {t, n:C.length, of:C.length, out:[]};
+      if(freeIds.indexOf(me())>=0 && (!best || freeIds.length>best.n)) best={t, n:freeIds.length, of:C.length, out:C.map(c=>c.id).filter(id=>freeIds.indexOf(id)<0)}; } }
+  return best; }
 function nextKeyDate(){ const F=(S.dates||[]).filter(d=>d.d && pd(d.e||d.d)>=today()).sort((a,b)=>(b.pin?1:0)-(a.pin?1:0) || (a.d<b.d?-1:1)); return F.find(d=>days(d.d)>=0) || F[0] || null; }
 function dashWeek(){
   const wrap=h('div','nx-sw'); const t0=today(); const x=X();
   for(let i=0;i<7;i++){ const d=addD(t0,i); const key=iso(d), hol=holiday(d), wk=d.getDay()%6===0;
     const due=myOpen().filter(t=>t.due===key), late=i===0 ? myOpen().filter(t=>t.due && days(t.due)<0) : [];
     const kd=keyDatesOn(d), L=!wk && x && x.dayLoad ? x.dayLoad(me(), d) : null;
-    const b=btn('nx-swd'+(i===0?' now':'')+(wk?' wkd':''), null, ()=>open(i===0?'cal':'week'));
+    const b=btn('nx-swd'+(i===0?' now':'')+(wk?' wkd':''), null, ()=>open('cal'));
     b.appendChild(h('span',null, i===0?'Today':WD[d.getDay()])); b.appendChild(h('b',null,String(d.getDate())));
     const pills=h('div','nx-pills'); const pil=(k,n)=>{ for(let j=0;j<Math.min(n,4);j++){ const z=h('i'); z.style.setProperty('--k',k); pills.appendChild(z); } };
     pil('#FF8A7A', late.length); pil('#74BFEB', due.length); pil('#3CCB7F', kd.length); if(L && L.n) pil('#5A7A94', Math.ceil(L.n/2)); b.appendChild(pills);
@@ -4003,11 +4023,11 @@ function dashWeek(){
 }
 /* one tile */
 function tileShell(cfg, meta, i, L){
-  const el=h('div','st-tile t-'+cfg.t+((cfg.w||meta.w)===2?' w2':''));
+  const sz=sizeOf(cfg, i, L); const el=h('div','st-tile t-'+cfg.t+' sz-'+sz);
   el.style.setProperty('--k', meta.k); el.tabIndex=0; el.setAttribute('role','button'); el.setAttribute('aria-label', meta.n);
   if(dashEdit){ el.draggable=true; el.dataset.i=i;
     const ctl=h('div','nx-tctl');
-    const wb=btn('nx-tcb', (cfg.w||meta.w)===2?'Narrow':'Wide', e=>{ e.stopPropagation(); cfg.w=(cfg.w||meta.w)===2?1:2; paint(); }); ctl.appendChild(wb);
+    const wb=btn('nx-tcb', SZN[sz], e=>{ e.stopPropagation(); delete cfg.w; cfg.sz=SIZES[(SIZES.indexOf(sz)+1)%SIZES.length]; paint(); }); wb.title='Change the size: Small, Wide, Tall, Large'; ctl.appendChild(wb);
     if(cfg.t==='sys'){ const sb=btn('nx-tcb','Settings', e=>{ e.stopPropagation(); sysSettings(cfg, sb); }); ctl.appendChild(sb); }
     const rm=btn('nx-tcb x','×', e=>{ e.stopPropagation(); L.splice(i,1); paint(); }); rm.title='Take this tile off'; rm.setAttribute('aria-label','Take '+meta.n+' off'); ctl.appendChild(rm);
     el.appendChild(ctl);
@@ -4025,13 +4045,14 @@ function tile(cfg, i, L){
   const el=tileShell(cfg, meta, i, L);
   const top=h('div','st-top'); top.appendChild(h('span','st-lab', meta.lab||meta.n)); el.appendChild(top);
   const go=()=>{ if(dashEdit) return; meta.go ? meta.go() : null; };
-  const x=X(), t0=today();
+  const x=X(), t0=today(); const SZ=sizeOf(cfg, i, L), tall=SZ==='t'||SZ==='b', wide=SZ==='w'||SZ==='b';
   if(cfg.t==='tasks'){ const M=myOpen(), late=M.filter(t=>t.due && days(t.due)<0).length, all=S.tasks.filter(t=>doers(t).indexOf(me())>=0), done=all.length-M.length;
     if(late) top.appendChild(h('span','st-pill hot', late+' late'));
     const b=h('div','st-big'); b.append(String(M.length)); b.appendChild(h('small',null,'open')); el.appendChild(b);
     const m=h('div','st-meter'); const f=h('i'); f.style.width=(all.length?Math.round(done/all.length*100):0)+'%'; m.appendChild(f); el.appendChild(m);
     el.appendChild(h('div','st-sub', done+' of '+all.length+' done · '+M.filter(t=>t.due && days(t.due)>=0 && days(t.due)<=7).length+' due this week'));
-    const nx=M.sort(byDue)[0]; if(nx){ const n=h('div','st-next'); n.append('Next: '); n.appendChild(h('b',null,nx.t)); if(nx.due) n.append(' · '+fmt(nx.due)); el.appendChild(n); }
+    M.sort(byDue); if(tall){ const ls=h('div','nx-tl2'); M.slice(0, SZ==='b'?8:5).forEach(t=>{ const r=h('div','tr'+(t.due && days(t.due)<0?' late':'')); const ck=btn('ck', null, e=>{ e.stopPropagation(); if(!dashEdit) complete(t, r, e); }); ck.title='Mark done'; ck.innerHTML=ic('check'); r.appendChild(ck); const tt=h('span','tt',t.t); r.appendChild(tt); if(t.due) r.appendChild(h('span','dd', days(t.due)<0 ? (-days(t.due))+'d late' : fmt(t.due))); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) editTask(t); }); ls.appendChild(r); }); el.appendChild(ls); }
+    else { const nx=M[0]; if(nx){ const n=h('div','st-next'); n.append('Next: '); n.appendChild(h('b',null,nx.t)); if(nx.due) n.append(' · '+fmt(nx.due)); el.appendChild(n); } }
     meta.go=()=>open('mine'); }
   else if(cfg.t==='day'){ let day=nextWorkday(t0); const now=Date.now(); if(+day===+t0 && now>etAt(day,17)) day=nextWorkday(addD(day,1));
     top.firstChild.textContent=+day===+t0?'Your Day':'Your '+WDL[day.getDay()];
@@ -4043,13 +4064,15 @@ function tile(cfg, i, L){
     row.appendChild(ep);
     if(nx && !cur){ const ms=Math.max(0,nx.s-now), dd=Math.floor(ms/864e5), hh=Math.floor(ms%864e5/36e5), mm=Math.floor(ms%36e5/6e4); const cd=h('div','mic-cd'); (dd?[[dd,'Days'],[hh,'Hrs']]:[[hh,'Hrs'],[mm,'Min']]).forEach(([v,l])=>{ const sp=h('span'); sp.appendChild(h('b',null,String(v).padStart(2,'0'))); sp.appendChild(h('small',null,l)); cd.appendChild(sp); }); row.appendChild(cd); }
     el.appendChild(row);
-    const ag=h('div','nx-ag'); ev.slice(0,6).forEach(e=>{ const r=h('div','ae'+(e.e<now?' past':'')+(e.s<=now&&e.e>now?' on':'')); r.appendChild(h('span','t',tm(e.s))); r.appendChild(h('span','n',e.t||'Busy')); ag.appendChild(r); }); if(ev.length>6) ag.appendChild(h('div','ae more','+'+(ev.length-6)+' more')); el.appendChild(ag);
+    const cap=SZ==='b'?10:tall?6:wide?4:2; const ag=h('div','nx-ag'+(wide?'':' one')); ev.slice(0,cap).forEach(e=>{ const r=h('div','ae'+(e.e<now?' past':'')+(e.s<=now&&e.e>now?' on':'')); r.appendChild(h('span','t',tm(e.s))); r.appendChild(h('span','n',e.t||'Busy')); ag.appendChild(r); }); if(ev.length>cap) ag.appendChild(h('div','ae more','+'+(ev.length-cap)+' more')); el.appendChild(ag);
+    if(SZ==='b'){ const w9=etAt(day,9), w5=etAt(day,17); const gaps=[]; let c2=Math.max(w9, +day===+t0?now:0); ev.filter(e=>e.show!=='oof').map(e=>[Math.max(e.s,w9),Math.min(e.e,w5)]).filter(z=>z[1]>z[0]).sort((a,b)=>a[0]-b[0]).concat([[w5,w5]]).forEach(([a,b2])=>{ if(a-c2>=30*6e4) gaps.push([c2,a]); c2=Math.max(c2,b2); });
+      if(gaps.length){ const gl=h('div','nx-gaps'); gl.appendChild(h('small',null,'Open Time to Get Things Done')); const gw=h('div','gw'); gaps.slice(0,6).forEach(([a,b2])=>{ const m=Math.round((b2-a)/6e4); const g=h('span'); g.appendChild(h('b',null,tm(a)+'–'+tm(b2))); g.append(' '+(m>=60?(Math.round(m/30)/2)+'h':m+'m')); gw.appendChild(g); }); gl.appendChild(gw); el.appendChild(gl); } }
     const Ld=x && x.dayLoad ? x.dayLoad(me(), day) : null; if(Ld){ const n=h('div','st-next'); n.appendChild(h('b',null,(Math.round(Ld.free/30)/2)+'h open')); n.append(' between 9 and 5 · '+ev.length+(ev.length===1?' meeting':' meetings')); el.appendChild(n); }
     meta.go=()=>open('cal'); }
   else if(cfg.t==='email'){ const ok=x && x.MAIL.state==='ok'; const items=ok ? x.MAIL.items.filter(m=>m.flagged||m.important||m.unread) : [];
     const art=h('div','nx-env'); art.innerHTML='<svg viewBox="0 0 64 44"><rect x="2" y="2" width="60" height="40" rx="4"/><path d="M4 5l28 21L60 5"/></svg>'; if(ok && items.length) art.appendChild(h('b',null,String(items.length))); el.appendChild(art);
     if(!ok){ el.appendChild(h('div','st-sub','Connect your Outlook email and what you’ve flagged or need to read shows up here.')); }
-    else { const fl=items.filter(m=>m.flagged).length; el.appendChild(h('div','st-sub', items.length ? fl+' flagged · '+items.filter(m=>m.unread).length+' unread' : 'Nothing flagged or waiting')); if(items[0]){ const n=h('div','st-next'); n.appendChild(h('b',null,items[0].from)); n.append(' · '+items[0].subject); el.appendChild(n); } }
+    else { const fl=items.filter(m=>m.flagged).length; el.appendChild(h('div','st-sub', items.length ? fl+' flagged · '+items.filter(m=>m.unread).length+' unread' : 'Nothing flagged or waiting')); const show=items.slice(0, SZ==='b'?6:tall?4:wide?2:1); if(show.length>1 || tall){ const ls=h('div','nx-ml2'); show.forEach(m=>{ const r=h('div','mr'); r.appendChild(h('b',null,m.from)); r.appendChild(h('span',null,m.subject)); if(m.link) r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) window.open(m.link,'_blank','noopener'); }); ls.appendChild(r); }); el.appendChild(ls); } else if(items[0]){ const n=h('div','st-next'); n.appendChild(h('b',null,items[0].from)); n.append(' · '+items[0].subject); el.appendChild(n); } }
     meta.go=()=>open('inbox'); }
   else if(cfg.t==='asks'){ const A=myAsks(), nw=A.filter(a=>(a.state||'New')==='New');
     if(nw.length) top.appendChild(h('span','st-pill hot', nw.length+' new'));
@@ -4059,43 +4082,55 @@ function tile(cfg, i, L){
   else if(cfg.t==='load'){ let mon=addD(t0, -((t0.getDay()+6)%7)); if(t0.getDay()%6===0) mon=addD(mon,7); const D=[0,1,2,3,4].map(k=>addD(mon,k));
     const bars=h('div','nx-bars'); let free=0; D.forEach(d=>{ const Ld=x && x.dayLoad ? x.dayLoad(me(), d) : null; const hrs=Ld?Ld.busy/60:0; if(Ld) free+=Ld.free; const c=h('div','bc'+(+d===+t0?' on':'')); const bb=h('i'); bb.style.height=Math.max(4, Math.min(100, hrs/8*100))+'%'; c.appendChild(h('b',null,(Math.round(hrs*2)/2)+'h')); c.appendChild(bb); c.appendChild(h('span',null,WD[d.getDay()])); bars.appendChild(c); }); el.appendChild(bars);
     el.appendChild(h('div','st-next', (Math.round(free/30)/2)+' hours open this week between meetings'));
-    meta.go=()=>open('week'); }
+    meta.go=()=>open('cal'); }
   else if(cfg.t==='people' || cfg.t==='team'){ const ids=cfg.t==='team' ? people().filter(p=>p.id!==me()).map(p=>p.id) : (x ? x.myPeople() : []);
     if(!ids.length){ el.appendChild(h('div','st-sub','Choose your direct reports, or anyone you keep an eye on.')); const c=btn('st-act','Choose My People', e=>{ e.stopPropagation(); x && x.pickPeople(); }); el.appendChild(c); meta.go=()=>x && x.pickPeople(); }
     else { const row=h('div','nx-avrow'); const tally={free:0,busy:0,away:0,off:0,unk:0}; ids.forEach(id=>{ const pp=person(id); if(!pp) return; const s2=statusOf(pp); tally[s2.k]=(tally[s2.k]||0)+1; const w=h('span','nx-avw'); w.appendChild(av(id,34)); w.appendChild(h('i','nx-dot '+s2.k)); w.title=pp.name+' · '+s2.t+(s2.s?' '+s2.s:''); row.appendChild(w); }); el.appendChild(row);
       const parts=[]; if(tally.free) parts.push(tally.free+' free'); if(tally.busy) parts.push(tally.busy+' in meetings'); if(tally.away) parts.push(tally.away+' out'); if(tally.off) parts.push(t0.getDay()%6===0?'weekend':tally.off+' off');
       el.appendChild(h('div','st-sub', parts.join(' · ')||'—'));
+      if(tall){ const ls=h('div','nx-pl2'); ids.slice(0,SZ==='b'?8:5).forEach(id=>{ const pp=person(id); if(!pp) return; const s2=statusOf(pp); const r=h('div','pr'); r.appendChild(h('i','nx-dot '+s2.k)); r.appendChild(h('b',null,first(id))); r.appendChild(h('span',null,s2.t+(s2.s?' · '+s2.s:''))); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) open('u:'+id); }); ls.appendChild(r); }); el.appendChild(ls); }
       const late=S.tasks.filter(t=>isOpen(t) && t.due && days(t.due)<0 && doers(t).some(d=>ids.indexOf(d)>=0)).length; const n=h('div','st-next'); n.appendChild(h('b',null,String(S.tasks.filter(t=>isOpen(t) && doers(t).some(d=>ids.indexOf(d)>=0)).length))); n.append(' open'); if(late){ n.append(' · '); n.appendChild(h('b',null,late+' late')); } el.appendChild(n);
       meta.go=()=>open('people'); } }
   else if(cfg.t==='projects'){ const R=activeRocks().filter(r=>r.lead===me() || S.tasks.some(t=>t.r===r.id && isOpen(t) && doers(t).indexOf(me())>=0));
     if(!R.length) el.appendChild(h('div','st-sub','You’re not on a Team Project right now.'));
-    R.slice(0,4).forEach(r=>{ const ts=S.tasks.filter(t=>t.r===r.id), op=ts.filter(isOpen), pct=ts.length?Math.round((ts.length-op.length)/ts.length*100):0; const rw=btn('nx-prj', null, e=>{ e.stopPropagation(); if(!dashEdit) open('p:'+r.id); }); rw.style.setProperty('--rc', rcol(r)); const tp=h('div','tp'); tp.appendChild(h('b',null,r.name)); tp.appendChild(h('span',null,pct+'%')); rw.appendChild(tp); const m=h('div','st-meter'); const f=h('i'); f.style.width=pct+'%'; f.style.background=rcol(r); m.appendChild(f); rw.appendChild(m); el.appendChild(rw); });
-    if(R.length>4) el.appendChild(h('div','st-next','+'+(R.length-4)+' more'));
+    const pc=SZ==='b'?8:tall?6:wide?4:3; R.slice(0,pc).forEach(r=>{ const ts=S.tasks.filter(t=>t.r===r.id), op=ts.filter(isOpen), pct=ts.length?Math.round((ts.length-op.length)/ts.length*100):0; const rw=btn('nx-prj', null, e=>{ e.stopPropagation(); if(!dashEdit) open('p:'+r.id); }); rw.style.setProperty('--rc', rcol(r)); const tp=h('div','tp'); tp.appendChild(h('b',null,r.name)); tp.appendChild(h('span',null,pct+'%')); rw.appendChild(tp); const m=h('div','st-meter'); const f=h('i'); f.style.width=pct+'%'; f.style.background=rcol(r); m.appendChild(f); rw.appendChild(m);
+      if(tall && R.length<=3){ op.filter(t=>t.due).sort(byDue).slice(0, R.length===1?4:2).forEach(t=>{ const q=h('div','pn'); q.appendChild(h('b',null, days(t.due)<0 ? (-days(t.due))+'d late' : fmt(t.due))); q.appendChild(h('span',null, t.t)); q.appendChild(h('em',null, first(doers(t)[0]))); rw.appendChild(q); }); }
+      el.appendChild(rw); });
+    if(R.length>pc) el.appendChild(h('div','st-next','+'+(R.length-pc)+' more'));
     meta.go=()=>openClassic('rocks'); }
   else if(cfg.t==='keydate'){ const kd=nextKeyDate(); if(!kd){ el.appendChild(h('div','st-sub','No key dates coming up.')); meta.go=()=>openClassic('dates'); }
     else { const n=Math.max(0,days(kd.d)), C=2*Math.PI*44, frac=Math.max(.04, 1-Math.min(n,120)/120); const rg=h('div','ring'); rg.innerHTML='<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44"/><circle class="rv" cx="50" cy="50" r="44" stroke-dasharray="'+(C*frac).toFixed(1)+' '+C.toFixed(1)+'"/></svg>'; const dv=h('div'); dv.appendChild(h('b',null,String(n))); dv.appendChild(h('small',null,n===1?'day':'days')); rg.appendChild(dv); el.appendChild(rg);
-      const s2=h('div','st-next'); s2.appendChild(h('b',null,kd.t)); s2.append(' · '+fmt(kd.d)+(kd.e&&kd.e!==kd.d?' – '+fmt(kd.e):'')); el.appendChild(s2); meta.go=()=>window.__editDate && window.__editDate(kd); } }
+      el.appendChild(h('div','nx-kdt', kd.t)); el.lastChild.appendChild(h('small',null, fmt(kd.d)+(kd.e&&kd.e!==kd.d?' – '+fmt(kd.e):'')));
+      if(tall || wide){ const more=(S.dates||[]).filter(d=>d!==kd && d.d && days(d.d)>=0).sort((a,b)=>a.d<b.d?-1:1).slice(0, SZ==='b'?5:3); if(more.length){ const ls=h('div','nx-kl2'); more.forEach(d=>{ const r=h('div','kr'); r.appendChild(h('b',null,days(d.d)+'d')); r.appendChild(h('span',null,d.t)); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit && window.__editDate) window.__editDate(d); }); ls.appendChild(r); }); el.appendChild(ls); } }
+      meta.go=()=>window.__editDate && window.__editDate(kd); } }
   else if(cfg.t==='meeting'){ let md=''; try{ const nm=window.__mtg && window.__mtg.next && window.__mtg.next(); md=typeof nm==='string'?nm:''; }catch(e){}
     if(md){ const n=Math.max(0,days(md)); const cd=h('div','mic-cd'); [[n,n===1?'Day':'Days']].forEach(([v,l])=>{ const sp=h('span'); sp.appendChild(h('b',null,String(v).padStart(2,'0'))); sp.appendChild(h('small',null,l)); cd.appendChild(sp); }); const row=h('div','mic-row'); const ep=h('div','mic-ep'); ep.appendChild(h('b',null,WDL[pd(md).getDay()]+', '+fmt(md))); const items=(S.agenda||[]).filter(a=>a.mtg===md && !a.done); ep.appendChild(h('small',null, items.length+(items.length===1?' item':' items')+' on the agenda')); row.appendChild(ep); row.appendChild(cd); el.appendChild(row);
+      if(tall){ const ai=(S.agenda||[]).filter(a=>a.mtg===md && !a.done).slice(0,5); if(ai.length){ const ls=h('div','nx-kl2'); ai.forEach(a=>{ const r=h('div','kr'); r.appendChild(h('b',null,a.kind||'Item')); r.appendChild(h('span',null,a.t)); ls.appendChild(r); }); el.appendChild(ls); } }
       const st2=h('div','mic-steps'); ['Before Business','Team Projects','Around the Room','Good of the Order'].forEach(z=>st2.appendChild(h('span',null,z))); el.appendChild(st2); }
     else el.appendChild(h('div','st-sub','No team meeting on the calendar.'));
     const n2=h('div','st-next'); n2.append('Raise something: '); n2.appendChild(h('b',null,'add it to the agenda')); el.appendChild(n2);
     meta.go=()=>openClassic('agenda'); }
-  else if(cfg.t==='wins'){ const W=S.tasks.filter(t=>!isOpen(t)).sort((a,b)=>(b.at||0)-(a.at||0)).slice(0,3);
+  else if(cfg.t==='wins'){ const W=S.tasks.filter(t=>!isOpen(t)).sort((a,b)=>(b.at||0)-(a.at||0)).slice(0, SZ==='b'?8:tall?6:3);
     W.forEach(t=>{ const r=h('div','nx-wn'); const d=doers(t)[0]; if(d) r.appendChild(av(d,22)); const tx=h('span',null,t.t); r.appendChild(tx); el.appendChild(r); }); if(!W.length) el.appendChild(h('div','st-sub','Nothing finished yet.'));
     meta.go=()=>{ ui.showDone=true; save(); open('all'); }; }
   else if(cfg.t==='board'){ let names=[]; try{ const Lb=(S.nb&&S.nb.pages&&S.nb.pages[0]&&S.nb.pages[0].tabs&&S.nb.pages[0].tabs[0]&&S.nb.pages[0].tabs[0].L)||S.layout||[]; Lb.forEach(r=>(r.r||[]).forEach(c=>names.push(c.t))); }catch(e){}
     const NM={mytasks:'My Tasks',mynote:'My Notes',mtoday:'Meeting Trackers',links:'My Systems',vault:'Locked Note'}; const g=h('div','nx-bgrid'); [...new Set(names)].slice(0,6).forEach(n=>g.appendChild(h('span',null,NM[n]||n.replace(/^./,c=>c.toUpperCase())))); el.appendChild(g);
-    el.appendChild(h('div','st-next', 'Notes, the locked note and system panels — arranged your way'));
+    el.appendChild(h('div','st-next', 'Your own board — free-form, notebook or rows'));
     meta.go=()=>openClassic('mine'); }
-  else if(cfg.t==='sys'){ meta.draw(el, top); }
+  else if(cfg.t==='findtime'){ const ids=(x && x.myPeople().length ? x.myPeople() : people().filter(p=>p.id!==me()).map(p=>p.id));
+    const row=h('div','nx-avrow'); let free=0; ids.forEach(id=>{ const pp=person(id); if(!pp) return; const s2=statusOf(pp); if(s2.k==='free') free++; const w=h('span','nx-avw'); w.appendChild(av(id, tall?34:28)); w.appendChild(h('i','nx-dot '+s2.k)); w.title=pp.name+' · '+s2.t+(s2.s?' '+s2.s:''); row.appendChild(w); }); el.appendChild(row);
+    const slot=nextShared([me()].concat(ids.slice(0,6)), 30);
+    const b=h('div','nx-ftv'); b.appendChild(h('small',null, !slot ? 'Next time you’re free together' : slot.n===slot.of ? 'Next time you’re all free' : 'Best time in the next two weeks')); b.appendChild(h('b',null, slot ? WDL[new Date(slot.t).getDay()]+', '+MON[new Date(slot.t).getMonth()]+' '+new Date(slot.t).getDate()+' at '+tmL(slot.t) : 'Calendars aren’t in yet')); if(slot && slot.n<slot.of) b.appendChild(h('span',null, slot.n+' of '+slot.of+' free — not '+slot.out.map(first).join(', '))); el.appendChild(b);
+    el.appendChild(h('div','st-next', free+' of '+ids.length+' free right now · tap to pick a time'));
+    meta.go=()=>{ try{ const k2='tools:team-hq:mismo.teamhq.ft'; const cur=JSON.parse(localStorage.getItem(k2)||'{}'); cur.who=[me()].concat(ids.slice(0,6)); localStorage.setItem(k2, JSON.stringify(cur)); }catch(e){} openClassic('findtime'); }; }
+  else if(cfg.t==='sys'){ meta.draw(el, top, SZ); }
   el.addEventListener('click', e=>{ if(dashEdit || e.target.closest('button:not(.st-tile)')) return; go(); });
   el.addEventListener('keydown', e=>{ if((e.key==='Enter'||e.key===' ') && e.target===el && !dashEdit){ e.preventDefault(); go(); } });
   return el;
 }
 function sysMeta(cfg){ const x=X(); const s=x && x.SYS.find(z=>z.k===cfg.s); if(!s) return null;
   const meta={n:s.n, lab:(x.SHORT[s.k]||s.n), k:s.c};
-  meta.draw=(el, top)=>{
+  meta.draw=(el, top, SZ)=>{
     if(cfg.go) top.appendChild(h('span','st-pill', cfg.go));
     const body2=h('div','nx-sysb'); const sym=h('div','nx-sym'); sym.innerHTML=x.symbol(s.k); body2.appendChild(sym);
     const val=h('div','nx-sysv');
@@ -4105,6 +4140,7 @@ function sysMeta(cfg){ const x=X(); const s=x && x.SYS.find(z=>z.k===cfg.s); if(
     else if(cfg.go){ val.appendChild(h('div','st-sub','Opens straight to '+cfg.go+'. The count shows here after the first time you open it.')); }
     else val.appendChild(h('div','st-sub', s.d));
     body2.appendChild(val); el.appendChild(body2);
+    if(SZ==='t' || SZ==='b'){ const rest=figs.filter(f=>f!==fig); const nv=x.navOf(s.k).filter(n=>n!==cfg.go && (x.countFor(s.k,n)||{}).n>0); const ls=h('div','nx-kl2'); rest.slice(0,4).forEach(f=>{ const r=h('div','kr'); r.appendChild(h('b',null,String(f.v))); r.appendChild(h('span',null,f.n)); ls.appendChild(r); }); nv.slice(0, Math.max(0, 5-rest.length)).forEach(n=>{ const r=h('div','kr'); r.appendChild(h('b',null,String(x.countFor(s.k,n).n))); r.appendChild(h('span',null,n)); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) openSystem(s.k, n); }); ls.appendChild(r); }); if(ls.childNodes.length) el.appendChild(ls); else el.appendChild(h('div','st-sub', s.d)); }
     const nt=h('div','st-next'); nt.append(c ? 'Checked '+x.ago(c.at) : fig && fig.asof ? 'As of '+fmt(fig.asof) : 'Opens right here'); nt.appendChild(h('b','opn',' Open →')); el.appendChild(nt);
   };
   meta.go=()=>openSystem(s.k, cfg.go||'');
@@ -4121,7 +4157,7 @@ function openCatalog(){
   const close=()=>ov.remove();
   const sec=(t)=>box.appendChild(h('div','nx-sec',t));
   const card=(name, desc, k, symHtml, fn, on)=>{ const b=btn('nx-cti'+(on?' on':'')); b.style.setProperty('--k',k); const i=h('span','ci'); i.innerHTML=symHtml; b.appendChild(i); const t=h('span','tx'); t.appendChild(h('b',null,name)); t.appendChild(h('small',null,desc)); b.appendChild(t); b.appendChild(h('em',null,on?'On':'Add')); b.addEventListener('click', ()=>{ fn(); b.classList.add('on'); b.querySelector('em').textContent='Added'; }); return b; };
-  ['Your Day','Team'].forEach(g=>{ sec(g); const gr=h('div','nx-ctg'); Object.keys(TILES).filter(k=>TILES[k].g===g).forEach(k=>{ const on=dashEdit.some(z=>z.t===k); gr.appendChild(card(TILES[k].n, TILES[k].d, TILES[k].k, ic(k==='email'?'mail':k==='people'||k==='team'?'ppl':k==='day'||k==='load'?'cal':k==='tasks'?'mine':k==='board'?'all':k==='asks'?'inbox':'week'), ()=>{ if(!dashEdit.some(z=>z.t===k)) dashEdit.push({t:k}); paint(); }, on)); }); box.appendChild(gr); });
+  ['Your Day','Team'].forEach(g=>{ sec(g); const gr=h('div','nx-ctg'); Object.keys(TILES).filter(k=>TILES[k].g===g).forEach(k=>{ const on=dashEdit.some(z=>z.t===k); gr.appendChild(card(TILES[k].n, TILES[k].d, TILES[k].k, ic(k==='email'?'mail':k==='people'||k==='team'?'ppl':k==='day'||k==='load'?'cal':k==='tasks'?'mine':k==='board'?'all':k==='asks'?'inbox':k==='findtime'?'search':'week'), ()=>{ if(!dashEdit.some(z=>z.t===k)) dashEdit.push({t:k}); paint(); }, on)); }); box.appendChild(gr); });
   sec('MISMO Systems'); const gs=h('div','nx-ctg'); (x?x.SYS:[]).filter(z=>x.canOpen(z.k)).sort((a,b)=>a.n.localeCompare(b.n)).forEach(z=>{ const on=dashEdit.some(q=>q.t==='sys' && q.s===z.k); gs.appendChild(card(z.n, z.d, z.c, x.symbol(z.k), ()=>{ dashEdit.push({t:'sys', s:z.k}); paint(); }, on)); }); box.appendChild(gs);
   const ft=h('div','hqx-ft'); const d=btn('btn','Done', close); ft.appendChild(d); box.appendChild(ft);
   ov.appendChild(box); ov.addEventListener('click', e=>{ if(e.target===ov) close(); }); document.body.appendChild(ov);
@@ -4286,7 +4322,7 @@ function vCal(){
 
 /* ---------- phones: a bottom tab bar and a sheet with everything ---------- */
 function drawTabbar(){ if(!tabbar) return; tabbar.textContent='';
-  [['day','Dashboard','home'],['week','My Week','week'],['mine','My Tasks','mine'],['inbox','Inbox','inbox']].forEach(([k,l,i])=>{ const b=btn('nx-tb'+(ui.view===k?' on':''), null, ()=>open(k)); b.dataset.k=k; b.innerHTML=ic(i)+'<span>'+l+'</span>'; if(k==='inbox'){ const n=myAsks().length+myNudges().length; if(n) b.insertAdjacentHTML('beforeend','<b class="nx-badge hot">'+n+'</b>'); } tabbar.appendChild(b); });
+  [['day','Dashboard','home'],['mine','My Tasks','mine'],['cal','Calendar','cal'],['inbox','Inbox','inbox']].forEach(([k,l,i])=>{ const b=btn('nx-tb'+(ui.view===k?' on':''), null, ()=>open(k)); b.dataset.k=k; b.innerHTML=ic(i)+'<span>'+l+'</span>'; if(k==='inbox'){ const n=myAsks().length+myNudges().length; if(n) b.insertAdjacentHTML('beforeend','<b class="nx-badge hot">'+n+'</b>'); } tabbar.appendChild(b); });
   const m=btn('nx-tb', null, openMenuSheet); m.innerHTML=ic('menu')+'<span>Everything</span>'; tabbar.appendChild(m);
 }
 function openMenuSheet(){
@@ -4306,8 +4342,8 @@ function placeSwitch(){ const r=document.querySelector('.hqtop-r'); if(!r || r.q
   sw=btn('nx-switch', null, ()=>setOn(!ui.on)); sw.title='Switch between the new and classic Team HQ'; r.insertBefore(sw, r.firstChild); paintSwitch(); }
 function paintSwitch(){ if(!sw) return; sw.innerHTML='<span class="tg'+(ui.on?' on':'')+'"><i></i></span><span class="lb">New Team HQ</span>'; sw.setAttribute('aria-pressed', String(ui.on)); }
 function setOn(v){ ui.on=v; save(); paintSwitch();
-  if(v){ if(!shell) build(); document.documentElement.classList.add('nx-on'); drawRail(); if(viewKind()==='classic') openClassic(ui.view.slice(2)); else open(ui.view); }
-  else { hideApp(); document.documentElement.classList.remove('nx-on'); railNodes.forEach(n=>n.remove()); railNodes=[]; restoreBoardBtn(); window.__show && window.__show(S.tab && S.tab.indexOf('nx')<0 ? S.tab : 'today'); } }
+  if(v){ if(!shell) build(); document.documentElement.classList.add('nx-on'); drawRail(); open('day'); try{ window.__hub && window.__hub.paint(); }catch(e){} }
+  else { hideApp(); document.documentElement.classList.remove('nx-on'); railNodes.forEach(n=>n.remove()); railNodes=[]; restoreBoardBtn(); window.__show && window.__show(S.tab && S.tab.indexOf('nx')<0 ? S.tab : 'today'); try{ window.__hub && window.__hub.paint(); }catch(e){} } }
 
 /* ---------- keep it live ---------- */
 let lastSig='';
@@ -4324,7 +4360,7 @@ document.addEventListener('click', onRailClick, true);
 const onKey=e=>{ if(!ui.on || !shell || shell.hidden) return; const a=document.activeElement; if(a && (a.tagName==='INPUT'||a.tagName==='TEXTAREA'||a.tagName==='SELECT'||a.isContentEditable)) return;
   if(e.metaKey||e.ctrlKey||e.altKey) return; if(document.querySelector('dialog[open], .modal.open, .ed-ov:not([hidden])')) return;
   const k=e.key.toLowerCase();
-  const m={'1':'day','2':'week','3':'inbox','4':'mine','5':'cal','6':'all','7':'people'}[k]; if(m){ open(m); e.preventDefault(); return; }
+  const m={'1':'day','2':'inbox','3':'mine','4':'cal','5':'all','6':'people'}[k]; if(m){ open(m); e.preventDefault(); return; }
   if(k==='c'){ const i=head.querySelector('.nx-qa input'); if(i){ e.preventDefault(); i.focus(); } return; }
   if(k==='/'){ const i=head.querySelector('.nx-find') || head.querySelector('.nx-qa input'); if(i){ e.preventDefault(); i.focus(); } return; }
   const rows=[...body.querySelectorAll('.nx-row[data-id]')].filter(r=>r.offsetParent);
@@ -4527,7 +4563,6 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .st-tile{--st-line:rgba(116,191,235,.18);position:relative;display:flex;flex-direction:column;gap:10px;min-width:0;padding:16px 18px;border:1px solid rgba(116,191,235,.18);border-radius:12px;color:#fff;cursor:pointer;text-align:left;background:radial-gradient(120% 90% at 100% 0%,color-mix(in srgb,var(--k,#74bfeb) 26%,transparent),transparent 60%),linear-gradient(160deg,#10324a,#0b2436);box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 10px 24px -14px rgba(6,32,47,.6);transition:transform .18s,box-shadow .18s;overflow:hidden}
 .st-tile:hover{transform:translateY(-3px);box-shadow:0 0 0 1px color-mix(in srgb,var(--k,#74bfeb) 55%,transparent),0 18px 34px -16px rgba(6,32,47,.75)}
 .st-tile:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
-.st-tile.w2{grid-column:span 2}
 .st-top{display:flex;align-items:center;gap:8px;min-width:0}
 .st-lab{font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:color-mix(in srgb,var(--k,#74bfeb) 70%,#fff);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .st-pill{margin-left:auto;flex:0 0 auto;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;background:rgba(255,255,255,.12);color:#fff;white-space:nowrap;max-width:60%;overflow:hidden;text-overflow:ellipsis}
@@ -4566,6 +4601,7 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-prj{display:flex;flex-direction:column;gap:5px;width:100%;padding:0;border:0;background:none;font:inherit;color:#fff;text-align:left;cursor:pointer}
 .nx-prj .tp{display:flex;gap:8px;font-size:12.5px}.nx-prj .tp b{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nx-prj .tp span{color:rgba(255,255,255,.7);font-weight:700}
 .nx-prj:hover .tp b{color:var(--sky)}
+.nx-prj .pn{display:flex;gap:8px;align-items:baseline;padding:5px 8px;border-radius:5px;background:rgba(255,255,255,.06);font-size:12px;min-width:0}.nx-prj .pn b{flex:0 0 auto;color:var(--rc);font-size:11px}.nx-prj .pn span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(255,255,255,.85)}.nx-prj .pn em{font-style:normal;flex:0 0 auto;font-size:11px;color:rgba(255,255,255,.55)}
 .nx-bars{display:flex;gap:10px;align-items:flex-end;height:96px}
 .nx-bars .bc{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%}
 .nx-bars .bc i{display:block;width:100%;max-width:34px;border-radius:4px 4px 2px 2px;background:linear-gradient(180deg,var(--k),color-mix(in srgb,var(--k) 45%,transparent))}
@@ -4596,7 +4632,32 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-cti em{font-style:normal;flex:0 0 auto;font-size:11.5px;font-weight:700;color:var(--c1)}.nx-cti.on em{color:var(--good)}
 @media(max-width:1250px){.nx-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:900px){.nx-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.nx-hero{grid-template-columns:minmax(0,1fr)}}
-@media(max-width:640px){.nx-dash{padding:12px 12px 30px}.nx-hhi h1{font-size:24px}.nx-hhi p{font-size:14px}.nx-sw{display:flex;overflow-x:auto}.nx-swd{flex:0 0 96px}.nx-tiles{grid-template-columns:minmax(0,1fr)}.st-tile.w2{grid-column:auto}.nx-ag{grid-template-columns:minmax(0,1fr)}.nx-dvr{margin-left:0}}
+@media(max-width:640px){.nx-dash{padding:12px 12px 30px}.nx-hhi h1{font-size:24px}.nx-hhi p{font-size:14px}.nx-sw{display:flex;overflow-x:auto}.nx-swd{flex:0 0 96px}.nx-tiles{grid-template-columns:minmax(0,1fr)}.nx-ag{grid-template-columns:minmax(0,1fr)}.nx-dvr{margin-left:0}}
+.st-tile.sz-w{grid-column:span 2}.st-tile.sz-t{grid-row:span 2}.st-tile.sz-b{grid-column:span 2;grid-row:span 2}
+.nx-tiles{grid-auto-flow:row dense}
+.nx-ag.one{grid-template-columns:minmax(0,1fr)}
+.nx-tl2{display:flex;flex-direction:column;gap:4px}
+.nx-tl2 .tr{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;background:rgba(255,255,255,.06);font-size:12.5px;min-width:0;transition:opacity .3s,transform .3s}
+.nx-tl2 .tr:hover{background:rgba(255,255,255,.12)}.nx-tl2 .tr.done{opacity:0;transform:translateX(20px)}
+.nx-tl2 .ck{flex:0 0 auto;width:18px;height:18px;padding:0;border:1.5px solid rgba(255,255,255,.45);border-radius:50%;background:transparent;color:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.nx-tl2 .ck svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:3}.nx-tl2 .ck:hover{border-color:#3ccb7f;color:#3ccb7f}
+.nx-tl2 .tt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nx-tl2 .dd{flex:0 0 auto;font-size:11px;color:rgba(255,255,255,.6);font-weight:700}.nx-tl2 .tr.late .dd{color:#ff8a7a}
+.nx-ml2,.nx-pl2,.nx-kl2{display:flex;flex-direction:column;gap:4px}
+.nx-ml2 .mr,.nx-pl2 .pr,.nx-kl2 .kr{display:flex;align-items:baseline;gap:8px;padding:6px 8px;border-radius:6px;background:rgba(255,255,255,.06);font-size:12.5px;min-width:0;cursor:pointer}
+.nx-ml2 .mr:hover,.nx-pl2 .pr:hover,.nx-kl2 .kr:hover{background:rgba(255,255,255,.12)}
+.nx-ml2 b,.nx-pl2 b{flex:0 0 auto;max-width:40%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nx-ml2 span,.nx-pl2 span,.nx-kl2 span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(255,255,255,.8)}
+.nx-pl2 .pr{align-items:center}.nx-pl2 .nx-dot{position:static;flex:0 0 auto;border:0}
+.nx-kl2 b{flex:0 0 auto;min-width:34px;color:var(--k)}
+.nx-kdt{font-size:14px;font-weight:700;text-align:center;line-height:1.3}.nx-kdt small{display:block;font-size:12px;font-weight:500;color:rgba(255,255,255,.65)}
+.nx-ftv{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:8px;background:rgba(0,0,0,.22);border:1px solid var(--st-line)}
+.nx-gaps{display:flex;flex-direction:column;gap:6px}.nx-gaps small{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:rgba(255,255,255,.6)}
+.nx-gaps .gw{display:flex;flex-wrap:wrap;gap:6px}.nx-gaps .gw span{padding:6px 10px;border-radius:6px;background:repeating-linear-gradient(135deg,rgba(60,203,127,.16) 0 7px,rgba(60,203,127,.06) 7px 13px);border:1px solid rgba(60,203,127,.35);font-size:12px;color:rgba(255,255,255,.8)}.nx-gaps .gw b{color:#7ee2b8;margin-right:4px}
+.nx-ftv span{font-size:12px;color:rgba(255,255,255,.7)}
+.nx-ftv small{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:rgba(255,255,255,.6)}.nx-ftv b{font-size:18px;color:var(--k)}
+.st-tile.sz-b .nx-sym,.st-tile.sz-t .nx-sym{width:76px;height:76px}
+.st-tile.sz-b .st-big{font-size:52px}
+@media(max-width:900px){.st-tile.sz-b,.st-tile.sz-w{grid-column:span 2}}
+@media(max-width:640px){.st-tile.sz-w,.st-tile.sz-b{grid-column:auto}.st-tile.sz-t,.st-tile.sz-b{grid-row:auto}}
 /* email, people, week */
 .nx-mrow{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--rule);background:var(--surface);cursor:pointer}
 .nx-mrow:last-child{border-bottom:0}.nx-mrow:hover{background:var(--surface-2)}
@@ -4890,7 +4951,8 @@ document.head.appendChild(css);
 /* ---------- start ---------- */
 placeSwitch();
 const mo=new MutationObserver(()=>placeSwitch()); const topEl=document.querySelector('.hqtop'); if(topEl) mo.observe(topEl, {childList:true, subtree:true});
-if(ui.on){ build(); document.documentElement.classList.add('nx-on'); drawRail(); if(viewKind()==='classic') { markRail(); } else open(ui.view); lastSig=sig(); }
+/* it always opens on My Dashboard */
+if(ui.on){ build(); document.documentElement.classList.add('nx-on'); drawRail(); open('day'); lastSig=sig(); try{ window.__hub && window.__hub.paint(); }catch(e){} }
 window.__nx={ version:'2.1', paint, open, setOn, parse:parseQuick, ui, pinTile,
   destroy(){ clearInterval(live); clearInterval(clock); mo.disconnect(); railMo.disconnect(); document.removeEventListener('keydown', onKey); document.removeEventListener('click', onRailClick, true); window.removeEventListener('resize', onResize);
     railNodes.forEach(n=>n.remove()); restoreBoardBtn(); if(shell) shell.remove(); if(tabbar) tabbar.remove(); if(sw) sw.remove(); closeMenus(); if(toastEl) toastEl.remove(); css.remove(); document.documentElement.classList.remove('nx-on','nx-show','nx-dragging'); } };
