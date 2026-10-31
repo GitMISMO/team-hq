@@ -47,7 +47,7 @@ function loadMail(force){
     MAIL.data=d||null; const list=d ? (Array.isArray(d) ? d : (d.msgs||d.mail||d.value||d.items||[])) : [];
     /* leave out automatic replies, out-of-office notes, bounce-backs and meeting responses — not email anyone needs to look at */
     const NOISE=/^\s*(automatic reply|auto[- ]?reply|autoreply|out of (the )?office|ooo\b|undeliverable|delivery (status notification|has failed)|mail delivery failed|accepted:|declined:|tentative:|tentatively accepted:|canceled:|cancelled:|read:|not read:|recall:)/i;
-    MAIL.items=list.map(norm).filter(m=>!NOISE.test(m.subject)).sort((a,b)=>b.at-a.at); MAIL.state=d ? 'ok' : 'none'; MAIL.at=Date.now(); MAIL.sent=d && Date.parse(d.at||'') || 0; return MAIL;
+    MAIL.items=list.map(norm).filter(m=>!NOISE.test(m.subject)).sort((a,b)=>b.at-a.at); MAIL.state=d ? 'ok' : 'none'; MAIL.at=Date.now(); MAIL.sent=d && Date.parse(d.at||'') || 0; try{ if(ACT.on) settle(); }catch(e){} return MAIL;
   }).catch(()=>{ MAIL.state='none'; MAIL.at=Date.now(); return MAIL; });
   return MAIL.p;
 }
@@ -229,10 +229,163 @@ html.hqx-sys-on body{overflow:hidden}
 `;
 document.head.appendChild(css2);
 
+/* ---------- Do It in Outlook ----------
+   Team HQ never touches Outlook itself. Flag, read, file, delete and book requests are saved with the
+   person's own signed-in Team HQ settings (bset.hqActs). Their "Team HQ Actions – <name>" flow checks
+   every couple of minutes, carries out only these kinds of requests on their own mailbox, and writes
+   back "act-done-<id>" with each request's id and result. Delete always means Deleted Items. */
+const ACT={on:false, at:0, sent:0, done:{}, busy:false};
+const MAXQ=60;
+const acts=()=>{ if(!S.bset) S.bset={}; if(!Array.isArray(S.bset.hqActs)) S.bset.hqActs=[]; return S.bset.hqActs; };
+const rid=()=>'a'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const fireActs=()=>{ try{ window.dispatchEvent(new Event('hq:acts')); }catch(e){} };
+const saveActs=()=>{ try{ window.__saveMine && window.__saveMine(); }catch(e){} fireActs(); };
+const okSt=s=>s>=200 && s<300;
+const VERB={flag:'Flagging', unflag:'Unflagging', read:'Marking read', unread:'Marking unread', move:'Filing', del:'Deleting', book:'Booking', fold:'Getting folders'};
+const DONEV={flag:'Flagged in Outlook', unflag:'Unflagged in Outlook', read:'Marked read in Outlook', unread:'Marked unread in Outlook', move:'Filed in Outlook', del:'Moved to Deleted Items', book:'Booked — invites sent'};
+function toast(msg){ const old=document.querySelector('.hqx-toast'); if(old) old.remove(); const t=h('div','hqx-toast', msg); document.body.appendChild(t); setTimeout(()=>t.classList.add('out'), 3800); setTimeout(()=>t.remove(), 4300); }
+function personEmail(id){ const p=(S.people||[]).find(x=>x.id===id); if(!p) return ''; if(p.email) return p.email; const n=String(p.name||'').toLowerCase().replace(/[^a-z\s-]/g,'').split(/\s+/).filter(Boolean); return n.length ? n[0][0]+n[n.length-1]+'@mismo.org' : ''; }
+function enqueue(q){
+  const L=acts(); if(L.filter(z=>!z.fin && !z.err).length>=MAXQ){ toast('Outlook has a lot waiting already — give it a few minutes.'); return null; }
+  q.id=rid(); q.at=Date.now();
+  /* a newer flag or read change on the same message replaces one that hasn't run yet */
+  if(q.mid && (q.k==='flag'||q.k==='unflag'||q.k==='read'||q.k==='unread')){ const grp=(q.k==='flag'||q.k==='unflag')?/^(un)?flag$/:/^(un)?read$/; for(let i=L.length-1;i>=0;i--){ const z=L[i]; if(z.mid===q.mid && grp.test(z.k) && !z.fin && !z.err && !ACT.done[z.id]) L.splice(i,1); } }
+  L.push(q); saveActs(); kick(); return q; }
+const gid=id=>String(id).replace(/\//g,'%2F'); /* Graph ids are already URL-safe; only a stray slash needs escaping */
+const msgUrl=id=>'/me/messages/'+gid(id);
+function mailAct(m, k, extra){
+  if(!m || !m.id || /^https?:/i.test(m.id)) return null;
+  const q={k, mid:m.id, subj:String(m.subject||'').slice(0,80)};
+  if(k==='flag'||k==='unflag'){ q.method='PATCH'; q.url=msgUrl(m.id); q.body={flag:{flagStatus:k==='flag'?'flagged':'notFlagged'}}; }
+  else if(k==='read'||k==='unread'){ q.method='PATCH'; q.url=msgUrl(m.id); q.body={isRead:k==='read'}; }
+  else if(k==='del'){ q.method='POST'; q.url=msgUrl(m.id)+'/move'; q.body={destinationId:'deleteditems'}; }
+  else if(k==='move'){ if(!extra || !extra.id) return null; q.method='POST'; q.url=msgUrl(m.id)+'/move'; q.body={destinationId:extra.id}; q.fname=extra.n||''; }
+  else return null;
+  const r=enqueue(q); if(r) toast((k==='del'?'Deleting':k==='move'?'Filing':VERB[k])+' — Outlook catches up in a couple of minutes.'); return r; }
+/* what Outlook will look like once the waiting requests run */
+function pendFor(mid){ return acts().filter(z=>z.mid===mid && !z.err && !(z.fin && MAIL.sent>z.fin)); }
+function mailFx(list){ const out=[]; (list||[]).forEach(m=>{ const P=pendFor(m.id); if(!P.length){ out.push(m); return; } const c=Object.assign({}, m); let gone=false;
+    P.forEach(z=>{ if(z.k==='del'||z.k==='move') gone=true; else if(z.k==='flag') c.flagged=true; else if(z.k==='unflag') c.flagged=false; else if(z.k==='read') c.unread=false; else if(z.k==='unread') c.unread=true; });
+    const w=P.filter(z=>!z.fin); c.pend=w.length ? VERB[w[w.length-1].k]+'…' : ''; if(!gone) out.push(c); }); return out; }
+function mailItems(){ return mailFx(MAIL.items); }
+function lastErr(mid){ const z=acts().filter(q=>q.mid===mid && q.err).pop(); return z ? z : null; }
+/* folders, fetched from Outlook through the same queue and kept with the person's settings */
+const SKIPF=/^(deleted items|drafts|junk email|outbox|sent items|conversation history|sync issues|rss feeds|rss subscriptions|scheduled|snoozed|social activity notifications|yammer root|externalcontacts|files)$/i;
+const folders=()=>{ const f=S.bset && S.bset.hqFolders; return f && Array.isArray(f.list) ? f.list : []; };
+function folderPath(f){ const L=folders(); const parts=[f.n]; let p=f.p, guard=0; while(p && guard++<8){ const up=L.find(z=>z.id===p); if(!up) break; parts.unshift(up.n); p=up.p; } return parts.join(' › '); }
+function wantFolders(force){
+  const pend=acts().some(z=>z.k==='fold' && !z.fin && !z.err); if(pend) return;
+  const f=S.bset && S.bset.hqFolders; if(!force && f && f.at && Date.now()-f.at<7*864e5) return;
+  enqueue({k:'fold', method:'GET', url:'/me/mailFolders?$select=id,displayName,childFolderCount&$top=200', fp:''}); }
+function gotFolders(q, val){
+  if(!S.bset.hqFolders || !q.fp) S.bset.hqFolders={at:Date.now(), list:q.fp ? folders() : []};
+  const L=S.bset.hqFolders.list; const parent=q.fp||'';
+  (Array.isArray(val)?val:[]).forEach(v=>{ if(!v || !v.id) return; const i=L.findIndex(z=>z.id===v.id); const rec={id:v.id, n:String(v.displayName||'Folder'), p:parent, c:+v.childFolderCount||0}; if(i>=0) L[i]=rec; else L.push(rec);
+    if(rec.c>0 && !SKIPF.test(rec.n) && L.length<400 && acts().filter(z=>z.k==='fold').length<40) acts().push({id:rid(), at:Date.now(), k:'fold', method:'GET', url:'/me/mailFolders/'+gid(v.id)+'/childFolders?$select=id,displayName,childFolderCount&$top=200', fp:v.id}); });
+  S.bset.hqFolders.at=Date.now(); }
+/* reconcile the queue with what the flow says it has done */
+function settle(){
+  const L=acts(); let ch=false; const now=Date.now();
+  L.forEach(z=>{ const d=ACT.done[z.id]; if(!d || z.fin || z.err) return; ch=true;
+    if(okSt(+d.status)){ z.fin=now; if(z.k==='fold') gotFolders(z, d.value); else if(DONEV[z.k] && now-z.at<20*60e3) toast(DONEV[z.k]+(z.k==='move'&&z.fname?' — '+z.fname:'')+(z.k==='book'&&z.subj?': '+z.subj:'')); }
+    else { z.err=+d.status||1; z.fin=now; if(z.k!=='fold') toast('Outlook couldn’t '+({flag:'flag',unflag:'unflag',read:'mark read',unread:'mark unread',move:'file',del:'delete',book:'book'}[z.k]||'do')+' '+(z.subj?'“'+z.subj+'”':'that')+(z.err===404?' — it may already be gone.':'.')); } });
+  for(let i=L.length-1;i>=0;i--){ const z=L[i];
+    const drop = (z.k==='fold'||z.k==='book') ? !!z.fin
+      : z.err ? now-z.fin>15*60e3
+      : z.fin ? (MAIL.sent>z.fin || now-z.fin>45*60e3)
+      : now-z.at>3*864e5;
+    if(drop){ L.splice(i,1); ch=true; } }
+  if(ch) saveActs(); }
+function loadDone(){ const R=window.__hqRelay; if(!R || !R.readOther || !S.me || ACT.busy) return Promise.resolve(ACT); ACT.busy=true;
+  return R.readOther('team-hq','act-done-'+S.me).then(d=>{ ACT.busy=false; ACT.at=Date.now();
+    if(d && typeof d==='object'){ const was=ACT.on; ACT.on=true; const m={}; (Array.isArray(d.done)?d.done:[]).forEach(r=>{ if(r && r.id) m[r.id]=r; }); ACT.done=m; ACT.sent=Date.parse(d.at||'')||ACT.sent;
+      settle(); if(!was){ wantFolders(false); fireActs(); } }
+    return ACT; }).catch(()=>{ ACT.busy=false; ACT.at=Date.now(); return ACT; }); }
+let actT=null;
+function kick(){ clearTimeout(actT); const waiting=acts().some(z=>!z.fin && !z.err); actT=setTimeout(()=>{ if(!document.hidden) loadDone().then(()=>kick()); else kick(); }, waiting ? 40e3 : 4*60e3); }
+const waitingCount=()=>acts().filter(z=>!z.fin && !z.err).length;
+/* the File Into… picker */
+function pickFolder(m){
+  const ov=h('div','hqx-ov'); const box=h('div','hqx-box hqx-fold'); box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true'); box.setAttribute('aria-label','File Into a Folder');
+  box.appendChild(h('h2',null,'File Into a Folder')); box.appendChild(h('p',null, m.subject||''));
+  const q=h('input','hqx-in'); q.placeholder='Search your folders'; q.type='search'; box.appendChild(q);
+  const list=h('div','hqx-fl'); box.appendChild(list);
+  const close=()=>{ ov.remove(); document.removeEventListener('keydown', esc); window.removeEventListener('hq:acts', paintL); };
+  const used=()=>Array.isArray(S.bset.hqFoldUse) ? S.bset.hqFoldUse : [];
+  const paintL=()=>{ list.innerHTML=''; const F=folders().filter(f=>!SKIPF.test(f.n));
+    if(!F.length){ const n=h('div','hqx-fe'); const fp=acts().some(z=>z.k==='fold' && !z.fin && !z.err); n.appendChild(h('b',null, fp ? 'Getting your folders from Outlook…' : 'No folders yet'));
+      n.appendChild(h('span',null, fp ? 'The first time takes a couple of minutes. This list fills in on its own.' : 'Team HQ will ask Outlook for them now.')); list.appendChild(n); if(!fp) wantFolders(true); return; }
+    const s=q.value.trim().toLowerCase(); const U=used();
+    const rows=F.map(f=>({f, path:folderPath(f)})).filter(r=>!s || r.path.toLowerCase().indexOf(s)>=0).sort((a,b)=>{ const ua=U.indexOf(a.f.id), ub=U.indexOf(b.f.id); if(ua>=0||ub>=0) return (ua<0?99:ua)-(ub<0?99:ub); return a.path.localeCompare(b.path); });
+    if(!s && U.length) list.appendChild(h('div','hqx-fh','Recent'));
+    rows.slice(0,120).forEach((r,i)=>{ if(!s && U.length && i===rows.filter(x=>U.indexOf(x.f.id)>=0).length) list.appendChild(h('div','hqx-fh','All Folders'));
+      const b=h('button','hqx-fb'); b.type='button'; const nm=h('span','n', r.f.n); b.appendChild(nm); if(r.path!==r.f.n) b.appendChild(h('small',null, r.path.slice(0, r.path.length-r.f.n.length-3)));
+      b.addEventListener('click', ()=>{ mailAct(m,'move',r.f); S.bset.hqFoldUse=[r.f.id].concat(U.filter(z=>z!==r.f.id)).slice(0,6); saveActs(); close(); }); list.appendChild(b); });
+    if(!rows.length) list.appendChild(h('div','hqx-fe', 'No folder matches “'+q.value+'”.'));
+    const rf=h('button','hqx-fr2','Refresh the folder list from Outlook'); rf.type='button'; rf.addEventListener('click', ()=>{ wantFolders(true); toast('Asking Outlook for your folders — a couple of minutes.'); }); list.appendChild(rf); };
+  q.addEventListener('input', paintL); window.addEventListener('hq:acts', paintL); paintL();
+  const ft=h('div','hqx-ft'); const c=h('button','btn ghost','Cancel'); c.type='button'; c.addEventListener('click', close); ft.appendChild(c); box.appendChild(ft);
+  ov.appendChild(box); ov.addEventListener('click', e=>{ if(e.target===ov) close(); });
+  const esc=e=>{ if(e.key==='Escape') close(); }; document.addEventListener('keydown', esc);
+  document.body.appendChild(ov); setTimeout(()=>q.focus(), 30); }
+/* Book It in Outlook: a real meeting with everyone invited and a Teams link */
+function pad(n){ return String(n).padStart(2,'0'); }
+const localDT=t=>{ const d=new Date(t); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes()); };
+function bookDialog(o){
+  o=o||{}; if(!ACT.on){ toast('Booking from Team HQ isn’t turned on for you yet.'); return; }
+  let who=(o.who||[]).filter(id=>id && id!==S.me);
+  const ov=h('div','hqx-ov'); const box=h('div','hqx-box hqx-book'); box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true'); box.setAttribute('aria-label','Book It in Outlook');
+  box.appendChild(h('h2',null,'Book It in Outlook')); box.appendChild(h('p',null,'Puts it on your calendar and sends everyone the invite.'));
+  const fld=(lab, el)=>{ const w=h('label','hqx-fld'); w.appendChild(h('span',null,lab)); w.appendChild(el); return w; };
+  const ti=h('input','hqx-in'); ti.value=o.subject||'MISMO Meeting'; box.appendChild(fld('Title', ti));
+  const row=h('div','hqx-r2'); const wh=h('input','hqx-in'); wh.type='datetime-local'; wh.value=localDT(o.start||Date.now()); row.appendChild(fld('When', wh));
+  const du=h('select','hqx-in'); [15,30,45,60,90,120].forEach(n=>{ const op=h('option',null, n<60?n+' minutes':n===60?'1 hour':(n/60)+' hours'); op.value=n; if(n===(o.mins||30)) op.selected=true; du.appendChild(op); }); row.appendChild(fld('How Long', du)); box.appendChild(row);
+  const wl=h('div','hqx-who'); const paintW=()=>{ wl.innerHTML=''; who.forEach(id=>{ const p=(S.people||[]).find(x=>x.id===id); const c=h('span','hqx-chip'); c.appendChild(h('span',null, p?p.name:id)); const x=h('button',null,'×'); x.type='button'; x.title='Take off the invite'; x.addEventListener('click', ()=>{ who=who.filter(z=>z!==id); paintW(); }); c.appendChild(x); wl.appendChild(c); });
+    const add=h('select','hqx-add'); const o0=h('option',null,'+ Add someone'); o0.value=''; add.appendChild(o0); (S.people||[]).filter(p=>p.id!==S.me && who.indexOf(p.id)<0).forEach(p=>{ const op=h('option',null,p.name); op.value=p.id; add.appendChild(op); }); add.addEventListener('change', ()=>{ if(add.value){ who.push(add.value); paintW(); } }); wl.appendChild(add); };
+  paintW(); box.appendChild(fld('Who', wl));
+  const tm=h('label','hqx-ck'); const cb=h('input'); cb.type='checkbox'; cb.checked=o.teams!==false; tm.appendChild(cb); tm.appendChild(h('span',null,'Add a Teams meeting link')); box.appendChild(tm);
+  const nt=h('textarea','hqx-in'); nt.rows=2; nt.placeholder='Optional note for the invite'; nt.value=o.note||''; box.appendChild(fld('Note', nt));
+  const ft=h('div','hqx-ft'); const close=()=>{ ov.remove(); document.removeEventListener('keydown', esc); };
+  const c=h('button','btn ghost','Cancel'); c.type='button'; c.addEventListener('click', close);
+  const sv=h('button','btn','Book It'); sv.type='button'; sv.addEventListener('click', ()=>{
+    const st=new Date(wh.value).getTime(); if(!st){ wh.focus(); return; } const en=st+(+du.value)*60e3; const subj=ti.value.trim()||'MISMO Meeting';
+    const att=who.map(id=>{ const p=(S.people||[]).find(x=>x.id===id); const em=personEmail(id); return em ? {emailAddress:{address:em, name:p?p.name:em}, type:'required'} : null; }).filter(Boolean);
+    const body={subject:subj, start:{dateTime:new Date(st).toISOString().slice(0,19), timeZone:'UTC'}, end:{dateTime:new Date(en).toISOString().slice(0,19), timeZone:'UTC'}, attendees:att};
+    if(cb.checked){ body.isOnlineMeeting=true; body.onlineMeetingProvider='teamsForBusiness'; }
+    if(nt.value.trim()) body.body={contentType:'text', content:nt.value.trim()};
+    const r=enqueue({k:'book', method:'POST', url:'/me/events', body, subj}); if(r){ toast('Booking “'+subj+'” — on your calendar and in their inboxes in about two minutes.'); close(); } });
+  ft.appendChild(c); ft.appendChild(sv); box.appendChild(ft); ov.appendChild(box);
+  ov.addEventListener('click', e=>{ if(e.target===ov) close(); });
+  const esc=e=>{ if(e.key==='Escape') close(); }; document.addEventListener('keydown', esc);
+  document.body.appendChild(ov); setTimeout(()=>ti.focus(), 30); }
+const css3=document.createElement('style'); css3.id='hqx-css3'; css3.textContent=`
+.hqx-toast{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:450;max-width:min(560px,calc(100vw - 32px));padding:11px 16px;border-radius:8px;background:#0b2436;color:#fff;font-size:13px;font-weight:600;box-shadow:0 12px 30px rgba(6,32,47,.35);border-left:4px solid var(--sky,#74bfeb);animation:hqxFade .2s ease;transition:opacity .4s}
+.hqx-toast.out{opacity:0}
+.hqx-in{width:100%;box-sizing:border-box;height:36px;padding:0 10px;border:1px solid var(--border-strong);border-radius:6px;background:var(--surface);color:var(--ink);font:inherit;font-size:13.5px}
+textarea.hqx-in{height:auto;padding:8px 10px;resize:vertical}
+.hqx-in:focus{outline:2px solid var(--c1);outline-offset:-1px}
+.hqx-fld{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;min-width:0;flex:1}.hqx-fld>span{font-size:11.5px;font-weight:700;color:var(--ink-2)}
+.hqx-r2{display:flex;gap:10px;flex-wrap:wrap}.hqx-r2 .hqx-fld{min-width:180px}
+.hqx-who{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.hqx-chip{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 4px 0 10px;border:1px solid var(--border);border-radius:4px;background:var(--surface-2);font-size:12.5px;font-weight:600;color:var(--ink)}
+.hqx-chip button{width:22px;height:22px;border:0;background:transparent;color:var(--ink-3);font-size:16px;line-height:1;cursor:pointer;border-radius:3px}.hqx-chip button:hover{background:var(--surface-3);color:var(--bad)}
+.hqx-add{height:28px;border:1px dashed var(--border-strong);border-radius:4px;background:var(--surface);color:var(--ink-2);font:inherit;font-size:12.5px;padding:0 6px}
+.hqx-ck{display:flex;align-items:center;gap:8px;margin:2px 0 12px;font-size:13px;color:var(--ink)}.hqx-ck input{width:16px;height:16px;accent-color:var(--c1)}
+.hqx-fold .hqx-in{margin-bottom:10px}
+.hqx-fl{display:flex;flex-direction:column;max-height:min(52vh,420px);overflow:auto;border:1px solid var(--border);border-radius:8px}
+.hqx-fh{position:sticky;top:0;padding:6px 12px;background:var(--surface-2);font-size:11px;font-weight:800;color:var(--ink-3);border-bottom:1px solid var(--rule)}
+.hqx-fb{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:9px 12px;border:0;border-bottom:1px solid var(--rule);background:var(--surface);font:inherit;text-align:left;color:var(--ink);cursor:pointer}
+.hqx-fb:hover,.hqx-fb:focus-visible{background:var(--sky-wash)}.hqx-fb .n{font-size:13.5px;font-weight:600}.hqx-fb small{font-size:11.5px;color:var(--ink-3)}
+.hqx-fe{display:flex;flex-direction:column;gap:4px;padding:22px 16px;font-size:13px;color:var(--ink-2)}.hqx-fe b{color:var(--ink)}
+.hqx-fr2{padding:9px 12px;border:0;background:transparent;font:inherit;font-size:12px;font-weight:600;color:var(--c1);text-align:left;cursor:pointer}
+`;
+document.head.appendChild(css3);
+loadDone().then(()=>kick());
+
 loadMail(true);
 const timer=setInterval(()=>{ if(!document.hidden) loadMail(true); }, 5*60e3);
-window.__hqx={ version:'1.1', MAIL, loadMail, ago, myPeople, setMyPeople, pickPeople, statusOf, dayLoad, nextWorkday, SYS, SHORT, canOpen, figsFor, symbol, openSys, closeSys, countFor, navOf, sig:()=>MAIL.state+':'+MAIL.at+':'+MAIL.items.length+':'+myPeople().join(','),
-  destroy(){ clearInterval(timer); closeSys(); css.remove(); css2.remove(); } };
+window.__hqx={ version:'1.2', MAIL, loadMail, ACT, mailItems, mailAct, pickFolder, bookDialog, personEmail, lastErr, waitingCount, loadDone, ago, myPeople, setMyPeople, pickPeople, statusOf, dayLoad, nextWorkday, SYS, SHORT, canOpen, figsFor, symbol, openSys, closeSys, countFor, navOf, sig:()=>MAIL.state+':'+MAIL.at+':'+MAIL.items.length+':'+myPeople().join(',')+':'+ACT.on+':'+acts().map(z=>z.id+(z.fin?'f':'')+(z.err?'e':'')).join(','),
+  destroy(){ clearInterval(timer); clearTimeout(actT); closeSys(); css.remove(); css2.remove(); css3.remove(); } };
 })();
 
 });
@@ -1254,7 +1407,7 @@ function badge(k){
   if(k==='asks'){ const n=asksForMe().filter(a=>a.state==='New').length + nudgesForMe().filter(x=>!(me()===ASK_OWNER && x.k==='Asked For')).length; return n; }
   if(k==='projects'){ return S.rocks.filter(r=>(r.status||'Active')==='Active').filter(r=>r.lead===me() || S.tasks.some(t=>t.r===r.id && isOpen(t) && doers(t).indexOf(me())>=0)).length; }
   if(k==='day'){ const P=dayPlan(workDay()); return P.ev ? P.ev.length : 0; }
-  if(k==='mail'){ const X=window.__hqx; return X && X.MAIL.state==='ok' ? X.MAIL.items.filter(m=>m.flagged || m.important || m.unread).length : 0; }
+  if(k==='mail'){ const X=window.__hqx; return X && X.MAIL.state==='ok' ? X.mailItems().filter(m=>m.flagged || m.important || m.unread).length : 0; }
   if(k==='people'){ const X=window.__hqx; return X ? X.myPeople().length : 0; }
   return 0;
 }
@@ -1284,7 +1437,7 @@ function mailView(){
   const X=window.__hqx, c=h('div','box hb-mail');
   const hd=h('div','hb-ch'); hd.appendChild(h('h3','sect-t','Email to Look At'));
   const r=h('div','hb-mr');
-  if(X && X.MAIL.state==='ok'){ ['all','flagged','important','unread'].forEach(k=>{ const n=k==='all'?X.MAIL.items.length:X.MAIL.items.filter(m=>m[k]).length; const b=btn('hb-chip'+((ui.mf||'all')===k?' on':''), null, ()=>{ ui.mf=k; paint(); }); b.appendChild(h('span',null,{all:'All',flagged:'Flagged',important:'Important',unread:'Unread'}[k])); b.appendChild(h('b',null,String(n))); r.appendChild(b); }); }
+  if(X && X.MAIL.state==='ok'){ ['all','flagged','important','unread'].forEach(k=>{ const n=k==='all'?X.mailItems().length:X.mailItems().filter(m=>m[k]).length; const b=btn('hb-chip'+((ui.mf||'all')===k?' on':''), null, ()=>{ ui.mf=k; paint(); }); b.appendChild(h('span',null,{all:'All',flagged:'Flagged',important:'Important',unread:'Unread'}[k])); b.appendChild(h('b',null,String(n))); r.appendChild(b); }); }
   const rf=btn('btn ghost','Refresh', ()=>{ X && X.loadMail(true).then(paint); }); r.appendChild(rf);
   const ol=h('a','btn ghost'); ol.href='https://outlook.office.com/mail/'; ol.target='_blank'; ol.rel='noopener'; ol.innerHTML=svg('out')+'<span>Open Outlook</span>'; r.appendChild(ol);
   hd.appendChild(r); c.appendChild(hd);
@@ -1296,7 +1449,7 @@ function mailView(){
     t.appendChild(h('p','hb-mnote', me()===ASK_OWNER ? 'Turn it on with the same kind of Power Automate flow that sends your calendar here.' : 'Ask Jonna to turn it on for you — it takes a few minutes.'));
     if(me()!==ASK_OWNER){ const a=btn('btn','Ask to Turn It On', ()=>window.__ask2 && window.__ask2()); t.appendChild(a); }
     w.appendChild(t); c.appendChild(w); return c; }
-  const L=X.MAIL.items.filter(m=>(ui.mf||'all')==='all' || m[ui.mf]);
+  const L=X.mailItems().filter(m=>(ui.mf||'all')==='all' || m[ui.mf]);
   if(X.MAIL.sent) c.appendChild(h('p','hb-msent','From Outlook '+X.ago(X.MAIL.sent)));
   if(!L.length){ c.appendChild(emptyNote('Nothing here. Inbox under control.')); return c; }
   const list=h('div','hb-ml');
@@ -2056,7 +2209,9 @@ function doodle(){
   const tf=h('tfoot'), fr=h('tr'); fr.appendChild(h('td','nm','Can Make It'));
   P.forEach((s,i)=>{ const td=h('td', score[i]===best ? 'best' : null); td.appendChild(h('b',null, score[i]+' of '+st.who.length));
     const a=h('a','btn'+(score[i]===best?'':' ghost'), 'Send Invite'); a.href=invite(s); a.target='_blank'; a.rel='noopener'; a.title='Opens a new Outlook invite with everyone on it';
-    td.appendChild(a); fr.appendChild(td); });
+    td.appendChild(a);
+    const X=window.__hqx; if(X && X.ACT && X.ACT.on){ const bk=h('button','btn ghost ft-book','Book It'); bk.type='button'; bk.title='Puts it on your calendar and sends everyone the invite, with a Teams link'; bk.addEventListener('click', ()=>X.bookDialog({subject:st.subj||'MISMO Meeting', start:s, mins:st.dur, who:st.who.slice()})); td.appendChild(bk); }
+    fr.appendChild(td); });
   tf.appendChild(fr); t.appendChild(tf);
   c.appendChild(wrap);
   return c;
@@ -2141,6 +2296,7 @@ div.ft{display:flex;flex-direction:column;gap:16px;margin-top:18px;font-variant-
 .v-unk .mk{background:var(--unk);color:var(--ink-3)}
 .ft-dt tfoot td{border-bottom:0;padding-top:12px}
 .ft-dt tfoot td b{display:block;margin-bottom:8px;font-size:13px;color:var(--ink)}
+.ft-dt tfoot .ft-book{display:flex;margin:6px auto 0;height:30px;padding:0 12px;font-size:12px}
 .ft-dt tfoot .nm{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
 .ft-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:300;padding:10px 16px;background:var(--navy);color:#fff;border-radius:6px;box-shadow:0 10px 30px rgba(6,32,47,.35);font-size:13.5px;font-weight:600}
 `;
@@ -3292,7 +3448,11 @@ const I={
   list:'<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/>',
   board:'<rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="11" rx="1"/><rect x="17" y="4" width="4" height="14" rx="1"/>',
   sun:'<path d="M5 12h10M11 8l4 4-4 4"/><path d="M19 5v14"/>', menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',
-  ext:'<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>' };
+  ext:'<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+  flag:'<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>', unflag:'<path d="M5 21V4M5 4h11l-2 4 2 4H5"/><path d="M3 3l18 18"/>',
+  read:'<path d="M3 10l9-6 9 6v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3.5 10.5L12 16l8.5-5.5"/>', unread:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/><circle cx="19" cy="5" r="3" fill="currentColor"/>',
+  folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11v5M9.5 13.5L12 16l2.5-2.5"/>',
+  trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>' };
 const ic=(k,c)=>'<svg class="'+(c||'')+'" viewBox="0 0 24 24" aria-hidden="true">'+I[k]+'</svg>';
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], WDL=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -3823,7 +3983,7 @@ function vInbox(){
     if(!asks.length && !nudges.length) it.appendChild(h('div','nx-drope','All clear. New asks land here the moment someone sends one.'));
     asks.sort((a,b)=>(b.at||0)-(a.at||0)).forEach(a=>it.appendChild(askRow(a)));
     nudges.forEach(n=>{ const r=h('div','nx-row nx-ask'); if(n.by) r.appendChild(av(n.by,22)); r.appendChild(h('span','nx-tt', n.m||n.k)); r.appendChild(h('span','nx-sp')); r.appendChild(btn('nx-mini','Done', ()=>put('nudges', Object.assign({}, n, {done:1})))); it.appendChild(r); }); }, asks.length?'warn':'');
-  const xm=X(); if(xm && xm.MAIL.state==='ok'){ const mi=xm.MAIL.items.filter(m=>m.flagged || m.important || m.unread); sec('mail','Email to Look At', mi.length, it=>{ if(!mi.length) it.appendChild(h('div','nx-drope','Nothing flagged or waiting.')); mi.slice(0,15).forEach(m=>it.appendChild(mailRow(m))); }); }
+  const xm=X(); if(xm && xm.MAIL.state==='ok'){ const mi=xm.mailItems().filter(m=>m.flagged || m.important || m.unread); sec('mail','Email to Look At', mi.length, it=>{ if(!mi.length) it.appendChild(h('div','nx-drope','Nothing flagged or waiting.')); mi.slice(0,15).forEach(m=>it.appendChild(mailRow(m))); }); }
   else { sec('mail','Email to Look At', 0, it=>{ const c=mailPanel(); c.querySelector('.nx-gh').remove(); it.appendChild(c); }); }
   const waiting=myOpen().filter(t=>st(t)==='Waiting on Someone').sort(byDue);
   sec('wait','Waiting on Someone', waiting.length, it=>{ if(!waiting.length) it.appendChild(h('div','nx-drope','Nothing of yours is waiting on anyone.')); waiting.forEach(t=>it.appendChild(row(t))); });
@@ -4070,7 +4230,7 @@ function tile(cfg, i, L){
       if(gaps.length){ const gl=h('div','nx-gaps'); gl.appendChild(h('small',null,'Open Time to Get Things Done')); const gw=h('div','gw'); gaps.slice(0,6).forEach(([a,b2])=>{ const m=Math.round((b2-a)/6e4); const g=h('span'); g.appendChild(h('b',null,tm(a)+'–'+tm(b2))); g.append(' '+(m>=60?(Math.round(m/30)/2)+'h':m+'m')); gw.appendChild(g); }); gl.appendChild(gw); el.appendChild(gl); } }
     const Ld=x && x.dayLoad ? x.dayLoad(me(), day) : null; if(Ld){ const n=h('div','st-next'); n.appendChild(h('b',null,(Math.round(Ld.free/30)/2)+'h open')); n.append(' between 9 and 5 · '+ev.length+(ev.length===1?' meeting':' meetings')); el.appendChild(n); }
     meta.go=()=>open('cal'); }
-  else if(cfg.t==='email'){ const ok=x && x.MAIL.state==='ok'; const items=ok ? x.MAIL.items.filter(m=>m.flagged||m.important||m.unread) : [];
+  else if(cfg.t==='email'){ const ok=x && x.MAIL.state==='ok'; const items=ok ? x.mailItems().filter(m=>m.flagged||m.important||m.unread) : [];
     const art=h('div','nx-env'); art.innerHTML='<svg viewBox="0 0 64 44"><rect x="2" y="2" width="60" height="40" rx="4"/><path d="M4 5l28 21L60 5"/></svg>'; if(ok && items.length) art.appendChild(h('b',null,String(items.length))); el.appendChild(art);
     if(!ok){ el.appendChild(h('div','st-sub','Connect your Outlook email and what you’ve flagged or need to read shows up here.')); }
     else { const fl=items.filter(m=>m.flagged).length; el.appendChild(h('div','st-sub', items.length ? fl+' flagged · '+items.filter(m=>m.unread).length+' unread' : 'Nothing flagged or waiting')); const show=items.slice(0, SZ==='b'?6:tall?4:wide?2:1); if(show.length>1 || tall){ const ls=h('div','nx-ml2'); show.forEach(m=>{ const r=h('div','mr'); r.appendChild(h('b',null,m.from)); r.appendChild(h('span',null,m.subject)); if(m.link) r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) window.open(m.link,'_blank','noopener'); }); ls.appendChild(r); }); el.appendChild(ls); } else if(items[0]){ const n=h('div','st-next'); n.appendChild(h('b',null,items[0].from)); n.append(' · '+items[0].subject); el.appendChild(n); } }
@@ -4121,7 +4281,9 @@ function tile(cfg, i, L){
   else if(cfg.t==='findtime'){ const ids=(x && x.myPeople().length ? x.myPeople() : people().filter(p=>p.id!==me()).map(p=>p.id));
     const row=h('div','nx-avrow'); let free=0; ids.forEach(id=>{ const pp=person(id); if(!pp) return; const s2=statusOf(pp); if(s2.k==='free') free++; const w=h('span','nx-avw'); w.appendChild(av(id, tall?34:28)); w.appendChild(h('i','nx-dot '+s2.k)); w.title=pp.name+' · '+s2.t+(s2.s?' '+s2.s:''); row.appendChild(w); }); el.appendChild(row);
     const slot=nextShared([me()].concat(ids.slice(0,6)), 30);
-    const b=h('div','nx-ftv'); b.appendChild(h('small',null, !slot ? 'Next time you’re free together' : slot.n===slot.of ? 'Next time you’re all free' : 'Best time in the next two weeks')); b.appendChild(h('b',null, slot ? WDL[new Date(slot.t).getDay()]+', '+MON[new Date(slot.t).getMonth()]+' '+new Date(slot.t).getDate()+' at '+tmL(slot.t) : 'Calendars aren’t in yet')); if(slot && slot.n<slot.of) b.appendChild(h('span',null, slot.n+' of '+slot.of+' free — not '+slot.out.map(first).join(', '))); el.appendChild(b);
+    const b=h('div','nx-ftv'); b.appendChild(h('small',null, !slot ? 'Next time you’re free together' : slot.n===slot.of ? 'Next time you’re all free' : 'Best time in the next two weeks')); b.appendChild(h('b',null, slot ? WDL[new Date(slot.t).getDay()]+', '+MON[new Date(slot.t).getMonth()]+' '+new Date(slot.t).getDate()+' at '+tmL(slot.t) : 'Calendars aren’t in yet')); if(slot && slot.n<slot.of) b.appendChild(h('span',null, slot.n+' of '+slot.of+' free — not '+slot.out.map(first).join(', ')));
+    if(slot && x && x.ACT && x.ACT.on && !dashEdit){ const bk=btn('nx-mini pri nx-ftb','Book It', e=>{ e.stopPropagation(); x.bookDialog({subject:'MISMO Meeting', start:slot.t, mins:30, who:ids.slice(0,6)}); }); bk.title='Book this time in Outlook and invite everyone'; b.appendChild(bk); }
+    el.appendChild(b);
     el.appendChild(h('div','st-next', free+' of '+ids.length+' free right now · tap to pick a time'));
     meta.go=()=>{ try{ const k2='tools:team-hq:mismo.teamhq.ft'; const cur=JSON.parse(localStorage.getItem(k2)||'{}'); cur.who=[me()].concat(ids.slice(0,6)); localStorage.setItem(k2, JSON.stringify(cur)); }catch(e){} openClassic('findtime'); }; }
   else if(cfg.t==='sys'){ meta.draw(el, top, SZ); }
@@ -4170,14 +4332,23 @@ const X=()=>window.__hqx;
 function mailRow(m){ const x=X(); const r=h('div','nx-mrow'+(m.unread?' unread':''));
   const ic2=h('span','mi'+(m.flagged?' flag':m.important?' imp':'')); ic2.textContent=m.flagged?'⚑':m.important?'!':'•'; ic2.title=m.flagged?'Flagged':m.important?'Important':'Unread'; r.appendChild(ic2);
   const tx=h('div','tx'); const tp=h('div','tp'); tp.appendChild(h('b',null,m.from||'Someone')); tp.appendChild(h('span','ag', m.at?x.ago(m.at):'')); tx.appendChild(tp); tx.appendChild(h('div','sj', m.subject)); r.appendChild(tx);
+  if(m.pend){ r.classList.add('pend'); tp.querySelector('.ag').textContent=m.pend; }
   const ac=h('div','ac');
+  const live=x && x.ACT && x.ACT.on && m.id && !/^https?:/i.test(m.id) && !m.pend;
+  const ob=(k, title, fn)=>{ const b=btn('nx-ib ox', null, e=>{ e.stopPropagation(); fn(); }); b.innerHTML=ic(k); b.title=title; b.setAttribute('aria-label', title); ac.appendChild(b); };
+  if(live){
+    ob(m.flagged?'unflag':'flag', m.flagged?'Unflag in Outlook':'Flag in Outlook', ()=>x.mailAct(m, m.flagged?'unflag':'flag'));
+    ob(m.unread?'read':'unread', m.unread?'Mark read in Outlook':'Mark unread in Outlook', ()=>x.mailAct(m, m.unread?'read':'unread'));
+    ob('folder', 'File into a folder', ()=>x.pickFolder(m));
+    ob('trash', 'Delete (goes to Deleted Items)', ()=>x.mailAct(m, 'del')); }
   const mk=btn('nx-ib', null, e=>{ e.stopPropagation(); newTask({t:m.subject, p:m.important?'High':'Normal', notes:'From '+(m.from||'')+(m.link?' — '+m.link:'')}); }); mk.innerHTML=ic('plus'); mk.title='Make it a task'; ac.appendChild(mk);
   r.appendChild(ac);
+  const er=x && x.lastErr && x.lastErr(m.id); if(er){ r.classList.add('err'); r.title='Outlook couldn’t do the last change ('+er.err+')'; }
   if(m.link){ r.addEventListener('click', ()=>window.open(m.link, '_blank', 'noopener')); r.title='Open in Outlook'; }
   return r; }
 function mailPanel(limit){
   const x=X(); const pn=h('section','nx-panel'); const gh=h('div','nx-gh'); gh.appendChild(h('b',null,'Email to Look At'));
-  const items=x && x.MAIL.state==='ok' ? x.MAIL.items.filter(m=>m.flagged || m.important || m.unread) : [];
+  const items=x && x.MAIL.state==='ok' ? x.mailItems().filter(m=>m.flagged || m.important || m.unread) : [];
   if(x && x.MAIL.state==='ok') gh.appendChild(h('span','nx-cnt', String(items.length)));
   const ol=h('a','nx-add'); ol.href='https://outlook.office.com/mail/'; ol.target='_blank'; ol.rel='noopener'; ol.innerHTML=ic('ext'); ol.title='Open Outlook'; gh.appendChild(ol);
   pn.appendChild(gh);
@@ -4671,6 +4842,7 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-gaps .gw{display:flex;flex-wrap:wrap;gap:6px}.nx-gaps .gw span{padding:6px 10px;border-radius:6px;background:repeating-linear-gradient(135deg,rgba(60,203,127,.16) 0 7px,rgba(60,203,127,.06) 7px 13px);border:1px solid rgba(60,203,127,.35);font-size:12px;color:rgba(255,255,255,.8)}.nx-gaps .gw b{color:#7ee2b8;margin-right:4px}
 .nx-ftv span{font-size:12px;color:rgba(255,255,255,.7)}
 .nx-ftv small{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:rgba(255,255,255,.6)}.nx-ftv b{font-size:18px;color:var(--k)}
+.nx-ftv .nx-ftb{align-self:flex-start;margin-top:6px;height:28px;background:var(--k,#74bfeb);border-color:var(--k,#74bfeb);color:#06202f}
 .st-tile.sz-b .nx-sym,.st-tile.sz-t .nx-sym{width:76px;height:76px}
 .st-tile.sz-b .st-big{font-size:52px}
 @media(max-width:900px){.st-tile.sz-b,.st-tile.sz-w{grid-column:span 2}}
@@ -4686,7 +4858,13 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-mrow.unread .tp b,.nx-mrow.unread .sj{font-weight:800}
 .nx-mrow .ag{margin-left:auto;flex:0 0 auto;font-size:11px;color:var(--ink-3)}
 .nx-mrow .sj{font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.nx-mrow .ac{flex:0 0 auto}.nx-mrow .nx-ib{width:26px;height:26px}
+.nx-mrow{position:relative}.nx-mrow .ac{flex:0 0 auto;display:flex;gap:4px}.nx-mrow .nx-ib{width:26px;height:26px}.nx-mrow .nx-ib svg{width:15px;height:15px}
+.nx-mrow .ox{display:none}
+@media(hover:hover){.nx-mrow:hover .ox,.nx-mrow:focus-within .ox{display:inline-flex}}
+@media(hover:none){.nx-mrow .ox{display:inline-flex}.nx-mrow .ac{gap:3px}}
+.nx-mrow .ox[title^="Delete"]:hover{color:var(--bad);border-color:var(--bad)}
+.nx-mrow.pend{opacity:.62}.nx-mrow.pend .ag{color:var(--c1);font-weight:700}
+.nx-mrow.err .mi{outline:2px solid var(--bad);outline-offset:1px}
 .nx-items>.nx-panel{border:0;border-radius:0}
 .nx-connect{display:flex;gap:12px;align-items:flex-start;padding:14px}
 .nx-connect>svg{flex:0 0 auto;width:28px;height:28px;fill:none;stroke:var(--c1);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
