@@ -170,9 +170,9 @@ const symbol=k=>'<svg class="hqx-sym" viewBox="0 0 48 48" aria-hidden="true">'+(
 /* counts a system shows on its own menu (e.g. "Action Queue 24"), remembered whenever it is opened here */
 const CK='tools:team-hq:mismo.teamhq.syscount';
 let counts={}; try{ counts=JSON.parse(localStorage.getItem(CK)||'{}')||{}; }catch(e){}
-function readNav(doc){ const out={}; try{ doc.querySelectorAll('.hq nav button, nav button').forEach(b=>{ const t=(b.textContent||'').replace(/\s+/g,' ').trim(); const m=/^(.*?)\s*(\d+)$/.exec(t); const label=(m?m[1]:t).trim(); if(label) out[label]=m?+m[2]:0; }); }catch(e){} return out; }
+function readNav(doc){ const out={}; try{ doc.querySelectorAll('.hq nav button, nav button').forEach(b=>{ const t=(b.textContent||'').replace(/\s+/g,' ').trim(); const m=/^(.*?)\s*(\d+)$/.exec(t); const label=(m?m[1]:t).trim(); if(label && label.length>1 && !/^(help|dark mode|light mode|theme|sign out|log out|menu|close)$/i.test(label)) out[label]=m?+m[2]:null; /* no number on the menu item means nothing to count, not zero */ }); }catch(e){} return out; }
 function storeCounts(k, nav){ if(!nav || !Object.keys(nav).length) return; counts[k]={at:Date.now(), nav}; try{ localStorage.setItem(CK, JSON.stringify(counts)); }catch(e){} try{ window.dispatchEvent(new Event('hq:counts')); }catch(e){} }
-function countFor(k, go){ const c=counts[k]; if(!c || !go || c.nav[go]==null) return null; return {n:c.nav[go], at:c.at}; }
+function countFor(k, go){ const c=counts[k]; if(!c || !go || !Object.prototype.hasOwnProperty.call(c.nav, go)) return null; return {n:c.nav[go], at:c.at}; }
 function navOf(k){ const c=counts[k]; return c ? Object.keys(c.nav) : []; }
 let pane=null;
 function closeSys(){ if(!pane) return; const p=pane; pane=null; try{ storeCounts(p.k, readNav(p.fr.contentDocument)); }catch(e){} p.el.classList.add('out'); setTimeout(()=>p.el.remove(), 200); document.removeEventListener('keydown', p.esc); document.documentElement.classList.remove('hqx-sys-on'); }
@@ -4342,14 +4342,15 @@ function sysMeta(cfg){ const x=X(); const s=x && x.SYS.find(z=>z.k===cfg.s); if(
     if(cfg.go) top.appendChild(h('span','st-pill', cfg.go));
     const body2=h('div','nx-sysb'); const sym=h('div','nx-sym'); sym.innerHTML=x.symbol(s.k); body2.appendChild(sym);
     const val=h('div','nx-sysv');
-    const c=cfg.go && x.countFor(s.k, cfg.go); const figs=x.figsFor(s.k); const fig=cfg.f ? figs.find(f=>f.id===cfg.f) : (cfg.go ? null : figs[0]);
+    const c0=cfg.go && x.countFor(s.k, cfg.go); const c=c0 && c0.n>0 ? c0 : null; /* a page whose menu item has no number (Overview, Home) has nothing to count — never show it as 0 */
+    const figs=x.figsFor(s.k); const fig=cfg.f ? figs.find(f=>f.id===cfg.f) : (c ? null : figs[0]);
     if(c){ const b=h('div','st-big'); b.append(String(c.n)); b.appendChild(h('small',null, cfg.go)); val.appendChild(b); }
     else if(fig){ const b=h('div','st-big'); b.append(String(fig.v)); val.appendChild(b); val.appendChild(h('div','st-sub', fig.n)); }
-    else if(cfg.go){ val.appendChild(h('div','st-sub','Opens straight to '+cfg.go+'. The count shows here after the first time you open it.')); }
+    else if(cfg.go){ val.appendChild(h('div','st-sub', c0 ? 'Opens straight to '+cfg.go+'. Nothing to count there — pick a page with a number, like a queue, in Settings to see one here.' : 'Opens straight to '+cfg.go+'. Its count shows here after the first time you open it.')); }
     else val.appendChild(h('div','st-sub', s.d));
     body2.appendChild(val); el.appendChild(body2);
     if(SZ==='t' || SZ==='b'){ const rest=figs.filter(f=>f!==fig); const nv=x.navOf(s.k).filter(n=>n!==cfg.go && (x.countFor(s.k,n)||{}).n>0); const ls=h('div','nx-kl2'); rest.slice(0,4).forEach(f=>{ const r=h('div','kr'); r.appendChild(h('b',null,String(f.v))); r.appendChild(h('span',null,f.n)); ls.appendChild(r); }); nv.slice(0, Math.max(0, 5-rest.length)).forEach(n=>{ const r=h('div','kr'); r.appendChild(h('b',null,String(x.countFor(s.k,n).n))); r.appendChild(h('span',null,n)); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) openSystem(s.k, n); }); ls.appendChild(r); }); if(ls.childNodes.length) el.appendChild(ls); else el.appendChild(h('div','st-sub', s.d)); }
-    const nt=h('div','st-next'); nt.append(c ? 'Checked '+x.ago(c.at) : fig && fig.asof ? 'As of '+fmt(fig.asof) : 'Opens right here'); nt.appendChild(h('b','opn',' Open →')); el.appendChild(nt);
+    const nt=h('div','st-next'); nt.append(c ? 'Checked '+x.ago(c.at) : c0 && !fig ? 'Checked '+x.ago(c0.at) : fig && fig.asof ? 'As of '+fmt(fig.asof) : 'Opens right here'); nt.appendChild(h('b','opn',' Open →')); el.appendChild(nt);
   };
   meta.go=()=>openSystem(s.k, cfg.go||'');
   return meta; }
