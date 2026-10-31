@@ -197,13 +197,72 @@ function driveFrame(fr, k, go, sec, done){
     step();
     const iv=setInterval(()=>{ if(!fr.isConnected){ clearInterval(iv); return; } if(!document.hidden){ snapSys(k, doc); if(sec) scrollToSec(doc, sec); } }, 90e3);
   }); }
+/* ---------- system snapshots ----------
+   The headline numbers, gauges and section counts on a system's tab, read in the background in a hidden
+   copy of the page and kept in this browser, so a dashboard tile can show them the Team HQ way. */
+const DK='tools:team-hq:mismo.teamhq.sysdata2';
+let SD={}; try{ SD=JSON.parse(localStorage.getItem(DK)||'{}')||{}; }catch(e){}
+const sdKey=(k,go)=>k+'|'+(go||'');
+const cleanT=x=>String(x||'').replace(/\s+/g,' ').trim();
+const VAL=/^[−\-+]?\(?\$?\s?\d[\d,]*(\.\d+)?\)?\s?[KMB]?%?$/;
+function extract(doc){
+  const win=doc.defaultView; const out={figs:[], gauges:[], secs:readSecs(doc), at:Date.now()};
+  const vis=e=>e.offsetParent!==null;
+  let GL=[...doc.querySelectorAll('[role=meter],[class*="gauge"]')].filter(g=>g.getAttribute('role')==='meter' || String(g.className||'').split(/\s+/).some(c=>/^gauge([-_](card|box|item|tile))?$/.test(c)));
+  if(!GL.length) GL=[...doc.querySelectorAll('[class*="gauge"]')].filter(g=>!g.querySelector('[class*="gauge"]'));
+  GL.forEach(g=>{ if(out.gauges.length>=8 || !vis(g)) return;
+    const pick=re=>{ const e=[...g.querySelectorAll('*')].find(z=>re.test(String(z.className&&z.className.baseVal!=null?z.className.baseVal:z.className||''))); return e ? cleanT(e.textContent) : ''; };
+    let pct=pick(/(^|\s|-)g?pct(n|-?num)?(\s|$)|percent/); let pm=/(-?\d+(?:\.\d+)?)/.exec(pct);
+    if(!pm){ const am=/(-?\d+(?:\.\d+)?)\s*%/.exec(String(g.getAttribute('aria-label')||'')+' '+String(g.getAttribute('aria-valuenow')||'')); pm=am; }
+    if(!pm && g.getAttribute('aria-valuenow')) pm=[0, g.getAttribute('aria-valuenow')];
+    if(!pm) return;
+    const nm=pick(/(^|\s|-)g?(name|title)(\s|$)/) || cleanT(String(g.getAttribute('aria-label')||'').split(',')[0]) || pick(/lab/);
+    const v=pick(/(^|\s|-)g?val(ue)?(\s|$)/), b=pick(/(^|\s|-)g?bud(get)?(\s|$)|target|goal/);
+    if(nm) out.gauges.push({n:nm.slice(0,40), p:+pm[1], v:VAL.test(v)?v:'', b:VAL.test(b)?b:''}); });
+  const seen=new Set();
+  doc.querySelectorAll('b,strong,span,div,p,h1,h2,h3,h4,dd').forEach(e=>{ if(out.figs.length>=10 || e.children.length) return; const tv=cleanT(e.textContent); if(!tv || tv.length>16 || !VAL.test(tv) || !vis(e)) return;
+    if(e.closest('[class*="gauge"],[role=meter],nav,table,button.navbtn,[role=tab],.hqtop,.masthead,time,[class*="cal"],[class*="countdown"],[class*="clock"],[class*="timer"],[class*="week"],[class*="date"]')) return;
+    if((parseFloat(win.getComputedStyle(e).fontSize)||0)<19) return;
+    const box=e.parentElement; if(!box) return; const tx=[...box.children].filter(z=>z!==e).map(z=>cleanT(z.innerText||z.textContent)).filter(z=>z && z.length<100 && !VAL.test(z));
+    let label=tx[0]||''; const sub=tx[1]||''; if(!label){ const pl=box.previousElementSibling; label=pl ? cleanT(pl.innerText||pl.textContent) : ''; }
+    if(!label || label.length>48 || label.length<3 || /^[a-z][a-z\s]*$/.test(label) || /^(today|tomorrow|yesterday|sun|mon|tue|wed|thu|fri|sat|sunday|monday|tuesday|wednesday|thursday|friday|saturday|days?|hrs?|hours?|mins?|minutes?|secs?|seconds?|weeks?|months?)$/i.test(label)) return; const key=label+'|'+tv; if(seen.has(key)) return; seen.add(key);
+    const cl=String(box.className||''); out.figs.push({n:label, v:tv, s:sub.slice(0,90), tone:/(^|\s)(good|ok|up|pos)(\s|$)/.test(cl)?'good':/(^|\s)(bad|warn|late|down|neg|over)(\s|$)/.test(cl)?'bad':''}); });
+  /* pages built around a table: a summary line ("Revenue $3.9M · Expense $4.2M · Net …") and its Total / Net rows */
+  const money=v=>{ v=cleanT(v).replace(/^-/,'−'); return /\.\d\d$/.test(v) && /\d{1,3},\d{3}/.test(v) ? v.replace(/\.\d\d$/,'') : v; };
+  if(out.figs.length<6){ [...doc.querySelectorAll('table')].filter(vis).slice(0,2).forEach(tb=>{
+      const hr=[...tb.querySelectorAll('thead tr')].pop(); const hds=hr ? [...hr.children].map(c=>cleanT(c.textContent)) : [];
+      const pref=['YTD ACTUAL','YEAR TO DATE','ACTUAL + REMAINING FORECAST','LIVE, FOR THE YEAR','FORECAST FOR THE YEAR','ACTUAL','TOTAL'];
+      [...tb.querySelectorAll('tbody tr, tfoot tr')].forEach(tr=>{ if(out.figs.length>=6) return; const cells=[...tr.children]; const lab=cleanT(cells[0] && cells[0].textContent); if(!/^(total|net)\b/i.test(lab) || lab.length>40) return;
+        const off=Math.max(0, cells.length-hds.length); let col=-1; for(const pk of pref){ const i=hds.findIndex(x=>x.toUpperCase().indexOf(pk)>=0); if(i>=0 && i+off>0 && cells[i+off] && /\$|\d/.test(cells[i+off].textContent)){ col=i+off; break; } }
+        if(col<0) col=cells.findIndex((c,i)=>i>0 && /^[−\-(]?\$?[\d,]+/.test(cleanT(c.textContent)));
+        if(col<0) return; const v=cleanT(cells[col].textContent).split(' ')[0]; if(!VAL.test(v.replace(/\.\d+$/,''))) return;
+        const vv=money(v); if(!out.figs.some(f=>f.n===lab)) out.figs.push({n:lab.replace(/\b\w/g,c=>c.toUpperCase()).replace(/\B\w+/g,w=>w.toLowerCase()), v:(/\$/.test(vv)||!/\d,\d{3}/.test(vv)) ? vv : vv.replace(/^([−\-(]?)/,'$1$'), s:hds[col-off] ? hds[col-off].toLowerCase().replace(/^./,c=>c.toUpperCase()) : '', tone:/^[−\-(]/.test(v)?'bad':''}); }); }); }
+  if(out.figs.length<3){ const RX=/([A-Z][A-Za-z’' ]{2,30}?)\s+([−\-]?\$[\d,]+(?:\.\d+)?)/g;
+    [...doc.querySelectorAll('p,div,span,small,li')].some(e=>{ if(!vis(e) || e.children.length>3) return false; const tx=String(e.innerText||e.textContent).replace(/[ \t]+/g,' '); if(tx.length>220 || !/[·|]/.test(tx)) return false; const m=[...tx.matchAll(RX)]; if(m.length<2) return false;
+      m.slice(0,4).forEach(z=>{ const n=cleanT(String(z[1]).split(/\n/).pop()); if(!out.figs.some(f=>f.n===n)) out.figs.push({n, v:money(z[2]), s:'', tone:''}); }); return true; }); }
+  return out; }
+const hasData=d=>d && (d.figs.length || d.gauges.length || Object.keys(d.secs||{}).length);
+function keepData(k, go, d){ if(!hasData(d)) return; SD[sdKey(k,go)]=d; try{ localStorage.setItem(DK, JSON.stringify(SD)); }catch(e){} try{ window.dispatchEvent(new Event('hq:counts')); }catch(e){} }
+function sysData(k, go){ return SD[sdKey(k,go)]||null; }
+const SQ=[]; let sBusy=false;
+function wantData(k, go, maxAge){ const d=SD[sdKey(k,go)]; if(d && Date.now()-d.at<(maxAge||20*60e3)) return; if(SQ.some(q=>q.k===k && q.go===(go||''))) return; SQ.push({k, go:go||''}); setTimeout(pump, 300); }
+function pump(){ if(sBusy || !SQ.length || document.hidden) return; const q=SQ.shift(); const s=SYS.find(z=>z.k===q.k); if(!s || !canOpen(s.k)){ pump(); return; } sBusy=true;
+  const fr=h('iframe','hqx-bg'); fr.src=s.u; fr.setAttribute('aria-hidden','true'); fr.tabIndex=-1; fr.title=''; document.body.appendChild(fr);
+  let last='', stable=0, n=0; const fin=d=>{ if(d) keepData(q.k, q.go, d); else { const old=SD[sdKey(q.k,q.go)]; if(old){ old.at=Date.now()-15*60e3; } } fr.remove(); sBusy=false; setTimeout(pump, 500); };
+  driveFrame(fr, q.k, q.go, '', null);
+  const tick=()=>{ n++; let doc=null; try{ doc=fr.contentDocument; }catch(e){} if(!doc || doc.readyState!=='complete'){ if(n<50) setTimeout(tick, 1000); else fin(null); return; }
+    const cur=curNav(doc); const onTab=!q.go || cur===q.go || (n>14 && !cur); let d=null; try{ d=extract(doc); }catch(e){}
+    if(onTab && hasData(d)){ const sg=JSON.stringify([d.figs, d.gauges, d.secs]); if(sg===last) stable++; else { stable=0; last=sg; } if(stable>=2){ fin(d); return; } }
+    if(n<45) setTimeout(tick, 1000); else fin(onTab && hasData(d) ? d : null); };
+  setTimeout(tick, 2500); }
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) pump(); });
 function snapSys(k, doc){ if(!doc) return; const nav=readNav(doc); const pg=curNav(doc), sc=readSecs(doc); const old=counts[k]||{}; const sec=Object.assign({}, old.sec||{}); if(pg && Object.keys(sc).length) sec[pg]=sc; if(!Object.keys(nav).length && !(pg && Object.keys(sc).length)) return; counts[k]={at:Date.now(), nav:Object.keys(nav).length ? nav : (old.nav||{}), sec}; try{ localStorage.setItem(CK, JSON.stringify(counts)); }catch(e){} try{ window.dispatchEvent(new Event('hq:counts')); }catch(e){} }
 function storeCounts(k, nav){ if(!nav || !Object.keys(nav).length) return; counts[k]=Object.assign({}, counts[k]||{}, {at:Date.now(), nav}); try{ localStorage.setItem(CK, JSON.stringify(counts)); }catch(e){} try{ window.dispatchEvent(new Event('hq:counts')); }catch(e){} }
 function countFor(k, go, sec){ const c=counts[k]; if(!c || !go) return null; if(sec){ const s=c.sec && c.sec[go] && c.sec[go][sec]; return s ? {n:s.n, x:s.x, at:c.at} : null; } if(!c.nav || !Object.prototype.hasOwnProperty.call(c.nav, go)) return null; return {n:c.nav[go], at:c.at}; }
 function secsOf(k, go){ const c=counts[k]; return c && c.sec && c.sec[go] ? Object.keys(c.sec[go]).map(n=>({n, c:c.sec[go][n].n})) : []; }
 function navOf(k){ const c=counts[k]; return c ? Object.keys(c.nav) : []; }
 let pane=null;
-function closeSys(){ if(!pane) return; const p=pane; pane=null; try{ snapSys(p.k, p.fr.contentDocument); }catch(e){} p.el.classList.add('out'); setTimeout(()=>p.el.remove(), 200); document.removeEventListener('keydown', p.esc); document.documentElement.classList.remove('hqx-sys-on'); }
+function closeSys(){ if(!pane) return; const p=pane; pane=null; try{ const pd=p.fr.contentDocument; snapSys(p.k, pd); const cur=curNav(pd); if(cur) keepData(p.k, cur, extract(pd)); }catch(e){} p.el.classList.add('out'); setTimeout(()=>p.el.remove(), 200); document.removeEventListener('keydown', p.esc); document.documentElement.classList.remove('hqx-sys-on'); }
 function openSys(k, go, opt){
   opt=opt||{}; const s=typeof k==='object' ? k : SYS.find(x=>x.k===k); if(!s) return; let sec=opt.sec||null;
   if(pane) closeSys();
@@ -223,6 +282,7 @@ function openSys(k, go, opt){
   driveFrame(fr, s.k, go, sec, ()=>ld.remove()); setTimeout(()=>ld.classList.add('done'), 2400);
 }
 const css2=document.createElement('style'); css2.id='hqx-css2'; css2.textContent=`
+.hqx-bg{position:fixed;left:-6000px;top:0;width:1366px;height:900px;border:0;pointer-events:none;opacity:0}
 .hqx-sym{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .hqx-sys{position:fixed;inset:0;z-index:380}
 .hqx-scrim{position:absolute;inset:0;background:rgba(6,32,47,.42);animation:hqxFade .2s ease}
@@ -402,7 +462,7 @@ loadDone().then(()=>kick());
 
 loadMail(true);
 const timer=setInterval(()=>{ if(!document.hidden) loadMail(true); }, 5*60e3);
-window.__hqx={ version:'1.2', MAIL, loadMail, ACT, mailItems, mailAct, pickFolder, bookDialog, personEmail, lastErr, waitingCount, loadDone, ago, myPeople, setMyPeople, pickPeople, statusOf, dayLoad, nextWorkday, SYS, SHORT, canOpen, figsFor, symbol, openSys, closeSys, countFor, secsOf, navOf, driveFrame, sig:()=>MAIL.state+':'+MAIL.at+':'+MAIL.items.length+':'+myPeople().join(',')+':'+ACT.on+':'+acts().map(z=>z.id+(z.fin?'f':'')+(z.err?'e':'')).join(','),
+window.__hqx={ version:'1.2', MAIL, loadMail, ACT, mailItems, mailAct, pickFolder, bookDialog, personEmail, lastErr, waitingCount, loadDone, ago, myPeople, setMyPeople, pickPeople, statusOf, dayLoad, nextWorkday, SYS, SHORT, canOpen, figsFor, symbol, openSys, closeSys, countFor, secsOf, navOf, driveFrame, sysData, wantData, sig:()=>MAIL.state+':'+MAIL.at+':'+MAIL.items.length+':'+myPeople().join(',')+':'+ACT.on+':'+acts().map(z=>z.id+(z.fin?'f':'')+(z.err?'e':'')).join(','),
   destroy(){ clearInterval(timer); clearTimeout(actT); closeSys(); css.remove(); css2.remove(); css3.remove(); } };
 })();
 
@@ -3646,7 +3706,6 @@ let sel=-1;
 function paint(){
   if(!shell || shell.hidden) return;
   const k=viewKind(); const sy=body.scrollTop; const sl=body.querySelector('.nx-sl, .nx-dl'); const sly=sl?sl.scrollTop:0; peekEl=null;
-  parkMinis(); pendMini=[];
   head.textContent=''; body.textContent=''; body.className='nx-body nx-v-'+k;
   try{
     if(k==='day') vDash();
@@ -3660,7 +3719,6 @@ function paint(){
     else if(k==='people') vPeople();
     else vDash();
   }catch(e){ console.error(e); body.appendChild(h('p','nx-empty','Something went wrong drawing this view.')); }
-  try{ placeMinis(); }catch(e){ console.error(e); }
   body.scrollTop=sy; const sl2=body.querySelector('.nx-sl, .nx-dl'); if(sl2) sl2.scrollTop=sly;
   drawTabbar();
 }
@@ -4254,6 +4312,7 @@ function tileShell(cfg, meta, i, L){
   if(dashEdit){ el.draggable=true; el.dataset.i=i;
     const ctl=h('div','nx-tctl');
     const wb=btn('nx-tcb', SZN[sz], e=>{ e.stopPropagation(); delete cfg.w; cfg.sz=SIZES[(SIZES.indexOf(sz)+1)%SIZES.length]; paint(); }); wb.title='Change the size: Small, Wide, Tall, Large'; ctl.appendChild(wb);
+    const lv=lvlOf(cfg); const lb=btn('nx-tcb', lv==='hi'?'High Level':'Detailed', e=>{ e.stopPropagation(); cfg.lvl=lvlOf(cfg)==='hi'?'det':'hi'; paint(); }); lb.title='High Level shows just the headline; Detailed shows more'; ctl.appendChild(lb);
     if(cfg.t==='sys'){ const sb=btn('nx-tcb','Settings', e=>{ e.stopPropagation(); sysSettings(cfg, sb); }); ctl.appendChild(sb); }
     const rm=btn('nx-tcb x','×', e=>{ e.stopPropagation(); L.splice(i,1); paint(); }); rm.title='Take this tile off'; rm.setAttribute('aria-label','Take '+meta.n+' off'); ctl.appendChild(rm);
     el.appendChild(ctl);
@@ -4352,59 +4411,60 @@ function tile(cfg, i, L){
     el.appendChild(h('div','st-next', free+' of '+ids.length+' free right now · tap to pick a time'));
     meta.go=()=>{ try{ const k2='tools:team-hq:mismo.teamhq.ft'; const cur=JSON.parse(localStorage.getItem(k2)||'{}'); cur.who=[me()].concat(ids.slice(0,6)); localStorage.setItem(k2, JSON.stringify(cur)); }catch(e){} openClassic('findtime'); }; }
   else if(cfg.t==='sys'){ meta.draw(el, top, SZ); }
+  if(cfg.t!=='sys' && lvlOf(cfg)==='hi'){ el.classList.add('lv-hi'); el.querySelectorAll('.nx-kl2,.nx-tl2,.nx-gaps,.mic-steps').forEach(z=>z.remove()); }
   el.addEventListener('click', e=>{ if(dashEdit || e.target.closest('button:not(.st-tile)')) return; go(); });
   el.addEventListener('keydown', e=>{ if((e.key==='Enter'||e.key===' ') && e.target===el && !dashEdit){ e.preventDefault(); go(); } });
   return el;
 }
-/* ---------- mini live views: a system's page, scaled down inside its tile ----------
-   Each one stays loaded while you use the dashboard: on a repaint it is parked and moved back
-   (moveBefore keeps the page alive in browsers that have it), never reloaded. */
-const MINI=new Map(); let pendMini=[]; let miniHold=null;
-function holdEl(){ if(!miniHold || !miniHold.isConnected){ miniHold=h('div','nx-minihold'); miniHold.setAttribute('aria-hidden','true'); document.body.appendChild(miniHold); } return miniHold; }
-function mvEl(parent, el){ if(parent.moveBefore && el.isConnected && parent.isConnected){ try{ parent.moveBefore(el, null); return; }catch(e){} } parent.appendChild(el); }
-function parkMinis(){ MINI.forEach(m=>{ if(m.el.isConnected && m.el.parentElement!==holdEl()) mvEl(holdEl(), m.el); }); }
-function fitMini(m){ const w=m.el.clientWidth, hh=m.el.clientHeight; if(!w || !hh) return; const base=w>520?1280:1100, sc=w/base; m.fr.style.width=base+'px'; m.fr.style.height=Math.ceil(hh/sc)+'px'; m.fr.style.transform='scale('+sc.toFixed(4)+')'; }
-function placeMinis(){ const used=new Set(), x=X();
-  pendMini.forEach(p=>{ if(!p.slot.isConnected) return; let m=MINI.get(p.key);
-    if(!m){ const w=h('div','nx-miniw'); const fr=h('iframe','nx-minif'); fr.src=p.s.u; fr.title=p.s.n+' (preview)'; fr.tabIndex=-1; fr.setAttribute('aria-hidden','true'); w.appendChild(fr);
-      const ld=h('div','nx-minild'); ld.appendChild(h('i')); w.appendChild(ld); fr.addEventListener('load', ()=>setTimeout(()=>ld.remove(), 1600));
-      if(x && x.driveFrame) x.driveFrame(fr, p.s.k, p.go, p.sec); m={el:w, fr}; MINI.set(p.key, m);
-      try{ m.ro=new ResizeObserver(()=>fitMini(m)); m.ro.observe(w); }catch(e){} }
-    mvEl(p.slot, m.el); fitMini(m); used.add(p.key); m.seen=Date.now(); });
-  pendMini=[];
-  MINI.forEach((m,k)=>{ if(!used.has(k) && Date.now()-(m.seen||0)>5*60e3){ try{ m.ro && m.ro.disconnect(); }catch(e){} m.el.remove(); MINI.delete(k); } }); }
+/* ---------- system tiles: a Team HQ version of a system's page ----------
+   The headline numbers, gauges and section counts are read from the page in the background
+   (x.wantData) and drawn here in Team HQ's own style. High Level shows the few that matter;
+   Detailed shows more. The person can choose exactly which ones in Settings. */
+const lvlOf=cfg=>cfg.lvl || ((cfg.t==='sys' || cfg.t==='keydate') ? 'hi' : 'det');
+function gaugeEl(g, big){ const p=Math.max(0, +g.p||0), C=2*Math.PI*40, f=Math.min(p,100)/100; const w=h('div','nx-gg'+(big?' big':'')+(p>=100?' full':''));
+  w.innerHTML='<svg viewBox="0 0 100 100" aria-hidden="true"><circle class="tr" cx="50" cy="50" r="40"/><circle class="pg" cx="50" cy="50" r="40" stroke-dasharray="'+(C*f).toFixed(1)+' '+C.toFixed(1)+'" transform="rotate(-90 50 50)"/></svg>';
+  const c=h('div','c'); c.appendChild(h('b',null,(Math.round(p*10)/10)+'%')); w.appendChild(c);
+  const l=h('div','l'); l.appendChild(h('span',null,g.n)); if(g.v) l.appendChild(h('small',null, big && g.b ? g.v+' of '+g.b : g.v)); w.appendChild(l); w.title=g.n+': '+p+'%'+(g.v?' — '+g.v:'')+(g.b?' of '+g.b+' budget':''); return w; }
+function figEl(f, big){ const w=h('div','nx-fg'+(big?' big':'')+(f.tone?' '+f.tone:'')); w.appendChild(h('b',null,f.v)); w.appendChild(h('span',null,f.n)); if(f.s && big) w.appendChild(h('small',null,f.s)); return w; }
 function sysMeta(cfg){ const x=X(); const s=x && x.SYS.find(z=>z.k===cfg.s); if(!s) return null;
   const meta={n:s.n, lab:(x.SHORT[s.k]||s.n), k:s.c};
   meta.draw=(el, top, SZ)=>{
+    const lvl=lvlOf(cfg), det=lvl==='det';
     if(cfg.go) top.appendChild(h('span','st-pill', cfg.sec || cfg.go));
-    if(cfg.mini!==false && SZ!=='s' && !phone()){
-      const cs=cfg.go && cfg.sec ? x.countFor(s.k, cfg.go, cfg.sec) : null, cn=cfg.go ? x.countFor(s.k, cfg.go) : null, cc=cs || (cn && cn.n>0 ? cn : null);
-      if(cc) top.appendChild(h('span','st-pill hot', cc.n+(cfg.sec ? (cc.n===1?' item':' items') : '')));
-      el.classList.add('has-mini'); const slot=h('div','nx-minislot'); el.appendChild(slot);
-      pendMini.push({slot, key:s.k+'|'+(cfg.go||'')+'|'+(cfg.sec||''), s, go:cfg.go||'', sec:cfg.sec||''});
-      const nt=h('div','st-next'); nt.append('Live from '+(x.SHORT[s.k]||s.n)+(cfg.go?' · '+(cfg.sec||cfg.go):'')); nt.appendChild(h('b','opn',' Open →')); el.appendChild(nt); return; }
-    const body2=h('div','nx-sysb'); const sym=h('div','nx-sym'); sym.innerHTML=x.symbol(s.k); body2.appendChild(sym);
-    const val=h('div','nx-sysv');
-    const cs=cfg.go && cfg.sec ? x.countFor(s.k, cfg.go, cfg.sec) : null; const c0=cs || (cfg.go && x.countFor(s.k, cfg.go)); const c=cs ? cs : (c0 && c0.n>0 ? c0 : null); /* a page whose menu item has no number (Overview, Home) has nothing to count — never show it as 0 */
-    const figs=x.figsFor(s.k); const fig=cfg.f ? figs.find(f=>f.id===cfg.f) : (c ? null : figs[0]);
-    if(c){ const b=h('div','st-big'); b.append(String(c.n)); b.appendChild(h('small',null, cfg.sec ? (c.n===1?'item':'items') : cfg.go)); val.appendChild(b); if(cfg.sec) val.appendChild(h('div','st-sub', cfg.sec+(c.x?' · '+c.x:''))); }
-    else if(cfg.sec){ val.appendChild(h('div','st-sub', cfg.sec+' in '+cfg.go+'. Its count shows here after the next time you open it.')); }
-    else if(fig){ const b=h('div','st-big'); b.append(String(fig.v)); val.appendChild(b); val.appendChild(h('div','st-sub', fig.n)); }
-    else if(cfg.go){ val.appendChild(h('div','st-sub', c0 ? 'Opens straight to '+cfg.go+'. Nothing to count there — pick a page with a number, like a queue, in Settings to see one here.' : 'Opens straight to '+cfg.go+'. Its count shows here after the first time you open it.')); }
-    else val.appendChild(h('div','st-sub', s.d));
-    body2.appendChild(val); el.appendChild(body2);
-    if(SZ==='t' || SZ==='b'){ const rest=figs.filter(f=>f!==fig); const nv=x.navOf(s.k).filter(n=>n!==cfg.go && (x.countFor(s.k,n)||{}).n>0); const ls=h('div','nx-kl2'); rest.slice(0,4).forEach(f=>{ const r=h('div','kr'); r.appendChild(h('b',null,String(f.v))); r.appendChild(h('span',null,f.n)); ls.appendChild(r); }); const sl=cfg.go ? x.secsOf(s.k, cfg.go).filter(z=>z.n!==cfg.sec && z.c>0) : []; let room=Math.max(0, 5-rest.length); sl.slice(0, room).forEach(z=>{ const r=h('div','kr'); r.appendChild(h('b',null,String(z.c))); r.appendChild(h('span',null,z.n)); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) openSystem(s.k, cfg.go, z.n); }); ls.appendChild(r); }); room=Math.max(0, room-sl.length);
-    nv.slice(0, room).forEach(n=>{ const r=h('div','kr'); r.appendChild(h('b',null,String(x.countFor(s.k,n).n))); r.appendChild(h('span',null,n)); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) openSystem(s.k, n); }); ls.appendChild(r); }); if(ls.childNodes.length) el.appendChild(ls); else el.appendChild(h('div','st-sub', s.d)); }
-    const nt=h('div','st-next'); nt.append(c ? 'Checked '+x.ago(c.at) : c0 && !fig ? 'Checked '+x.ago(c0.at) : fig && fig.asof ? 'As of '+fmt(fig.asof) : 'Opens right here'); nt.appendChild(h('b','opn',' Open →')); el.appendChild(nt);
+    if(x.wantData) x.wantData(s.k, cfg.go||'');
+    const d=x.sysData ? x.sysData(s.k, cfg.go||'') : null;
+    const cs=cfg.go && cfg.sec ? x.countFor(s.k, cfg.go, cfg.sec) : null; const c0=cs || (cfg.go && x.countFor(s.k, cfg.go)); const c=cs ? cs : (c0 && c0.n>0 ? c0 : null);
+    let F=d ? d.figs.slice() : [], G=d ? d.gauges.slice() : [];
+    if(Array.isArray(cfg.pick) && cfg.pick.length){ F=F.filter(f=>cfg.pick.indexOf('f:'+f.n)>=0); G=G.filter(g=>cfg.pick.indexOf('g:'+g.n)>=0); }
+    const small=SZ==='s', wide=SZ==='w'||SZ==='b', tall=SZ==='t'||SZ==='b';
+    const nF=small ? 1 : det ? (SZ==='b'?6:wide?4:tall?4:2) : (wide?3:tall?2:1), nG=small ? 0 : det ? (SZ==='b'?6:wide?4:tall?4:2) : (SZ==='b'?3:wide?3:tall?2:0);
+    const head=h('div','nx-sysh'); const sym=h('div','nx-sym sm'); sym.innerHTML=x.symbol(s.k); head.appendChild(sym);
+    const lead=h('div','nx-syl');
+    if(c){ const b=h('div','st-big'); b.append(String(c.n)); b.appendChild(h('small',null, cfg.sec ? (c.n===1?'item':'items') : cfg.go)); lead.appendChild(b); if(cfg.sec && c.x) lead.appendChild(h('div','st-sub', c.x)); }
+    else if(F.length){ lead.appendChild(figEl(F[0], true)); F=F.slice(1); }
+    else if(G.length && small){ lead.appendChild(gaugeEl(G[0], false)); }
+    else if(!d){ lead.appendChild(h('div','st-sub', cfg.go ? 'Getting the numbers from '+cfg.go+'…' : 'Getting the numbers…')); }
+    else lead.appendChild(h('div','st-sub', s.d));
+    head.appendChild(lead); el.appendChild(head);
+    if(!small){
+      const fr=F.slice(0, Math.max(0, nF-1)); if(fr.length){ const row=h('div','nx-fgr'); fr.forEach(f=>row.appendChild(figEl(f, det))); el.appendChild(row); }
+      const gr=G.slice(0, nG); if(gr.length){ const row=h('div','nx-ggr'); gr.forEach(g=>row.appendChild(gaugeEl(g, det && gr.length<=3))); el.appendChild(row); }
+      if(det && d && d.secs){ const sl=Object.keys(d.secs).filter(n=>n!==cfg.sec && d.secs[n].n>0).slice(0, SZ==='b'?6:4); if(sl.length){ const ls=h('div','nx-kl2'); sl.forEach(n=>{ const r=h('div','kr'); r.appendChild(h('b',null,String(d.secs[n].n))); r.appendChild(h('span',null,n)); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) openSystem(s.k, cfg.go, n); }); ls.appendChild(r); }); el.appendChild(ls); } } }
+    const nt=h('div','st-next'); nt.append(d ? 'From '+(cfg.go||(x.SHORT[s.k]||s.n))+' · '+x.ago(d.at) : c ? 'Checked '+x.ago(c.at) : 'Opens right here'); nt.appendChild(h('b','opn',' Open →')); el.appendChild(nt);
   };
   meta.go=()=>openSystem(s.k, cfg.go||'', cfg.sec||'');
   return meta; }
 function sysSettings(cfg, anchor){ const x=X(); const s=x.SYS.find(z=>z.k===cfg.s); const items=[];
-  const nav=x.navOf(s.k); if(nav.length){ items.push({node:h('div','nx-ml','Opens To')}); items.push({label:'Its Home Page', on:!cfg.go, fn:()=>{ cfg.go=''; cfg.sec=''; paint(); }}); nav.forEach(n=>{ const cn=x.countFor(s.k,n); items.push({label:n, hint:cn && cn.n>0 ? String(cn.n) : '', on:cfg.go===n && !cfg.sec, fn:()=>{ cfg.go=n; cfg.sec=''; cfg.f=''; paint(); }}); }); }
-  if(cfg.go){ const sl=x.secsOf(s.k, cfg.go); if(sl.length){ items.push({node:h('div','nx-ml','A Section of '+cfg.go)}); sl.forEach(z=>items.push({label:z.n, hint:String(z.c), on:cfg.sec===z.n, fn:()=>{ cfg.sec=z.n; cfg.f=''; paint(); }})); } else items.push({node:h('div','nx-ml','Open '+cfg.go+' once and its sections show up here to pick from')}); }
+  const nav=x.navOf(s.k); if(nav.length){ items.push({node:h('div','nx-ml','Show This Page')}); items.push({label:'Its Home Page', on:!cfg.go, fn:()=>{ cfg.go=''; cfg.sec=''; cfg.pick=[]; paint(); }}); nav.forEach(n=>{ const cn=x.countFor(s.k,n); items.push({label:n, hint:cn && cn.n>0 ? String(cn.n) : '', on:cfg.go===n && !cfg.sec, fn:()=>{ cfg.go=n; cfg.sec=''; cfg.pick=[]; paint(); }}); }); }
   else items.push({node:h('div','nx-ml','Open '+(x.SHORT[s.k]||s.n)+' once and its pages show up here to pick from')});
-  const figs=x.figsFor(s.k); if(figs.length){ items.push({node:h('div','nx-ml','Number to Show')}); figs.forEach(f=>items.push({label:f.n, hint:String(f.v), on:cfg.f===f.id, fn:()=>{ cfg.f=f.id; paint(); }})); }
-  items.push({node:h('div','nx-ml','Show')}); items.push({label:'A Mini Live View of the Page', hint:'wide and tall sizes', on:cfg.mini!==false, fn:()=>{ cfg.mini=true; paint(); }}); items.push({label:'The Number', on:cfg.mini===false, fn:()=>{ cfg.mini=false; paint(); }});
+  const d=x.sysData(s.k, cfg.go||''); const pk=Array.isArray(cfg.pick) ? cfg.pick : [];
+  const tog=key=>{ const L=(Array.isArray(cfg.pick) ? cfg.pick : []).slice(); const i=L.indexOf(key); if(i>=0) L.splice(i,1); else L.push(key); cfg.pick=L; paint(); };
+  if(d && (d.figs.length || d.gauges.length)){ items.push({node:h('div','nx-ml','Numbers to Show'+(pk.length?'':' (all, in order)'))});
+    d.figs.forEach(f=>items.push({label:f.n, hint:f.v, on:pk.indexOf('f:'+f.n)>=0, fn:()=>tog('f:'+f.n)}));
+    d.gauges.forEach(g=>items.push({label:g.n+' Gauge', hint:g.p+'%', on:pk.indexOf('g:'+g.n)>=0, fn:()=>tog('g:'+g.n)}));
+    if(pk.length) items.push({label:'Show All of Them Again', fn:()=>{ cfg.pick=[]; paint(); }}); }
+  const secs=d && d.secs ? Object.keys(d.secs) : (cfg.go ? x.secsOf(s.k, cfg.go).map(z=>z.n) : []);
+  if(cfg.go && secs.length){ items.push({node:h('div','nx-ml','Or Count One Section')}); items.push({label:'None — Show the Numbers', on:!cfg.sec, fn:()=>{ cfg.sec=''; paint(); }}); secs.forEach(n=>{ const cc=x.countFor(s.k, cfg.go, n) || (d && d.secs[n]); items.push({label:n, hint:cc?String(cc.n):'', on:cfg.sec===n, fn:()=>{ cfg.sec=n; paint(); }}); }); }
   popMenu(anchor, items, (x.SHORT[s.k]||s.n)); if(menuEl) menuEl.classList.add('tall'); }
 function openCatalog(){
   const x=X(); if(!dashEdit) dashEdit=dashLayout();
@@ -4840,7 +4900,7 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-dvb h2{margin:0;font-size:17px;font-weight:700;color:var(--ink)}
 .nx-dvr{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
 .nx-dtip{margin:-4px 0 12px;font-size:12.5px;color:var(--ink-2)}
-.nx-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:minmax(150px,auto);gap:14px}
+.nx-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:minmax(150px,auto);grid-auto-flow:row dense;gap:14px}
 .st-tile{--st-line:rgba(116,191,235,.18);position:relative;display:flex;flex-direction:column;gap:10px;min-width:0;padding:16px 18px;border:1px solid rgba(116,191,235,.18);border-radius:12px;color:#fff;cursor:pointer;text-align:left;background:radial-gradient(120% 90% at 100% 0%,color-mix(in srgb,var(--k,#74bfeb) 26%,transparent),transparent 60%),linear-gradient(160deg,#10324a,#0b2436);box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 10px 24px -14px rgba(6,32,47,.6);transition:transform .18s,box-shadow .18s;overflow:hidden}
 .st-tile:hover{transform:translateY(-3px);box-shadow:0 0 0 1px color-mix(in srgb,var(--k,#74bfeb) 55%,transparent),0 18px 34px -16px rgba(6,32,47,.75)}
 .st-tile:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
@@ -4891,15 +4951,25 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-wn{display:flex;gap:8px;align-items:center;font-size:12.5px;min-width:0}.nx-wn span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nx-wn .av{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;font-weight:700;font-size:9px}
 .nx-bgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.nx-bgrid span{padding:7px 9px;border-radius:6px;background:rgba(255,255,255,.07);border:1px solid var(--st-line);font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .nx-sysb{display:flex;gap:16px;align-items:center;min-width:0}
-.st-tile.has-mini{padding-bottom:12px}
-.nx-minislot{position:relative;flex:1 1 auto;min-height:150px;border-radius:8px;overflow:hidden;border:1px solid var(--st-line);background:var(--ground,#f4f7fa);box-shadow:inset 0 0 0 1px rgba(0,0,0,.04)}
-.st-tile.sz-t .nx-minislot,.st-tile.sz-b .nx-minislot{min-height:280px}
-.nx-miniw{position:absolute;inset:0;overflow:hidden}
-.nx-minif{position:absolute;left:0;top:0;border:0;transform-origin:0 0;pointer-events:none;background:var(--ground,#f4f7fa)}
-.nx-minild{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--ground,#f4f7fa);transition:opacity .3s}
-.nx-minild i{width:18px;height:18px;border-radius:50%;border:2.5px solid var(--border);border-top-color:var(--c1);animation:hqxSpin .8s linear infinite}
-.st-tile.has-mini:hover .nx-minislot{border-color:color-mix(in srgb,var(--k) 60%,transparent)}
-.nx-minihold{position:fixed;left:-30000px;top:0;width:640px;height:420px;overflow:hidden;pointer-events:none;visibility:hidden}
+.nx-sysh{display:flex;gap:14px;align-items:center;min-width:0}
+.nx-sym.sm{width:52px;height:52px;padding:9px;border-radius:12px}
+.nx-syl{flex:1;min-width:0}
+.nx-fg{display:flex;flex-direction:column;gap:1px;min-width:0}
+.nx-fg b{font-size:20px;font-weight:800;letter-spacing:-.01em;color:#fff;white-space:nowrap}
+.nx-fg span{font-size:12px;font-weight:600;color:rgba(255,255,255,.72);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nx-fg small{font-size:11.5px;color:rgba(255,255,255,.55);line-height:1.35}
+.nx-fg.big b{font-size:34px;line-height:1.05}.nx-fg.big span{font-size:13px;color:var(--k)}
+.nx-fg.good b{color:#7ee2a8}.nx-fg.bad b{color:#ff9b8a}
+.nx-fgr{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.nx-fgr .nx-fg{padding:9px 11px;border-radius:8px;background:rgba(0,0,0,.2);border:1px solid var(--st-line)}
+.nx-ggr{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px}
+.nx-gg{position:relative;display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:rgba(0,0,0,.2);border:1px solid var(--st-line);min-width:0}
+.nx-gg svg{flex:0 0 auto;width:44px;height:44px}.nx-gg .tr{fill:none;stroke:rgba(255,255,255,.12);stroke-width:10}.nx-gg .pg{fill:none;stroke:var(--k);stroke-width:10;stroke-linecap:round}
+.nx-gg.full .pg{stroke:#7ee2a8}
+.nx-gg .c{position:absolute;left:10px;top:8px;width:44px;height:44px;display:flex;align-items:center;justify-content:center}.nx-gg .c b{font-size:10px;font-weight:800;color:#fff}
+.nx-gg .l{display:flex;flex-direction:column;min-width:0}.nx-gg .l span{font-size:12px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nx-gg .l small{font-size:11px;color:rgba(255,255,255,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nx-gg.big{flex-direction:column;align-items:center;text-align:center;padding:12px 8px}.nx-gg.big svg{width:76px;height:76px}.nx-gg.big .c{left:50%;top:12px;width:76px;height:76px;transform:translateX(-50%)}.nx-gg.big .c b{font-size:15px}.nx-gg.big .l{align-items:center}
+.st-tile.lv-hi.t-keydate{justify-content:center}.st-tile.lv-hi.t-keydate .st-top{position:absolute;top:16px;left:18px;right:18px}
 .nx-sym{flex:0 0 auto;width:64px;height:64px;padding:10px;border-radius:14px;background:color-mix(in srgb,var(--k) 16%,transparent);border:1px solid color-mix(in srgb,var(--k) 40%,transparent);color:var(--k);transition:transform .25s}
 .st-tile:hover .nx-sym{transform:scale(1.06) rotate(-3deg)}
 .nx-sysv{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
