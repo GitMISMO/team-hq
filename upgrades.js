@@ -91,6 +91,8 @@
 
 
 
+
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -4554,6 +4556,11 @@ function vDash(){
    as its contents need (Small and Wide start at one row, Tall and Large at two), so a Small tile
    never gets stretched to match a long tile beside it */
 let packRO=null, packMO=null;
+/* boxes on a grid of columns and rows: keep each where it is unless it overlaps one already settled, then slide it down just enough */
+function settleBoxes(list, first){ const done=[]; const hit=(a,b)=>a.x<b.x+b.w && b.x<a.x+a.w && a.y<b.y+b.n && b.y<a.y+a.n;
+  if(first) done.push(first);
+  list.forEach(b=>{ if(b===first) return; let guard=0; for(;;){ const o=done.filter(d=>hit(b,d)); if(!o.length || guard++>200) break; b.y=Math.max(...o.map(d=>d.y+d.n)); } done.push(b); });
+  return done; }
 function packTiles(grid, L){
   if(packRO){ packRO.disconnect(); packRO=null; } if(packMO){ packMO.disconnect(); packMO=null; }
   grid.classList.add('nx-pack');
@@ -4562,14 +4569,20 @@ function packTiles(grid, L){
   const colSpan=t=>/\bsz-(w|b)\b/.test(t.className) && cols()>=2 ? 2 : 1;
   /* a tile you dropped into a particular spot stays in that spot (for this screen width); the rest flow around it */
   const pinOf=t=>{ if(t._pin) return t._pin; const c=L && t.dataset.i!=null ? L[+t.dataset.i] : null; return c && c.at && c.at.c===cols() ? c.at : null; };
-  const fit=t=>{ if(!t.isConnected) return; const tall=/\bsz-(t|b)\b/.test(t.className), min=tall?4:2;
+  const fit=t=>{ if(!t.isConnected || t.classList.contains('nx-dropmark')) return; const tall=/\bsz-(t|b)\b/.test(t.className), min=tall?4:2;
     const keepR=t.style.gridRow, keepC=t.style.gridColumn; t.style.alignSelf='start'; const hgt=t.getBoundingClientRect().height; t.style.alignSelf=''; if(!hgt) return;
     const n=Math.max(min, Math.ceil((hgt+GAP)/(ROW+GAP))); t.dataset.n=n; const pin=pinOf(t);
     const cs=colSpan(t), px=pin ? Math.max(1, Math.min(pin.x, cols()-cs+1)) : 0;
     const r=(pin ? pin.y : 'auto')+' / span '+n, c=pin ? px+' / span '+cs : '';
     if(keepR!==r) t.style.gridRow=r; if(keepC!==c) t.style.gridColumn=c; };
   grid._fit=fit; grid._cols=cols; grid._colSpan=colSpan; grid._unit=ROW+GAP;
-  const all=()=>[...grid.children].forEach(fit);
+  /* measure every tile, then lay the placed ones out; if a tile grew and now runs into the one below,
+     the lower one is shown pushed down (only on screen; the saved spots don't change) */
+  const all=()=>{ const kids=[...grid.children].filter(k=>!k.classList.contains('nx-dropmark')); kids.forEach(fit); const C=cols();
+    const placed=kids.filter(t=>{ const c=L && t.dataset.i!=null ? L[+t.dataset.i] : null; return c && c.at && c.at.c===C; })
+      .map(t=>{ const c=L[+t.dataset.i]; const w=colSpan(t); return {t, x:Math.max(1, Math.min(c.at.x, C-w+1)), y:c.at.y, w, n:+t.dataset.n||2}; })
+      .sort((a,b)=>a.y-b.y || a.x-b.x);
+    settleBoxes(placed).forEach(b=>{ const r=b.y+' / span '+b.n, c=b.x+' / span '+b.w; if(b.t.style.gridRow!==r) b.t.style.gridRow=r; if(b.t.style.gridColumn!==c) b.t.style.gridColumn=c; }); };
   all(); requestAnimationFrame(all);
   let tm=null; const later=()=>{ clearTimeout(tm); tm=setTimeout(all, 120); };
   if(window.ResizeObserver){ let lastW=grid.clientWidth; packRO=new ResizeObserver(()=>{ if(grid.clientWidth!==lastW){ lastW=grid.clientWidth; later(); } }); packRO.observe(grid); }
@@ -4711,69 +4724,53 @@ function dragTile(el, i, L){
     const move=ev=>{
       if(!started){ if(Math.hypot(ev.clientX-sx, ev.clientY-sy)<6) return; started=true; begin(ev); }
       tdrag.x=ev.clientX; tdrag.y=ev.clientY; place(); };
-    const up=()=>{ document.removeEventListener('pointermove', move, true); document.removeEventListener('pointerup', up, true); document.removeEventListener('pointercancel', up, true); if(started) finish(); };
-    document.addEventListener('pointermove', move, true); document.addEventListener('pointerup', up, true); document.addEventListener('pointercancel', up, true);
+    const up=()=>{ document.removeEventListener('pointermove', move, true); document.removeEventListener('pointerup', up, true); document.removeEventListener('pointercancel', up, true); document.removeEventListener('keydown', esc, true); if(started) finish(false); };
+    const esc=ev=>{ if(ev.key==='Escape' && tdrag){ ev.preventDefault(); document.removeEventListener('pointermove', move, true); document.removeEventListener('pointerup', up, true); document.removeEventListener('pointercancel', up, true); document.removeEventListener('keydown', esc, true); finish(true); } };
+    document.addEventListener('pointermove', move, true); document.addEventListener('pointerup', up, true); document.addEventListener('pointercancel', up, true); document.addEventListener('keydown', esc, true);
+    function geom(){ const cs=getComputedStyle(grid); const tracks=cs.gridTemplateColumns.split(' ').map(parseFloat).filter(n=>!isNaN(n)); const cg=parseFloat(cs.columnGap)||0; const rg=parseFloat(cs.rowGap)||0; const unit=grid._unit||94;
+      return {tracks, cg, rg, unit, C:tracks.length, colW:tracks[0]||100}; }
     function begin(ev){
       const r=el.getBoundingClientRect();
       const ghost=el.cloneNode(true); ghost.classList.add('nx-ghost'); ghost.removeAttribute('id'); ghost.querySelectorAll('[id]').forEach(z=>z.removeAttribute('id'));
       Object.assign(ghost.style, {position:'fixed', left:r.left+'px', top:r.top+'px', width:r.width+'px', height:r.height+'px', margin:'0', zIndex:'9999', pointerEvents:'none'});
       document.body.appendChild(ghost);
-      tdrag={el, L, grid, sc, ghost, edit:!!dashEdit, moved:false, ox:sx-r.left, oy:sy-r.top, x:ev.clientX, y:ev.clientY, last:0, raf:0};
-      el.classList.add('nx-ph'); document.documentElement.classList.add('nx-tdragging');
+      const mark=h('div','nx-dropmark'); if(getComputedStyle(grid).position==='static') grid.style.position='relative'; grid.appendChild(mark);
+      tdrag={el, L, grid, sc, ghost, mark, edit:!!dashEdit, ox:sx-r.left, oy:sy-r.top, x:ev.clientX, y:ev.clientY, raf:0, w:grid._colSpan ? grid._colSpan(el) : 1, n:+el.dataset.n||2, cell:null};
+      el.classList.add('nx-lift'); document.documentElement.classList.add('nx-tdragging');
       try{ window.getSelection().removeAllRanges(); }catch(x){}
       const tick=()=>{ if(!tdrag) return; const t=tdrag; const box=t.sc===document.scrollingElement ? {top:0, bottom:innerHeight} : t.sc.getBoundingClientRect();
         const edge=70; let dy=0; if(t.y<box.top+edge) dy=-Math.ceil((box.top+edge-t.y)/5); else if(t.y>box.bottom-edge) dy=Math.ceil((t.y-(box.bottom-edge))/5);
         if(dy){ t.sc.scrollTop+=dy; place(); } t.raf=requestAnimationFrame(tick); };
-      tdrag.raf=requestAnimationFrame(tick); }
+      tdrag.raf=requestAnimationFrame(tick); place(); }
+    /* only the copy under the mouse and a dashed outline move; every other tile stays exactly where it is */
     function place(){ const t=tdrag; if(!t) return;
-      t.ghost.style.transform='translate('+(t.x-t.ox-parseFloat(t.ghost.style.left))+'px,'+(t.y-t.oy-parseFloat(t.ghost.style.top))+'px) rotate(1deg) scale(1.02)';
-      const now=Date.now(); if(now-t.last<140) return;
-      const under=document.elementFromPoint(t.x, t.y); const tgt=under && under.closest('.st-tile, .nx-tadd');
-      const tadd=[...grid.children].find(z=>z.classList.contains('nx-tadd')) || null;
-      /* over the Add a Tile box, or in the open space after the last tile: it goes to the end */
-      const tiles=[...grid.children].filter(z=>z.classList.contains('st-tile')); const lastR=tiles.length ? tiles[tiles.length-1].getBoundingClientRect() : null;
-      const gr=grid.getBoundingClientRect(); const lowest=tiles.reduce((m,z)=>Math.max(m, z.getBoundingClientRect().bottom), 0);
-      const toEnd=(tgt && tgt.classList.contains('nx-tadd')) || (!tgt && t.y>lowest && gr.left<t.x && t.x<gr.right);
-      /* over an empty spot in the grid: the tile goes exactly there */
-      if(!toEnd && !tgt && under===grid && grid._fit){
-        const cs=getComputedStyle(grid); const tracks=cs.gridTemplateColumns.split(' ').map(parseFloat).filter(n=>!isNaN(n)); const cg=parseFloat(cs.columnGap)||0;
-        let x=t.x-gr.left, ci=1; for(let k=0;k<tracks.length;k++){ if(x<=tracks[k]+cg/2 || k===tracks.length-1){ ci=k+1; break; } x-=tracks[k]+cg; }
-        const span=grid._colSpan(el); ci=Math.max(1, Math.min(ci, tracks.length-span+1));
-        const ri=Math.max(1, Math.floor((t.y-gr.top)/grid._unit)+1);
-        if(el._pin && el._pin.x===ci && el._pin.y===ri) return;
-        el._pin={c:tracks.length, x:ci, y:ri}; t.pin=el._pin; slide(()=>grid._fit(el)); t.moved=true; t.last=now; return; }
-      const unpin=()=>{ t.unpin=true; if(el._pin){ delete el._pin; t.pin=null; grid._fit && grid._fit(el); } };
-      if(toEnd){ unpin(); const ref=tadd; if(el.nextSibling===ref && (ref || el===grid.lastElementChild)) return; if(!ref && el===grid.lastElementChild) return; slide(()=>grid.insertBefore(el, ref)); t.moved=true; t.last=now; return; }
-      if(!tgt || tgt===el || tgt.parentNode!==grid || tgt.classList.contains('nx-ghost')) return;
-      /* only move once the pointer is well inside the other tile, so the tiles don't flicker back and forth */
-      const tr=tgt.getBoundingClientRect(); const ix=(t.x-tr.left)/tr.width, iy=(t.y-tr.top)/tr.height; if(ix<0.15 || ix>0.85 || iy<0.15 || iy>0.85) return;
-      const kids=[...grid.children]; const from=kids.indexOf(el), to=kids.indexOf(tgt); if(from<0 || to<0) return;
-      slide(()=>{ if(el._pin){ delete el._pin; t.pin=null; } grid.insertBefore(el, from<to ? tgt.nextSibling : tgt); grid._fit && grid._fit(el); }); t.moved=true; t.unpin=true; t.last=now; }
-    /* move the tile, then glide every other tile from where it was to where it is now */
-    function slide(doMove){ const kids=[...grid.children]; const before=new Map(kids.map(k=>[k, k.getBoundingClientRect()])); doMove();
-      kids.forEach(k=>{ if(k===el) return; const a=before.get(k), z=k.getBoundingClientRect(); const dx=a.left-z.left, dy=a.top-z.top; if(!dx && !dy) return;
-        k.style.transition='none'; k.style.transform='translate('+dx+'px,'+dy+'px)'; k.getBoundingClientRect(); k.style.transition='transform .2s ease'; k.style.transform='';
-        setTimeout(()=>{ k.style.transition=''; }, 230); }); }
-    function finish(){ const t=tdrag; if(!t) return;
-      const r=el.getBoundingClientRect(); t.ghost.style.transition='transform .16s ease'; t.ghost.style.transform='translate('+(r.left-parseFloat(t.ghost.style.left))+'px,'+(r.top-parseFloat(t.ghost.style.top))+'px)';
-      /* the click that ends a drag must not open the tile */
+      const gx=t.x-t.ox, gy=t.y-t.oy;
+      t.ghost.style.transform='translate('+(gx-parseFloat(t.ghost.style.left))+'px,'+(gy-parseFloat(t.ghost.style.top))+'px) rotate(1deg) scale(1.02)';
+      const g=geom(), gr=grid.getBoundingClientRect();
+      const x=Math.max(1, Math.min(g.C-t.w+1, Math.round((gx-gr.left)/(g.colW+g.cg))+1));
+      const y=Math.max(1, Math.round((gy-gr.top)/g.unit)+1);
+      if(t.cell && t.cell.x===x && t.cell.y===y) return; t.cell={x, y};
+      const row=g.unit-g.rg; Object.assign(t.mark.style, {left:((x-1)*(g.colW+g.cg))+'px', top:((y-1)*g.unit)+'px', width:(t.w*g.colW+(t.w-1)*g.cg)+'px', height:(t.n*row+(t.n-1)*g.rg)+'px'}); }
+    function finish(cancel){ const t=tdrag; if(!t) return;
       const eat=ev=>{ ev.stopPropagation(); ev.preventDefault(); }; document.addEventListener('click', eat, true); setTimeout(()=>document.removeEventListener('click', eat, true), 0);
-      setTimeout(()=>{ dragReset();
-        if(!t.moved || !el.isConnected) return;
-        const order=[...grid.children].filter(z=>z.dataset && z.dataset.i!=null).map(z=>+z.dataset.i);
-        if(order.length!==L.length) return;
-        const me=L[+el.dataset.i], pin=el._pin; delete el._pin; let pinCh=false;
-        if(pin){ me.at={c:pin.c, x:pin.x, y:pin.y}; pinCh=true;
-          /* a spot can hold one pinned tile: any other pinned tile it now covers goes back to flowing */
-          const myN=+el.dataset.n||2, myW=grid._colSpan(el);
-          [...grid.children].forEach(z=>{ if(z===el || z.dataset.i==null) return; const o=L[+z.dataset.i]; if(!o || !o.at || o.at.c!==pin.c) return; const oN=+z.dataset.n||2, oW=grid._colSpan(z);
-            if(o.at.x<pin.x+myW && pin.x<o.at.x+oW && o.at.y<pin.y+myN && pin.y<o.at.y+oN) delete o.at; }); }
-        else if(me.at && t.unpin){ delete me.at; pinCh=true; }
-        if(!pinCh && order.every((v,k)=>v===k)) return;
+      const target=cancel ? el.getBoundingClientRect() : t.mark.getBoundingClientRect();
+      t.ghost.style.transition='transform .16s ease, opacity .16s'; t.ghost.style.transform='translate('+(target.left-parseFloat(t.ghost.style.left))+'px,'+(target.top-parseFloat(t.ghost.style.top))+'px)';
+      setTimeout(()=>{ const cell=t.cell; try{ t.mark.remove(); }catch(e){} el.classList.remove('nx-lift'); dragReset();
+        if(cancel || !cell || !el.isConnected) return;
+        /* where every tile is right now, on this screen's grid */
+        const g=geom(), gr=grid.getBoundingClientRect(); const C=g.C;
+        const boxes=[...grid.children].filter(z=>z.classList.contains('st-tile') && z.dataset.i!=null).map(z=>{ const r=z.getBoundingClientRect(); return {i:+z.dataset.i, x:Math.max(1, Math.round((r.left-gr.left)/(g.colW+g.cg))+1), y:Math.max(1, Math.round((r.top-gr.top)/g.unit)+1), w:grid._colSpan(z), n:+z.dataset.n||2}; });
+        const me=boxes.find(b=>b.i===+el.dataset.i); if(!me) return;
+        if(me.x===cell.x && me.y===cell.y) return;
+        me.x=cell.x; me.y=cell.y;
+        /* anything in the way slides straight down; everything else stays put */
+        const others=boxes.filter(b=>b!==me).sort((a,b)=>a.y-b.y || a.x-b.x);
+        settleBoxes(others, me);
+        boxes.forEach(b=>{ L[b.i].at={c:C, x:b.x, y:b.y}; });
         L.forEach((c,k)=>{ if(!c.sz && dashMixed()){ c.sz=sizeOf(c, k, L); delete c.w; } }); /* keep every tile the size it is now */
-        const NL=order.map(k=>L[k]);
+        const NL=L.slice().sort((a,b)=>((a.at&&a.at.c===C?a.at.y:1e4)-(b.at&&b.at.c===C?b.at.y:1e4)) || ((a.at?a.at.x:0)-(b.at?b.at.x:0)));
         if(t.edit){ L.splice(0, L.length, ...NL); paint(); }
-        else { saveDash(NL); paint(); toast('Tile order saved', null); } }, 170); }
+        else { saveDash(NL); paint(); toast('Tile moved', null); } }, 170); }
   }); }
 function tile(cfg, i, L){
   const meta = cfg.t==='sys' ? sysMeta(cfg) : TILES[cfg.t]; if(!meta) return null;
@@ -5488,7 +5485,8 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-tiles.editing .st-tile{cursor:grab;animation:nxWig .9s ease-in-out infinite alternate}
 .nx-tiles.editing .st-tile:nth-child(2n){animation-delay:.3s}
 @keyframes nxWig{from{transform:rotate(-.4deg)}to{transform:rotate(.4deg)}}
-.st-tile.nx-ph{background:transparent!important;border:2px dashed var(--sky)!important;box-shadow:none!important;animation:none!important}.st-tile.nx-ph > *{visibility:hidden}
+.st-tile.nx-lift{opacity:.35;animation:none!important}
+.nx-dropmark{position:absolute;box-sizing:border-box;border:2px dashed var(--sky);border-radius:12px;background:rgba(116,191,235,.12);pointer-events:none;z-index:5;transition:left .12s ease,top .12s ease}
 .st-tile.nx-ghost{box-shadow:0 18px 40px rgba(6,32,47,.35)!important;opacity:.95;animation:none!important;cursor:grabbing}
 html.nx-tdragging,html.nx-tdragging *{cursor:grabbing!important;user-select:none!important}
 html.nx-tdragging .nx-tiles .st-tile{animation:none!important}
