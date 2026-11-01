@@ -98,6 +98,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -3797,9 +3798,9 @@ const css=document.createElement('style'); css.id='sy-skin'; css.textContent=`
 @keyframes syPulse{0%,100%{opacity:1}50%{opacity:.35}}
 #app-syncs .sy-meter{flex:0 0 74px;height:6px;border-radius:3px;background:var(--surface-2,#eef4f9);overflow:hidden;display:flex}
 #app-syncs .sy-meter b{display:block;height:100%;background:var(--sa)}#app-syncs .sy-meter b.od{background:#e5533d}
-#app-syncs .sylists{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))!important;gap:14px!important;align-items:start}
 #app-syncs .sylist{border-radius:12px!important;border:1px solid var(--border)!important;border-top:3px solid var(--sa)!important;background:var(--surface-2,#f5f8fb)!important;box-shadow:none!important}
-#app-syncs .sylhw .syln{font-size:12px!important;font-weight:800!important;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+#app-syncs .sylhw .syln{font-size:12px!important;font-weight:800!important;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal!important;word-break:normal!important}
+#app-syncs .sylhw .sylh{min-width:0}
 #app-syncs .sylhw .cnt{border-radius:5px!important;background:color-mix(in srgb,var(--sa) 14%,transparent)!important;color:var(--sa)!important;font-weight:800}
 #app-syncs .syc{border-radius:10px!important;background:var(--surface)!important;border:1px solid var(--border)!important;box-shadow:0 1px 2px rgba(6,32,47,.05);transition:transform .15s,box-shadow .15s,border-color .15s}
 #app-syncs .syc:hover{transform:translateY(-1px);box-shadow:0 8px 18px -12px rgba(6,32,47,.45);border-color:color-mix(in srgb,var(--sa) 45%,var(--border))!important}
