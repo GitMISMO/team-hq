@@ -116,6 +116,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -5035,7 +5036,7 @@ function tile(cfg, i, L){
       if(tall || wide){ const more=(S.dates||[]).filter(d=>d!==kd && d.d && days(d.d)>=0).sort((a,b)=>a.d<b.d?-1:1).slice(0, SZ==='b'?5:3); if(more.length){ const ls=h('div','nx-kl2'); more.forEach(d=>{ const r=h('div','kr'); r.appendChild(h('b',null,days(d.d)+'d')); r.appendChild(h('span',null,d.t)); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit && window.__editDate) window.__editDate(d); }); ls.appendChild(r); }); el.appendChild(ls); } }
       meta.go=()=>openClassic('dates'); } }
   else if(cfg.t==='meeting'){ let md=''; try{ const nm=window.__mtg && window.__mtg.next && window.__mtg.next(); md=typeof nm==='string'?nm:''; }catch(e){}
-    if(md){ const n=Math.max(0,days(md)); const cd=h('div','mic-cd'); [[n,n===1?'Day':'Days']].forEach(([v,l])=>{ const sp=h('span'); sp.appendChild(h('b',null,String(v).padStart(2,'0'))); sp.appendChild(h('small',null,l)); cd.appendChild(sp); }); const row=h('div','mic-row'); const ep=h('div','mic-ep'); ep.appendChild(h('b',null,WDL[pd(md).getDay()]+', '+fmt(md))); const items=(S.agenda||[]).filter(a=>a.mtg===md && !a.done); ep.appendChild(h('small',null, items.length+(items.length===1?' item':' items')+' on the agenda')); row.appendChild(ep); row.appendChild(cd); el.appendChild(row);
+    if(md){ const n=Math.max(0,days(md)); const cd=h('div','mic-cd'); [[n,n===1?'Day':'Days']].forEach(([v,l])=>{ const sp=h('span'); sp.appendChild(h('b',null,String(v).padStart(2,'0'))); sp.appendChild(h('small',null,l)); cd.appendChild(sp); }); const row=h('div','mic-row'); const ep=h('div','mic-ep'); ep.appendChild(h('b',null,WDL[pd(md).getDay()]+', '+fmt(md))); const items=(S.agenda||[]).filter(a=>a.mtg===md && !a.done); ep.appendChild(h('small',null, items.length+(items.length===1?' item':' items')+' on the agenda')); { const ip=(S.dates||[]).find(d=>d.d===md && /meeting/i.test(d.k||'') && d.loc); if(ip){ const miss=people().map(p=>p.id).filter(id=>(ip.who||[]).indexOf(id)<0).map(first); ep.appendChild(h('small','mic-loc','In person · '+ip.loc+(miss.length ? ' · '+miss.join(', ')+' out' : ''))); } } row.appendChild(ep); row.appendChild(cd); el.appendChild(row);
       if(tall){ const ai=(S.agenda||[]).filter(a=>a.mtg===md && !a.done).slice(0,5); if(ai.length){ const ls=h('div','nx-kl2'); ai.forEach(a=>{ const r=h('div','kr'); r.appendChild(h('b',null,a.kind||'Item')); r.appendChild(h('span',null,a.t)); ls.appendChild(r); }); el.appendChild(ls); } }
       const st2=h('div','mic-steps'); ['Before Business','Team Projects','Around the Room','Good of the Order'].forEach(z=>st2.appendChild(h('span',null,z))); el.appendChild(st2); }
     else el.appendChild(h('div','st-sub','No team meeting on the calendar.'));
@@ -5742,6 +5743,7 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-ftr{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface)}
 .nx-ftr b{font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums}.nx-fte{font-size:12px;color:var(--ink-3)}.nx-ftr .sp{flex:1}
 .nx-ftn{margin:6px 0;color:var(--ink-2);font-size:13.5px}
+.mic-loc{display:block;margin-top:3px;color:var(--k,#e86f5a)!important;font-weight:700}
 .mtd{display:flex;gap:14px;align-items:flex-start;min-width:0;min-height:0}
 .mtd-cal{flex:0 0 60px;border-radius:11px;overflow:hidden;text-align:center;background:rgba(255,255,255,.07);border:1px solid color-mix(in srgb,var(--k,#74bfeb) 50%,transparent);box-shadow:0 8px 18px -12px var(--k,#74bfeb)}
 .mtd-cal i{display:block;font-style:normal;font-size:10px;font-weight:800;letter-spacing:.14em;padding:3px 0 2px;background:var(--k,#74bfeb);color:#14203a}
@@ -6265,7 +6267,9 @@ async function sync(){
       if(!(S.people||[]).some(p=>p.id===pid)) continue;
       const seen=dayOf(Math.max.apply(null, list.map(e=>e.e||0))-1);
       const runs=runsFor(list).filter(r=>r.b>=today);
-      const manual=S.dates.filter(d=>d.src!=='outlook' && /travel|out of office|pto|vacation/i.test((d.k||'')+' '+(d.t||'')) && (d.who||[]).indexOf(pid)>=0 && d.d);
+      /* a key date added by hand wins: travel or time off, or a one-off MISMO meeting the person is going to
+         (out of the office for an in-person team meeting isn't time off) */
+      const manual=S.dates.filter(d=>d.src!=='outlook' && d.d && !d.rec && (d.who||[]).indexOf(pid)>=0 && (/travel|out of office|pto|vacation/i.test((d.k||'')+' '+(d.t||'')) || /meeting|summit/i.test(d.k||'')));
       const mine=S.dates.filter(d=>d.src==='outlook' && (d.who||[])[0]===pid);
       const want={};
       for(const r of runs){
