@@ -4553,7 +4553,7 @@ function tileEditor(cfg, i, L, inEdit){
           d.figs.map(f=>['f:'+f.n, f.n, f.v]).concat(d.gauges.map(gg=>['g:'+gg.n, gg.n+' gauge', gg.p+'%'])).forEach(([k,l,v])=>{ const b=btn(pk.indexOf(k)>=0?'on':'', null, ()=>{ const i2=pk.indexOf(k); if(i2>=0) pk.splice(i2,1); else pk.push(k); draw(); }); b.appendChild(h('i')); b.appendChild(h('span',null,l)); b.appendChild(h('b',null,v)); ch.appendChild(b); }); s3.appendChild(ch); } } }
     const sz=sizeOf(work, 0, [work]);
     const s4=sec(sysS ? (x && x.sysData(sysS.k, work.go||'') && !pickCard(work, x.sysData(sysS.k, work.go||'')) && 1 ? 'Size' : 'Size') : 'Size'); s4.appendChild(seg([['s','Small','one box'],['w','Wide','two across'],['t','Tall','two down'],['b','Large','two by two']], sz, k=>{ delete work.w; work.sz=k; }));
-    const s5=sec('How Much Detail'); s5.appendChild(seg([['hi','High Level','the headline'],['det','Detailed','plus lists and more numbers']], lvlOf(work), k=>{ work.lvl=k; }));
+    const s5=sec('How Much Detail'); s5.appendChild(seg([['hi','High Level','just the top — no list'],['det','Detailed','adds the list underneath']], lvlOf(work), k=>{ work.lvl=k; }));
   }
   const close=()=>{ ov.remove(); document.removeEventListener('keydown', esc); window.removeEventListener('hq:counts', onData); };
   const commit=()=>{ if(inEdit) paint(); else { saveDash(L); paint(); } };
