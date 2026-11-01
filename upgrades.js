@@ -4612,14 +4612,19 @@ function dragTile(el, i, L){
     function place(){ const t=tdrag; if(!t) return;
       t.ghost.style.transform='translate('+(t.x-t.ox-parseFloat(t.ghost.style.left))+'px,'+(t.y-t.oy-parseFloat(t.ghost.style.top))+'px) rotate(1deg) scale(1.02)';
       const now=Date.now(); if(now-t.last<140) return;
-      const under=document.elementFromPoint(t.x, t.y); const tgt=under && under.closest('.st-tile');
+      const under=document.elementFromPoint(t.x, t.y); const tgt=under && under.closest('.st-tile, .nx-tadd');
+      const tadd=[...grid.children].find(z=>z.classList.contains('nx-tadd')) || null;
+      /* over the Add a Tile box, or in the open space after the last tile: it goes to the end */
+      const tiles=[...grid.children].filter(z=>z.classList.contains('st-tile')); const lastR=tiles.length ? tiles[tiles.length-1].getBoundingClientRect() : null;
+      const toEnd=(tgt && tgt.classList.contains('nx-tadd')) || (!tgt && under===grid && lastR && t.y>lastR.top && t.x>lastR.right) || (!tgt && lastR && t.y>lastR.bottom && grid.getBoundingClientRect().left<t.x && t.x<grid.getBoundingClientRect().right);
+      if(toEnd){ const ref=tadd; if(el.nextSibling===ref && (ref || el===grid.lastElementChild)) return; if(!ref && el===grid.lastElementChild) return; slide(()=>grid.insertBefore(el, ref)); t.moved=true; t.last=now; return; }
       if(!tgt || tgt===el || tgt.parentNode!==grid || tgt.classList.contains('nx-ghost')) return;
       /* only move once the pointer is well inside the other tile, so the tiles don't flicker back and forth */
       const tr=tgt.getBoundingClientRect(); const ix=(t.x-tr.left)/tr.width, iy=(t.y-tr.top)/tr.height; if(ix<0.15 || ix>0.85 || iy<0.15 || iy>0.85) return;
       const kids=[...grid.children]; const from=kids.indexOf(el), to=kids.indexOf(tgt); if(from<0 || to<0) return;
-      const before=new Map(kids.map(k=>[k, k.getBoundingClientRect()]));
-      grid.insertBefore(el, from<to ? tgt.nextSibling : tgt); t.moved=true; t.last=now;
-      /* glide every tile from where it was to where it is now */
+      slide(()=>grid.insertBefore(el, from<to ? tgt.nextSibling : tgt)); t.moved=true; t.last=now; }
+    /* move the tile, then glide every other tile from where it was to where it is now */
+    function slide(doMove){ const kids=[...grid.children]; const before=new Map(kids.map(k=>[k, k.getBoundingClientRect()])); doMove();
       kids.forEach(k=>{ if(k===el) return; const a=before.get(k), z=k.getBoundingClientRect(); const dx=a.left-z.left, dy=a.top-z.top; if(!dx && !dy) return;
         k.style.transition='none'; k.style.transform='translate('+dx+'px,'+dy+'px)'; k.getBoundingClientRect(); k.style.transition='transform .2s ease'; k.style.transform='';
         setTimeout(()=>{ k.style.transition=''; }, 230); }); }
