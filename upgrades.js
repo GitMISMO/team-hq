@@ -113,6 +113,9 @@
 
 
 
+
+
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -4642,7 +4645,7 @@ function dashDefault(){
   return L;
 }
 function dashLayout(){ const b=S.bset||{}; return Array.isArray(b[DK]) && b[DK].length ? b[DK].map(z=>Object.assign({}, z)) : dashDefault(); }
-function saveDash(L){ if(!S.bset) S.bset={}; S.bset[DK]=L.map(z=>{ const o={t:z.t}; ['s','go','f','sz','sec','lvl','card','at','mins'].forEach(k=>{ if(z[k]) o[k]=z[k]; }); if(Array.isArray(z.who) && z.who.length) o.who=z.who.slice(); if(Array.isArray(z.pick) && z.pick.length) o.pick=z.pick.slice(); return o; }); if(dashMixEdit!=null) S.bset.hqDashMix=dashMixEdit; try{ window.__saveMine && window.__saveMine(); }catch(e){} }
+function saveDash(L){ if(!S.bset) S.bset={}; S.bset[DK]=L.map(z=>{ const o={t:z.t}; ['s','go','f','sz','sec','lvl','card','at','mins','open'].forEach(k=>{ if(z[k]) o[k]=z[k]; }); if(Array.isArray(z.who) && z.who.length) o.who=z.who.slice(); if(Array.isArray(z.pick) && z.pick.length) o.pick=z.pick.slice(); return o; }); if(dashMixEdit!=null) S.bset.hqDashMix=dashMixEdit; try{ window.__saveMine && window.__saveMine(); }catch(e){} }
 let dashEdit=null; /* the layout being customized, or null */
 let dashMixEdit=null; /* mixed or uniform sizes, while customizing */
 const SIZES=['s','w','t','b'], SZN={s:'Small',w:'Wide',t:'Tall',b:'Large'};
@@ -4653,7 +4656,8 @@ function sizeOf(cfg, i, L){ if(cfg.sz) return cfg.sz; if(cfg.w===2) return 'w';
   if(cfg.t==='sys'){ const n=L.slice(0,i).filter(z=>z.t==='sys').length; return ['s','w','t','s','b','s','w'][n%7]; }
   return MIXDEF[cfg.t] || 's'; }
 function pinTile(k, go){ const L=dashLayout(); const i=L.findIndex(z=>z.t==='sys' && z.s===k && (z.go||'')===(go||'')); const had=i>=0; const t=had ? L.splice(i,1)[0] : {t:'sys', s:k, go:go||''}; L.splice(0,0,t); saveDash(L); toast((had?'Moved to the top of your dashboard':'Added to your dashboard')+(go?': '+go:''), null); if(viewKind()==='day' && !dashEdit) paint(); }
-function openSystem(k, go, sec){ const x=X(); if(x && x.openSys) x.openSys(k, go, {onPin:pinTile, sec:sec||''}); }
+function openSystem(k, go, sec, cfg){ const x=X(); if(cfg && cfg.open==='tab'){ const s=x && x.SYS.find(z=>z.k===k); if(s){ let u=s.u; try{ u=new URL(s.u, document.baseURI).href; }catch(e){} window.open(u, '_blank', 'noopener'); return; } } if(x && x.openSys) x.openSys(k, go, {onPin:pinTile, sec:sec||''}); }
+const opnTxt=cfg=>cfg && cfg.open==='tab' ? ' Open ↗' : ' Open →';
 const em=t=>{ const e=h('em'); e.textContent=t; return e; };
 function vDash(){
   const now=new Date(), hr=now.getHours();
@@ -4705,14 +4709,15 @@ function settleBoxes(list, first){ const done=[]; const hit=(a,b)=>a.x<b.x+b.w &
 function packTiles(grid, L){
   if(packRO){ packRO.disconnect(); packRO=null; } if(packMO){ packMO.disconnect(); packMO=null; }
   grid.classList.add('nx-pack');
-  const ROW=84, GAP=10;
+  /* SLACK: a tile a few pixels over a row boundary eats into its bottom padding rather than taking a whole extra row */
+  const ROW=84, GAP=10, SLACK=10;
   const cols=()=>getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length || 1;
   const colSpan=t=>/\bsz-(w|b)\b/.test(t.className) && cols()>=2 ? 2 : 1;
   /* a tile you dropped into a particular spot stays in that spot (for this screen width); the rest flow around it */
   const pinOf=t=>{ if(t._pin) return t._pin; const c=L && t.dataset.i!=null ? L[+t.dataset.i] : null; return c && c.at && c.at.c===cols() ? c.at : null; };
   const fit=t=>{ if(!t.isConnected || t.classList.contains('nx-dropmark')) return; const tall=/\bsz-(t|b)\b/.test(t.className), min=tall?4:2;
     const keepR=t.style.gridRow, keepC=t.style.gridColumn; t.style.alignSelf='start'; const hgt=t.getBoundingClientRect().height; t.style.alignSelf=''; if(!hgt) return;
-    const n=Math.max(min, Math.ceil((hgt+GAP)/(ROW+GAP))); t.dataset.n=n; const pin=pinOf(t);
+    const n=Math.max(min, Math.ceil((hgt+GAP-SLACK)/(ROW+GAP))); t.dataset.n=n; const pin=pinOf(t);
     const cs=colSpan(t), px=pin ? Math.max(1, Math.min(pin.x, cols()-cs+1)) : 0;
     const r=(pin ? pin.y : 'auto')+' / span '+n, c=pin ? px+' / span '+cs : '';
     if(keepR!==r) t.style.gridRow=r; if(keepC!==c) t.style.gridColumn=c; };
@@ -4876,6 +4881,7 @@ function tileEditor(cfg, i, L, inEdit){
     const sz=sizeOf(work, 0, [work]);
     const s4=sec(sysS ? (x && x.sysData(sysS.k, work.go||'') && !pickCard(work, x.sysData(sysS.k, work.go||'')) && 1 ? 'Size' : 'Size') : 'Size'); s4.appendChild(seg([['s','Small','one box'],['w','Wide','two across'],['t','Tall','two down'],['b','Large','two by two']], sz, k=>{ delete work.w; work.sz=k; }));
     const s5=sec('How Much Detail'); s5.appendChild(seg([['hi','High Level','just the top — no list'],['det','Detailed','adds the list underneath']], lvlOf(work), k=>{ work.lvl=k; }));
+    if(sysS){ const s6=sec('When You Click It'); s6.appendChild(seg([['hq','Open in Team HQ','opens right here'],['tab','Open in a New Tab','the system on its own']], work.open==='tab'?'tab':'hq', k=>{ if(k==='tab') work.open='tab'; else delete work.open; })); }
   }
   const close=()=>{ ov.remove(); document.removeEventListener('keydown', esc); window.removeEventListener('hq:counts', onData); };
   const commit=()=>{ if(inEdit) paint(); else { saveDash(L); paint(); } };
@@ -5138,7 +5144,7 @@ function mtDay(el, top, c, SZ, s, cfg, d){
     else mn.appendChild(h('div','mtd-s','Nothing scheduled in the next two weeks'));
   }
   el.appendChild(w);
-  const nt=h('div','st-next'); nt.append((X().SHORT[s.k]||s.n)+(d && d.at ? ' · '+X().ago(d.at) : '')); nt.appendChild(h('b','opn',' Open →')); el.appendChild(nt);
+  const nt=h('div','st-next'); nt.append((X().SHORT[s.k]||s.n)+(d && d.at ? ' · '+X().ago(d.at) : '')); nt.appendChild(h('b','opn', opnTxt(cfg))); el.appendChild(nt);
   if(!mtTimer) mtTimer=setInterval(mtTick, 30000);
   return true; }
 function drawCard(el, top, c, SZ, lvl, s, cfg, d){ const x=X(), det=lvl==='det', small=SZ==='s', tall=SZ==='t'||SZ==='b';
@@ -5146,7 +5152,7 @@ function drawCard(el, top, c, SZ, lvl, s, cfg, d){ const x=X(), det=lvl==='det',
   /* a page's day strip ("Today · Sunday, November 1 · No workgroup meetings today…") keeps the system's name on top */
   const dayStrip=/^(today|this week|the week ahead)$/i.test(c.t);
   if(dayStrip && mtDay(el, top, c, SZ, s, cfg, d)) return;
-  if(dayStrip){ top.appendChild(h('span','st-pill', c.t)); if(c.head) el.appendChild(h('div','nx-chd', c.head)); if(c.text) el.appendChild(h('div','nx-ctx nx-day', c.text)); const nt=h('div','st-next'); nt.append((x.SHORT[s.k]||s.n)+(cfg.go?' · '+cfg.go:'')+(d && d.at ? ' · '+x.ago(d.at) : '')); nt.appendChild(h('b','opn',' Open →')); el.appendChild(nt); return; }
+  if(dayStrip){ top.appendChild(h('span','st-pill', c.t)); if(c.head) el.appendChild(h('div','nx-chd', c.head)); if(c.text) el.appendChild(h('div','nx-ctx nx-day', c.text)); const nt=h('div','st-next'); nt.append((x.SHORT[s.k]||s.n)+(cfg.go?' · '+cfg.go:'')+(d && d.at ? ' · '+x.ago(d.at) : '')); nt.appendChild(h('b','opn', opnTxt(cfg))); el.appendChild(nt); return; }
   top.firstChild.textContent=c.t;
   if(c.pill) top.appendChild(h('span','st-pill'+(c.hot?' hot':''), c.pill));
   if(c.big){ const b=h('div','st-big'); b.append(c.big); if(c.unit) b.appendChild(h('small',null,c.unit)); el.appendChild(b); }
@@ -5157,7 +5163,7 @@ function drawCard(el, top, c, SZ, lvl, s, cfg, d){ const x=X(), det=lvl==='det',
   if(c.groups && c.groups.length && !small){ const g=h('div','nx-cgrp'); c.groups.slice(0, det||tall?5:3).forEach(([k,n])=>{ const sp=h('span'); sp.appendChild(h('b',null,String(n))); sp.append(k); g.appendChild(sp); }); el.appendChild(g); }
   if(c.total && !small && !(c.sub && c.sub.indexOf(c.total)>=0)) el.appendChild(h('div','st-sub', 'Total '+c.total));
   if(c.rows && c.rows.length && !small && (det || tall)){ const ls=h('div','nx-crows'); c.rows.slice(0, SZ==='b'?6:tall?5:3).forEach(r=>{ const row=h('div','cr'); row.appendChild(h('b',null,r[0])); if(r.length>2){ row.appendChild(h('i',null,r[1])); row.appendChild(h('em',null,r[2])); } else if(r[1]){ /^\d/.test(r[1]) || /days?|ago|late|due/i.test(r[1]) ? row.appendChild(h('em',null,r[1])) : row.appendChild(h('i',null,r[1])); } ls.appendChild(row); }); el.appendChild(ls); }
-  const nt=h('div','st-next'); nt.append((x.SHORT[s.k]||s.n)+(cfg.go?' · '+cfg.go:'')+(d && d.at ? ' · '+x.ago(d.at) : '')); nt.appendChild(h('b','opn',' Open →')); el.appendChild(nt); }
+  const nt=h('div','st-next'); nt.append((x.SHORT[s.k]||s.n)+(cfg.go?' · '+cfg.go:'')+(d && d.at ? ' · '+x.ago(d.at) : '')); nt.appendChild(h('b','opn', opnTxt(cfg))); el.appendChild(nt); }
 function sysMeta(cfg){ const x=X(); const s=x && x.SYS.find(z=>z.k===cfg.s); if(!s) return null;
   const meta={n:s.n, lab:(x.SHORT[s.k]||s.n), k:s.c};
   meta.draw=(el, top, SZ)=>{
@@ -5193,11 +5199,11 @@ function sysMeta(cfg){ const x=X(); const s=x && x.SYS.find(z=>z.k===cfg.s); if(
           const t1=h('div','t'); t1.appendChild(h('b',null,c.t)); const tag=c.big ? c.big+(c.unit?' '+c.unit:'') : (c.pill || c.head || ''); if(tag) t1.appendChild(h('em',null,tag)); r.appendChild(t1);
           if(c.meter!=null && isFinite(c.meter)){ const m=h('div','st-meter'); const f=h('i'); f.style.width=Math.max(0,Math.min(100,c.meter))+'%'; m.appendChild(f); r.appendChild(m); }
           const ln=c.sub || c.text; if(ln) r.appendChild(h('small',null,ln));
-          r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) openSystem(s.k, cfg.go||''); }); ls.appendChild(r); }); el.appendChild(ls); } }
-      if(det && d && d.secs){ const sl=Object.keys(d.secs).filter(n=>n!==cfg.sec && d.secs[n].n>0).slice(0, SZ==='b'?6:4); if(sl.length){ const ls=h('div','nx-kl2'); sl.forEach(n=>{ const r=h('div','kr'); r.appendChild(h('b',null,String(d.secs[n].n))); r.appendChild(h('span',null,n)); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) openSystem(s.k, cfg.go, n); }); ls.appendChild(r); }); el.appendChild(ls); } } }
-    const nt=h('div','st-next'); nt.append(d ? 'From '+(cfg.go||(x.SHORT[s.k]||s.n))+' · '+x.ago(d.at) : c ? 'Checked '+x.ago(c.at) : 'Opens right here'); nt.appendChild(h('b','opn',' Open →')); el.appendChild(nt);
+          r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) openSystem(s.k, cfg.go||'', '', cfg); }); ls.appendChild(r); }); el.appendChild(ls); } }
+      if(det && d && d.secs){ const sl=Object.keys(d.secs).filter(n=>n!==cfg.sec && d.secs[n].n>0).slice(0, SZ==='b'?6:4); if(sl.length){ const ls=h('div','nx-kl2'); sl.forEach(n=>{ const r=h('div','kr'); r.appendChild(h('b',null,String(d.secs[n].n))); r.appendChild(h('span',null,n)); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) openSystem(s.k, cfg.go, n, cfg); }); ls.appendChild(r); }); el.appendChild(ls); } } }
+    const nt=h('div','st-next'); nt.append(d ? 'From '+(cfg.go||(x.SHORT[s.k]||s.n))+' · '+x.ago(d.at) : c ? 'Checked '+x.ago(c.at) : 'Opens right here'); nt.appendChild(h('b','opn', opnTxt(cfg))); el.appendChild(nt);
   };
-  meta.go=()=>openSystem(s.k, cfg.go||'', cfg.sec||'');
+  meta.go=()=>openSystem(s.k, cfg.go||'', cfg.sec||'', cfg);
   return meta; }
 function sysSettings(cfg, anchor){ const x=X(); const s=x.SYS.find(z=>z.k===cfg.s); let changed=false; popMenu(anchor, sysItems(cfg, paint, ()=>{ changed=true; }), (x.SHORT[s.k]||s.n)); if(menuEl){ menuEl.classList.add('tall'); menuEl._onClose=()=>{ if(changed) paint(); }; } }
 function sysItems(cfg, done, later){ const x=X(); const s=x.SYS.find(z=>z.k===cfg.s); const items=[];
