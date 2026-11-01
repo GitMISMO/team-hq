@@ -105,6 +105,8 @@
 
 
 
+
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -481,7 +483,7 @@ const hasData=d=>d && (d.figs.length || d.gauges.length || (d.cards||[]).length 
 function keepData(k, go, d){ if(!hasData(d) || d.failed) return; SD[sdKey(k,go)]=d; try{ localStorage.setItem(DK, JSON.stringify(SD)); }catch(e){} try{ window.dispatchEvent(new Event('hq:counts')); }catch(e){} }
 function sysData(k, go){ return SD[sdKey(k,go)]||null; }
 const SQ=[], INF=new Set(); let sRun=0; const SMAX=1; /* one page read at a time */
-function wantData(k, go, maxAge){ const d=SD[sdKey(k,go)]; if(d && Date.now()-d.at<(maxAge||45*60e3)) return; if(INF.has(sdKey(k,go)) || SQ.some(q=>q.k===k && q.go===(go||''))) return; SQ.push({k, go:go||'', miss:!(d && hasData(d))}); setTimeout(pump, 300); }
+function wantData(k, go, maxAge){ const d=SD[sdKey(k,go)]; if(d && Date.now()-d.at<(maxAge||20*60e3)) return; if(INF.has(sdKey(k,go)) || SQ.some(q=>q.k===k && q.go===(go||''))) return; SQ.push({k, go:go||'', miss:!(d && hasData(d))}); setTimeout(pump, 300); }
 /* other systems are read in the background only once Team HQ has opened and settled, one at a time,
    and only when the browser has a free moment, so opening Team HQ never feels slow */
 let pumpWait=null, lastAct=0, actWait=null;
@@ -525,7 +527,9 @@ function countFor(k, go, sec){ const c=counts[k]; if(!c || !go) return null; if(
 function secsOf(k, go){ const c=counts[k]; return c && c.sec && c.sec[go] ? Object.keys(c.sec[go]).map(n=>({n, c:c.sec[go][n].n})) : []; }
 function navOf(k){ const c=counts[k]; return c ? Object.keys(c.nav) : []; }
 let pane=null;
-function closeSys(){ if(!pane) return; const p=pane; pane=null; try{ const pd=p.fr.contentDocument; snapSys(p.k, pd); const cur=curNav(pd); if(cur) keepData(p.k, cur, extract(pd)); }catch(e){} p.el.classList.add('out'); setTimeout(()=>p.el.remove(), 200); document.removeEventListener('keydown', p.esc); document.documentElement.classList.remove('hqx-sys-on'); }
+function closeSys(){ if(!pane) return; const p=pane; pane=null; try{ const pd=p.fr.contentDocument; snapSys(p.k, pd); const cur=curNav(pd); const d=extract(pd); if(cur) keepData(p.k, cur, d); else keepData(p.k, p.go, d);
+    /* opened at its home page and still on it: that's the tile's page too */
+    if(cur && !p.go){ const nv=navOf(p.k); if(!nv.length || nv[0]===cur) keepData(p.k, '', d); } }catch(e){} p.el.classList.add('out'); setTimeout(()=>p.el.remove(), 200); document.removeEventListener('keydown', p.esc); document.documentElement.classList.remove('hqx-sys-on'); }
 function openSys(k, go, opt){
   opt=opt||{}; const s=typeof k==='object' ? k : SYS.find(x=>x.k===k); if(!s) return; let sec=opt.sec||null;
   if(pane) closeSys();
@@ -541,7 +545,7 @@ function openSys(k, go, opt){
   const fr=h('iframe','hqx-fr'); fr.src=s.u; fr.title=s.n; box.appendChild(fr);
   el.appendChild(box); document.body.appendChild(el); document.documentElement.classList.add('hqx-sys-on');
   const esc=e=>{ if(e.key==='Escape') closeSys(); }; document.addEventListener('keydown', esc);
-  pane={el, fr, k:s.k, esc};
+  pane={el, fr, k:s.k, esc, go:go||''};
   driveFrame(fr, s.k, go, sec, ()=>ld.remove()); setTimeout(()=>ld.classList.add('done'), 2400);
 }
 const css2=document.createElement('style'); css2.id='hqx-css2'; css2.textContent=`
