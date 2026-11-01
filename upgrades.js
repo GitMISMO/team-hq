@@ -93,6 +93,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -450,8 +451,10 @@ let pumpWait=null, lastAct=0, actWait=null;
 ['pointermove','pointerdown','wheel','keydown','touchstart','scroll'].forEach(ev=>window.addEventListener(ev, ()=>{ lastAct=Date.now(); }, {passive:true, capture:true}));
 function pump(){
   /* while the opening screen is up nobody is clicking, so read the systems your tiles have no numbers for yet */
-  if(!document.hidden && Date.now()-lastAct<4000){ clearTimeout(actWait); actWait=setTimeout(pump, 1500); return; }
-  if(window.__hqBooted===false){ if(!pumpWait){ pumpWait=()=>{ window.removeEventListener('hq:booted', pumpWait); pumpWait=null; pump(); }; window.addEventListener('hq:booted', pumpWait); } return; }
+  /* a tile with no numbers at all (one you just added) is read as soon as you pause; refreshes wait for a longer quiet moment */
+  const miss=SQ.some(q=>q.miss), quiet=miss ? 1200 : 4000;
+  if(!document.hidden && Date.now()-lastAct<quiet){ clearTimeout(actWait); actWait=setTimeout(pump, miss ? 600 : 1500); return; }
+  if(window.__hqBooted===false && !(miss && !document.getElementById('hqo'))){ if(!pumpWait){ pumpWait=()=>{ window.removeEventListener('hq:booted', pumpWait); pumpWait=null; pump(); }; window.addEventListener('hq:booted', pumpWait); } return; }
   const go=()=>{ SQ.sort((a,b)=>(b.miss?1:0)-(a.miss?1:0)); while(sRun<SMAX && SQ.length) pumpOne(); };
   if(window.requestIdleCallback) requestIdleCallback(go, {timeout:2500}); else setTimeout(go, 200); }
 function pumpOne(){ const q0=SQ.shift(); const s=SYS.find(z=>z.k===q0.k); if(!s || !canOpen(s.k)) return; sRun++;
@@ -4874,7 +4877,7 @@ function gaugeEl(g, big){ const p=Math.max(0, +g.p||0), C=2*Math.PI*40, f=Math.m
   const l=h('div','l'); l.appendChild(h('span',null,g.n)); if(g.v) l.appendChild(h('small',null, big && g.b ? g.v+' of '+g.b : g.v)); w.appendChild(l); w.title=g.n+': '+p+'%'+(g.v?' — '+g.v:'')+(g.b?' of '+g.b+' budget':''); return w; }
 function figEl(f, big){ const w=h('div','nx-fg'+(big?' big':'')+(f.tone?' '+f.tone:'')); w.appendChild(h('b',null,f.v)); w.appendChild(h('span',null,f.n)); if(f.s && big) w.appendChild(h('small',null,f.s)); return w; }
 /* the page's own tiles, drawn the Team HQ way: one per Team HQ tile, picked in Settings */
-const goodCard=c=>c && (c.big || (c.rows && c.rows.length) || c.text);
+const goodCard=c=>c && !/^(\d+\s+to\s+\w+|up to date|all caught up|caught up|nothing today)$/i.test(c.t||'') && (c.big || (c.rows && c.rows.length) || c.text);
 function pickCard(cfg, d){ if(!d || !Array.isArray(d.cards) || !d.cards.length) return null;
   if(cfg.card==='#num') return null;
   if(cfg.card){ return d.cards.find(c=>c.t===cfg.card) || null; }
@@ -4889,6 +4892,9 @@ function pickCard(cfg, d){ if(!d || !Array.isArray(d.cards) || !d.cards.length) 
   return d.cards.find(goodCard) || null; }
 function drawCard(el, top, c, SZ, lvl, s, cfg, d){ const x=X(), det=lvl==='det', small=SZ==='s', tall=SZ==='t'||SZ==='b';
   if(c.k && /^(#|rgb|hsl|var)/.test(c.k)) el.style.setProperty('--k', c.k);
+  /* a page's day strip ("Today · Sunday, November 1 · No workgroup meetings today…") keeps the system's name on top */
+  const dayStrip=/^(today|this week|the week ahead)$/i.test(c.t);
+  if(dayStrip){ top.appendChild(h('span','st-pill', c.t)); if(c.head) el.appendChild(h('div','nx-chd', c.head)); if(c.text) el.appendChild(h('div','nx-ctx nx-day', c.text)); const nt=h('div','st-next'); nt.append((x.SHORT[s.k]||s.n)+(cfg.go?' · '+cfg.go:'')+(d && d.at ? ' · '+x.ago(d.at) : '')); nt.appendChild(h('b','opn',' Open →')); el.appendChild(nt); return; }
   top.firstChild.textContent=c.t;
   if(c.pill) top.appendChild(h('span','st-pill'+(c.hot?' hot':''), c.pill));
   if(c.big){ const b=h('div','st-big'); b.append(c.big); if(c.unit) b.appendChild(h('small',null,c.unit)); el.appendChild(b); }
@@ -5461,6 +5467,7 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-sysh{display:flex;gap:14px;align-items:center;min-width:0}
 .nx-sym.sm{width:52px;height:52px;padding:9px;border-radius:12px}
 .nx-syl{flex:1;min-width:0;container-type:inline-size}
+.nx-day{font-size:14px;line-height:1.45;color:rgba(255,255,255,.85);display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
 .nx-skel{display:flex;flex-direction:column;gap:7px;padding:2px 0}.nx-skel i{display:block;height:12px;border-radius:4px;background:linear-gradient(90deg,rgba(255,255,255,.07),rgba(255,255,255,.16),rgba(255,255,255,.07));background-size:200% 100%;animation:nxsk 1.4s ease-in-out infinite}.nx-skel .a{width:55%;height:30px}.nx-skel .b{width:80%}.nx-skel .c{width:40%}@keyframes nxsk{0%{background-position:100% 0}100%{background-position:-100% 0}}@media (prefers-reduced-motion:reduce){.nx-skel i{animation:none}}.nx-syl .nx-fg.big b{font-size:min(34px,15.5cqi)}.nx-syl .st-big{font-size:min(40px,18cqi)}
 .nx-fg{display:flex;flex-direction:column;gap:1px;min-width:0}
 .nx-fg b{font-size:20px;font-weight:800;letter-spacing:-.01em;color:#fff;white-space:nowrap}
