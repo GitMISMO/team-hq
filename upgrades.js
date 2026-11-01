@@ -112,6 +112,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -4147,7 +4148,6 @@ function header(title, icon, sub, controls){
   if(icon){ const i=h('span','nx-hi'); i.innerHTML=icon; l.appendChild(i); }
   const tt=h('div','nx-ht'); tt.appendChild(h('h1',null,title)); if(sub) tt.appendChild(h('span','nx-hs',sub)); l.appendChild(tt);
   head.appendChild(l);
-  head.appendChild(quickAdd());
   if(controls){ const r=h('div','nx-hr'); controls.forEach(c=>c && r.appendChild(c)); head.appendChild(r); }
 }
 function quickAdd(){
@@ -4159,6 +4159,9 @@ function quickAdd(){
   qa.addEventListener('submit', e=>{ e.preventDefault(); const v=inp.value.trim(); if(!v) return; const o=Object.assign(ctxDefaults(), parseQuick(v)); inp.value=''; hint.textContent=''; qa.classList.remove('typing'); newTask(o); });
   return qa;
 }
+/* what a new task should already know, from the page you're on: the project (and workstream) or the person */
+function ctxAdd(){ const k=viewKind(), o={}; if(k==='project'){ o.r=ui.view.slice(2); if(ui.ws) o.w=ui.ws; } if(k==='person'){ const id=ui.view.slice(2); o.o=id; o.d=[id]; } return o; }
+document.addEventListener('click', e=>{ const b=e.target.closest && e.target.closest('#newtask'); if(!b || !ui.on || !document.documentElement.classList.contains('nx-show')) return; const k=viewKind(); if(k!=='project' && k!=='person') return; e.preventDefault(); e.stopPropagation(); newTask(ctxAdd()); }, true);
 function ctxDefaults(){ const k=viewKind(), o={};
   if(k==='project') o.r=ui.view.slice(2); if(k==='project' && ui.ws) o.w=ui.ws;
   if(k==='person'){ const id=ui.view.slice(2); o.o=id; o.d=[id]; }
@@ -5438,8 +5441,8 @@ const onKey=e=>{ if(!ui.on || !shell || shell.hidden || document.documentElement
   if(e.metaKey||e.ctrlKey||e.altKey) return; if(document.querySelector('dialog[open], .modal.open, .ed-ov:not([hidden])')) return;
   const k=e.key.toLowerCase();
   const m={'1':'day','2':'inbox','3':'mine','4':'cal','5':'people'}[k]; if(m){ open(m); e.preventDefault(); return; }
-  if(k==='c'){ const i=head.querySelector('.nx-qa input'); if(i){ e.preventDefault(); i.focus(); } return; }
-  if(k==='/'){ const i=head.querySelector('.nx-find') || head.querySelector('.nx-qa input'); if(i){ e.preventDefault(); i.focus(); } return; }
+  if(k==='c'){ e.preventDefault(); newTask(ctxAdd()); return; }
+  if(k==='/'){ const i=head.querySelector('.nx-find'); if(i){ e.preventDefault(); i.focus(); } return; }
   const rows=[...body.querySelectorAll('.nx-row[data-id]')].filter(r=>r.offsetParent);
   if(!rows.length) return;
   if(sel<0 && peekEl && peekEl.isConnected && ui.peek) sel=rows.findIndex(r=>r.dataset.id===ui.peek);
@@ -6164,7 +6167,6 @@ html.nx-tdragging .nx-tiles .st-tile{animation:none!important}
   .nx-sp,.nx-ws{display:none}
   .nx-row:not(.nx-card) .nx-pj{max-width:150px;order:5;margin-left:34px}
   .nx-row:not(.nx-card) .nx-due{min-width:0}
-  html.nx-on #newtask{display:none}
   .hqtop-r{gap:8px!important}
   .nx-gh{padding-right:12px}
   .nx-strip,.nx-teamstrip,.nx-coming,.nx-overlay{padding-left:12px;padding-right:12px}
