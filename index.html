@@ -296,7 +296,7 @@
       var go = function () {
         if (f.denied) { rej(err('NO_ACCESS', 'You do not have access to save this.', 403)); return; }
         if (f.proj === PROJECT && SYNC[f.name] && syncShared !== true) { rej(err('SYNC_NOT_PRIVATE', 'Sync Ups waits until the relay can keep each space to its members.')); return; }
-        if (kind === 'update' && f.loaded && docIn(f, p.key) === null) { rej(err('not-found', 'No document to update: ' + path)); return; }
+        if (kind === 'update' && f.loaded && docIn(f, p.key) === null) { if (!go.again) { go.again = true; f.loaded = false; load(f).then(go, go); return; } rej(err('not-found', 'No document to update: ' + path)); return; }
         var op = { kind: kind, key: p.key, data: data, res: res, rej: rej };
         f.pending.push(op); f.view = null;
         keepAll();
@@ -339,7 +339,7 @@
           saved();
         });
       }).catch(function (e) {
-        if (e && e.status === 409 && tries < 8) {
+        if (e && e.status === 409 && tries < 30) {
           tries++;
           f.loaded = false;
           return new Promise(function (r) { setTimeout(r, 300 * tries + Math.random() * 500); })
@@ -353,7 +353,7 @@
          taken back. Anything GitHub or the connection refuses - a busy hour, GitHub having
          trouble, a key or repository that needs fixing - keeps the change, on this computer
          too, and tries again: quickly at first, then every few minutes. */
-      var keep = e && (e.code === 'OFFLINE' || e.status === 401 || e.code === 'SIGNED_OUT' ||
+      var keep = e && (e.code === 'OFFLINE' || e.status === 401 || e.status === 409 || e.code === 'CONFLICT' || e.code === 'SIGNED_OUT' ||
         e.code === 'GITHUB' || e.code === 'TOKEN' || e.code === 'CONFIG_UNAVAILABLE' ||
         (e.status >= 500 && e.code !== 'REJECTED' && e.code !== 'TOO_BIG') || e.status === 429);
       if (keep) {
