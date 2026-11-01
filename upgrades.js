@@ -4406,7 +4406,7 @@ function dashDefault(){
   return L;
 }
 function dashLayout(){ const b=S.bset||{}; return Array.isArray(b[DK]) && b[DK].length ? b[DK].map(z=>Object.assign({}, z)) : dashDefault(); }
-function saveDash(L){ if(!S.bset) S.bset={}; S.bset[DK]=L.map(z=>{ const o={t:z.t}; ['s','go','f','sz','sec','lvl','card'].forEach(k=>{ if(z[k]) o[k]=z[k]; }); if(Array.isArray(z.pick) && z.pick.length) o.pick=z.pick.slice(); return o; }); if(dashMixEdit!=null) S.bset.hqDashMix=dashMixEdit; try{ window.__saveMine && window.__saveMine(); }catch(e){} }
+function saveDash(L){ if(!S.bset) S.bset={}; S.bset[DK]=L.map(z=>{ const o={t:z.t}; ['s','go','f','sz','sec','lvl','card','at'].forEach(k=>{ if(z[k]) o[k]=z[k]; }); if(Array.isArray(z.pick) && z.pick.length) o.pick=z.pick.slice(); return o; }); if(dashMixEdit!=null) S.bset.hqDashMix=dashMixEdit; try{ window.__saveMine && window.__saveMine(); }catch(e){} }
 let dashEdit=null; /* the layout being customized, or null */
 let dashMixEdit=null; /* mixed or uniform sizes, while customizing */
 const SIZES=['s','w','t','b'], SZN={s:'Small',w:'Wide',t:'Tall',b:'Large'};
@@ -4440,19 +4440,27 @@ function vDash(){
   const L=dashEdit || dashLayout();
   L.forEach((cfg, i)=>{ let el=null; try{ el=tile(cfg, i, L); }catch(e){ console.error(e); } if(el) grid.appendChild(el); });
   if(dashEdit){ const add=btn('nx-tadd', null, openCatalog); add.innerHTML='<b>+</b><span>Add a Tile</span>'; grid.appendChild(add); }
-  pg.appendChild(grid); packTiles(grid);
+  pg.appendChild(grid); packTiles(grid, L);
 }
 /* tiles sit on an even grid of rows so their tops and bottoms line up; each one takes as many rows
    as its contents need (Small and Wide start at one row, Tall and Large at two), so a Small tile
    never gets stretched to match a long tile beside it */
 let packRO=null, packMO=null;
-function packTiles(grid){
+function packTiles(grid, L){
   if(packRO){ packRO.disconnect(); packRO=null; } if(packMO){ packMO.disconnect(); packMO=null; }
   grid.classList.add('nx-pack');
   const ROW=84, GAP=10;
+  const cols=()=>getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length || 1;
+  const colSpan=t=>/\bsz-(w|b)\b/.test(t.className) && cols()>=2 ? 2 : 1;
+  /* a tile you dropped into a particular spot stays in that spot (for this screen width); the rest flow around it */
+  const pinOf=t=>{ if(t._pin) return t._pin; const c=L && t.dataset.i!=null ? L[+t.dataset.i] : null; return c && c.at && c.at.c===cols() ? c.at : null; };
   const fit=t=>{ if(!t.isConnected) return; const tall=/\bsz-(t|b)\b/.test(t.className), min=tall?4:2;
-    t.style.alignSelf='start'; const hgt=t.getBoundingClientRect().height; t.style.alignSelf=''; if(!hgt) return;
-    const n=Math.max(min, Math.ceil((hgt+GAP)/(ROW+GAP))); const v='auto / span '+n; if(t.dataset.span!==v){ t.dataset.span=v; t.style.gridRow=v; } };
+    const keepR=t.style.gridRow, keepC=t.style.gridColumn; t.style.alignSelf='start'; const hgt=t.getBoundingClientRect().height; t.style.alignSelf=''; if(!hgt) return;
+    const n=Math.max(min, Math.ceil((hgt+GAP)/(ROW+GAP))); t.dataset.n=n; const pin=pinOf(t);
+    const cs=colSpan(t), px=pin ? Math.max(1, Math.min(pin.x, cols()-cs+1)) : 0;
+    const r=(pin ? pin.y : 'auto')+' / span '+n, c=pin ? px+' / span '+cs : '';
+    if(keepR!==r) t.style.gridRow=r; if(keepC!==c) t.style.gridColumn=c; };
+  grid._fit=fit; grid._cols=cols; grid._colSpan=colSpan; grid._unit=ROW+GAP;
   const all=()=>[...grid.children].forEach(fit);
   all(); requestAnimationFrame(all);
   let tm=null; const later=()=>{ clearTimeout(tm); tm=setTimeout(all, 120); };
@@ -4616,13 +4624,23 @@ function dragTile(el, i, L){
       const tadd=[...grid.children].find(z=>z.classList.contains('nx-tadd')) || null;
       /* over the Add a Tile box, or in the open space after the last tile: it goes to the end */
       const tiles=[...grid.children].filter(z=>z.classList.contains('st-tile')); const lastR=tiles.length ? tiles[tiles.length-1].getBoundingClientRect() : null;
-      const toEnd=(tgt && tgt.classList.contains('nx-tadd')) || (!tgt && under===grid && lastR && t.y>lastR.top && t.x>lastR.right) || (!tgt && lastR && t.y>lastR.bottom && grid.getBoundingClientRect().left<t.x && t.x<grid.getBoundingClientRect().right);
-      if(toEnd){ const ref=tadd; if(el.nextSibling===ref && (ref || el===grid.lastElementChild)) return; if(!ref && el===grid.lastElementChild) return; slide(()=>grid.insertBefore(el, ref)); t.moved=true; t.last=now; return; }
+      const gr=grid.getBoundingClientRect(); const lowest=tiles.reduce((m,z)=>Math.max(m, z.getBoundingClientRect().bottom), 0);
+      const toEnd=(tgt && tgt.classList.contains('nx-tadd')) || (!tgt && t.y>lowest && gr.left<t.x && t.x<gr.right);
+      /* over an empty spot in the grid: the tile goes exactly there */
+      if(!toEnd && !tgt && under===grid && grid._fit){
+        const cs=getComputedStyle(grid); const tracks=cs.gridTemplateColumns.split(' ').map(parseFloat).filter(n=>!isNaN(n)); const cg=parseFloat(cs.columnGap)||0;
+        let x=t.x-gr.left, ci=1; for(let k=0;k<tracks.length;k++){ if(x<=tracks[k]+cg/2 || k===tracks.length-1){ ci=k+1; break; } x-=tracks[k]+cg; }
+        const span=grid._colSpan(el); ci=Math.max(1, Math.min(ci, tracks.length-span+1));
+        const ri=Math.max(1, Math.floor((t.y-gr.top)/grid._unit)+1);
+        if(el._pin && el._pin.x===ci && el._pin.y===ri) return;
+        el._pin={c:tracks.length, x:ci, y:ri}; t.pin=el._pin; slide(()=>grid._fit(el)); t.moved=true; t.last=now; return; }
+      const unpin=()=>{ t.unpin=true; if(el._pin){ delete el._pin; t.pin=null; grid._fit && grid._fit(el); } };
+      if(toEnd){ unpin(); const ref=tadd; if(el.nextSibling===ref && (ref || el===grid.lastElementChild)) return; if(!ref && el===grid.lastElementChild) return; slide(()=>grid.insertBefore(el, ref)); t.moved=true; t.last=now; return; }
       if(!tgt || tgt===el || tgt.parentNode!==grid || tgt.classList.contains('nx-ghost')) return;
       /* only move once the pointer is well inside the other tile, so the tiles don't flicker back and forth */
       const tr=tgt.getBoundingClientRect(); const ix=(t.x-tr.left)/tr.width, iy=(t.y-tr.top)/tr.height; if(ix<0.15 || ix>0.85 || iy<0.15 || iy>0.85) return;
       const kids=[...grid.children]; const from=kids.indexOf(el), to=kids.indexOf(tgt); if(from<0 || to<0) return;
-      slide(()=>grid.insertBefore(el, from<to ? tgt.nextSibling : tgt)); t.moved=true; t.last=now; }
+      slide(()=>{ if(el._pin){ delete el._pin; t.pin=null; } grid.insertBefore(el, from<to ? tgt.nextSibling : tgt); grid._fit && grid._fit(el); }); t.moved=true; t.unpin=true; t.last=now; }
     /* move the tile, then glide every other tile from where it was to where it is now */
     function slide(doMove){ const kids=[...grid.children]; const before=new Map(kids.map(k=>[k, k.getBoundingClientRect()])); doMove();
       kids.forEach(k=>{ if(k===el) return; const a=before.get(k), z=k.getBoundingClientRect(); const dx=a.left-z.left, dy=a.top-z.top; if(!dx && !dy) return;
@@ -4635,7 +4653,15 @@ function dragTile(el, i, L){
       setTimeout(()=>{ dragReset();
         if(!t.moved || !el.isConnected) return;
         const order=[...grid.children].filter(z=>z.dataset && z.dataset.i!=null).map(z=>+z.dataset.i);
-        if(order.length!==L.length || order.every((v,k)=>v===k)) return;
+        if(order.length!==L.length) return;
+        const me=L[+el.dataset.i], pin=el._pin; delete el._pin; let pinCh=false;
+        if(pin){ me.at={c:pin.c, x:pin.x, y:pin.y}; pinCh=true;
+          /* a spot can hold one pinned tile: any other pinned tile it now covers goes back to flowing */
+          const myN=+el.dataset.n||2, myW=grid._colSpan(el);
+          [...grid.children].forEach(z=>{ if(z===el || z.dataset.i==null) return; const o=L[+z.dataset.i]; if(!o || !o.at || o.at.c!==pin.c) return; const oN=+z.dataset.n||2, oW=grid._colSpan(z);
+            if(o.at.x<pin.x+myW && pin.x<o.at.x+oW && o.at.y<pin.y+myN && pin.y<o.at.y+oN) delete o.at; }); }
+        else if(me.at && t.unpin){ delete me.at; pinCh=true; }
+        if(!pinCh && order.every((v,k)=>v===k)) return;
         L.forEach((c,k)=>{ if(!c.sz && dashMixed()){ c.sz=sizeOf(c, k, L); delete c.w; } }); /* keep every tile the size it is now */
         const NL=order.map(k=>L[k]);
         if(t.edit){ L.splice(0, L.length, ...NL); paint(); }
