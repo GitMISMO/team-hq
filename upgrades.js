@@ -4407,7 +4407,7 @@ function vDash(){
     r.appendChild(btn('nx-mini', 'Cancel', ()=>{ dashEdit=null; dashMixEdit=null; paint(); })); r.appendChild(btn('nx-mini pri', 'Save Layout', ()=>{ saveDash(dashEdit); dashEdit=null; dashMixEdit=null; toast('Your dashboard is saved', null); paint(); })); }
   else { r.appendChild(btn('nx-mini', '+ Add a Tile', ()=>{ dashEdit=dashLayout(); paint(); openCatalog(); })); r.appendChild(btn('nx-mini', null, ()=>{ dashEdit=dashLayout(); paint(); })).innerHTML=ic('gear')+'<span>Customize</span>'; }
   vb.appendChild(r); pg.appendChild(vb);
-  if(dashEdit) pg.appendChild(h('p','nx-dtip','Drag tiles to put them in order, click a tile’s size to make it Small, Wide, Tall or Large, take off what you don’t need, then Save Layout. Open any system and use Make This a Dashboard Tile to pin the exact page you want — like an approval queue.'));
+  if(dashEdit) pg.appendChild(h('p','nx-dtip','Drag tiles to put them in order (you can do that any time, not just here), click a tile’s size to make it Small, Wide, Tall or Large, take off what you don’t need, then Save Layout. Open any system and use Make This a Dashboard Tile to pin the exact page you want — like an approval queue.'));
   const grid=h('div','nx-tiles'+(dashEdit?' editing':''));
   const L=dashEdit || dashLayout();
   L.forEach((cfg, i)=>{ let el=null; try{ el=tile(cfg, i, L); }catch(e){ console.error(e); } if(el) grid.appendChild(el); });
@@ -4530,16 +4530,29 @@ function tileShell(cfg, meta, i, L){
     const cb=btn('nx-tcb', null, e=>{ e.stopPropagation(); tileEditor(cfg, i, L, true); }); cb.innerHTML='Customize · '+SZN[sz]; cb.title='Pick what this tile shows, its size and how much detail'; ctl.appendChild(cb);
     const rm=btn('nx-tcb x','×', e=>{ e.stopPropagation(); L.splice(i,1); paint(); }); rm.title='Take this tile off'; rm.setAttribute('aria-label','Take '+meta.n+' off'); ctl.appendChild(rm);
     el.appendChild(ctl);
-    el.addEventListener('dragstart', e=>{ tdrag=i; el.classList.add('dragging'); try{ e.dataTransfer.setData('text/plain', String(i)); e.dataTransfer.effectAllowed='move'; }catch(x){} });
-    el.addEventListener('dragend', ()=>{ tdrag=null; el.classList.remove('dragging'); document.querySelectorAll('.st-tile.tover').forEach(z=>z.classList.remove('tover')); });
-    el.addEventListener('dragover', e=>{ if(tdrag==null) return; e.preventDefault(); el.classList.add('tover'); });
-    el.addEventListener('dragleave', ()=>el.classList.remove('tover'));
-    el.addEventListener('drop', e=>{ e.preventDefault(); el.classList.remove('tover'); if(tdrag==null || tdrag===i) return; const [m]=L.splice(tdrag,1); L.splice(i,0,m); tdrag=null; paint(); });
   }
   else { const g=btn('nx-tgear', null, e=>{ e.stopPropagation(); tileEditor(cfg, i, L, false); }); g.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>'; g.title='Customize this tile'; g.setAttribute('aria-label','Customize '+meta.n); el.appendChild(g); }
+  if(!phone() && L && L.length>1) dragTile(el, i, L);
   return el;
 }
 let tdrag=null;
+/* drag a tile anywhere on the dashboard: the others slide out of the way as you go, and the new order saves when you let go */
+function dragTile(el, i, L){
+  el.draggable=true; el.dataset.i=i;
+  el.addEventListener('dragstart', e=>{ if(e.target!==el) return; tdrag={el, L, edit:!!dashEdit, moved:false}; el.classList.add('dragging'); document.documentElement.classList.add('nx-tdragging');
+    try{ e.dataTransfer.setData('text/plain', 'tile '+i); e.dataTransfer.effectAllowed='move'; }catch(x){} });
+  el.addEventListener('dragover', e=>{ if(!tdrag || tdrag.L!==L) return; e.preventDefault(); try{ e.dataTransfer.dropEffect='move'; }catch(x){} const d=tdrag.el; if(d===el) return;
+    const r=el.getBoundingClientRect(); const sameRow=Math.abs(d.getBoundingClientRect().top-r.top)<r.height/2;
+    const after=sameRow ? e.clientX>r.left+r.width/2 : e.clientY>r.top+r.height/2;
+    const ref=after ? el.nextSibling : el; if(ref!==d && d.nextSibling!==ref){ el.parentNode.insertBefore(d, ref); tdrag.moved=true; } });
+  el.addEventListener('drop', e=>{ if(tdrag) e.preventDefault(); });
+  el.addEventListener('dragend', ()=>{ const t=tdrag; tdrag=null; el.classList.remove('dragging'); document.documentElement.classList.remove('nx-tdragging'); if(!t || !t.moved || !el.isConnected) return;
+    const order=[...el.parentNode.children].filter(z=>z.dataset && z.dataset.i!=null).map(z=>+z.dataset.i);
+    if(order.length!==L.length || order.every((v,k)=>v===k)) return;
+    L.forEach((c,k)=>{ if(!c.sz && dashMixed()){ c.sz=sizeOf(c, k, L); delete c.w; } }); /* keep every tile the size it is now */
+    const NL=order.map(k=>L[k]);
+    if(t.edit){ L.splice(0, L.length, ...NL); paint(); }
+    else { saveDash(NL); paint(); toast('Tile order saved', null); } }); }
 function tile(cfg, i, L){
   const meta = cfg.t==='sys' ? sysMeta(cfg) : TILES[cfg.t]; if(!meta) return null;
   const el=tileShell(cfg, meta, i, L);
@@ -4580,7 +4593,7 @@ function tile(cfg, i, L){
     if(A[0]){ const n=h('div','st-next'); n.append('Newest: '); n.appendChild(h('b',null,A.slice().sort((a,c)=>(c.at||0)-(a.at||0))[0].t)); el.appendChild(n); } else el.appendChild(h('div','st-sub','Nothing waiting. Ask for something any time.'));
     meta.go=()=>open('inbox'); }
   else if(cfg.t==='load'){ let mon=addD(t0, -((t0.getDay()+6)%7)); if(t0.getDay()%6===0) mon=addD(mon,7); const D=[0,1,2,3,4].map(k=>addD(mon,k));
-    const bars=h('div','nx-bars'); let free=0; D.forEach(d=>{ const Ld=x && x.dayLoad ? x.dayLoad(me(), d) : null; const hrs=Ld?Ld.busy/60:0; if(Ld) free+=Ld.free; const c=h('div','bc'+(+d===+t0?' on':'')); const bb=h('i'); bb.style.height=Math.max(4, Math.min(100, hrs/8*100))+'%'; c.appendChild(h('b',null,(Math.round(hrs*2)/2)+'h')); c.appendChild(bb); c.appendChild(h('span',null,WD[d.getDay()])); bars.appendChild(c); }); el.appendChild(bars);
+    const bars=h('div','nx-bars'); let free=0; const LD=D.map(d=>x && x.dayLoad ? x.dayLoad(me(), d) : null); const top=Math.max(2, ...LD.map(z=>z?z.busy/60:0)); D.forEach((d,di)=>{ const Ld=LD[di]; const hrs=Ld?Ld.busy/60:0; if(Ld) free+=Ld.free; const c=h('div','bc'+(+d===+t0?' on':'')); const bb=h('i'); bb.style.height=Math.max(4, Math.min(82, hrs/top*82))+'%'; const bw=h('div','bw'); bw.appendChild(h('b',null,(Math.round(hrs*2)/2)+'h')); bw.appendChild(bb); c.appendChild(bw); c.appendChild(h('span',null,WD[d.getDay()])); bars.appendChild(c); }); el.appendChild(bars);
     el.appendChild(h('div','st-next', (Math.round(free/30)/2)+' hours open this week between meetings'));
     meta.go=()=>open('cal'); }
   else if(cfg.t==='people' || cfg.t==='team'){ const ids=cfg.t==='team' ? people().filter(p=>p.id!==me()).map(p=>p.id) : (x ? x.myPeople() : []);
@@ -4736,7 +4749,7 @@ function openCatalog(){
   const ft=h('div','hqx-ft'); const d=btn('btn','Done', close); ft.appendChild(d); box.appendChild(ft);
   ov.appendChild(box); ov.addEventListener('click', e=>{ if(e.target===ov) close(); }); document.body.appendChild(ov);
 }
-window.addEventListener('hq:counts', ()=>{ if(ui.on && viewKind()==='day' && !dashEdit) paint(); });
+window.addEventListener('hq:counts', ()=>{ if(ui.on && viewKind()==='day' && !dashEdit && !tdrag) paint(); });
 
 /* ---------- email and people, shared by My Day, Inbox and People ---------- */
 const X=()=>window.__hqx;
@@ -5210,8 +5223,8 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-prj .tp{display:flex;gap:8px;font-size:12.5px}.nx-prj .tp b{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nx-prj .tp span{color:rgba(255,255,255,.7);font-weight:700}
 .nx-prj:hover .tp b{color:var(--sky)}
 .nx-prj .pn{display:flex;gap:8px;align-items:baseline;padding:5px 8px;border-radius:5px;background:rgba(255,255,255,.06);font-size:12px;min-width:0}.nx-prj .pn b{flex:0 0 auto;color:var(--rc);font-size:11px}.nx-prj .pn span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(255,255,255,.85)}.nx-prj .pn em{font-style:normal;flex:0 0 auto;font-size:11px;color:rgba(255,255,255,.55)}
-.nx-bars{display:flex;gap:10px;align-items:flex-end;flex:1 1 auto;min-height:96px}
-.nx-bars .bc{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%}
+.nx-bars{display:flex;gap:10px;align-items:stretch;flex:0 0 auto;height:104px}.st-tile.sz-t .nx-bars,.st-tile.sz-b .nx-bars{height:230px}.st-tile.sz-s .nx-bars{height:96px}
+.nx-bars .bc{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px}.nx-bars .bc .bw{flex:1 1 0;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px}
 .nx-bars .bc i{display:block;width:100%;max-width:46px;border-radius:4px 4px 2px 2px;background:linear-gradient(180deg,var(--k),color-mix(in srgb,var(--k) 45%,transparent))}
 .nx-bars .bc b{font-size:11px;color:rgba(255,255,255,.8)}.nx-bars .bc span{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:rgba(255,255,255,.55)}
 .nx-bars .bc.on span{color:var(--sky)}
@@ -5244,7 +5257,8 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-tiles.editing .st-tile{cursor:grab;animation:nxWig .9s ease-in-out infinite alternate}
 .nx-tiles.editing .st-tile:nth-child(2n){animation-delay:.3s}
 @keyframes nxWig{from{transform:rotate(-.4deg)}to{transform:rotate(.4deg)}}
-.st-tile.dragging{opacity:.4}.st-tile.tover{box-shadow:0 0 0 3px var(--sky)}
+.st-tile.dragging{opacity:.35;outline:2px dashed var(--sky);outline-offset:-2px}html.nx-tdragging .st-tile:not(.dragging){transition:transform .15s}html.nx-tdragging .nx-tgear{opacity:0!important}
+.nx-tiles:not(.editing) .st-tile[draggable=true]:active{cursor:grabbing}
 .nx-tctl{position:absolute;top:8px;right:8px;z-index:3;display:flex;gap:4px}
 .nx-tcb{height:26px;padding:0 9px;border:1px solid rgba(255,255,255,.3);border-radius:5px;background:rgba(6,32,47,.85);color:#fff;font:inherit;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap}
 .nx-tcb.x{width:26px;padding:0;font-size:16px}.nx-tcb:hover{background:var(--sky);color:#06202f}
