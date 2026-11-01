@@ -17415,6 +17415,7 @@ const HELP_SECS = [
 <li><b>Repeating dates</b> roll forward on their own, monthly or yearly, and can last several days.</li>
 <li><b>Pin</b> a date to put it first in <b>Counting Down</b> and on the <b>Next Key Date</b> tile.</li>
 <li><b>Travel, Summit, Out of Office</b> and similar dates with people tagged mark those people as away for exactly those days.</li>
+<li><b>Out of office in Outlook makes its own key date.</b> When someone sets out-of-office time in Outlook (all day, or 4 hours or more), Team HQ adds an <b>Out of Office</b> key date for them, marked as from their Outlook calendar. Change or cancel it in Outlook and the key date follows. Weekends and MISMO holidays are left out, and if someone has already added a Travel or Out of Office date for those days, no second one is made.</li>
 </ul>`},
 
 {id:'findtime', t:'Find a Time', d:'Everyone’s Outlook side by side, then send the invite.', h:`
@@ -17499,6 +17500,7 @@ const HELP_SECS = [
 <li>Your meetings show on My Dashboard, Calendar, your person page and your card on Today. Private meetings show without a name.</li>
 <li><b>Find a Time</b> works around everyone's meetings, holidays and travel.</li>
 <li>Time you set aside for a task is added to your Outlook calendar.</li>
+<li>Out-of-office time in your Outlook becomes an <b>Out of Office</b> key date on its own (see <i>Key Dates</i>).</li>
 <li><b>Book It</b> (on Find a Time and the Find a Time tile) books a meeting: title, when, how long, who, and <b>Add a Teams meeting link</b>. It is on your calendar and in their inboxes in about two minutes.</li>
 </ul>
 <h4>Email to Look At</h4>
@@ -17785,5 +17787,5 @@ boot().then(()=>{ paintWho(); renderAll();
 })();
 </script>
 
-<script src="upgrades.js?v=20261101v" defer></script>
+<script src="upgrades.js?v=20261101w" defer></script>
 </body></html>
