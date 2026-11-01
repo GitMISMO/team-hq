@@ -200,7 +200,7 @@ function driveFrame(fr, k, go, sec, done){
 /* ---------- system snapshots ----------
    The headline numbers, gauges and section counts on a system's tab, read in the background in a hidden
    copy of the page and kept in this browser, so a dashboard tile can show them the Team HQ way. */
-const DK='tools:team-hq:mismo.teamhq.sysdata5';
+const DK='tools:team-hq:mismo.teamhq.sysdata6';
 let SD={}; try{ SD=JSON.parse(localStorage.getItem(DK)||'{}')||{}; }catch(e){}
 const sdKey=(k,go)=>k+'|'+(go||'');
 const cleanT=x=>String(x||'').replace(/\s+/g,' ').trim();
@@ -230,8 +230,13 @@ function readCards(doc){
     let card=lab.parentElement; if(card && (hasTok(card, /(^|[-_])(top|head|hd|bar|row|l)$/i) || card.children.length<=2 && cleanT(words(card)).length<60)) card=card.parentElement;
     for(let i=0;i<3 && card && card.parentElement && cleanT(words(card)).length<=cleanT(words(lab)).length+12;i++) card=card.parentElement;
     if(!card || !vis(card) || card===doc.body) return;
-    const r=card.getBoundingClientRect(); if(r.width<160 || r.height<50 || r.height>700) return;
+    const r=card.getBoundingClientRect(); if(r.width<120 || r.height<50 || r.height>700) return;
     cands.push({lab, card, area:r.width*r.height, y:r.top+(doc.scrollingElement||doc.documentElement).scrollTop, x:r.left}); });
+  /* stat tiles built as value + key + small line (class "v" / "k" / "s" and the like) */
+  [...doc.querySelectorAll('[class]')].forEach(v=>{ if(!hasTok(v, /^(v|val|value|num|n|big|figure|count|stat-v|kpi-v)$/i) || v.children.length>2) return; const tv=numText(v); if(!VAL.test(tv) || !vis(v)) return;
+    const card=v.parentElement; if(!card || !vis(card) || card.closest('nav,table')) return; const lab=[...card.children].find(z=>z!==v && hasTok(z, /^(k|key|lab|label|l|name|t|title|cap|lbl)$/i)) || [...card.children].find(z=>z!==v && cleanT(z.textContent) && !VAL.test(cleanT(z.textContent)) && cleanT(z.textContent).length<=40);
+    if(!lab) return; const r=card.getBoundingClientRect(); if(r.width<80 || r.height<40 || r.height>500) return;
+    if(cands.some(c=>c.card===card)) return; cands.push({lab, card, area:r.width*r.height, y:r.top+(doc.scrollingElement||doc.documentElement).scrollTop, x:r.left}); });
   /* the smallest box around each label wins, so a section heading never swallows the tiles inside it */
   cands.sort((a,b)=>a.area-b.area);
   const picked=[];
@@ -241,13 +246,13 @@ function readCards(doc){
     const c={t:/[a-z]/.test(title) ? title : tcase(title), k:cleanT(card.style && card.style.getPropertyValue('--k') || win.getComputedStyle(card).getPropertyValue('--k')) || ''};
     const pillE=[...card.querySelectorAll('*')].find(e=>e!==lab && hasTok(e, /(^|[-_])(pill|badge|chip|tag|flag)s?$/i) && cleanT(e.textContent).length<=26 && vis(e));
     if(pillE){ c.pill=cleanT(words(pillE)); if(/hot|bad|late|warn|over|red/i.test(clsOf(pillE))) c.hot=1; }
-    let bigE=[...card.querySelectorAll('*')].find(e=>hasTok(e, /(^|[-_])(big|n|num|count|value|val|figure|fig|stat)$/i) && /\d/.test(e.textContent) && vis(e));
+    let bigE=[...card.querySelectorAll('*')].find(e=>hasTok(e, /(^|[-_])(big|n|num|count|value|val|figure|fig|stat)$|^v$/i) && /\d/.test(e.textContent) && vis(e));
     if(!bigE) bigE=[...card.querySelectorAll('b,strong,span,div')].find(e=>!e.children.length && VAL.test(cleanT(e.textContent)) && (parseFloat(win.getComputedStyle(e).fontSize)||0)>=24 && vis(e));
     if(bigE){ const num=[...bigE.querySelectorAll('*')].concat([bigE]).find(e=>!e.children.length && VAL.test(cleanT(e.textContent))) || bigE; const v=numText(num);
       if(VAL.test(v)){ c.big=v; const unitE=(num.parentElement||bigE).querySelector('small') || [...(num.parentElement||bigE).children].find(z=>z!==num && cleanT(z.textContent) && !VAL.test(cleanT(z.textContent))); if(unitE && unitE!==num) c.unit=cleanT(words(unitE)).slice(0,30); } }
     const mE=[...card.querySelectorAll('*')].find(e=>hasTok(e, /(^|[-_])(meter|bar|progress|track)$/i) || e.getAttribute('role')==='progressbar');
     if(mE){ const fill=mE.querySelector('[style*="width"]') || mE.firstElementChild; const pw=mE.getBoundingClientRect().width, fw=fill ? fill.getBoundingClientRect().width : 0; const av=+mE.getAttribute('aria-valuenow'); c.meter=isFinite(av) && mE.getAttribute('aria-valuenow')!=null ? av : (pw ? Math.round(fw/pw*100) : null); }
-    const subE=[...card.querySelectorAll('*')].find(e=>hasTok(e, /(^|[-_])(sub|note|meta|caption|desc|foot)$/i) && vis(e) && cleanT(e.textContent).length<=120);
+    const subE=[...card.querySelectorAll('*')].find(e=>hasTok(e, /(^|[-_])(sub|note|meta|caption|desc|foot)$|^s$/i) && vis(e) && cleanT(e.textContent).length<=120);
     if(subE) c.sub=cleanT(words(subE));
     const listE=[...card.querySelectorAll('*')].find(e=>hasTok(e, /(^|[-_])(list|names|rows|items|ul|lines)$/i) && e.children.length>=1) || card.querySelector('ul,ol');
     if(listE){ c.rows=[...listE.children].filter(vis).slice(0,6).map(row=>{ const parts=[...row.children].length ? [...row.children].map(z=>cleanT(words(z))).filter(Boolean) : [cleanT(words(row))]; return parts.slice(0,3); }).filter(z=>z.length && z[0]); if(!c.rows.length) delete c.rows; }
@@ -256,7 +261,11 @@ function readCards(doc){
       const body=[...card.querySelectorAll('div,p,span')].filter(e=>vis(e) && !e.contains(lab) && e!==nxt && !(nxt && nxt.contains(e))).map(e=>cleanT(words(e))).filter(x=>x.length>20 && x.length<=260).sort((a,b)=>b.length-a.length)[0];
       if(body) c.text=body; }
     if(!c.big && !c.rows && !c.text && !c.head) return;
-    if(/^(opening|loading|reading)\b/i.test(c.t) || /^(opening|loading|reading)\b/i.test(c.text||'')) return;
+    if(/^(opening|loading|reading|checking|fetching|getting)\b/i.test(c.t) || /^(opening|loading|reading|checking|fetching)\b/i.test(c.text||'') || /…$/.test(c.t)) return;
+    /* a dated greeting or "Today · <date>" band: its number belongs to the line beside it, so it reads as Today */
+    if(/welcome|good (morning|afternoon|evening)/i.test(c.t) || /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.? \d{1,2}/i.test(c.t) || /^today\s*·/i.test(c.t)){ c.t='Today'; if(c.text && !c.rows){ delete c.big; delete c.unit; } }
+    /* calendar day headings (Mon, Wed …) are not tiles; a dated greeting card becomes "At a Glance" */
+    if(/^(sun|mon|tue|wed|thu|fri|sat)(day|sday|nesday|rsday|urday)?\b/i.test(c.t) || /^(today|tomorrow)$/i.test(c.t) && !c.text && !c.head){ if(c.text && c.text.length>40 && /^(sun|mon|tue|wed|thu|fri|sat)\w*,/i.test(c.t)) c.t='At a Glance'; else if(!/^(today)$/i.test(c.t)) return; }
     seen.add(title); used.push(card); c.y=y; c.x=x; picked.push(c); });
   picked.sort((a,b)=>(Math.round(a.y/30)-Math.round(b.y/30)) || (a.x-b.x)); picked.forEach(c=>{ delete c.y; delete c.x; out.push(c); });
   return out; }
@@ -297,6 +306,8 @@ function extract(doc){
   if(out.figs.length<3){ const RX=/([A-Z][A-Za-z’' ]{2,30}?)\s+([−\-]?\$[\d,]+(?:\.\d+)?)/g;
     [...doc.querySelectorAll('p,div,span,small,li')].some(e=>{ if(!vis(e) || e.children.length>3) return false; const tx=String(e.innerText||e.textContent).replace(/[ \t]+/g,' '); if(tx.length>220 || !/[·|]/.test(tx)) return false; const m=[...tx.matchAll(RX)]; if(m.length<2) return false;
       m.slice(0,4).forEach(z=>{ const n=cleanT(String(z[1]).split(/\n/).pop()); if(!out.figs.some(f=>f.n===n)) out.figs.push({n, v:money(z[2]), s:'', tone:''}); }); return true; }); }
+  /* every headline number can be its own tile too, when the page's tiles don't already carry it */
+  out.figs.forEach(f=>{ if(out.cards.length>=24) return; if(out.cards.some(c=>c.t===f.n || (c.big===f.v && c.t && f.n && (c.t.toLowerCase().indexOf(f.n.toLowerCase())>=0 || f.n.toLowerCase().indexOf(c.t.toLowerCase())>=0)))) return; out.cards.push({t:f.n, big:f.v, sub:f.s||'', fig:1}); });
   return out; }
 /* an app still on its own "Opening…" screen isn't ready to read yet */
 function stillLoading(doc){ try{
@@ -323,6 +334,9 @@ function pumpOne(){ const q0=SQ.shift(); const s=SYS.find(z=>z.k===q0.k); if(!s 
     const cur=curNav(doc);
     if(idx>0 && go && cur!==go && clicks<5 && n%2===1){ const b=[...doc.querySelectorAll('.hq nav button, nav button, nav a, [role=tab]')].find(z=>(z.textContent||'').replace(/\s+/g,' ').trim().replace(/\s*\d+$/,'')===go); if(b){ b.click(); clicks++; stable=0; } }
     const onTab=!go || cur===go || (n>14 && !cur); let d=null; try{ d=extract(doc); }catch(e){}
+    /* numbers still at zero across the board usually means the app hasn't filled them in yet */
+    const bigs=d ? (d.cards||[]).map(c=>c.big).filter(Boolean).concat(d.figs.map(f=>f.v)) : []; const zeroish=bigs.filter(v=>/^[−\-+]?\$?0(\.0+)?%?$/.test(String(v).trim()));
+    if(n<32 && bigs.length>=2 && zeroish.length===bigs.length){ stable=0; setTimeout(tick, 1000); return; }
     if(onTab && hasData(d)){ const sg=JSON.stringify([d.figs, d.gauges, d.cards, d.secs]); if(sg===last) stable++; else { stable=0; last=sg; } if(stable>=2 && n>=6){ store(go, d); snapSys(q0.k, doc); next(); return; } }
     if(n<45 && (n<22 || hasData(d))) setTimeout(tick, 1000); else { store(go, onTab && hasData(d) ? d : null); next(); } };
   setTimeout(tick, 2500); }
@@ -533,7 +547,7 @@ loadDone().then(()=>kick());
 
 loadMail(true);
 const timer=setInterval(()=>{ if(!document.hidden) loadMail(true); }, 5*60e3);
-window.__hqx={ version:'1.2', MAIL, loadMail, ACT, mailItems, mailAct, pickFolder, bookDialog, personEmail, lastErr, waitingCount, loadDone, ago, myPeople, setMyPeople, pickPeople, statusOf, dayLoad, nextWorkday, SYS, SHORT, canOpen, figsFor, symbol, openSys, closeSys, countFor, secsOf, navOf, driveFrame, sysData, wantData, sig:()=>MAIL.state+':'+MAIL.at+':'+MAIL.items.length+':'+myPeople().join(',')+':'+ACT.on+':'+acts().map(z=>z.id+(z.fin?'f':'')+(z.err?'e':'')).join(','),
+window.__hqx={ version:'1.2', MAIL, loadMail, ACT, mailItems, mailAct, pickFolder, bookDialog, personEmail, lastErr, waitingCount, loadDone, ago, myPeople, setMyPeople, pickPeople, statusOf, dayLoad, nextWorkday, SYS, SHORT, canOpen, figsFor, symbol, openSys, closeSys, countFor, secsOf, navOf, driveFrame, sysData, wantData, extract, sig:()=>MAIL.state+':'+MAIL.at+':'+MAIL.items.length+':'+myPeople().join(',')+':'+ACT.on+':'+acts().map(z=>z.id+(z.fin?'f':'')+(z.err?'e':'')).join(','),
   destroy(){ clearInterval(timer); clearTimeout(actT); closeSys(); css.remove(); css2.remove(); css3.remove(); } };
 })();
 
@@ -4562,8 +4576,10 @@ function pickCard(cfg, d){ if(!d || !Array.isArray(d.cards) || !d.cards.length) 
   if(cfg.card==='#num') return null;
   if(cfg.card){ return d.cards.find(c=>c.t===cfg.card) || null; }
   /* first time on a page: its headline numbers when it has gauges or no tiles of its own, otherwise its first real tile */
-  if(d.gauges.length || (d.figs.length>=3 && !d.cards.some(c=>c.big))) return null;
-  return d.cards.find(c=>c.big) || d.cards.find(goodCard) || null; }
+  if(d.gauges.length) return null;
+  const real=d.cards.filter(c=>!c.fig && c.big && c.t!=='Today'); if(real.length) return real[0];
+  if(d.figs.length>=2) return null;
+  return d.cards.find(goodCard) || null; }
 function drawCard(el, top, c, SZ, lvl, s, cfg, d){ const x=X(), det=lvl==='det', small=SZ==='s', tall=SZ==='t'||SZ==='b';
   if(c.k && /^(#|rgb|hsl|var)/.test(c.k)) el.style.setProperty('--k', c.k);
   top.firstChild.textContent=c.t;
