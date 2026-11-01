@@ -4442,18 +4442,22 @@ function vDash(){
   if(dashEdit){ const add=btn('nx-tadd', null, openCatalog); add.innerHTML='<b>+</b><span>Add a Tile</span>'; grid.appendChild(add); }
   pg.appendChild(grid); packTiles(grid);
 }
-/* each tile takes the height it needs and no more, and the tiles around it fill in underneath,
-   so a Small tile never gets stretched to match a long tile beside it */
-let packRO=null;
+/* tiles sit on an even grid of rows so their tops and bottoms line up; each one takes as many rows
+   as its contents need (Small and Wide start at one row, Tall and Large at two), so a Small tile
+   never gets stretched to match a long tile beside it */
+let packRO=null, packMO=null;
 function packTiles(grid){
-  if(packRO){ packRO.disconnect(); packRO=null; }
+  if(packRO){ packRO.disconnect(); packRO=null; } if(packMO){ packMO.disconnect(); packMO=null; }
   grid.classList.add('nx-pack');
-  const ROW=6, GAP=14;
-  const fit=t=>{ if(!t.isConnected) return; const hgt=t.getBoundingClientRect().height; if(!hgt) return; const n=Math.max(1, Math.ceil((hgt+GAP)/ROW)); const v='span '+n; if(t.dataset.span!==v){ t.dataset.span=v; t.style.gridRow='auto / '+v; } };
+  const ROW=83, GAP=14;
+  const fit=t=>{ if(!t.isConnected) return; const tall=/\bsz-(t|b)\b/.test(t.className), min=tall?4:2;
+    t.style.alignSelf='start'; const hgt=t.getBoundingClientRect().height; t.style.alignSelf=''; if(!hgt) return;
+    const n=Math.max(min, Math.ceil((hgt+GAP)/(ROW+GAP))); const v='auto / span '+n; if(t.dataset.span!==v){ t.dataset.span=v; t.style.gridRow=v; } };
   const all=()=>[...grid.children].forEach(fit);
   all(); requestAnimationFrame(all);
-  if(window.ResizeObserver){ packRO=new ResizeObserver(es=>es.forEach(e=>fit(e.target))); [...grid.children].forEach(t=>packRO.observe(t));
-    new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(nd=>{ if(nd.nodeType===1 && nd.parentNode===grid){ packRO && packRO.observe(nd); fit(nd); } }))).observe(grid, {childList:true}); }
+  let tm=null; const later=()=>{ clearTimeout(tm); tm=setTimeout(all, 120); };
+  if(window.ResizeObserver){ let lastW=grid.clientWidth; packRO=new ResizeObserver(()=>{ if(grid.clientWidth!==lastW){ lastW=grid.clientWidth; later(); } }); packRO.observe(grid); }
+  packMO=new MutationObserver(later); packMO.observe(grid, {childList:true, subtree:true, characterData:true});
 }
 function dashHero(now, hr){
   const hero=h('div','nx-hero');
@@ -5347,10 +5351,8 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 @media(max-width:900px){.nx-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.nx-hero{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:640px){.nx-dash{padding:12px 12px 30px}.nx-hhi h1{font-size:24px}.nx-hhi p{font-size:14px}.nx-sw{display:flex;overflow-x:auto}.nx-swd{flex:0 0 96px}.nx-tiles{grid-template-columns:minmax(0,1fr)}.nx-ag{grid-template-columns:minmax(0,1fr)}.nx-dvr{margin-left:0}}
 .st-tile.sz-w{grid-column:span 2}.st-tile.sz-t{grid-row:span 2}.st-tile.sz-b{grid-column:span 2;grid-row:span 2}
-.nx-tiles.nx-pack{grid-auto-rows:6px;row-gap:0;align-items:start}
-.nx-tiles.nx-pack > *{align-self:start;margin-bottom:14px}
-.nx-tiles.nx-pack > .st-tile{min-height:150px}
-.nx-tiles.nx-pack > .st-tile.sz-t,.nx-tiles.nx-pack > .st-tile.sz-b{min-height:314px}
+.nx-tiles.nx-pack{grid-auto-rows:83px;row-gap:14px}
+.nx-tiles.nx-pack > .st-tile{min-height:0}
 .nx-tiles{grid-auto-flow:row dense}
 .nx-ag.one{grid-template-columns:minmax(0,1fr)}
 .nx-tl2{display:flex;flex-direction:column;gap:4px}
