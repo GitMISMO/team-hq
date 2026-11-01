@@ -16,9 +16,9 @@
    Team HQ loads your tasks, calendars and email before it can draw your dashboard. This card covers
    that, the same way Member 360 and MISMO Money do, and lifts once everything is in place. */
 (function(){
-  var D=document, H=D.documentElement, t0=Date.now(), KEY='tools:team-hq:boot.ms', done=false;
+  var D=document, H=D.documentElement, t0=Date.now(), KEY='tools:team-hq:boot2.ms', done=false;
   var appx=/[?&]app=expenses/.test(location.search) || H.classList.contains('app-exp');
-  var est=6; try{ var v=+localStorage.getItem(KEY); if(v>1500 && v<30000) est=Math.max(3, Math.round(v/1000)); }catch(e){}
+  var est=4; try{ var v=+localStorage.getItem(KEY); if(v>1500 && v<15000) est=Math.max(3, Math.min(8, Math.round(v/1000))); }catch(e){}
   /* never cover the sign-in page */
   function signin(){ if(window.__S && window.__S.ready) return false; var pw=D.querySelector('input[type=password]'); return !!(pw && pw.offsetParent!==null); }
   window.__hqBooted=false;
@@ -59,16 +59,16 @@
     if(appx){ if(S && S.ready) mark('data'); var ex=D.getElementById('app-expenses'); if(got.data && ex && ex.offsetParent!==null) mark('dash'); }
     else {
       try{ var n=performance.getEntriesByType('resource').filter(function(e){ return e.name.indexOf('/team-hq/data/cal-')>=0 && e.responseEnd>0; }).length;
-        if(n>calSeen){ calSeen=n; calQuiet=Date.now(); } if((calSeen && Date.now()-calQuiet>700) || el>7000) mark('cal'); }catch(e){ mark('cal'); }
-      var X=window.__hqx; if((X && X.MAIL && /^(ok|none|off|err)$/.test(X.MAIL.state)) || el>7000) mark('mail');
+        if(n>calSeen){ calSeen=n; calQuiet=Date.now(); } if((calSeen && Date.now()-calQuiet>500) || el>4500) mark('cal'); }catch(e){ mark('cal'); }
+      var X=window.__hqx; if((X && X.MAIL && /^(ok|none|off|err)$/.test(X.MAIL.state)) || el>4500) mark('mail');
       var g=D.querySelector('.nx-tiles'); if(got.data && ((g && g.children.length) || (window.__nx && el>5000))) mark('dash');
     }
     var need=appx ? ['me','data','dash'] : ['me','data','cal','mail','dash'];
     var have=need.filter(function(k){ return got[k]; }).length;
-    var pct=Math.min(97, Math.max(have/need.length*100, el/(est*1000)*90));
+    var pct=Math.min(97, Math.max(have/need.length*100, Math.min(90, el/(est*1000)*90)));
     o.querySelector('.bar i').style.width=pct+'%';
     var s=Math.floor(el/1000); o.querySelector('.tm b').textContent=Math.floor(s/60)+':'+('0'+(s%60)).slice(-2);
-    if(have===need.length || (got.dash && el>9000) || el>20000){ finish(false); return; }
+    if(have===need.length || (got.data && got.dash && el>6000) || el>10000){ finish(false); return; }
     setTimeout(check, 150);
   }
   function finish(skip){
@@ -82,6 +82,9 @@
 })();
 
 /*<BOOT*/
+
+
+
 
 
 
@@ -289,6 +292,12 @@ function driveFrame(fr, k, go, sec, done){
    copy of the page and kept in this browser, so a dashboard tile can show them the Team HQ way. */
 const DK='tools:team-hq:mismo.teamhq.sysdata8';
 let SD={}; try{ SD=JSON.parse(localStorage.getItem(DK)||'{}')||{}; }catch(e){}
+/* carry over what this browser already read before (marked as due for a refresh) so tiles show numbers right away,
+   then clear out the old copies */
+try{ let added=false; ['sysdata7','sysdata6'].forEach(v=>{ const o=JSON.parse(localStorage.getItem('tools:team-hq:mismo.teamhq.'+v)||'{}')||{};
+    Object.keys(o).forEach(k=>{ if(SD[k] || /\|My Approvals$/.test(k) || !o[k] || o[k].empty) return; SD[k]=Object.assign({}, o[k], {at:Date.now()-50*60e3}); added=true; }); });
+  if(added) localStorage.setItem(DK, JSON.stringify(SD));
+  ['','2','3','4','5','6','7'].forEach(v=>localStorage.removeItem('tools:team-hq:mismo.teamhq.sysdata'+v)); }catch(e){}
 const sdKey=(k,go)=>k+'|'+(go||'');
 const cleanT=x=>String(x||'').replace(/\s+/g,' ').trim();
 /* the words in an element as written (not as styled — no ALL CAPS from CSS), with a space between pieces */
@@ -432,15 +441,16 @@ const hasData=d=>d && (d.figs.length || d.gauges.length || (d.cards||[]).length 
 function keepData(k, go, d){ if(!hasData(d)) return; SD[sdKey(k,go)]=d; try{ localStorage.setItem(DK, JSON.stringify(SD)); }catch(e){} try{ window.dispatchEvent(new Event('hq:counts')); }catch(e){} }
 function sysData(k, go){ return SD[sdKey(k,go)]||null; }
 const SQ=[], INF=new Set(); let sRun=0; const SMAX=1; /* one page read at a time */
-function wantData(k, go, maxAge){ const d=SD[sdKey(k,go)]; if(d && Date.now()-d.at<(maxAge||45*60e3)) return; if(INF.has(sdKey(k,go)) || SQ.some(q=>q.k===k && q.go===(go||''))) return; SQ.push({k, go:go||''}); setTimeout(pump, 300); }
+function wantData(k, go, maxAge){ const d=SD[sdKey(k,go)]; if(d && Date.now()-d.at<(maxAge||45*60e3)) return; if(INF.has(sdKey(k,go)) || SQ.some(q=>q.k===k && q.go===(go||''))) return; SQ.push({k, go:go||'', miss:!(d && hasData(d))}); setTimeout(pump, 300); }
 /* other systems are read in the background only once Team HQ has opened and settled, one at a time,
    and only when the browser has a free moment, so opening Team HQ never feels slow */
 let pumpWait=null, lastAct=0, actWait=null;
 ['pointermove','pointerdown','wheel','keydown','touchstart','scroll'].forEach(ev=>window.addEventListener(ev, ()=>{ lastAct=Date.now(); }, {passive:true, capture:true}));
 function pump(){
+  /* while the opening screen is up nobody is clicking, so read the systems your tiles have no numbers for yet */
   if(!document.hidden && Date.now()-lastAct<4000){ clearTimeout(actWait); actWait=setTimeout(pump, 1500); return; }
   if(window.__hqBooted===false){ if(!pumpWait){ pumpWait=()=>{ window.removeEventListener('hq:booted', pumpWait); pumpWait=null; pump(); }; window.addEventListener('hq:booted', pumpWait); } return; }
-  const go=()=>{ while(sRun<SMAX && SQ.length) pumpOne(); };
+  const go=()=>{ SQ.sort((a,b)=>(b.miss?1:0)-(a.miss?1:0)); while(sRun<SMAX && SQ.length) pumpOne(); };
   if(window.requestIdleCallback) requestIdleCallback(go, {timeout:2500}); else setTimeout(go, 200); }
 function pumpOne(){ const q0=SQ.shift(); const s=SYS.find(z=>z.k===q0.k); if(!s || !canOpen(s.k)) return; sRun++;
   /* every page wanted from this system, read in one visit: its home page first, then each tab */
@@ -4674,7 +4684,7 @@ function tileEditor(cfg, i, L, inEdit){
   let dt=null; const onData=()=>{ clearTimeout(dt); dt=setTimeout(draw, 200); }; window.addEventListener('hq:counts', onData);
   draw(); }
 function tileShell(cfg, meta, i, L){
-  const sz=sizeOf(cfg, i, L); const el=h('div','st-tile t-'+cfg.t+' sz-'+sz);
+  const sz=sizeOf(cfg, i, L); const el=h('div','st-tile t-'+cfg.t+' sz-'+sz); el.dataset.i=i;
   el.style.setProperty('--k', meta.k); el.tabIndex=0; el.setAttribute('role','button'); el.setAttribute('aria-label', meta.n);
   if(dashEdit){ el.dataset.i=i;
     const ctl=h('div','nx-tctl');
@@ -4914,7 +4924,7 @@ function sysMeta(cfg){ const x=X(); const s=x && x.SYS.find(z=>z.k===cfg.s); if(
     if(c){ const b=h('div','st-big'); b.append(String(c.n)); b.appendChild(h('small',null, cfg.sec ? (c.n===1?'item':'items') : cfg.go)); lead.appendChild(b); if(cfg.sec && c.x) lead.appendChild(h('div','st-sub', c.x)); }
     else if(F.length){ lead.appendChild(figEl(F[0], true)); F=F.slice(1); }
     else if(G.length && small){ lead.appendChild(gaugeEl(G[0], false)); }
-    else if(!d){ lead.appendChild(h('div','st-sub', cfg.go ? 'Getting the numbers from '+cfg.go+'…' : 'Getting the numbers…')); }
+    else if(!d){ el.classList.add('nx-filling'); const sk=h('div','nx-skel'); sk.appendChild(h('i','a')); sk.appendChild(h('i','b')); sk.appendChild(h('i','c')); lead.appendChild(sk); }
     else if(d.empty){ const b0=h('div','st-big'); b0.append('0'); b0.appendChild(h('small',null,'waiting')); lead.appendChild(b0); lead.appendChild(h('div','st-sub', 'Nothing on '+(cfg.go || (x.SHORT[s.k]||s.n))+' right now.')); }
     else lead.appendChild(h('div','st-sub', s.d));
     head.appendChild(lead); el.appendChild(head);
@@ -4962,7 +4972,11 @@ function openCatalog(){
   ov.appendChild(box); ov.addEventListener('click', e=>{ if(e.target===ov) close(); }); document.body.appendChild(ov);
 }
 /* new numbers from a system: redraw the dashboard once they've stopped arriving, not for every one */
-let countsT=null; window.addEventListener('hq:counts', ()=>{ clearTimeout(countsT); countsT=setTimeout(()=>{ if(ui.on && viewKind()==='day' && !dashEdit && !tdrag && !busy()) paint(); }, 1200); });
+let countsT=null; window.addEventListener('hq:counts', ()=>{ clearTimeout(countsT); countsT=setTimeout(refreshSysTiles, 600); });
+function refreshSysTiles(){ if(!ui.on || viewKind()!=='day' || tdrag || !shell || shell.hidden) return; const grid=body.querySelector('.nx-tiles'); if(!grid) return;
+  const L=dashEdit || dashLayout();
+  grid.querySelectorAll(':scope > .t-sys').forEach(el=>{ const i=+el.dataset.i; const cfg=L[i]; if(!cfg || cfg.t!=='sys' || el.contains(document.activeElement)) return; let nu=null; try{ nu=tile(cfg, i, L); }catch(e){} if(!nu) return;
+    nu.style.gridRow=el.style.gridRow; nu.style.gridColumn=el.style.gridColumn; nu.style.animation='none'; el.replaceWith(nu); }); }
 
 /* ---------- email and people, shared by My Day, Inbox and People ---------- */
 const X=()=>window.__hqx;
@@ -5449,7 +5463,8 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-sysb{display:flex;gap:16px;align-items:center;min-width:0}
 .nx-sysh{display:flex;gap:14px;align-items:center;min-width:0}
 .nx-sym.sm{width:52px;height:52px;padding:9px;border-radius:12px}
-.nx-syl{flex:1;min-width:0;container-type:inline-size}.nx-syl .nx-fg.big b{font-size:min(34px,15.5cqi)}.nx-syl .st-big{font-size:min(40px,18cqi)}
+.nx-syl{flex:1;min-width:0;container-type:inline-size}
+.nx-skel{display:flex;flex-direction:column;gap:7px;padding:2px 0}.nx-skel i{display:block;height:12px;border-radius:4px;background:linear-gradient(90deg,rgba(255,255,255,.07),rgba(255,255,255,.16),rgba(255,255,255,.07));background-size:200% 100%;animation:nxsk 1.4s ease-in-out infinite}.nx-skel .a{width:55%;height:30px}.nx-skel .b{width:80%}.nx-skel .c{width:40%}@keyframes nxsk{0%{background-position:100% 0}100%{background-position:-100% 0}}@media (prefers-reduced-motion:reduce){.nx-skel i{animation:none}}.nx-syl .nx-fg.big b{font-size:min(34px,15.5cqi)}.nx-syl .st-big{font-size:min(40px,18cqi)}
 .nx-fg{display:flex;flex-direction:column;gap:1px;min-width:0}
 .nx-fg b{font-size:20px;font-weight:800;letter-spacing:-.01em;color:#fff;white-space:nowrap}
 .nx-fg span{font-size:12px;font-weight:600;color:rgba(255,255,255,.72);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
