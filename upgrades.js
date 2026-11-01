@@ -102,6 +102,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -309,6 +310,11 @@ try{ let added=false; ['sysdata7','sysdata6'].forEach(v=>{ const o=JSON.parse(lo
     Object.keys(o).forEach(k=>{ if(SD[k] || /\|My Approvals$/.test(k) || !o[k] || o[k].empty) return; SD[k]=Object.assign({}, o[k], {at:Date.now()-50*60e3}); added=true; }); });
   if(added) localStorage.setItem(DK, JSON.stringify(SD));
   ['','2','3','4','5','6','7'].forEach(v=>localStorage.removeItem('tools:team-hq:mismo.teamhq.sysdata'+v)); }catch(e){}
+/* a page's trouble message, never a tile — and one already saved by an earlier read is cleared out and read again */
+const BADT=/couldn.?t (load|reach|connect|open|read|save)|could not (load|reach|connect|open|read)|failed to (load|fetch)|check your connection|network error|save relay|try again|sign in again|session (has )?expired|not signed in|^error\b|something went wrong/i;
+try{ let fixed=false; Object.keys(SD).forEach(k=>{ const d=SD[k]; if(!d || !Array.isArray(d.cards)) return; const keep=d.cards.filter(c=>!BADT.test(c.t||'') && !BADT.test(c.text||'') && !BADT.test(c.head||'') && !BADT.test(c.sub||''));
+    if(keep.length!==d.cards.length){ d.cards=keep; d.at=Math.min(d.at||0, Date.now()-50*60e3); fixed=true; } });
+  if(fixed) localStorage.setItem(DK, JSON.stringify(SD)); }catch(e){}
 const sdKey=(k,go)=>k+'|'+(go||'');
 const cleanT=x=>String(x||'').replace(/\s+/g,' ').trim();
 /* the words in an element as written (not as styled — no ALL CAPS from CSS), with a space between pieces */
@@ -421,6 +427,11 @@ function readTables(doc){ const out=[]; const vis=e=>e && e.offsetParent!==null;
   return out; }
 function extract(doc){
   const win=doc.defaultView; const out={figs:[], gauges:[], cards:[], secs:readSecs(doc), at:Date.now()}; try{ out.cards=readCards(doc); }catch(e){}
+  /* a page's own trouble message ("Couldn't load", "couldn't reach the save relay", "Sign in") is never a tile:
+     drop it, and if that was all there was, the read counts as failed so the last good numbers stay */
+  const BAD=BADT;
+  out.cards=out.cards.filter(c=>!BAD.test(c.t||'') && !BAD.test(c.text||'') && !BAD.test(c.head||'') && !BAD.test(c.sub||''));
+  if(BAD.test(cleanT(((doc.querySelector('[role=alert],.err,.error,.errbox,.loaderr,.fail')||{}).textContent)||'')) && !out.cards.length) out.failed=1;
   try{ const mt=readMtToday(doc); if(mt){ out.cards=out.cards.filter(c=>c.t!=='Today'); out.cards.unshift(mt); } }catch(e){} try{ readTables(doc).forEach(c=>{ if(!out.cards.some(z=>z.t===c.t)) out.cards.unshift(c); }); }catch(e){}
   const vis=e=>e.offsetParent!==null;
   let GL=pick(doc,'[role=meter],[class*="gauge"]').filter(g=>g.getAttribute('role')==='meter' || String(g.className||'').split(/\s+/).some(c=>/^gauge([-_](card|box|item|tile))?$/.test(c)));
@@ -465,7 +476,7 @@ function stillLoading(doc){ try{
   if(pick(doc,'[class]').some(e=>e.offsetParent!==null && hasTok(e, /(^|[-_])(loading|loader|boot|booting|splash|spinner|opening)$/i))) return true;
   return pick(doc,'div,p,span,h1,h2,h3,b,strong,small').some(e=>!e.children.length && e.offsetParent!==null && (e.textContent||'').length<140 && /^\s*(opening|loading|reading|fetching|getting)\b[^]*?(…|\.\.\.)/i.test(e.textContent||'')); }catch(e){ return false; } }
 const hasData=d=>d && (d.figs.length || d.gauges.length || (d.cards||[]).length || Object.keys(d.secs||{}).length);
-function keepData(k, go, d){ if(!hasData(d)) return; SD[sdKey(k,go)]=d; try{ localStorage.setItem(DK, JSON.stringify(SD)); }catch(e){} try{ window.dispatchEvent(new Event('hq:counts')); }catch(e){} }
+function keepData(k, go, d){ if(!hasData(d) || d.failed) return; SD[sdKey(k,go)]=d; try{ localStorage.setItem(DK, JSON.stringify(SD)); }catch(e){} try{ window.dispatchEvent(new Event('hq:counts')); }catch(e){} }
 function sysData(k, go){ return SD[sdKey(k,go)]||null; }
 const SQ=[], INF=new Set(); let sRun=0; const SMAX=1; /* one page read at a time */
 function wantData(k, go, maxAge){ const d=SD[sdKey(k,go)]; if(d && Date.now()-d.at<(maxAge||45*60e3)) return; if(INF.has(sdKey(k,go)) || SQ.some(q=>q.k===k && q.go===(go||''))) return; SQ.push({k, go:go||'', miss:!(d && hasData(d))}); setTimeout(pump, 300); }
@@ -487,7 +498,7 @@ function pumpOne(){ const q0=SQ.shift(); const s=SYS.find(z=>z.k===q0.k); if(!s 
   list.sort((a,b)=>(a?1:0)-(b?1:0)); list.forEach(g=>INF.add(sdKey(q0.k,g)));
   const fr=h('iframe','hqx-bg'); fr.src=s.u; fr.setAttribute('aria-hidden','true'); fr.tabIndex=-1; fr.title=''; document.body.appendChild(fr);
   let idx=0, last='', stable=0, n=0, clicks=0;
-  const store=(go, d)=>{ INF.delete(sdKey(q0.k,go)); if(d) keepData(q0.k, go, d); else { const old=SD[sdKey(q0.k,go)]; if(old && hasData(old)) old.at=Date.now()-15*60e3; else { SD[sdKey(q0.k,go)]={figs:[], gauges:[], cards:[], secs:{}, at:Date.now(), empty:true}; try{ localStorage.setItem(DK, JSON.stringify(SD)); }catch(e){} try{ window.dispatchEvent(new Event('hq:counts')); }catch(e){} } } };
+  const store=(go, d)=>{ INF.delete(sdKey(q0.k,go)); if(d && !d.failed && hasData(d)) keepData(q0.k, go, d); else { const old=SD[sdKey(q0.k,go)]; if(old && hasData(old)) old.at=Date.now()-(d && d.failed ? 41 : 15)*60e3; else { SD[sdKey(q0.k,go)]={figs:[], gauges:[], cards:[], secs:{}, at:Date.now(), empty:true}; try{ localStorage.setItem(DK, JSON.stringify(SD)); }catch(e){} try{ window.dispatchEvent(new Event('hq:counts')); }catch(e){} } } };
   const next=()=>{ try{ fr._stopDrive && fr._stopDrive(); }catch(e){} idx++; last=''; stable=0; n=0; clicks=0; if(idx>=list.length){ list.forEach(g=>INF.delete(sdKey(q0.k,g))); fr.remove(); sRun=Math.max(0,sRun-1); setTimeout(pump, 500); return; } setTimeout(tick, 700); };
   driveFrame(fr, q0.k, list[0], '', null);
   const tick=()=>{ n++; const go=list[idx]; let doc=null; try{ doc=fr.contentDocument; }catch(e){}
