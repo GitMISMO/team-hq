@@ -591,7 +591,8 @@ const added=[];
 function add(el){ document.head.appendChild(el); added.push(el); return el; }
 const qs=new URLSearchParams(location.search);
 const standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
-const appExp = qs.get('app')==='expenses' || (standalone && /expenses/.test(location.search+location.hash));
+/* the only thing Team HQ installs as is Expenses, so any launch from an installed icon opens Expenses */
+const appExp = qs.get('app')==='expenses' || standalone;
 
 /* ---------- phone app: manifest + home-screen tags ---------- */
 function meta(name, content){ const m=document.createElement('meta'); m.name=name; m.content=content; return add(m); }
@@ -712,8 +713,8 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed color-mix(in srgb,va
 html.app-exp body{padding-left:0!important}
 html.app-exp .hq.rail,html.app-exp .railscrim,html.app-exp #newtask,html.app-exp #jot{display:none!important}
 html.app-exp .hqtop{margin-left:0!important;width:100%!important;padding-top:env(safe-area-inset-top,0px)}
-html.app-exp .hqname{font-size:0}
-html.app-exp .hqname::after{content:"Expenses";font-size:17px}
+html.app-exp .hqname{font-size:0!important;letter-spacing:0!important}
+html.app-exp .hqname::after{content:"Expenses";font-size:17px!important;letter-spacing:normal}
 html.app-exp main{padding:16px 14px calc(100px + env(safe-area-inset-bottom,0px))}
 html.app-exp #app-expenses > .vhead{display:none}
 html.app-exp #app-expenses .snapzone{min-height:180px}
@@ -3844,12 +3845,12 @@ function open(key){
   if(key==='all') key='mine'; /* All Tasks is gone; My Tasks is the list */
   if(key==='people'){ openClassic('today'); setTimeout(()=>{ const t=document.querySelector('#app-today .td-team'); if(t) t.scrollIntoView({block:'start', behavior:'smooth'}); }, 150); return; } /* People now lives in Today's Where My Team Is Today */
   if(key.indexOf('c:')===0){ openClassic(key.slice(2)); return; }
-  ui.view=key; ui.ws=''; ui.q=''; sel=-1; save();
+  ui.view=key; ui.ws=''; ui.q=''; sel=-1; save(); pushView(key);
   document.documentElement.classList.add('nx-show'); shell.hidden=false;
   paint(); body.scrollTop=0; markRail();
 }
 function openClassic(k){
-  ui.view='c:'+k; save(); hideApp();
+  ui.view='c:'+k; save(); pushView(ui.view); hideApp();
   const b=document.querySelector('.hq.rail nav button[data-hq="'+k+'"]');
   if(b) b.click(); else if(window.__show) window.__show(k);
   markRail(); window.scrollTo(0,0);
@@ -3857,7 +3858,35 @@ function openClassic(k){
 function hideApp(){ document.documentElement.classList.remove('nx-show'); if(shell) shell.hidden=true; closeMenus(); }
 /* a click on a classic tab in the rail leaves the app area for that page */
 function onRailClick(e){ if(!ui.on) return; const b=e.target.closest && e.target.closest('.hq.rail nav button[data-hq]'); if(!b) return;
-  ui.view='c:'+b.dataset.hq; save(); hideApp(); setTimeout(markRail, 0); }
+  ui.view='c:'+b.dataset.hq; save(); pushView(ui.view); hideApp(); setTimeout(markRail, 0); }
+
+/* ---------- the phone's Back button ----------
+   Back closes whatever is open on top (a menu, a system, a dialog, a task), then steps back
+   through the pages you went to, and only leaves Team HQ from My Dashboard. */
+let navPop=false, navOn=false;
+function pushView(v){ if(navPop || !navOn) return; try{ const st=history.state; if(st && st.nx===v) return; history.pushState({nx:v}, ''); }catch(e){} }
+const seen=e=>e && e.isConnected && e.getClientRects().length>0 && getComputedStyle(e).visibility!=='hidden';
+function closeTop(){
+  const x=X();
+  if(menuEl){ closeMenus(); return true; }
+  const ov=[...document.querySelectorAll('.hqx-ov')].filter(seen).pop();
+  if(ov){ document.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape', bubbles:true})); if(ov.isConnected && seen(ov)){ const c=[...ov.querySelectorAll('button')].find(b=>/^(cancel|close|done|×|✕)$/i.test((b.textContent||'').trim()) || /close/i.test(b.getAttribute('aria-label')||'')); if(c) c.click(); else ov.remove(); } return true; }
+  if(document.querySelector('.hqx-sys') && x && x.closeSys){ x.closeSys(); return true; }
+  const dlg=[...document.querySelectorAll('dialog[open], [role=dialog], [aria-modal=true], .modal.open, .modal.show, .sheet.open, .drawer.open, .mt-cover')].filter(e=>!e.closest('.nx-tabbar') && seen(e)).pop();
+  if(dlg){ const c=[...dlg.querySelectorAll('button')].find(b=>/^(cancel|close|done|×|✕)$/i.test((b.textContent||'').trim()) || /close/i.test(b.getAttribute('aria-label')||''));
+    if(c) c.click(); else { dlg.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape', bubbles:true})); document.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape', bubbles:true})); if(dlg.tagName==='DIALOG' && dlg.open) try{ dlg.close(); }catch(e){} return !seen(dlg); } return true; }
+  const rail=document.querySelector('.hq.rail.open, html.rail-open .hq.rail'); if(rail){ const sc=document.querySelector('.railscrim'); if(sc) sc.click(); return true; }
+  return false; }
+function onPop(e){ if(!ui.on) return; const st=e.state||{};
+  /* something is open on top: close it and stay on this page */
+  if(closeTop()){ try{ history.pushState({nx:ui.view}, ''); }catch(x){} return; }
+  if(st.nx==='root'){ /* the bottom of the stack: back to My Dashboard first, then out */
+    if(ui.view!=='day' && !document.documentElement.classList.contains('app-exp')){ navPop=true; try{ open('day'); }finally{ navPop=false; } try{ history.pushState({nx:'day'}, ''); }catch(x){} }
+    else history.back();
+    return; }
+  if(st.nx && st.nx!==ui.view){ navPop=true; try{ open(st.nx); }finally{ navPop=false; } } }
+function navInit(){ if(navOn) return; navOn=true; try{ history.replaceState({nx:'root'}, ''); history.pushState({nx:ui.view}, ''); }catch(e){} window.addEventListener('popstate', onPop); }
+
 
 /* ---------- painting ---------- */
 let sel=-1;
@@ -3882,7 +3911,6 @@ function paint(){
 }
 function header(title, icon, sub, controls){
   const l=h('div','nx-hl');
-  if(phone()){ const m=btn('nx-ib nx-menu-b', null, openMenuSheet); m.innerHTML=ic('menu'); m.setAttribute('aria-label','All of Team HQ'); l.appendChild(m); }
   if(icon){ const i=h('span','nx-hi'); i.innerHTML=icon; l.appendChild(i); }
   const tt=h('div','nx-ht'); tt.appendChild(h('h1',null,title)); if(sub) tt.appendChild(h('span','nx-hs',sub)); l.appendChild(tt);
   head.appendChild(l);
@@ -3937,7 +3965,7 @@ function popMenu(anchor, items, title){
   document.body.appendChild(menuEl);
   if(!phone()){ const r=anchor.getBoundingClientRect(), mh=menuEl.offsetHeight; let top=r.bottom+4; if(top+mh>innerHeight-8) top=Math.max(8, r.top-mh-4);
     menuEl.style.top=top+'px'; menuEl.style.left=Math.max(8, Math.min(innerWidth-menuEl.offsetWidth-8, r.left))+'px'; }
-  setTimeout(()=>document.addEventListener('click', function off(e){ if(menuEl && !menuEl.contains(e.target)){ closeMenus(); document.removeEventListener('click', off); } }), 0);
+  { const mine=menuEl; setTimeout(()=>document.addEventListener('click', function off(e){ if(menuEl!==mine){ document.removeEventListener('click', off); return; } if(mine && !mine.contains(e.target) && !e.target.closest('.nx-tbm')){ closeMenus(); document.removeEventListener('click', off); } }), 0); }
 }
 function statusMenu(t, anchor, rowEl){
   popMenu(anchor, STATUSES.map(s=>({label:s, icon:sIcon(s), on:st(t)===s, fn:()=>{ if(s===st(t)) return; if(s==='Done') complete(t, rowEl, anchor.getBoundingClientRect ? {clientX:anchor.getBoundingClientRect().left+8, clientY:anchor.getBoundingClientRect().top+8} : null); else change(t, {s}, 'Moved to '+s+': '+t.t); }})), 'Status');
@@ -4917,9 +4945,11 @@ function vCal(){
 }
 
 /* ---------- phones: a bottom tab bar and a sheet with everything ---------- */
-function drawTabbar(){ if(!tabbar) return; tabbar.textContent='';
-  [['day','Dashboard','home'],['mine','My Tasks','mine'],['cal','Calendar','cal'],['inbox','Inbox','inbox']].forEach(([k,l,i])=>{ const b=btn('nx-tb'+(ui.view===k?' on':''), null, ()=>open(k)); b.dataset.k=k; b.innerHTML=ic(i)+'<span>'+l+'</span>'; if(k==='inbox'){ const n=myAsks().length+myNudges().length; if(n) b.insertAdjacentHTML('beforeend','<b class="nx-badge hot">'+n+'</b>'); } tabbar.appendChild(b); });
-  const m=btn('nx-tb', null, openMenuSheet); m.innerHTML=ic('menu')+'<span>Everything</span>'; tabbar.appendChild(m);
+function drawTabbar(){ if(!tabbar) return;
+  if(!tabbar.querySelector('.nx-tb')){
+    [['day','Dashboard','home'],['mine','My Tasks','mine'],['cal','Calendar','cal'],['inbox','Inbox','inbox']].forEach(([k,l,i])=>{ const b=btn('nx-tb', null, ()=>open(k)); b.dataset.k=k; b.innerHTML=ic(i)+'<span>'+l+'</span>'; tabbar.appendChild(b); });
+    const m=btn('nx-tb nx-tbm', null, e=>{ e.stopPropagation(); if(menuEl && menuEl.classList.contains('sheet')) closeMenus(); else openMenuSheet(); }); m.innerHTML=ic('menu')+'<span>Everything</span>'; tabbar.appendChild(m); }
+  tabbar.querySelectorAll('.nx-tb[data-k]').forEach(b=>{ b.classList.toggle('on', ui.view===b.dataset.k); if(b.dataset.k==='inbox'){ const n=myAsks().length+myNudges().length; let bd=b.querySelector('.nx-badge'); if(n){ if(!bd){ bd=h('b','nx-badge hot'); b.appendChild(bd); } bd.textContent=String(n); } else if(bd) bd.remove(); } });
 }
 function openMenuSheet(){
   closeMenus(); menuEl=h('div','nx-menu sheet tall');
@@ -4928,7 +4958,7 @@ function openMenuSheet(){
   grp('You'); Object.keys(VIEWS).forEach(k=>item(VIEWS[k].t, ()=>open(k), ic(VIEWS[k].i)));
   grp('Team Pages'); [...document.querySelectorAll('.hq.rail nav button[data-hq]')].forEach(b=>{ const s=b.querySelector('svg'); item(b.textContent.trim(), ()=>openClassic(b.dataset.hq), s?s.outerHTML:''); });
   document.body.appendChild(menuEl);
-  setTimeout(()=>document.addEventListener('click', function off(e){ if(menuEl && !menuEl.contains(e.target)){ closeMenus(); document.removeEventListener('click', off); } }), 0);
+  { const mine=menuEl; setTimeout(()=>document.addEventListener('click', function off(e){ if(menuEl!==mine){ document.removeEventListener('click', off); return; } if(mine && !mine.contains(e.target) && !e.target.closest('.nx-tbm')){ closeMenus(); document.removeEventListener('click', off); } }), 0); }
 }
 
 /* ---------- switch in the masthead ---------- */
@@ -4952,7 +4982,7 @@ const railMo=new MutationObserver(()=>{ if(!ui.on) return; const nav=navEl(); if
 const railEl=document.querySelector('.hq.rail'); if(railEl) railMo.observe(railEl, {childList:true, subtree:true});
 document.addEventListener('click', onRailClick, true);
 /* keys: C new task, / filter, J/K move, Enter open, X done, 1-5 views */
-const onKey=e=>{ if(!ui.on || !shell || shell.hidden) return; const a=document.activeElement; if(a && (a.tagName==='INPUT'||a.tagName==='TEXTAREA'||a.tagName==='SELECT'||a.isContentEditable)) return;
+const onKey=e=>{ if(!ui.on || !shell || shell.hidden || document.documentElement.classList.contains('app-exp')) return; const a=document.activeElement; if(a && (a.tagName==='INPUT'||a.tagName==='TEXTAREA'||a.tagName==='SELECT'||a.isContentEditable)) return;
   if(e.metaKey||e.ctrlKey||e.altKey) return; if(document.querySelector('dialog[open], .modal.open, .ed-ov:not([hidden])')) return;
   const k=e.key.toLowerCase();
   const m={'1':'day','2':'inbox','3':'mine','4':'cal','5':'people'}[k]; if(m){ open(m); e.preventDefault(); return; }
@@ -4994,6 +5024,7 @@ const css=h('style'); css.id='nx-css'; css.textContent=`
 html.nx-show body{overflow:hidden}
 html.nx-show main{visibility:hidden}
 html.nx-on .mob-bar{display:none!important}
+html.app-exp .nx-tabbar,html.app-exp .nx,html.app-exp .hq.rail{display:none!important}html.app-exp.nx-on body{padding-bottom:0!important}
 .nx{position:fixed;top:calc(var(--hq-h) + env(safe-area-inset-top,0px));left:var(--rail-w,240px);right:0;bottom:0;z-index:90;display:flex;flex-direction:column;background:var(--ground);font-variant-numeric:tabular-nums;transition:left .2s cubic-bezier(.4,0,.2,1)}
 body.railmini .nx{left:var(--rail-mini,62px)}
 @media(max-width:900px){body:not(.railmini) .nx{left:var(--rail-mini,62px)}}
@@ -5223,7 +5254,7 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-prj .tp{display:flex;gap:8px;font-size:12.5px}.nx-prj .tp b{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nx-prj .tp span{color:rgba(255,255,255,.7);font-weight:700}
 .nx-prj:hover .tp b{color:var(--sky)}
 .nx-prj .pn{display:flex;gap:8px;align-items:baseline;padding:5px 8px;border-radius:5px;background:rgba(255,255,255,.06);font-size:12px;min-width:0}.nx-prj .pn b{flex:0 0 auto;color:var(--rc);font-size:11px}.nx-prj .pn span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(255,255,255,.85)}.nx-prj .pn em{font-style:normal;flex:0 0 auto;font-size:11px;color:rgba(255,255,255,.55)}
-.nx-bars{display:flex;gap:10px;align-items:stretch;flex:0 0 auto;height:104px}.st-tile.sz-t .nx-bars,.st-tile.sz-b .nx-bars{height:230px}.st-tile.sz-s .nx-bars{height:96px}
+.nx-bars{display:flex;gap:10px;align-items:stretch;flex:1 1 104px;min-height:104px;max-height:320px}.st-tile.sz-s .nx-bars{flex-basis:90px;min-height:90px}
 .nx-bars .bc{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px}.nx-bars .bc .bw{flex:1 1 0;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px}
 .nx-bars .bc i{display:block;width:100%;max-width:46px;border-radius:4px 4px 2px 2px;background:linear-gradient(180deg,var(--k),color-mix(in srgb,var(--k) 45%,transparent))}
 .nx-bars .bc b{font-size:11px;color:rgba(255,255,255,.8)}.nx-bars .bc span{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:rgba(255,255,255,.55)}
@@ -5641,9 +5672,11 @@ document.head.appendChild(css);
 document.querySelectorAll('.nx-switch').forEach(x=>x.remove());
 const mo=new MutationObserver(()=>{}); 
 /* it always opens on My Dashboard */
-if(ui.on){ build(); document.documentElement.classList.add('nx-on'); drawRail(); open('day'); lastSig=sig(); try{ window.__hub && window.__hub.paint(); }catch(e){} }
+/* opened from the Expenses phone app: go straight to Expenses and nothing else */
+const APPX=document.documentElement.classList.contains('app-exp') || new URLSearchParams(location.search).get('app')==='expenses';
+if(ui.on){ build(); document.documentElement.classList.add('nx-on'); drawRail(); if(APPX) openClassic('expenses'); else open('day'); navInit(); lastSig=sig(); try{ window.__hub && window.__hub.paint(); }catch(e){} }
 window.__nx={ version:'2.2', paint, open, setOn, parse:parseQuick, ui, pinTile,
-  destroy(){ clearInterval(live); clearInterval(clock); mo.disconnect(); railMo.disconnect(); document.removeEventListener('keydown', onKey); document.removeEventListener('click', onRailClick, true); document.removeEventListener('click', onPgx, true); window.removeEventListener('resize', onResize);
+  destroy(){ window.removeEventListener('popstate', onPop); clearInterval(live); clearInterval(clock); mo.disconnect(); railMo.disconnect(); document.removeEventListener('keydown', onKey); document.removeEventListener('click', onRailClick, true); document.removeEventListener('click', onPgx, true); window.removeEventListener('resize', onResize);
     railNodes.forEach(n=>n.remove()); restoreBoardBtn(); if(shell) shell.remove(); if(tabbar) tabbar.remove(); if(sw) sw.remove(); closeMenus(); if(toastEl) toastEl.remove(); css.remove(); document.documentElement.classList.remove('nx-on','nx-show','nx-dragging'); } };
 })();
 
