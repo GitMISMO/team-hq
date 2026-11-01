@@ -17085,241 +17085,369 @@ qaScan();
    changes, change its section here. */
 const HELP_SECS = [
 {id:'start', t:'Getting Started', d:'What Team HQ is for, finding your way around, and signing in.', h:`
-<p><b>Team HQ is the team's one place to see what everyone is working on</b> — so two people don't end up doing the same thing, good ideas get parked instead of half-done, and key dates aren't buried in someone's inbox.</p>
+<p><b>Team HQ is the team's one place to see what everyone is working on</b>, so two people don't end up doing the same thing, good ideas get parked instead of half-done, and key dates aren't buried in someone's inbox.</p>
 <h4>Signing In</h4>
-<p>On <b>resources.mismo.org/team-hq</b> you sign in with the same MISMO sign-in as the other tools. Your initials at the top right show who you are signed in as. On the Claude copy, pick your name with <b>Who Are You?</b> at the top right.</p>
+<p>On <b>resources.mismo.org/team-hq</b> you sign in with the same MISMO sign-in as the other tools. Your initials at the top right show who you are signed in as.</p>
+<h4>The Opening Screen</h4>
+<p>While Team HQ gets your work, your team, your calendar and your dashboard ready, a card says <b>Opening Team HQ…</b> and ticks off each step: <b>Signing You In</b>, <b>Tasks and Team Projects</b>, <b>Team Calendars</b>, <b>Your Email</b> and <b>Your Dashboard</b>. It usually takes a few seconds and never more than ten.</p>
 <h4>Finding Your Way Around</h4>
 <ul>
-<li><b>The left menu</b> has the sections: Today, My Board, Team Projects, Plans, Key Dates, Team Meeting, Sync Ups and Expenses. <b>Help</b> and <b>Dark Mode</b> sit at the bottom.</li>
+<li><b>The left menu</b> has two groups. <b>You</b>: My Dashboard, Inbox, My Tasks, Calendar and My Board. <b>Team</b>: Today, Team Projects, Plans, Key Dates, Find a Time, Team Meeting, Sync Ups and Expenses. <b>Help</b> and <b>Dark Mode</b> sit at the bottom.</li>
+<li>The red number on <b>Inbox</b> counts asks and nudges waiting on you; the number on <b>My Tasks</b> counts your open tasks.</li>
 <li><b>Narrow the menu</b> with the arrow at its top (or press <span class="hk">\\</span>) to leave just the icons. Team HQ remembers your choice.</li>
-<li><b>Search</b> at the top of the menu finds tasks, team projects, parts, people, dates, plans, notes, expenses and these help sections. Press <span class="hk">Ctrl</span>+<span class="hk">K</span> (<span class="hk">⌘</span>+<span class="hk">K</span> on a Mac) to jump to it from anywhere.</li>
-<li><b>Add a Task</b> and <b>Jot It Down</b> sit in the navy bar across the top on every page.</li>
-<li><b>The right-hand pane.</b> Almost anything you click — a task, a project, a note, a card — opens in a pane on the right. The arrows at its top right make it wider or put it back. The × closes it; a back arrow steps out one level when you have opened something from inside something else.</li>
+<li><b>Search</b> at the top of the menu finds tasks, team projects, parts, people, dates, plans, notes, expenses and these help sections.</li>
+<li><b>Jump to Anything</b>: press <span class="hk">Ctrl</span>+<span class="hk">K</span> (<span class="hk">⌘</span>+<span class="hk">K</span> on a Mac) anywhere to jump to a system, project, task or date, or to start something (see <i>Jump to Anything and Keyboard Shortcuts</i>).</li>
+<li><b>The add box</b> at the top of My Dashboard, My Tasks, Inbox and Calendar adds a task in one line (see <i>Adding a Task in One Line</i>). <b>Add a Task</b> and <b>Jot It Down</b> are also in the navy bar across the top.</li>
+<li><b>The right-hand pane.</b> Almost anything you click (a task, a project, a note, a card) opens in a pane on the right. The arrows at its top right make it wider or put it back. The × closes it; a back arrow steps out one level when you have opened something from inside something else.</li>
 </ul>`},
+
+{id:'dash', t:'My Dashboard', d:'Your front page: your day, your week, and tiles you choose.', h:`
+<p>My Dashboard is the first thing you see. It is yours alone.</p>
+<h4>The Top of the Page</h4>
+<ul>
+<li><b>The greeting</b> sums up your day in a sentence: how many meetings and free hours you have, what to start with (your latest late task, or what is next), and the next key date.</li>
+<li><b>On Your Plate</b> lists what lands in the next seven days: late tasks, tasks due, key dates that include you, and the team meeting. Click any of them to open it. <b>See All My Tasks →</b> goes to My Tasks.</li>
+<li><b>The week strip</b> shows the next seven days with colored dots: red for late, blue for due, green for key dates, gray for meetings. Click a day to open your Calendar.</li>
+</ul>
+<h4>Your Tiles</h4>
+<p>Under <b>Your Dashboard</b> are tiles. Click a tile to go to what it shows. Built-in tiles include <b>My Tasks</b>, <b>Your Day</b> (meetings and a countdown to the next one), <b>Email to Look At</b>, <b>Asks</b>, <b>Your Week Ahead</b> (hours in meetings each day), <b>My People</b>, <b>The Team Right Now</b>, <b>My Team Projects</b>, <b>Next Key Date</b>, <b>Team Meeting</b>, <b>Team Wins</b>, <b>Find a Time</b> and <b>My Board</b>. You can also add a tile for any MISMO system you can open (see <i>System Tiles</i>).</p>
+<h4>Add a Tile</h4>
+<ol>
+<li>Click <b>+ Add a Tile</b>.</li>
+<li>Pick from <b>Your Day</b>, <b>Team</b> or <b>MISMO Systems</b> and click <b>Add</b>. A system can be added more than once, for different pages.</li>
+<li>Click <b>Done</b>, then <b>Save Layout</b>.</li>
+</ol>
+<h4>Customize a Tile</h4>
+<p>Point at a tile and click its gear (on a phone or tablet the gear always shows). <b>Customize This Tile</b> shows a live preview and lets you choose:</p>
+<ul>
+<li><b>Size</b>: <b>Small</b> (one box), <b>Wide</b> (two across), <b>Tall</b> (two down) or <b>Large</b> (two by two).</li>
+<li><b>How Much Detail</b>: <b>High Level</b> is just the top, with no list. <b>Detailed</b> adds the list underneath.</li>
+<li>For a system tile, also the <b>Page</b> it comes from and <b>What to Show</b> (see <i>System Tiles</i>).</li>
+<li><b>Add Another Tile from This App</b> adds a second tile from the same system and opens its settings. <b>Take This Tile Off</b> removes it (you can add it back any time).</li>
+</ul>
+<p>Click <b>Save</b> to keep your choices.</p>
+<h4>Moving Tiles</h4>
+<ul>
+<li><b>Drag a tile</b> by its body (not a button) with the mouse. A copy follows your pointer and a dashed outline shows where it will land. Nothing else moves while you decide.</li>
+<li>Drop it and it goes exactly there. Only tiles in its way slide down to make room. Press <b>Esc</b> to cancel.</li>
+<li>Dragging works any time, with no need to turn anything on. It saves straight away, for the screen width you are on.</li>
+</ul>
+<h4>Customize the Whole Dashboard</h4>
+<p>The gear <b>Customize</b> button next to <b>+ Add a Tile</b> lets you work on everything at once: <b>Mixed Sizes</b> or <b>All the Same</b>, <b>Shuffle Sizes</b>, <b>Reset</b> (back to the starting layout), a size and × on every tile, then <b>Save Layout</b> or <b>Cancel</b>.</p>
+<p>Your dashboard is saved with your board, so it looks the same on every computer you use.</p>`},
+
+{id:'systiles', t:'System Tiles', d:'Numbers from MISMO Money, CMS, Summit HQ and the other systems, right on your dashboard.', h:`
+<p>A system tile shows numbers and lists from another MISMO system: what is waiting, totals, gauges, or one of that system's own cards.</p>
+<h4>Pin the Exact Page You Want</h4>
+<ol>
+<li>Click a system tile (or open a system from Jump to Anything). The system opens right inside Team HQ.</li>
+<li>Go to the page you care about, like an approval queue.</li>
+<li>Click <b>Make This a Dashboard Tile</b>. It changes to <b>On Your Dashboard ✓</b>, and the tile goes to the top of your dashboard.</li>
+</ol>
+<p>Close the system with × or <b>Esc</b>. <b>Open in a New Tab</b> opens it on its own.</p>
+<h4>Choose What a System Tile Shows</h4>
+<ul>
+<li><b>1. Page</b>: the system's home page or any of its pages, with their counts.</li>
+<li><b>2. What to Show</b>: <b>Headline Numbers</b>, or one of the cards on that page (for example <i>Square Payments</i> in MISMO Money). Each choice is one tile; for two, use <b>Add Another Tile from This App</b>.</li>
+<li><b>3. Numbers to Include</b> (Headline Numbers only): tick the ones you want. None ticked means all of them.</li>
+</ul>
+<p>The first time, it can take up to half a minute to read a page (<b>Reading this page…</b>).</p>
+<h4>How the Numbers Stay Current</h4>
+<ul>
+<li>Team HQ reads each system quietly in the background once it has finished opening, and only when you pause, so it never slows you down.</li>
+<li>Numbers are re-read when they are more than 45 minutes old. The foot of each tile says where they came from and when, for example <b>From Action Queue · 5m ago</b>.</li>
+<li>Numbers are kept in your browser, so they show straight away next time.</li>
+<li>If a system can't be reached, the tile keeps its last good numbers and tries again in a few minutes. A system's error message never shows as a tile.</li>
+</ul>
+<h4>The Meeting Trackers Tile</h4>
+<p>It shows today as a calendar date and lists the day's workgroup meetings in time order, each marked <b>On Now</b>, <b>in 20 min</b>, <b>Done</b> or <b>Cancelled</b>, updated every 30 seconds. On a day with no meetings it shows who meets next.</p>`},
+
+{id:'quickadd', t:'Adding a Task in One Line', d:'Type a task the way you would say it.', h:`
+<p>The add box at the top of My Dashboard, Inbox, My Tasks and Calendar (press <span class="hk">C</span> to jump to it) understands a few shortcuts:</p>
+<ul>
+<li><b>@name</b>: who is doing it, for example <b>@amy</b>. You can add more than one.</li>
+<li><b>#project</b>: the team project, for example <b>#summit</b>.</li>
+<li><b>!</b>: high priority.</li>
+<li><b>A date</b>: <b>today</b>, <b>tomorrow</b>, <b>next week</b>, a day like <b>fri</b>, or <b>11/6</b>.</li>
+</ul>
+<p>Example: <b>Send deck to Amy fri @amy #summit !</b>. A line under the box shows what it understood. Press <b>Enter</b> and the task opens ready to check and save.</p>
+<p>On a team project's page the task goes on that project. On a person's page it goes to them. On My Dashboard it is due today unless you say otherwise.</p>`},
+
+{id:'mytasks', t:'My Tasks', d:'Everything you are doing, grouped how you like, with quick changes.', h:`
+<h4>The List</h4>
+<ul>
+<li>Each row shows a status circle, <b>!</b> for high priority, the task, its workstream and team project, when it is due, and who is on it.</li>
+<li><b>Click the circle</b> to change the status: Not Started, In Progress, Waiting on Someone or Done.</li>
+<li><b>Click the due date</b> to move it: Today, Tomorrow, Friday, Next Monday, In Two Weeks, a date you pick, or No Due Date.</li>
+<li><b>Click the task</b> to open it. On a wide screen it opens beside the list, where you can change the title, status, due date, who is doing it, who is accountable, the team project, priority and notes. <b>Full Editor</b> opens everything.</li>
+</ul>
+<h4>Sorting It Out</h4>
+<ul>
+<li><b>Filter…</b> narrows the list by any word in the task, project or people.</li>
+<li><b>Group</b> by Due Date (Overdue, Today, Tomorrow, This Week, Next Week, Later, No Date), Status, Team Project or Person. The <b>+</b> on a group adds a task already set for it.</li>
+<li><b>Done</b> shows what was finished in the last two weeks.</li>
+<li>The two icons switch between a <b>List</b> and a <b>Board</b> of columns. Team HQ remembers your choices for each page.</li>
+</ul>
+<h4>Drag to Change</h4>
+<p>On a computer, drag a task onto another group or column to change that thing: its status, due date, team project, workstream or person.</p>
+<h4>Undo</h4>
+<p>Every change shows a note at the bottom with <b>Undo</b> for six seconds.</p>
+<h4>From Your Sync Ups</h4>
+<p>Sync Up cards that are yours show under <b>From Your Sync Ups</b>. Ticking one here ticks it in the Sync Up too. Things you handed to others in a Sync Up are under <b>Handed Off in Your Sync Ups</b>.</p>`},
+
+{id:'inbox', t:'Inbox', d:'Asks, nudges, email to look at, and work waiting on others.', h:`
+<p>Inbox gathers what needs a look:</p>
+<ul>
+<li><b>Your Open Asks</b> (for Jonna, <b>Asks for You</b>): asks and where they stand (New, Looking at It, Built, Not Doing), plus nudges, each with a <b>Done</b> button.</li>
+<li><b>Email to Look At</b>: flagged, important and unread mail from people (see <i>Outlook, Email and Your Calendar</i>).</li>
+<li><b>Waiting on Someone</b>: your tasks that are waiting.</li>
+<li><b>You're Accountable, Others Are Doing</b>: work you handed off.</li>
+<li><b>Due Soon on Projects You Lead</b>: other people's tasks due within a week on your projects.</li>
+<li><b>Recently Closed Asks</b>.</li>
+</ul>
+<p><b>Ask for Something</b> at the top sends a request for a change or a new panel.</p>`},
+
+{id:'calendar', t:'Calendar', d:'Your week from Outlook, with tasks and key dates, and others laid over it.', h:`
+<ul>
+<li>It shows Monday to Friday (next week on a weekend). The arrows move a week; <b>This Week</b> comes back.</li>
+<li><b>The all-day row</b> shows key dates and your tasks due that day. Click one to open it.</li>
+<li><b>Your Outlook meetings</b> fill the day from 7 AM to 6 PM, with a line at the current time.</li>
+<li><b>Lay over busy time</b>: click a teammate's name to see their busy times as thin bars in your days.</li>
+<li><b>Find a Time</b> opens Find a Time with you and the people you laid over.</li>
+</ul>`},
+
+{id:'views', t:'Team Project and Person Pages', d:'Everything on one project, or everything one person has on.', h:`
+<h4>A Team Project's Page</h4>
+<p>Click a project's name on a task or a dashboard tile. You see its progress, who is on it, and its open tasks grouped by workstream (or status, due date or person). The workstream chips at the top narrow the list, and the add box then adds to that workstream. <b>Timeline and More</b> opens the project on Team Projects.</p>
+<h4>A Person's Page</h4>
+<p>Click a person's name or picture, or <b>Their Work</b> on Today. You see their status, what they have open and late, and the projects they lead, with <b>Find a Time</b> and <b>Add a Task for</b> them. On the right is their day from Outlook, with free stretches marked (for example <b>45m open</b>). The arrows step through days.</p>`},
 
 {id:'today', t:'Today', d:'Where the team stands right now.', h:`
-<p>Today is the team's front page.</p>
+<p>Today is the team's page.</p>
 <ul>
-<li><b>The navy band</b> shows the date and five numbers: <b>Traveling</b>, <b>Active Projects</b> (with all open tasks under it), <b>Possible Overlaps</b>, <b>Past Due</b> and <b>Working Days Left</b> in the year (weekdays, minus MISMO holidays). Click a number to go to what it counts.</li>
-<li><b>Ask</b> — type a question about the team (“Who is overloaded right now?”) and Team HQ answers from what is on it.</li>
-<li><b>Counting Down</b> — the key dates that are pinned, with days to go.</li>
-<li><b>Where My Team Is Today</b> — a card for each person: their status, their working day (with their Outlook meetings when Outlook is connected) and how loaded they are. Click a card to see their work, <b>Add a Task for</b> them, or <b>Send a Nudge</b>.</li>
-<li><b>Who Is Doing What</b> — put someone on a task, or take them off, in one place.</li>
-<li><b>The note wall</b> — the team's post-its (see <i>Jot It Down and Post-Its</i>).</li>
+<li><b>Ask</b>: type a question about the team (“Who is overloaded right now?”) and Team HQ answers from what is on it.</li>
+<li><b>Counting Down</b>: key dates with days to go. Pick <b>This Week</b>, <b>This Month</b>, <b>Next 90 Days</b> or <b>Next 12 Months</b>. Click a card to open the date; <b>All Key Dates</b> goes to Key Dates.</li>
+<li><b>The Next Four Weeks</b>: a timeline of key dates, project deadlines, holidays and who is away or tied up in meetings. Point at a marker to see what it is; click to open it.</li>
+<li><b>Where My Team Is Today</b>: a card for each person with their status, working day and load. Switch between <b>Everyone</b> and <b>My People</b> (<b>Choose</b> picks them). <b>Their Work</b> opens their page; <b>Find a Time</b> finds a time with them; you can also <b>Add a Task for</b> them or <b>Send a Nudge</b>.</li>
+<li><b>Who Is Doing What</b>: put someone on a task, or take them off, in one place.</li>
+<li><b>The note wall</b>: the team's post-its (see <i>Jot It Down and Post-Its</i>).</li>
 </ul>`},
 
-{id:'tasks', t:'Tasks', d:'Adding a task, and what each field means.', h:`
+{id:'tasks', t:'Tasks', d:'The full task editor, and what each field means.', h:`
 <h4>Add a Task</h4>
 <ol>
-<li>Click <b>Add a Task</b> in the navy bar at the top (or the <b>Add a task</b> box on a panel).</li>
-<li>Fill in what you know — only <b>Task</b> is needed.</li>
+<li>Type in the add box at the top of a page and press <b>Enter</b>, or click <b>Add a Task</b> in the navy bar.</li>
+<li>Fill in what you know. Only <b>Task</b> is needed.</li>
 <li>Click <b>Save</b>.</li>
 </ol>
 <h4>The Fields</h4>
 <ul>
-<li><b>Accountable</b> — the one person answerable for it getting done.</li>
-<li><b>Who Is Working It</b> — anyone doing the hands-on work. They can be different from the person accountable; the accountable person then sees it under <i>What I Am Watching</i>.</li>
-<li><b>Status</b> — Not Started, In Progress, Waiting on Someone or Done.</li>
-<li><b>Priority</b> — High, Normal or Low.</li>
-<li><b>Due Date</b> — when it is due. Past due tasks show how many days late.</li>
-<li><b>Team Project</b> and <b>Part Of</b> — which team project and which part of it the task belongs to. This is what lets Team HQ spot two people working the same part.</li>
-<li><b>Running Rail</b> — tick it for an ongoing responsibility rather than a one-off (a weekly report, an inbox you watch).</li>
-<li><b>Already Handled Elsewhere</b> — whether the work is already automated or partly covered somewhere else.</li>
-<li><b>Notes</b> — anything the next person would need to know, with formatting (see <i>Formatting Your Notes</i>).</li>
-<li><b>Time Set Aside for It</b> — block time on your calendar for the task. On resources.mismo.org, <b>Your Day in Outlook</b> shows your meetings that day so you can pick a free stretch, and the time is added to your Outlook calendar.</li>
-<li><b>Files</b> — attach anything up to 4 MB; click a file to look at it or download it.</li>
+<li><b>Accountable</b>: the one person answerable for it getting done.</li>
+<li><b>Who Is Working It</b>: anyone doing the hands-on work. They can be different from the person accountable; the accountable person then sees it in their Inbox under <i>You're Accountable, Others Are Doing</i>.</li>
+<li><b>Status</b>: Not Started, In Progress, Waiting on Someone or Done.</li>
+<li><b>Priority</b>: High, Normal or Low.</li>
+<li><b>Due Date</b>: when it is due. Past due tasks show how many days late.</li>
+<li><b>Team Project</b> and <b>Part Of</b>: which team project and which part (workstream) the task belongs to. This is what lets Team HQ spot two people working the same part.</li>
+<li><b>Running Rail</b>: tick it for an ongoing responsibility rather than a one-off (a weekly report, an inbox you watch).</li>
+<li><b>Already Handled Elsewhere</b>: whether the work is already automated or partly covered somewhere else.</li>
+<li><b>Notes</b>: anything the next person would need to know, with formatting (see <i>Formatting Your Notes</i>).</li>
+<li><b>Time Set Aside for It</b>: block time on your calendar for the task. <b>Your Day in Outlook</b> shows your meetings that day so you can pick a free stretch, and the time is added to your Outlook calendar.</li>
+<li><b>Files</b>: attach anything up to 4 MB; click a file to look at it or download it.</li>
 </ul>
 <h4>Finishing a Task</h4>
-<p>Set <b>Status</b> to <b>Done</b> and click <b>Save</b>. Finished tasks fold away under <b>Done (n)</b> at the bottom of a list, newest first.</p>`},
+<p>Click its status circle and pick <b>Done</b>, or set <b>Status</b> to <b>Done</b> and click <b>Save</b>.</p>`},
 
 {id:'jot', t:'Jot It Down and Post-Its', d:'Getting a thought down fast, and post-its you can type on.', h:`
 <h4>Jot It Down</h4>
 <ol>
 <li>Click <b>Jot It Down</b> in the navy bar at the top.</li>
-<li>Type it the way you would on a sticky note — or click the microphone and say it.</li>
+<li>Type it the way you would on a sticky note, or click the microphone and say it.</li>
 <li>Choose where it goes:
-<ul><li><b>Put It on My Board</b> (or someone else's board, picked under <b>Whose Board</b>) — a post-it on that board.</li>
-<li><b>Park It</b> — onto the team's note wall on Today. No owner, no date, no pressure.</li></ul></li>
+<ul><li><b>Put It on My Board</b> (or someone else's board, picked under <b>Whose Board</b>): a post-it on that board.</li>
+<li><b>Park It</b>: onto the team's note wall on Today. No owner, no date, no pressure.</li></ul></li>
 </ol>
-<p>Have the details already? Use <b>Add a Task</b> instead.</p>
 <h4>Post-Its</h4>
 <ul>
-<li><b>Click a post-it and type.</b> The formatting toolbar shows while you type. A <b>Save</b> button appears once you have changed something — click it to keep your words.</li>
-<li><b>The colored dot</b> changes its color. <b>Make It a Task</b> turns it into a task (the first line is the task, the rest goes in its notes) and takes it off the wall once the task is saved. <b>×</b> clears it (click twice; there is an Undo).</li>
+<li><b>Click a post-it and type.</b> A <b>Save</b> button appears once you have changed something.</li>
+<li><b>The colored dot</b> changes its color. <b>Make It a Task</b> turns it into a task. <b>×</b> clears it (click twice; there is an Undo).</li>
 <li><b>Drag a post-it by the dots at its top</b> to put it in a different order.</li>
 <li><b>A post-it you add and leave blank</b> removes itself.</li>
-<li>On a <b>Free-Form</b> or <b>Notebook</b> board, post-its can sit anywhere — see <i>My Board: Free-Form and Notebook</i>.</li>
 </ul>`},
 
-{id:'board', t:'My Board: Panels and Settings', d:'Your own page — what is on it is up to you.', h:`
-<p><b>My Board is yours alone.</b> It starts with My Tasks; you add what else you want.</p>
+{id:'board', t:'My Board: Panels and Settings', d:'Your own page for notes, post-its and panels.', h:`
+<p><b>My Board is yours alone.</b> Your tasks, day, team, key dates and systems live on My Dashboard; My Board is for notes, post-its, writing and the panels only a board does.</p>
+<h4>The Bar Across the Top</h4>
+<p><b>Add a Task</b>, <b>Jot It Down</b>, <b>Find a Time</b>, <b>Raise at Team Meeting</b>, <b>Snap a Receipt</b>, <b>Ask for Something</b> and <b>Jump to Anything</b>.</p>
 <h4>Add a Panel</h4>
 <ol>
 <li>Click <b>Add a Panel</b> in the navy band on My Board.</li>
-<li>Pick a group on the left (My Work, Projects and Plans, The Team, Dates and Meetings, Notes and Ideas, Numbers and Systems) or search.</li>
+<li>Pick a group on the left or search.</li>
 <li>Point at a panel to see it drawn with your own data, then click <b>Add It to My Board</b>.</li>
 </ol>
+<p>Panels that My Dashboard already covers are not listed. <b>Add a Tile to My Dashboard</b> takes you there instead.</p>
 <h4>Moving and Shaping Panels</h4>
 <ul>
-<li><b>Drag a panel by its heading</b> to move it.</li>
+<li><b>Drag a panel by its heading</b> to move it. <b>Tidy Up</b> lines every panel up in a neat grid (with Undo).</li>
 <li><b>Click the heading</b> to fold a panel down to its heading, or open it again.</li>
 <li><b>The gear on a panel</b> has its own settings: its size, its color and style, whether it starts open or collapsed, what it shows, and <b>Take It Off My Board</b>. Taking a panel off never deletes what is in it.</li>
 </ul>
 <h4>My Board Settings (the Gear in the Navy Band)</h4>
 <ul>
-<li><b>Layout</b> — <b>Arrange My Board As</b> Board, Free-Form or Notebook (next section); <b>When the Board Opens</b>: every panel Open or Collapsed; whether panels side by side match their heights.</li>
-<li><b>Opening Things</b> — whether a task, note or project opens in the right-hand pane, as a drop-down under its row, or both.</li>
-<li><b>Appearance</b> — Plain or Bold panels, automatic colors, shuffle or clear every color.</li>
-<li><b>Tasks</b> — show tasks as Rows, Cards or Sticky Notes.</li>
-<li><b>Top Band</b> — show or hide the navy band, and pick up to four numbers for it.</li>
+<li><b>Layout</b>: <b>Arrange My Board As</b> Board, Free-Form or Notebook (next section), and whether panels start Open or Collapsed.</li>
+<li><b>Opening Things</b>: whether a task, note or project opens in the right-hand pane, as a drop-down under its row, or both.</li>
+<li><b>Appearance</b>: Plain or Bold panels, automatic colors, shuffle or clear every color.</li>
+<li><b>Tasks</b>: show tasks as Rows, Cards or Sticky Notes.</li>
+<li><b>Top Band</b>: show or hide the navy band, and pick up to four numbers for it.</li>
 </ul>
-<p>Point at any setting to see a picture of what it does before you click.</p>
 <h4>Your Status</h4>
-<p>The status button in the navy band (for example <b>Around</b>) sets yours — see <i>Your Status, Working Hours and Nudges</i>.</p>`},
+<p>The status button in the navy band (for example <b>Around</b>) sets yours. See <i>Your Status, Working Hours and Nudges</i>.</p>`},
 
 {id:'layouts', t:'My Board: Free-Form and Notebook', d:'Panels anywhere, writing on the board, sections and pages like OneNote.', h:`
 <p>Pick a layout in <b>My Board Settings → Layout → Arrange My Board As</b>:</p>
 <ul>
-<li><b>Board</b> — panels in rows down the page.</li>
-<li><b>Free-Form</b> — one open board. Drag panels anywhere by their heading, size them from the bottom-right corner, overlap them. Nothing snaps to a grid.</li>
-<li><b>Notebook</b> — Free-Form, laid out like OneNote: colored <b>sections</b> across the top, that section's <b>pages</b> down the left.</li>
+<li><b>Board</b>: panels in rows down the page.</li>
+<li><b>Free-Form</b>: one open board. Drag panels anywhere by their heading, size them from the bottom-right corner, overlap them.</li>
+<li><b>Notebook</b>: Free-Form, laid out like OneNote, with colored <b>sections</b> across the top and that section's <b>pages</b> down the left.</li>
 </ul>
-<p><b>Switching layouts keeps your things.</b> Anything the other layout is missing comes across when you switch.</p>
+<p><b>Switching layouts keeps your things.</b></p>
 <h4>Writing on the Board</h4>
 <ul>
 <li><b>Double-click an empty spot</b> to write right there, or click <b>Add Text</b> in the navy band.</li>
-<li>Drag a text box by the thin bar along its top; widen it from its right edge. <b>Save</b> appears once you type. <b>×</b> deletes it (asks first if it has words, and there is an Undo).</li>
-<li>A box you click into and leave empty disappears.</li>
+<li>Drag a text box by the thin bar along its top; widen it from its right edge. <b>Save</b> appears once you type. <b>×</b> deletes it.</li>
 </ul>
 <h4>Post-Its on the Board</h4>
 <ul>
 <li><b>Add a Post-It</b> in the navy band puts one straight on the board. Drag it by its dots, size it from its corner.</li>
 <li><b>Drag a post-it out of a Note Wall panel</b> onto the board to stick it there.</li>
-<li>Jot It Down → <b>Put It on My Board</b> sticks it at the top right of the page you are on.</li>
 </ul>
 <h4>Sections and Pages (Notebook)</h4>
 <ul>
-<li><b>Add a Section</b> / <b>Add a Page</b> make new ones. A new page opens with its title ready to type.</li>
-<li>Each page shows a big <b>title</b> (type over it to rename the page) and the date and time it was made.</li>
+<li><b>Add a Section</b> and <b>Add a Page</b> make new ones. Type over a page's big title to rename it.</li>
 <li>On the section you are on: the <b>pencil</b> renames it, the <b>color dot</b> picks its color, <b>×</b> deletes it.</li>
-<li>On the page you are on: the <b>›</b> arrow tucks it under the page above as a subpage (<b>‹</b> brings it back out).</li>
+<li>On the page you are on: <b>›</b> tucks it under the page above as a subpage (<b>‹</b> brings it back out).</li>
 <li>Drag sections and pages to reorder them. Drop a panel, post-it or text box on another section or page to move it there.</li>
 </ul>
-<h4>A Board as Long as You Need</h4>
-<p>Drag anything toward the bottom of the window and the page scrolls and the board grows with it.</p>
-<p><b>Writing typed on the board is not private</b> — keep passwords in the <i>Locked Note</i>.</p>`},
+<p><b>Writing typed on the board is not private.</b> Keep passwords in the <i>Locked Note</i>.</p>`},
 
 {id:'notes', t:'My Notes', d:'Long-form notes on your board, archived when you are done with them.', h:`
 <ol>
-<li>Add the <b>My Notes</b> panel to your board (Add a Panel → Notes and Ideas). It always shows <b>your</b> notes.</li>
+<li>Add the <b>My Notes</b> panel to your board (Add a Panel → Notes and Ideas).</li>
 <li>Click <b>Add a Note</b>, give it a <b>Title</b>, write the <b>Note</b> and click <b>Save</b>.</li>
 <li>Click any note to open it again.</li>
 </ol>
 <ul>
 <li><b>Drag notes by their dots</b> to put them in order.</li>
-<li><b>Archive</b> takes a note off the list but keeps it. Archived notes sit under <b>Archived (n)</b> at the foot of the panel; open one and click <b>Bring It Back</b> to return it.</li>
-<li><b>Make It a Task</b> puts the note on the board as a task; the note stays, marked as a task.</li>
-<li><b>Want a separate set of notes?</b> Add My Notes again and choose <b>Start a Separate Notes Section</b>. Rename a panel in its gear → Name.</li>
-<li>If a yellow box says <b>notes of yours are not on this board</b>, nothing was deleted — click <b>Put It Back</b>.</li>
+<li><b>Archive</b> takes a note off the list but keeps it under <b>Archived (n)</b>; <b>Bring It Back</b> returns it.</li>
+<li><b>Make It a Task</b> puts the note on the board as a task.</li>
+<li><b>Want a separate set of notes?</b> Add My Notes again and choose <b>Start a Separate Notes Section</b>.</li>
+<li>If a yellow box says <b>notes of yours are not on this board</b>, nothing was deleted. Click <b>Put It Back</b>.</li>
 </ul>
-<p><b>My Notes are not private</b> — anyone with access to Team HQ could get to them. Use the <i>Locked Note</i> for anything sensitive.</p>`},
+<p><b>My Notes are not private.</b> Use the <i>Locked Note</i> for anything sensitive.</p>`},
 
-{id:'vault', t:'Locked Note', d:'A note locked with a passphrase only you know — for passwords and logins.', h:`
-<p>The Locked Note is scrambled in your browser with your passphrase before it is saved. What is stored can't be read by the team, an admin, GitHub or Claude.</p>
+{id:'vault', t:'Locked Note', d:'A note locked with a passphrase only you know, for passwords and logins.', h:`
+<p>The Locked Note is scrambled in your browser with your passphrase before it is saved. Nobody else can read it, including an admin.</p>
 <h4>Set It Up</h4>
 <ol>
 <li>Add the <b>Locked Note</b> panel (Add a Panel → Notes and Ideas).</li>
-<li>Click <b>Set It Up</b>, type a passphrase of at least 10 characters twice (four random words work well), and click <b>Lock It With This Passphrase</b>.</li>
-<li>Write your note and click <b>Save</b>. A table works well: Site · Username · Password.</li>
+<li>Click <b>Set It Up</b>, type a passphrase of at least 10 characters twice, and click <b>Lock It With This Passphrase</b>.</li>
+<li>Write your note and click <b>Save</b>.</li>
 </ol>
 <h4>Using It</h4>
 <ul>
-<li><b>Unlock</b> on the panel asks for your passphrase. The panel itself never shows what is inside.</li>
-<li>It <b>locks itself after 10 quiet minutes</b> (saving anything you typed first), when you click <b>Lock Now</b>, or when you close the page.</li>
+<li><b>Unlock</b> asks for your passphrase.</li>
+<li>It <b>locks itself after 10 quiet minutes</b>, when you click <b>Lock Now</b>, or when you close the page.</li>
 <li><b>Change Passphrase</b> is inside the open note.</li>
 </ul>
-<p><b>Write your passphrase down somewhere safe, away from Team HQ.</b> If it is forgotten nobody can open the note, and what is in it cannot be got back.</p>`},
+<p><b>Write your passphrase down somewhere safe, away from Team HQ.</b> If it is forgotten, what is in the note cannot be got back.</p>`},
 
 {id:'myprojects', t:'My Projects', d:'Your own bigger pieces of work, with steps.', h:`
-<p>For your own projects — bigger than a task, smaller than a team project.</p>
 <ol>
 <li>Add the <b>My Projects</b> panel (Add a Panel → My Work) and click <b>Add a Project</b>.</li>
-<li>Fill in <b>Project Name</b>, <b>Where It Stands</b>, <b>Priority</b>, dates, <b>What Done Looks Like</b>, and its <b>Steps</b> (each its own line with a done box and date).</li>
-<li>Link tasks from your board under <b>Tasks from Your Board</b> — their status counts toward the progress bar.</li>
+<li>Fill in <b>Project Name</b>, <b>Where It Stands</b>, <b>Priority</b>, dates, <b>What Done Looks Like</b>, and its <b>Steps</b>.</li>
+<li>Link tasks under <b>Tasks from Your Board</b>; their status counts toward the progress bar.</li>
 <li>Click <b>Save</b>.</li>
-</ol>
-<p>The filter at the top of the panel shows Open, Done or All.</p>`},
+</ol>`},
 
 {id:'rocks', t:'Team Projects', d:'The big efforts everything rolls up to, and where work doubles up.', h:`
-<p>Team projects are the umbrella efforts tasks roll up to. Each is split into <b>parts</b> people divide up.</p>
+<p>Team projects are the umbrella efforts tasks roll up to. Each is split into <b>parts</b> (workstreams) people divide up.</p>
+<h4>The Page</h4>
 <ul>
-<li><b>The filters</b> at the top show Active, Next Up, Someday, Done or All. <b>Someday</b> is a real place to park a good idea that is not a priority now.</li>
-<li><b>Click a project</b> to open its tasks, soonest first, under <b>Past Due</b>, <b>Due This Week</b>, <b>Coming Up</b> and <b>No Date Yet</b>. <b>Add a Task</b> adds one to it.</li>
-<li><b>By Part</b> (at the top of the pane) shows one row per part with who has open work in it. Team HQ remembers which view you used last.</li>
-<li><b>Overlap Check</b> flags a part where two or more people have open work, so you can check nobody is covering the same ground.</li>
-<li><b>Who Is Doing What</b> puts someone on a task without changing who is accountable.</li>
+<li><b>Where Our Projects Stand</b> says in a sentence what to look at first. The tiles under it (<b>Active Projects</b>, <b>Past Due</b>, <b>Landing Soon</b>, <b>Waiting</b>, <b>No Date Yet</b>) filter the projects; click again to clear.</li>
+<li><b>Three views</b>: <b>Board</b> (a card per project with its health, progress and what is next), <b>Timeline</b> (six months of tasks, with key dates) and <b>Who's on What</b> (how many open tasks each person has on each project; darker means more, a red corner means past due).</li>
+<li>Filter by status (<b>Active</b>, <b>On Deck</b>, <b>Done</b>, <b>Not Pursuing</b>, <b>All</b>) and by person. Team HQ remembers your choices.</li>
 </ul>
+<h4>A Project's Panel</h4>
+<p>Click a project to open its panel: who leads it, numbers at the top, and its tasks <b>By Workstream</b>, <b>By Date</b> or <b>By Person</b>. <b>Add a Task</b> adds one; <b>Add to This Workstream</b> adds one to a column.</p>
 <h4>Editing a Team Project</h4>
 <ol>
-<li>Open the project and click <b>Edit This Team Project</b>.</li>
+<li>Click <b>New Team Project</b>, or open a project and click <b>Edit Project</b>.</li>
 <li>Set its name, status, lead and <b>What It Is</b>.</li>
-<li>Under <b>The Parts</b>, pick from <b>Add a Part…</b> (parts used on other projects, common parts, or type your own). Drag parts to reorder. Renaming a part takes its tasks with it.</li>
+<li>Under <b>The Parts</b>, pick from <b>Add a Part…</b> or type your own. Drag parts to reorder. Renaming a part takes its tasks with it.</li>
 <li>Click <b>Save</b>.</li>
 </ol>`},
 
 {id:'plans', t:'Plans', d:'Onboarding, handovers and checklists, with a view for leadership.', h:`
+<h4>The Plans Page</h4>
+<p><b>Where Our Plans Stand</b> sums up what is behind and what lands in the next two weeks. Each plan's card shows the day it is on, its progress, what is next (or what <b>Needs a Push</b>) and who runs it. Click a card or <b>Open Plan →</b> to open it.</p>
 <h4>Start a Plan</h4>
 <ol>
-<li>On <b>Plans</b>, click <b>Start a New Plan</b>.</li>
-<li>Start blank, or copy a plan you already have (sections and items come across with every tick cleared).</li>
+<li>Click <b>Start a New Plan</b>.</li>
+<li>Start blank, or copy a plan you already have (every tick is cleared).</li>
 <li>Give it a name, kind, who it is for, who runs it and a start date.</li>
 </ol>
 <h4>Working the Plan</h4>
 <ul>
-<li><b>Sections</b> hold the items. Each can have a day window (Day 1 is the start date) and an <b>owner</b>. The pencil on a section opens its details; <b>Add a Section</b> adds one.</li>
-<li><b>The order of sections is their priority</b> — top is highest. Drag a section by its dots to change it.</li>
-<li><b>Show Sections</b>: In Priority Order, or By Owner (each person's sections grouped together). Each plan remembers your choice.</li>
-<li><b>Items</b>: click one to open it — status, owner, target date, notes. <b>Put It on the Board</b> makes it a task whose status then drives the item.</li>
-<li><b>Plan Details</b> changes the plan itself.</li>
+<li><b>Sections</b> hold the items. Each can have a day window (Day 1 is the start date) and an <b>owner</b>.</li>
+<li><b>The order of sections is their priority.</b> Drag a section by its dots to change it.</li>
+<li><b>Show Sections</b>: In Priority Order, or By Owner.</li>
+<li><b>Items</b>: click one to open it. <b>Put It on the Board</b> makes it a task whose status then drives the item.</li>
 </ul>
 <h4>Leadership View and Private Notes</h4>
 <ul>
 <li><b>Leadership View</b> shows progress by section, what is behind and what is coming up, and <b>Download a Progress Report</b>.</li>
-<li><b>My Private Notes</b> on a plan are seen only by you — never on the Leadership View or the report.</li>
+<li><b>My Private Notes</b> on a plan are seen only by you.</li>
 </ul>`},
 
-{id:'dates', t:'Key Dates', d:'The team calendar, countdowns, and finding a time to meet.', h:`
+{id:'dates', t:'Key Dates', d:'The team calendar and countdowns.', h:`
 <ul>
-<li><b>Three views</b>: <b>The List</b>, <b>A Month</b> (a calendar showing who is away each day) and <b>Who Is Free</b>.</li>
-<li><b>Add a date</b> with its kind (Travel, Summit, Holiday and the rest — <b>+ Add a Kind</b> makes a new one), the people involved, where, and a note.</li>
-<li><b>Repeating dates</b> roll forward on their own: every month on a date or weekday, every year on a date or in a month. A repeating date can last several days.</li>
-<li><b>Pin</b> a date to put it in <b>Counting Down</b> on Today.</li>
+<li><b>Views</b>: <b>The List</b> and <b>A Month</b> (a calendar showing who is away each day). <b>Find a Time</b> in the header opens Find a Time.</li>
+<li><b>Add a date</b> with its kind (Travel, Summit, Holiday and the rest; <b>+ Add a Kind</b> makes a new one), the people involved, where, and a note.</li>
+<li><b>Repeating dates</b> roll forward on their own, monthly or yearly, and can last several days.</li>
+<li><b>Pin</b> a date to put it first in <b>Counting Down</b> and on the <b>Next Key Date</b> tile.</li>
 <li><b>Travel, Summit, Out of Office</b> and similar dates with people tagged mark those people as away for exactly those days.</li>
-</ul>
-<h4>Find a Time</h4>
-<ol>
-<li>On <b>Key Dates → Who Is Free</b>, use <b>Find a Time</b> (also on the Who Is Free panel).</li>
-<li>Pick who needs to be there, <b>How Long</b>, and how far to look ahead.</li>
-<li>Team HQ lists the stretches each day when they are all free — inside everyone's working hours, around their Outlook meetings, holidays and travel.</li>
-<li>Click a stretch, choose the start time, and <b>Open the Invitation in Outlook</b> (or <b>Copy the Time</b>).</li>
-</ol>`},
-
-{id:'agenda', t:'Team Meeting', d:'The shared agenda, and what people have asked for.', h:`
-<ol>
-<li>On <b>Team Meeting</b>, pick the meeting and click <b>Put Something On</b>.</li>
-<li>Say what you want to raise, what kind (Discuss, Decide and so on), how long, and who is raising it.</li>
-<li>Add <b>Anything to Read First?</b>, <b>Files to Read First</b>, and background under <b>About This Topic</b>.</li>
-<li>Click <b>Save</b>.</li>
-</ol>
-<ul>
-<li><b>Drag topics by their dots</b> to set the running order — everyone sees the same order.</li>
-<li>During or after the meeting, open a topic to note <b>What Was Decided?</b> and tick <b>Covered</b>. Topics not covered can be carried over.</li>
-<li><b>Worth Raising</b> lists things Team HQ has spotted (late tasks, overlaps). Click one to put it on the agenda.</li>
-<li><b>What People Have Asked For</b> — panels, numbers and changes the team has asked for, and where each stands.</li>
 </ul>`},
+
+{id:'findtime', t:'Find a Time', d:'Everyone’s Outlook side by side, then send the invite.', h:`
+<ol>
+<li>Open <b>Find a Time</b> in the left menu (or from a person, the Calendar, or the Find a Time tile).</li>
+<li>Under <b>Who Needs to Be There</b>, pick the people (<b>Whole Team</b> picks everyone). Pick <b>How Long</b>, and type <b>What It's For</b> to use as the invite's subject.</li>
+<li>In the grid, click the start times you want to offer (three to six is plenty), or click <b>Suggest 5 Good Times</b>. Each cell shows who is busy; hatched cells are past or holidays. Times are Eastern.</li>
+<li><b>Who Can Make It</b> fills in like a Doodle poll: ✓ free, ? tentative, ✕ busy, – can't see their Outlook. The best time is marked <b>Best</b>.</li>
+<li>Click <b>Send Invite</b> to open an Outlook invite with everyone on it, or <b>Book It</b> to put it on your calendar and send it straight away, with a Teams link.</li>
+</ol>
+<p><b>Copy These Times</b> copies your picks to paste anywhere. For people outside MISMO, use <b>People Outside MISMO? Use the Scheduler</b>.</p>`},
+
+{id:'agenda', t:'Team Meeting', d:'The shared agenda, the run of show, and running it on the screen.', h:`
+<h4>Before the Meeting</h4>
+<ol>
+<li>On <b>Team Meeting</b>, click <b>Put Something On</b>.</li>
+<li>Say what you want to raise, what kind (Discuss, Decide and so on), how long, and who is raising it. Add anything to read first.</li>
+<li>Click <b>Save</b>. Drag topics by their dots to set the running order.</li>
+</ol>
+<p><b>Run of Show</b> lays out the four parts of every meeting: <b>Before Normal Business</b> (the agenda), <b>Team Projects</b> (a standing item), <b>Around the Room</b> (each person's work, pulled from Team HQ) and <b>For the Good of the Order</b> (open floor).</p>
+<h4>Running It on the Screen</h4>
+<ul>
+<li>Click <b>Put It on the Screen</b> or <b>Start the Meeting</b> (or click one of the four parts to start there). It opens full screen.</li>
+<li><b>Next →</b> and <b>← Back</b> (or the arrow keys and Space) move through it; <b>Esc</b> or <b>Exit</b> leaves.</li>
+<li>For each agenda item, note the <b>Outcome</b> and <b>Notes</b>, tick <b>Covered</b>, and <b>Save</b>. <b>Make It a Task</b> turns it into a task.</li>
+<li>For each person, type <b>Their Update</b> and click <b>Save Update</b>.</li>
+<li><b>That's a Wrap</b> shows what was covered. Items not covered stay on the list for next time.</li>
+</ul>
+<p><b>Worth Raising</b> lists things Team HQ has spotted. <b>What People Have Asked For</b> lists requested changes and where each stands.</p>`},
 
 {id:'syncs', t:'Sync Ups', d:'Regular sync-ups between a few people, seen only by them.', h:`
 <p>A <b>space</b> is for a regular sync-up between a few people. Only the people in a space can see it.</p>
+<p>The band at the top shows the <b>Next Sync Up</b> and how many days away it is, with <b>Open Items</b>, <b>Past Due</b> and <b>Spaces</b>. Each space has its own color, a <b>Today</b> / <b>Tomorrow</b> / <b>In N days</b> badge, and a bar showing how much is past due.</p>
 <h4>Start a Space</h4>
 <ol>
 <li>Click <b>Start a Shared Space</b>.</li>
@@ -17328,96 +17456,122 @@ const HELP_SECS = [
 </ol>
 <h4>Lists and Cards</h4>
 <ul>
-<li>Each space has <b>lists</b> (to start: Topics, each person's To Dos, Parked for Later). Click a list's name to rename it; <b>Add a List</b> adds one; the bin on a list's heading deletes it (its cards move to the next list).</li>
+<li>Each space has <b>lists</b> (to start: Topics, each person's To Dos, Parked for Later). Click a list's name to rename it; <b>Add a List</b> adds one; the bin deletes it (its cards move to the next list).</li>
 <li><b>Add a card</b>: type in the box at the foot of a list and press <b>Enter</b> or tap <b>Add</b>.</li>
-<li><b>Drag a card</b> anywhere on it to move it up or down, onto another list, or into another space (it then belongs to that space and its people).</li>
-<li><b>Click a card</b> to open it: open/done, owner, due date, notes and <b>steps</b>. <b>Put It on the Board</b> makes a team task from it.</li>
-<li>Fold a list with the arrow on its heading; drag lists and spaces by their dots to reorder them.</li>
+<li><b>Drag a card</b> to move it up or down, onto another list, or into another space.</li>
+<li><b>Click a card</b> to open it: open or done, owner, due date, notes and steps. <b>Put It on the Board</b> makes a team task from it.</li>
+<li>Cards that are yours also show on <b>My Tasks</b>; ticking them there ticks them here.</li>
 </ul>
 <h4>Log This Week's Sync</h4>
-<p>After you meet, click <b>Log This Week's Sync</b> to record what you talked about, what was decided and action items (which become cards). Past syncs fold open below the lists.</p>`},
+<p>After you meet, click <b>Log This Week's Sync</b> to record what you talked about, what was decided and action items (which become cards).</p>`},
 
-{id:'expenses', t:'Expenses', d:'Snap a receipt — Team HQ fills in the rest.', h:`
+{id:'expenses', t:'Expenses', d:'Snap a receipt and Team HQ fills in the rest, on your computer or your phone.', h:`
 <ol>
-<li>On <b>Expenses</b>, click or drop onto <b>Snap a Receipt</b> — one or several photos or PDFs. Each becomes its own expense, saved straight away.</li>
+<li>On <b>Expenses</b>, click or drop onto <b>Snap a Receipt</b>: one or several photos or PDFs. Each becomes its own expense, saved straight away.</li>
 <li>Team HQ reads the receipt and fills in what it can: the business, date, amounts, expense type and a note. Filled-in fields carry a <b>From the Receipt</b> tag until you change them.</li>
 <li>Check it, add anything missing (an expense missing details shows <b>Needs Details</b>) and click <b>Save</b>.</li>
 </ol>
 <ul>
-<li>Nothing is required — a receipt alone is enough to save.</li>
 <li><b>MBA's travel policy</b> is built in: receipts over $25 (meals over $15), meal caps, and the rest. Anything outside policy is flagged.</li>
 <li><b>After a trip</b> with no expenses claimed, Team HQ reminds you, with <b>Add Them</b> or <b>Already Claimed</b>.</li>
 <li><b>Who sees what:</b> each person sees only their own. Jonna and Vanessa see everyone's and process them in DataBasics.</li>
-</ul>`},
+</ul>
+<h4>Expenses on Your Phone</h4>
+<ol>
+<li>On your phone, open Team HQ and go to <b>Expenses</b>. A tip says <b>Put Expenses on your phone</b>.</li>
+<li>iPhone: in Safari, tap <b>Share</b>, then <b>Add to Home Screen</b>. Android: tap <b>Install</b>, or open Chrome's menu and tap <b>Add to Home screen</b>.</li>
+<li>The <b>Expenses</b> icon opens straight to your expenses, like an app, with <b>Snap a Receipt</b> (opens the camera) and <b>Add by Hand</b> along the bottom.</li>
+</ol>`},
 
 {id:'status', t:'Your Status, Working Hours and Nudges', d:'Letting the team know where you are.', h:`
 <ul>
-<li><b>Set your status</b> with the status button in the navy band on My Board: Around, In a Meeting, Heads Down, Traveling or Out of Office, with a short note and an optional <b>Until</b> date that clears it for you.</li>
-<li><b>A Key Date can set it for you</b> — a trip with you tagged shows you as Traveling for exactly those days.</li>
-<li><b>My Working Hours</b> (under your status) sets your hours and time zone. Outside them, the team sees when you are back.</li>
-<li><b>Nudges</b> — open someone's card on Today and click <b>Send a Nudge</b> for a gentle reminder or a note. It lands on their board with a <b>Got It</b> button. Everyone can see nudges, so keep them to what you would say out loud.</li>
+<li><b>Set your status</b> with the status button in the navy band on My Board: Around, In a Meeting, Heads Down, Traveling or Out of Office, with a short note and an optional <b>Until</b> date.</li>
+<li><b>Team HQ also works it out for you</b> from Outlook and Key Dates: <b>Free</b>, <b>In a meeting until 2:30p</b>, <b>Out</b>, <b>Traveling</b>, <b>Not in yet</b> or <b>Done for the day</b>. Green means free, red in a meeting, amber away.</li>
+<li><b>My Working Hours</b> (under your status) sets your hours and time zone.</li>
+<li><b>My People</b>: <b>Choose My People</b> (on the My People tile or on Today) picks your direct reports or anyone you keep an eye on. Only you see this list.</li>
+<li><b>Nudges</b>: open someone's card on Today and click <b>Send a Nudge</b>. It lands in their Inbox with a <b>Done</b> button. Everyone can see nudges, so keep them to what you would say out loud.</li>
 </ul>`},
 
-{id:'outlook', t:'Outlook and Your Calendar', d:'What Team HQ reads from Outlook, and what it adds to it.', h:`
-<p>On resources.mismo.org, once your Outlook is connected:</p>
+{id:'outlook', t:'Outlook, Email and Your Calendar', d:'What Team HQ reads from Outlook, and what it can do there for you.', h:`
+<p>Each person's Outlook is connected through their own link, set up by Jonna. Calendars refresh every hour; email every few minutes.</p>
+<h4>Your Calendar</h4>
 <ul>
-<li>Your card on Today shows your working day with your meetings, and <b>In a Meeting · Until …</b> while you are in one. Private meetings show without a name.</li>
-<li><b>Find a Time</b> and <b>Who Is Free</b> work around everyone's meetings.</li>
+<li>Your meetings show on My Dashboard, Calendar, your person page and your card on Today. Private meetings show without a name.</li>
+<li><b>Find a Time</b> works around everyone's meetings, holidays and travel.</li>
 <li>Time you set aside for a task is added to your Outlook calendar.</li>
+<li><b>Book It</b> (on Find a Time and the Find a Time tile) books a meeting: title, when, how long, who, and <b>Add a Teams meeting link</b>. It is on your calendar and in their inboxes in about two minutes.</li>
 </ul>
-<p>Someone whose Outlook isn't connected shows <b>Outlook not connected</b>. To connect yours, ask Jonna.</p>`},
+<h4>Email to Look At</h4>
+<ul>
+<li>Flagged, important and unread mail from people shows on the <b>Email to Look At</b> tile and in Inbox. Only the subject, sender and a short preview are kept, never the message itself. Auto-replies and meeting responses are left out.</li>
+<li>Click a message to open it in Outlook. The buttons on each row: <b>Flag in Outlook</b>, <b>Mark read in Outlook</b>, <b>File into a folder</b>, <b>Delete</b> (it goes to Deleted Items) and <b>Make it a task</b>. Outlook catches up in a couple of minutes.</li>
+</ul>
+<p>Someone whose Outlook isn't connected shows <b>Outlook not connected</b>. To connect yours, click <b>Ask to Turn It On</b> or ask Jonna.</p>`},
+
+{id:'keys', t:'Jump to Anything and Keyboard Shortcuts', d:'Getting anywhere fast.', h:`
+<h4>Jump to Anything</h4>
+<p>Press <span class="hk">Ctrl</span>+<span class="hk">K</span> (<span class="hk">⌘</span>+<span class="hk">K</span> on a Mac), or click <b>Jump to Anything</b> on My Board. Type a few letters of a system, project, task, key date or plan, or what you want to do (<b>Add a Task</b>, <b>Find a Time</b>, <b>Schedule a Meeting</b>, <b>New Team Project</b>, <b>Ask for Something</b>). Use <span class="hk">↑</span> <span class="hk">↓</span> and <span class="hk">Enter</span>; <span class="hk">Esc</span> closes it.</p>
+<h4>Shortcuts</h4>
+<ul>
+<li><span class="hk">1</span> My Dashboard, <span class="hk">2</span> Inbox, <span class="hk">3</span> My Tasks, <span class="hk">4</span> Calendar, <span class="hk">5</span> Where My Team Is Today.</li>
+<li><span class="hk">C</span> the add box; <span class="hk">/</span> the filter.</li>
+<li><span class="hk">J</span> / <span class="hk">K</span> (or the arrow keys) move through tasks, <span class="hk">Enter</span> opens one, <span class="hk">X</span> marks it done.</li>
+<li><span class="hk">\\</span> narrows or widens the left menu.</li>
+</ul>
+<p>Shortcuts don't fire while you are typing in a box.</p>`},
 
 {id:'format', t:'Formatting Your Notes', d:'Bold, bullets, colors, tables and links in any notes box.', h:`
 <p>Every notes box has a toolbar:</p>
 <ul>
-<li><b>B</b>, <i>I</i>, <u>U</u> and <s>S</s> — bold, italic, underline, strike through (<span class="hk">Ctrl</span>+<span class="hk">B</span>/<span class="hk">I</span>/<span class="hk">U</span> work too).</li>
-<li><b>Bullets</b> and <b>Numbering</b> — <span class="hk">Tab</span> tucks a bullet in a level.</li>
+<li><b>B</b>, <i>I</i>, <u>U</u> and <s>S</s>: bold, italic, underline, strike through (<span class="hk">Ctrl</span>+<span class="hk">B</span>/<span class="hk">I</span>/<span class="hk">U</span> work too).</li>
+<li><b>Bullets</b> and <b>Numbering</b>. <span class="hk">Tab</span> tucks a bullet in a level.</li>
 <li><b>Text Color</b> and <b>Highlight</b>.</li>
-<li><b>Table</b> — pick the size on the grid. Inside a table, the same button adds or deletes rows and columns; <span class="hk">Tab</span> moves cell to cell.</li>
-<li><b>Link</b> (or <span class="hk">Ctrl</span>+<span class="hk">K</span>) — link selected words to a web or email address. Typing an address makes it a link on its own. <span class="hk">Ctrl</span>+click opens a link while you are writing.</li>
+<li><b>Table</b>: pick the size on the grid. Inside a table, the same button adds or deletes rows and columns; <span class="hk">Tab</span> moves cell to cell.</li>
+<li><b>Link</b>: link selected words to a web or email address. Typing an address makes it a link on its own.</li>
 <li><b>Clear Formatting</b> takes formatting off the selected words.</li>
 </ul>`},
 
-{id:'ask', t:'Ask and Plan My Day', d:'Questions about the team, and a plan for your day.', h:`
-<ul>
-<li><b>Ask</b> on Today answers questions about what is on Team HQ — who is overloaded, what is at risk this week, where people are doubling up.</li>
-<li><b>Plan My Day</b> is a My Board panel: it reads your board and tells you what to do first, in what order, and what can wait.</li>
-</ul>
-<p>Both use Claude. Sync Ups and private notes are never included.</p>`},
+{id:'ask', t:'Ask', d:'Questions about the team, answered from what is on Team HQ.', h:`
+<p><b>Ask</b> on Today answers questions about what is on Team HQ: who is overloaded, what is at risk this week, where people are doubling up. It uses Claude. Sync Ups and private notes are never included.</p>`},
 
 {id:'saving', t:'Saving and Undo', d:'When things save, and how to take something back.', h:`
 <ul>
-<li><b>Anything you type needs Save.</b> A line says <b>Unsaved changes — click Save to keep them</b> until you do. <b>Cancel</b> leaves without changing anything.</li>
-<li><b>Quick actions save straight away</b>: ticking a box, dragging something into a new place, adding with the Add box, and changing a setting.</li>
-<li><b>Deleting</b> asks you to click twice. Many deletes then offer <b>Undo</b> in the note at the bottom left for a few seconds.</li>
-<li><b>If a save doesn't go through</b> (on resources.mismo.org), Team HQ keeps your change and tries again on its own, and says what went wrong in plain words.</li>
+<li><b>In a form, anything you type needs Save.</b> A line says <b>Unsaved changes — click Save to keep them</b> until you do. <b>Cancel</b> leaves without changing anything.</li>
+<li><b>Quick changes save straight away</b>: a status circle, a due date, a drag, a tick, a tile moved, a setting changed. Most show a note with <b>Undo</b> for a few seconds.</li>
+<li><b>Deleting</b> asks you to click twice. Many deletes then offer <b>Undo</b>.</li>
+<li><b>If a save doesn't go through</b>, Team HQ keeps your change and tries again on its own. When two people change the same thing at once, both changes are kept.</li>
 </ul>`},
 
 {id:'privacy', t:'Who Sees What', d:'What is shared with the team, and what is just yours.', h:`
 <ul>
 <li><b>Seen by the whole team:</b> tasks, team projects, plans (except private notes), key dates, the team meeting, the team note wall, statuses and nudges.</li>
-<li><b>Your own layout:</b> My Board — how it is arranged is yours. But My Notes, My Projects, post-its and writing typed on your board are kept in the team's shared store, so they are <b>not private</b>.</li>
+<li><b>Your own layout:</b> My Dashboard and My Board. But My Notes, My Projects, post-its and writing on your board are kept in the team's shared store, so they are <b>not private</b>.</li>
+<li><b>Only you:</b> your email list, your My People list, your private notes on a plan, and your <b>Locked Note</b>.</li>
 <li><b>Only the people in it:</b> a Sync Ups space.</li>
-<li><b>Only you and the people processing them:</b> expenses (Jonna and Vanessa process them).</li>
-<li><b>Only you:</b> your private notes on a plan, and your <b>Locked Note</b> (which even an admin can't read).</li>
+<li><b>Only you and the people processing them:</b> expenses (Jonna and Vanessa).</li>
+<li><b>System tiles</b> only show systems you can already open, and their numbers stay in your browser.</li>
 </ul>`},
 
 {id:'phone', t:'On a Phone', d:'Using Team HQ on a small screen.', h:`
 <ul>
-<li>The left menu narrows to icons. Tap the arrow at its top to see the names.</li>
-<li>Panels and lists stack into one column; a Free-Form board lists its panels top to bottom.</li>
-<li><b>Adding with a quick-add box</b> (“Add a card and press Enter…”): type, then tap the <b>Add</b> button that appears beside the box — or your keyboard's Return or Done key.</li>
-<li>Drag things by their six dots.</li>
+<li><b>The bar along the bottom</b> has <b>Dashboard</b>, <b>My Tasks</b>, <b>Calendar</b>, <b>Inbox</b> and <b>Everything</b>. <b>Everything</b> lists every page.</li>
+<li><b>Your phone's Back button</b> closes whatever is open first (a menu, a pane, a dialog), then steps back through the pages you visited, then goes to My Dashboard before leaving Team HQ.</li>
+<li>Tiles, panels and lists stack into one column. Menus open from the bottom of the screen.</li>
+<li><b>Adding with a quick-add box</b>: type, then tap the <b>Add</b> button beside the box, or your keyboard's Return key.</li>
+<li><b>Expenses</b> can go on your home screen as its own app (see <i>Expenses</i>).</li>
+<li>Dragging tiles and tasks is a computer thing; on a phone, use the menus instead.</li>
 </ul>`},
 
 {id:'trouble', t:'When Something Isn’t Right', d:'Common questions and what to do.', h:`
 <ul>
-<li><b>“My notes have gone.”</b> Nothing was deleted. Look for the yellow box on My Board and click <b>Put It Back</b>, or Add a Panel → My Notes, which puts your notes back.</li>
+<li><b>“A change I was told about isn't there.”</b> Refresh the page. A new version can take a few minutes to reach you.</li>
+<li><b>“A system tile has old numbers or says it's reading.”</b> Numbers are re-read in the background when you pause; give it a minute. If a system can't be reached, the tile keeps its last good numbers. Opening the system from the tile also refreshes it.</li>
+<li><b>“A tile isn't where I put it.”</b> Tiles remember their spot for each screen width. On a narrower window they may sit differently.</li>
+<li><b>“My notes have gone.”</b> Nothing was deleted. Look for the yellow box on My Board and click <b>Put It Back</b>.</li>
 <li><b>“I can't add from my phone.”</b> Type in the box, then tap <b>Add</b>.</li>
-<li><b>“A change I was told about isn't there.”</b> Refresh the page. On resources.mismo.org a new version takes about a minute to arrive after it is uploaded.</li>
-<li><b>“I can't find something.”</b> Use the Search at the top of the left menu.</li>
-<li><b>“Someone shows Outlook not connected.”</b> Their Outlook hasn't been hooked up yet — ask Jonna.</li>
-<li><b>Anything else</b> — ask Jonna, or use <b>Ask for It</b> under Add a Panel to request a change.</li>
+<li><b>“I can't find something.”</b> Press <span class="hk">Ctrl</span>+<span class="hk">K</span>, or use Search at the top of the left menu.</li>
+<li><b>“Someone shows Outlook not connected.”</b> Their Outlook hasn't been hooked up yet. Ask Jonna.</li>
+<li><b>Anything else</b>: ask Jonna, or use <b>Ask for Something</b> to request a change.</li>
 </ul>`}
 ];
 
@@ -17631,5 +17785,5 @@ boot().then(()=>{ paintWho(); renderAll();
 })();
 </script>
 
-<script src="upgrades.js?v=20261101t" defer></script>
+<script src="upgrades.js?v=20261101u" defer></script>
 </body></html>
