@@ -17097,7 +17097,7 @@ const HELP_SECS = [
 <li><b>Narrow the menu</b> with the arrow at its top (or press <span class="hk">\\</span>) to leave just the icons. Team HQ remembers your choice.</li>
 <li><b>Search</b> at the top of the menu finds tasks, team projects, parts, people, dates, plans, notes, expenses and these help sections.</li>
 <li><b>Jump to Anything</b>: press <span class="hk">Ctrl</span>+<span class="hk">K</span> (<span class="hk">⌘</span>+<span class="hk">K</span> on a Mac) anywhere to jump to a system, project, task or date, or to start something (see <i>Jump to Anything and Keyboard Shortcuts</i>).</li>
-<li><b>The add box</b> at the top of My Dashboard, My Tasks, Inbox and Calendar adds a task in one line (see <i>Adding a Task in One Line</i>). <b>Add a Task</b> and <b>Jot It Down</b> are also in the navy bar across the top.</li>
+<li><b>The add box</b> at the top of My Dashboard, My Tasks, Inbox and Calendar adds a task in one line (see <i>Adding a Task in One Line</i>). The <b>+</b> and <b>note</b> buttons in the navy bar across the top add a task or jot something down from anywhere.</li>
 <li><b>The right-hand pane.</b> Almost anything you click (a task, a project, a note, a card) opens in a pane on the right. The arrows at its top right make it wider or put it back. The × closes it; a back arrow steps out one level when you have opened something from inside something else.</li>
 </ul>`},
 
@@ -17155,7 +17155,7 @@ const HELP_SECS = [
 <h4>How the Numbers Stay Current</h4>
 <ul>
 <li>Team HQ reads each system quietly in the background once it has finished opening, and only when you pause, so it never slows you down.</li>
-<li>Numbers are re-read when they are more than 45 minutes old. The foot of each tile says where they came from and when, for example <b>From Action Queue · 5m ago</b>.</li>
+<li>Numbers are re-read when they are more than 20 minutes old, and straight away when you open the system from its tile and close it again. The foot of each tile says where they came from and when, for example <b>From Action Queue · 5m ago</b>.</li>
 <li>Numbers are kept in your browser, so they show straight away next time.</li>
 <li>If a system can't be reached, the tile keeps its last good numbers and tries again in a few minutes. A system's error message never shows as a tile.</li>
 </ul>
@@ -17236,7 +17236,7 @@ const HELP_SECS = [
 {id:'tasks', t:'Tasks', d:'The full task editor, and what each field means.', h:`
 <h4>Add a Task</h4>
 <ol>
-<li>Type in the add box at the top of a page and press <b>Enter</b>, or click <b>Add a Task</b> in the navy bar.</li>
+<li>Type in the add box at the top of a page and press <b>Enter</b>, or click the <b>+</b> in the navy bar.</li>
 <li>Fill in what you know. Only <b>Task</b> is needed.</li>
 <li>Click <b>Save</b>.</li>
 </ol>
@@ -17251,7 +17251,7 @@ const HELP_SECS = [
 <li><b>Running Rail</b>: tick it for an ongoing responsibility rather than a one-off (a weekly report, an inbox you watch).</li>
 <li><b>Already Handled Elsewhere</b>: whether the work is already automated or partly covered somewhere else.</li>
 <li><b>Notes</b>: anything the next person would need to know, with formatting (see <i>Formatting Your Notes</i>).</li>
-<li><b>Time Set Aside for It</b>: block time on your calendar for the task. <b>Your Day in Outlook</b> shows your meetings that day so you can pick a free stretch, and the time is added to your Outlook calendar.</li>
+<li><b>Time Set Aside for It</b>: block time on your calendar for the task. Your meetings that day show so you can pick a free stretch, and the time is added to your Outlook calendar.</li>
 <li><b>Files</b>: attach anything up to 4 MB; click a file to look at it or download it.</li>
 </ul>
 <h4>Finishing a Task</h4>
@@ -17260,7 +17260,7 @@ const HELP_SECS = [
 {id:'jot', t:'Jot It Down and Post-Its', d:'Getting a thought down fast, and post-its you can type on.', h:`
 <h4>Jot It Down</h4>
 <ol>
-<li>Click <b>Jot It Down</b> in the navy bar at the top.</li>
+<li>Click the <b>note</b> button in the navy bar at the top (<i>Jot something down</i>), or <b>Jot It Down</b> on My Board.</li>
 <li>Type it the way you would on a sticky note, or click the microphone and say it.</li>
 <li>Choose where it goes:
 <ul><li><b>Put It on My Board</b> (or someone else's board, picked under <b>Whose Board</b>): a post-it on that board.</li>
@@ -17322,7 +17322,7 @@ const HELP_SECS = [
 </ul>
 <h4>Sections and Pages (Notebook)</h4>
 <ul>
-<li><b>Add a Section</b> and <b>Add a Page</b> make new ones. Type over a page's big title to rename it.</li>
+<li><b>Add a Section</b> makes a new section, and the add button above the list of pages makes a new page. Type over a page's big title to rename it.</li>
 <li>On the section you are on: the <b>pencil</b> renames it, the <b>color dot</b> picks its color, <b>×</b> deletes it.</li>
 <li>On the page you are on: <b>›</b> tucks it under the page above as a subpage (<b>‹</b> brings it back out).</li>
 <li>Drag sections and pages to reorder them. Drop a panel, post-it or text box on another section or page to move it there.</li>
@@ -17377,7 +17377,7 @@ const HELP_SECS = [
 <li>Filter by status (<b>Active</b>, <b>On Deck</b>, <b>Done</b>, <b>Not Pursuing</b>, <b>All</b>) and by person. Team HQ remembers your choices.</li>
 </ul>
 <h4>A Project's Panel</h4>
-<p>Click a project to open its panel: who leads it, numbers at the top, and its tasks <b>By Workstream</b>, <b>By Date</b> or <b>By Person</b>. <b>Add a Task</b> adds one; <b>Add to This Workstream</b> adds one to a column.</p>
+<p>Click a project to open its panel: who leads it, numbers at the top, and its tasks <b>By Workstream</b>, <b>By Date</b> or <b>By Person</b>. <b>Add a Task</b> adds one.</p>
 <h4>Editing a Team Project</h4>
 <ol>
 <li>Click <b>New Team Project</b>, or open a project and click <b>Edit Project</b>.</li>
@@ -17391,7 +17391,7 @@ const HELP_SECS = [
 <p><b>Where Our Plans Stand</b> sums up what is behind and what lands in the next two weeks. Each plan's card shows the day it is on, its progress, what is next (or what <b>Needs a Push</b>) and who runs it. Click a card or <b>Open Plan →</b> to open it.</p>
 <h4>Start a Plan</h4>
 <ol>
-<li>Click <b>Start a New Plan</b>.</li>
+<li>Click <b>New Plan</b>.</li>
 <li>Start blank, or copy a plan you already have (every tick is cleared).</li>
 <li>Give it a name, kind, who it is for, who runs it and a start date.</li>
 </ol>
@@ -17785,5 +17785,5 @@ boot().then(()=>{ paintWho(); renderAll();
 })();
 </script>
 
-<script src="upgrades.js?v=20261101u" defer></script>
+<script src="upgrades.js?v=20261101v" defer></script>
 </body></html>
