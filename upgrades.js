@@ -4570,7 +4570,7 @@ function tileEditor(cfg, i, L, inEdit){
 function tileShell(cfg, meta, i, L){
   const sz=sizeOf(cfg, i, L); const el=h('div','st-tile t-'+cfg.t+' sz-'+sz);
   el.style.setProperty('--k', meta.k); el.tabIndex=0; el.setAttribute('role','button'); el.setAttribute('aria-label', meta.n);
-  if(dashEdit){ el.draggable=true; el.dataset.i=i;
+  if(dashEdit){ el.dataset.i=i;
     const ctl=h('div','nx-tctl');
     const cb=btn('nx-tcb', null, e=>{ e.stopPropagation(); tileEditor(cfg, i, L, true); }); cb.innerHTML='Customize · '+SZN[sz]; cb.title='Pick what this tile shows, its size and how much detail'; ctl.appendChild(cb);
     const rm=btn('nx-tcb x','×', e=>{ e.stopPropagation(); L.splice(i,1); paint(); }); rm.title='Take this tile off'; rm.setAttribute('aria-label','Take '+meta.n+' off'); ctl.appendChild(rm);
@@ -4581,28 +4581,61 @@ function tileShell(cfg, meta, i, L){
   return el;
 }
 let tdrag=null;
-function dragReset(){ if(!tdrag && !document.documentElement.classList.contains('nx-tdragging')) return; tdrag=null; document.documentElement.classList.remove('nx-tdragging'); document.querySelectorAll('.st-tile.dragging').forEach(z=>z.classList.remove('dragging')); }
-/* mouse moves never arrive during a real drag, so one with no button held means a drag ended without telling us */
-document.addEventListener('mousemove', e=>{ if(tdrag && e.buttons===0) dragReset(); }, true);
-document.addEventListener('pointerdown', ()=>{ if(tdrag) dragReset(); }, true);
-document.addEventListener('drop', ()=>setTimeout(()=>{ if(tdrag && !tdrag.el.isConnected) dragReset(); }, 0), true);
-/* drag a tile anywhere on the dashboard: the others slide out of the way as you go, and the new order saves when you let go */
+function dragReset(){ const t=tdrag; tdrag=null; document.documentElement.classList.remove('nx-tdragging'); if(t){ try{ t.ghost && t.ghost.remove(); }catch(e){} try{ t.el.classList.remove('nx-ph'); }catch(e){} cancelAnimationFrame(t.raf||0); } }
+/* drag a tile to move it: press and move a little, a copy follows the mouse, the spot it will land in
+   shows as a dashed outline, the other tiles glide out of the way, and the order saves when you let go */
 function dragTile(el, i, L){
-  el.draggable=true; el.dataset.i=i;
-  el.addEventListener('dragstart', e=>{ if(e.target!==el) return; tdrag={el, L, edit:!!dashEdit, moved:false}; el.classList.add('dragging'); document.documentElement.classList.add('nx-tdragging');
-    try{ e.dataTransfer.setData('text/plain', 'tile '+i); e.dataTransfer.effectAllowed='move'; }catch(x){} });
-  el.addEventListener('dragover', e=>{ if(!tdrag || tdrag.L!==L) return; e.preventDefault(); try{ e.dataTransfer.dropEffect='move'; }catch(x){} const d=tdrag.el; if(d===el) return;
-    const r=el.getBoundingClientRect(); const sameRow=Math.abs(d.getBoundingClientRect().top-r.top)<r.height/2;
-    const after=sameRow ? e.clientX>r.left+r.width/2 : e.clientY>r.top+r.height/2;
-    const ref=after ? el.nextSibling : el; if(ref!==d && d.nextSibling!==ref){ el.parentNode.insertBefore(d, ref); tdrag.moved=true; } });
-  el.addEventListener('drop', e=>{ if(tdrag) e.preventDefault(); });
-  el.addEventListener('dragend', ()=>{ const t=tdrag; tdrag=null; el.classList.remove('dragging'); document.documentElement.classList.remove('nx-tdragging'); if(!t || !t.moved || !el.isConnected) return;
-    const order=[...el.parentNode.children].filter(z=>z.dataset && z.dataset.i!=null).map(z=>+z.dataset.i);
-    if(order.length!==L.length || order.every((v,k)=>v===k)) return;
-    L.forEach((c,k)=>{ if(!c.sz && dashMixed()){ c.sz=sizeOf(c, k, L); delete c.w; } }); /* keep every tile the size it is now */
-    const NL=order.map(k=>L[k]);
-    if(t.edit){ L.splice(0, L.length, ...NL); paint(); }
-    else { saveDash(NL); paint(); toast('Tile order saved', null); } }); }
+  el.dataset.i=i; el.removeAttribute('draggable');
+  el.addEventListener('dragstart', e=>e.preventDefault());
+  el.addEventListener('pointerdown', e=>{
+    if(e.button!==0 || e.pointerType==='touch' || tdrag) return;
+    if(e.target.closest('button,a,input,select,textarea,[contenteditable],.nx-tctl,.nx-tgear')) return;
+    const sx=e.clientX, sy=e.clientY; let started=false;
+    const grid=el.parentNode, sc=el.closest('.nx-body') || document.scrollingElement;
+    const move=ev=>{
+      if(!started){ if(Math.hypot(ev.clientX-sx, ev.clientY-sy)<6) return; started=true; begin(ev); }
+      tdrag.x=ev.clientX; tdrag.y=ev.clientY; place(); };
+    const up=()=>{ document.removeEventListener('pointermove', move, true); document.removeEventListener('pointerup', up, true); document.removeEventListener('pointercancel', up, true); if(started) finish(); };
+    document.addEventListener('pointermove', move, true); document.addEventListener('pointerup', up, true); document.addEventListener('pointercancel', up, true);
+    function begin(ev){
+      const r=el.getBoundingClientRect();
+      const ghost=el.cloneNode(true); ghost.classList.add('nx-ghost'); ghost.removeAttribute('id'); ghost.querySelectorAll('[id]').forEach(z=>z.removeAttribute('id'));
+      Object.assign(ghost.style, {position:'fixed', left:r.left+'px', top:r.top+'px', width:r.width+'px', height:r.height+'px', margin:'0', zIndex:'9999', pointerEvents:'none'});
+      document.body.appendChild(ghost);
+      tdrag={el, L, grid, sc, ghost, edit:!!dashEdit, moved:false, ox:sx-r.left, oy:sy-r.top, x:ev.clientX, y:ev.clientY, last:0, raf:0};
+      el.classList.add('nx-ph'); document.documentElement.classList.add('nx-tdragging');
+      try{ window.getSelection().removeAllRanges(); }catch(x){}
+      const tick=()=>{ if(!tdrag) return; const t=tdrag; const box=t.sc===document.scrollingElement ? {top:0, bottom:innerHeight} : t.sc.getBoundingClientRect();
+        const edge=70; let dy=0; if(t.y<box.top+edge) dy=-Math.ceil((box.top+edge-t.y)/5); else if(t.y>box.bottom-edge) dy=Math.ceil((t.y-(box.bottom-edge))/5);
+        if(dy){ t.sc.scrollTop+=dy; place(); } t.raf=requestAnimationFrame(tick); };
+      tdrag.raf=requestAnimationFrame(tick); }
+    function place(){ const t=tdrag; if(!t) return;
+      t.ghost.style.transform='translate('+(t.x-t.ox-parseFloat(t.ghost.style.left))+'px,'+(t.y-t.oy-parseFloat(t.ghost.style.top))+'px) rotate(1deg) scale(1.02)';
+      const now=Date.now(); if(now-t.last<140) return;
+      const under=document.elementFromPoint(t.x, t.y); const tgt=under && under.closest('.st-tile');
+      if(!tgt || tgt===el || tgt.parentNode!==grid || tgt.classList.contains('nx-ghost')) return;
+      /* only move once the pointer is well inside the other tile, so the tiles don't flicker back and forth */
+      const tr=tgt.getBoundingClientRect(); const ix=(t.x-tr.left)/tr.width, iy=(t.y-tr.top)/tr.height; if(ix<0.15 || ix>0.85 || iy<0.15 || iy>0.85) return;
+      const kids=[...grid.children]; const from=kids.indexOf(el), to=kids.indexOf(tgt); if(from<0 || to<0) return;
+      const before=new Map(kids.map(k=>[k, k.getBoundingClientRect()]));
+      grid.insertBefore(el, from<to ? tgt.nextSibling : tgt); t.moved=true; t.last=now;
+      /* glide every tile from where it was to where it is now */
+      kids.forEach(k=>{ if(k===el) return; const a=before.get(k), z=k.getBoundingClientRect(); const dx=a.left-z.left, dy=a.top-z.top; if(!dx && !dy) return;
+        k.style.transition='none'; k.style.transform='translate('+dx+'px,'+dy+'px)'; k.getBoundingClientRect(); k.style.transition='transform .2s ease'; k.style.transform='';
+        setTimeout(()=>{ k.style.transition=''; }, 230); }); }
+    function finish(){ const t=tdrag; if(!t) return;
+      const r=el.getBoundingClientRect(); t.ghost.style.transition='transform .16s ease'; t.ghost.style.transform='translate('+(r.left-parseFloat(t.ghost.style.left))+'px,'+(r.top-parseFloat(t.ghost.style.top))+'px)';
+      /* the click that ends a drag must not open the tile */
+      const eat=ev=>{ ev.stopPropagation(); ev.preventDefault(); }; document.addEventListener('click', eat, true); setTimeout(()=>document.removeEventListener('click', eat, true), 0);
+      setTimeout(()=>{ dragReset();
+        if(!t.moved || !el.isConnected) return;
+        const order=[...grid.children].filter(z=>z.dataset && z.dataset.i!=null).map(z=>+z.dataset.i);
+        if(order.length!==L.length || order.every((v,k)=>v===k)) return;
+        L.forEach((c,k)=>{ if(!c.sz && dashMixed()){ c.sz=sizeOf(c, k, L); delete c.w; } }); /* keep every tile the size it is now */
+        const NL=order.map(k=>L[k]);
+        if(t.edit){ L.splice(0, L.length, ...NL); paint(); }
+        else { saveDash(NL); paint(); toast('Tile order saved', null); } }, 170); }
+  }); }
 function tile(cfg, i, L){
   const meta = cfg.t==='sys' ? sysMeta(cfg) : TILES[cfg.t]; if(!meta) return null;
   const el=tileShell(cfg, meta, i, L);
@@ -5310,8 +5343,12 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-tiles.editing .st-tile{cursor:grab;animation:nxWig .9s ease-in-out infinite alternate}
 .nx-tiles.editing .st-tile:nth-child(2n){animation-delay:.3s}
 @keyframes nxWig{from{transform:rotate(-.4deg)}to{transform:rotate(.4deg)}}
-.st-tile.dragging{opacity:.35;outline:2px dashed var(--sky);outline-offset:-2px}html.nx-tdragging .st-tile:not(.dragging){transition:transform .15s}
-.nx-tiles:not(.editing) .st-tile[draggable=true]:active{cursor:grabbing}
+.st-tile.nx-ph{background:transparent!important;border:2px dashed var(--sky)!important;box-shadow:none!important;animation:none!important}.st-tile.nx-ph > *{visibility:hidden}
+.st-tile.nx-ghost{box-shadow:0 18px 40px rgba(6,32,47,.35)!important;opacity:.95;animation:none!important;cursor:grabbing}
+html.nx-tdragging,html.nx-tdragging *{cursor:grabbing!important;user-select:none!important}
+html.nx-tdragging .nx-tiles .st-tile{animation:none!important}
+
+
 .nx-tctl{position:absolute;top:8px;right:8px;z-index:3;display:flex;gap:4px}
 .nx-tcb{height:26px;padding:0 9px;border:1px solid rgba(255,255,255,.3);border-radius:5px;background:rgba(6,32,47,.85);color:#fff;font:inherit;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap}
 .nx-tcb.x{width:26px;padding:0;font-size:16px}.nx-tcb:hover{background:var(--sky);color:#06202f}
