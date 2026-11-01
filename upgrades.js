@@ -110,6 +110,8 @@
 
 
 
+
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -4637,7 +4639,7 @@ function dashDefault(){
   return L;
 }
 function dashLayout(){ const b=S.bset||{}; return Array.isArray(b[DK]) && b[DK].length ? b[DK].map(z=>Object.assign({}, z)) : dashDefault(); }
-function saveDash(L){ if(!S.bset) S.bset={}; S.bset[DK]=L.map(z=>{ const o={t:z.t}; ['s','go','f','sz','sec','lvl','card','at'].forEach(k=>{ if(z[k]) o[k]=z[k]; }); if(Array.isArray(z.pick) && z.pick.length) o.pick=z.pick.slice(); return o; }); if(dashMixEdit!=null) S.bset.hqDashMix=dashMixEdit; try{ window.__saveMine && window.__saveMine(); }catch(e){} }
+function saveDash(L){ if(!S.bset) S.bset={}; S.bset[DK]=L.map(z=>{ const o={t:z.t}; ['s','go','f','sz','sec','lvl','card','at','mins'].forEach(k=>{ if(z[k]) o[k]=z[k]; }); if(Array.isArray(z.who) && z.who.length) o.who=z.who.slice(); if(Array.isArray(z.pick) && z.pick.length) o.pick=z.pick.slice(); return o; }); if(dashMixEdit!=null) S.bset.hqDashMix=dashMixEdit; try{ window.__saveMine && window.__saveMine(); }catch(e){} }
 let dashEdit=null; /* the layout being customized, or null */
 let dashMixEdit=null; /* mixed or uniform sizes, while customizing */
 const SIZES=['s','w','t','b'], SZN={s:'Small',w:'Wide',t:'Tall',b:'Large'};
@@ -4755,6 +4757,58 @@ function dashHero(now, hr){
   hero.appendChild(nd);
   return hero;
 }
+/* ---------- Find a Time tile: its own people, and the times right here ---------- */
+const ETT=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York', hour:'numeric', minute:'2-digit'});
+const tmET=ms=>ETT.format(new Date(ms)).replace(':00','').replace(/\s?(AM|PM)/,' $1');
+const sameTZ=()=>{ const t=Date.now(); return tmET(t)===tmL(t); };
+function ftIds(cfg){ const x=X(); const valid=id=>id!==me() && !!person(id);
+  if(cfg && Array.isArray(cfg.who) && cfg.who.filter(valid).length) return cfg.who.filter(valid).slice(0,8);
+  const mp=x && x.myPeople ? x.myPeople().filter(valid) : []; return (mp.length ? mp : people().filter(p=>p.id!==me()).map(p=>p.id)).slice(0,8); }
+function ftSave(cfg, L){ if(!dashEdit && L){ saveDash(L); } paint(); }
+function ftPick(cfg, L, after){ closeMenus(); const chosen=new Set(Array.isArray(cfg.who)&&cfg.who.length ? cfg.who : ftIds(cfg));
+  const ov=h('div','hqx-ov'); const box=h('div','hqx-box'); box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true'); box.setAttribute('aria-label','Who to find a time with');
+  box.appendChild(h('h2',null,'Who to Find a Time With')); box.appendChild(h('p',null,'Pick anyone. You’re always included. This is just for this tile — My People stays as it is.'));
+  const g=h('div','hqx-g'); const n=h('p','nx-ftn');
+  const upd=()=>{ n.textContent=chosen.size ? chosen.size+' picked' : 'Nobody picked — the tile will use My People'; };
+  people().filter(p=>p.id!==me()).forEach(p=>{ const b=btn('hqx-p'+(chosen.has(p.id)?' on':''), null, ()=>{ if(chosen.has(p.id)) chosen.delete(p.id); else if(chosen.size<8) chosen.add(p.id); else { toast('Up to eight people at a time'); return; } b.classList.toggle('on', chosen.has(p.id)); upd(); });
+    b.appendChild(av(p.id, 30)); const t=h('span','tx'); t.appendChild(h('b',null,p.name)); t.appendChild(h('small',null,p.role||'')); b.appendChild(t); b.appendChild(h('i','ck')); g.appendChild(b); });
+  box.appendChild(g); upd(); box.appendChild(n);
+  const close=()=>{ ov.remove(); document.removeEventListener('keydown', esc); };
+  const ft=h('div','hqx-ft');
+  ft.appendChild(btn('btn ghost','Everyone', ()=>{ people().filter(p=>p.id!==me()).slice(0,8).forEach(p=>chosen.add(p.id)); g.querySelectorAll('.hqx-p').forEach((b,i)=>b.classList.toggle('on', chosen.has(people().filter(p=>p.id!==me())[i].id))); upd(); }));
+  ft.appendChild(btn('btn ghost','Clear', ()=>{ chosen.clear(); g.querySelectorAll('.hqx-p').forEach(b=>b.classList.remove('on')); upd(); }));
+  ft.appendChild(btn('btn ghost','Cancel', close));
+  ft.appendChild(btn('btn','Save', ()=>{ const ids=people().map(p=>p.id).filter(id=>chosen.has(id)); if(ids.length) cfg.who=ids; else delete cfg.who; close(); ftSave(cfg, L); if(after) after(); }));
+  box.appendChild(ft); ov.appendChild(box); ov.addEventListener('click', e=>{ if(e.target===ov) close(); });
+  const esc=e=>{ if(e.key==='Escape') close(); }; document.addEventListener('keydown', esc); document.body.appendChild(ov); }
+/* every time in the next two weeks when everyone picked is free (9 to 5 Eastern, half-hour starts), a few per day */
+function freeTimes(ids, mins, max){ const now=Date.now(); let d=today(); const C=ids.map(id=>({id, ev:cal(id)})).filter(c=>c.ev); const out=[]; if(!C.length) return {list:out, seen:0};
+  for(let k=0;k<15 && out.length<max;k++,d=addD(d,1)){ if(!workday(d)) continue; let t=Math.max(etAt(d,9), now); t=Math.ceil(t/18e5)*18e5; const end=etAt(d,17); let perDay=0, lastEnd=0;
+    for(; t+mins*6e4<=end && perDay<3 && out.length<max; t+=18e5){ const e2=t+mins*6e4; if(t<lastEnd) continue;
+      if(C.every(c=>!c.ev.some(e=>e.show!=='free' && !e.all && e.s<e2 && e.e>t))){ out.push({t, e:e2}); perDay++; lastEnd=e2+60*6e4; } } }
+  return {list:out, seen:C.length}; }
+function ftDialog(cfg, L){ const x=X(); closeMenus(); let mins=cfg.mins||30;
+  const ov=h('div','hqx-ov'); const box=h('div','hqx-box nx-ftd'); box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true'); box.setAttribute('aria-label','Find a Time');
+  const close=()=>{ ov.remove(); document.removeEventListener('keydown', esc); };
+  const draw=()=>{ box.textContent=''; const ids=ftIds(cfg), all=[me()].concat(ids);
+    const hd=h('div','nx-ftdh'); const tt=h('div'); tt.appendChild(h('h2',null,'Find a Time')); tt.appendChild(h('p',null,'When you and these people are all free in the next two weeks, between 9 and 5 Eastern.'+(sameTZ()?'':' Times are in your time, with Eastern underneath.'))); hd.appendChild(tt); box.appendChild(hd);
+    const who=h('div','nx-ftdw'); all.forEach(id=>{ const pp=person(id); if(!pp) return; const s2=statusOf(pp); const c=h('span','nx-ftc'); const a=h('span','nx-avw'); a.appendChild(av(id,26)); a.appendChild(h('i','nx-dot '+s2.k)); c.appendChild(a); c.appendChild(h('span',null, id===me()?'You':first(id))); c.title=pp.name+' · '+s2.t+(s2.s?' '+s2.s:''); who.appendChild(c); });
+    const ch=btn('nx-mini', 'Change People', ()=>ftPick(cfg, L, draw)); who.appendChild(ch); box.appendChild(who);
+    const sg=h('div','nx-seg'); [[30,'30 Min'],[45,'45 Min'],[60,'1 Hour'],[90,'1½ Hours']].forEach(([m,l])=>sg.appendChild(btn('nx-sg'+(m===mins?' on':''), l, ()=>{ mins=m; if((cfg.mins||30)!==m){ if(m===30) delete cfg.mins; else cfg.mins=m; ftSave(cfg, L); } draw(); })));
+    const lr=h('div','nx-ftdl'); lr.appendChild(h('b',null,'How Long')); lr.appendChild(sg); box.appendChild(lr);
+    const R=freeTimes(all, mins, 9); const list=h('div','nx-ftdt');
+    if(!R.seen) list.appendChild(h('p','nx-ftn','Calendars aren’t in yet. Give it a moment and open this again.'));
+    else if(!R.list.length){ const best=nextShared(all, mins); list.appendChild(h('p','nx-ftn','There’s no time in the next two weeks when everyone is free.'+(best ? ' The closest: '+WDL[new Date(best.t).getDay()]+', '+MON[new Date(best.t).getMonth()]+' '+new Date(best.t).getDate()+' at '+tmL(best.t)+', without '+best.out.map(first).join(', ')+'.' : ''))); }
+    else { let lastDay=''; R.list.forEach(sl=>{ const d0=new Date(sl.t), dk=d0.toDateString(); if(dk!==lastDay){ lastDay=dk; list.appendChild(h('div','nx-ftdd', (dk===new Date().toDateString()?'Today':WDL[d0.getDay()])+', '+MON[d0.getMonth()]+' '+d0.getDate())); }
+      const r=h('div','nx-ftr'); r.appendChild(h('b',null, tmL(sl.t)+' – '+tmL(sl.e))); if(!sameTZ()) r.appendChild(h('small','nx-fte', tmET(sl.t)+' – '+tmET(sl.e)+' Eastern')); r.appendChild(h('span','sp'));
+      r.appendChild(btn('nx-mini','Copy', ()=>{ const txt=WDL[d0.getDay()]+', '+MON[d0.getMonth()]+' '+d0.getDate()+', '+tmET(sl.t)+' – '+tmET(sl.e)+' Eastern'; try{ navigator.clipboard.writeText(txt); toast('Copied: '+txt); }catch(e){ toast(txt); } }));
+      if(x && x.ACT && x.ACT.on) r.appendChild(btn('nx-mini pri','Book It', ()=>{ close(); x.bookDialog({subject:'MISMO Meeting', start:sl.t, mins, who:ids}); }));
+      list.appendChild(r); }); }
+    box.appendChild(list);
+    const ft=h('div','hqx-ft'); ft.appendChild(btn('btn ghost','Open Find a Time', ()=>{ close(); try{ const k2='tools:team-hq:mismo.teamhq.ft'; const cur=JSON.parse(localStorage.getItem(k2)||'{}'); cur.who=all; localStorage.setItem(k2, JSON.stringify(cur)); }catch(e){} openClassic('findtime'); }));
+    ft.appendChild(btn('btn','Done', close)); box.appendChild(ft); };
+  draw(); ov.appendChild(box); ov.addEventListener('click', e=>{ if(e.target===ov) close(); });
+  const esc=e=>{ if(e.key==='Escape') close(); }; document.addEventListener('keydown', esc); document.body.appendChild(ov); }
 function nextShared(ids, mins){ const now=Date.now(); let d=today(); const C=ids.map(id=>({id, ev:cal(id)})).filter(c=>c.ev); if(!C.length) return null;
   let best=null;
   for(let k=0;k<15;k++,d=addD(d,1)){ if(!workday(d)) continue; let t=Math.max(etAt(d,9), now); t=Math.ceil(t/18e5)*18e5; const end=etAt(d,17);
@@ -4985,14 +5039,16 @@ function tile(cfg, i, L){
     const NM={mytasks:'My Tasks',mynote:'My Notes',mtoday:'Meeting Trackers',links:'My Systems',vault:'Locked Note'}; const g=h('div','nx-bgrid'); [...new Set(names)].slice(0,6).forEach(n=>g.appendChild(h('span',null,NM[n]||n.replace(/^./,c=>c.toUpperCase())))); el.appendChild(g);
     el.appendChild(h('div','st-next', 'Your own board — free-form, notebook or rows'));
     meta.go=()=>openClassic('mine'); }
-  else if(cfg.t==='findtime'){ const ids=(x && x.myPeople().length ? x.myPeople() : people().filter(p=>p.id!==me()).map(p=>p.id));
-    const row=h('div','nx-avrow'); let free=0; ids.forEach(id=>{ const pp=person(id); if(!pp) return; const s2=statusOf(pp); if(s2.k==='free') free++; const w=h('span','nx-avw'); w.appendChild(av(id, tall?34:28)); w.appendChild(h('i','nx-dot '+s2.k)); w.title=pp.name+' · '+s2.t+(s2.s?' '+s2.s:''); row.appendChild(w); }); el.appendChild(row);
-    const slot=nextShared([me()].concat(ids.slice(0,6)), 30);
+  else if(cfg.t==='findtime'){ const ids=ftIds(cfg); const mins=cfg.mins||30;
+    const row=h('div','nx-avrow'); let free=0; ids.forEach(id=>{ const pp=person(id); if(!pp) return; const s2=statusOf(pp); if(s2.k==='free') free++; const w=h('span','nx-avw'); w.appendChild(av(id, tall?34:28)); w.appendChild(h('i','nx-dot '+s2.k)); w.title=pp.name+' · '+s2.t+(s2.s?' '+s2.s:''); row.appendChild(w); });
+    if(!dashEdit){ const pk=btn('nx-ftpk', null, e=>{ e.stopPropagation(); ftPick(cfg, L); }); pk.innerHTML=ic('plus')+'<span>'+(cfg.who && cfg.who.length ? 'Change' : 'Pick People')+'</span>'; pk.title='Pick who this tile finds a time with'; row.appendChild(pk); }
+    el.appendChild(row);
+    const slot=nextShared([me()].concat(ids), mins);
     const b=h('div','nx-ftv'); b.appendChild(h('small',null, !slot ? 'Next time you’re free together' : slot.n===slot.of ? 'Next time you’re all free' : 'Best time in the next two weeks')); b.appendChild(h('b',null, slot ? WDL[new Date(slot.t).getDay()]+', '+MON[new Date(slot.t).getMonth()]+' '+new Date(slot.t).getDate()+' at '+tmL(slot.t) : 'Calendars aren’t in yet')); if(slot && slot.n<slot.of) b.appendChild(h('span',null, slot.n+' of '+slot.of+' free — not '+slot.out.map(first).join(', ')));
-    if(slot && x && x.ACT && x.ACT.on && !dashEdit){ const bk=btn('nx-mini pri nx-ftb','Book It', e=>{ e.stopPropagation(); x.bookDialog({subject:'MISMO Meeting', start:slot.t, mins:30, who:ids.slice(0,6)}); }); bk.title='Book this time in Outlook and invite everyone'; b.appendChild(bk); }
+    if(slot && x && x.ACT && x.ACT.on && !dashEdit){ const bk=btn('nx-mini pri nx-ftb','Book It', e=>{ e.stopPropagation(); x.bookDialog({subject:'MISMO Meeting', start:slot.t, mins, who:ids}); }); bk.title='Book this time in Outlook and invite everyone'; b.appendChild(bk); }
     el.appendChild(b);
-    el.appendChild(h('div','st-next', free+' of '+ids.length+' free right now · tap to pick a time'));
-    meta.go=()=>{ try{ const k2='tools:team-hq:mismo.teamhq.ft'; const cur=JSON.parse(localStorage.getItem(k2)||'{}'); cur.who=[me()].concat(ids.slice(0,6)); localStorage.setItem(k2, JSON.stringify(cur)); }catch(e){} openClassic('findtime'); }; }
+    el.appendChild(h('div','st-next', free+' of '+ids.length+' free now · tap for more times'));
+    meta.go=()=>ftDialog(cfg, L); }
   else if(cfg.t==='sys'){ meta.draw(el, top, SZ); }
   if(cfg.t!=='sys' && lvlOf(cfg)==='hi'){ el.classList.add('lv-hi'); el.querySelectorAll('.nx-kl2,.nx-tl2,.nx-gaps,.mic-steps').forEach(z=>z.remove()); }
   el.addEventListener('click', e=>{ if(dashEdit || e.target.closest('button:not(.st-tile)')) return; go(); });
@@ -5665,6 +5721,18 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-sysh{display:flex;gap:14px;align-items:center;min-width:0}
 .nx-sym.sm{width:52px;height:52px;padding:9px;border-radius:12px}
 .nx-syl{flex:1;min-width:0;container-type:inline-size}
+.nx-ftpk{display:inline-flex;align-items:center;gap:4px;margin-left:4px;padding:4px 9px 4px 6px;border-radius:999px;border:1px dashed rgba(255,255,255,.35);background:transparent;color:rgba(255,255,255,.85);font:inherit;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap}
+.nx-ftpk:hover{border-color:var(--k,#74bfeb);color:#fff}.nx-ftpk svg{width:12px;height:12px}
+.nx-ftd{width:min(560px,94vw)}
+.nx-ftdh h2{margin:0 0 4px}.nx-ftdh p{margin:0 0 12px;color:var(--ink-2);font-size:13.5px}
+.nx-ftdw{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px}
+.nx-ftc{display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 3px;border-radius:999px;background:var(--surface-2,#f6fafd);border:1px solid var(--border);font-size:13px;font-weight:600;color:var(--ink)}
+.nx-ftdl{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}.nx-ftdl b{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.nx-ftdt{display:flex;flex-direction:column;gap:6px;max-height:min(46vh,420px);overflow:auto;padding-right:2px}
+.nx-ftdd{margin-top:6px;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.nx-ftr{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface)}
+.nx-ftr b{font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums}.nx-fte{font-size:12px;color:var(--ink-3)}.nx-ftr .sp{flex:1}
+.nx-ftn{margin:6px 0;color:var(--ink-2);font-size:13.5px}
 .mtd{display:flex;gap:14px;align-items:flex-start;min-width:0;min-height:0}
 .mtd-cal{flex:0 0 60px;border-radius:11px;overflow:hidden;text-align:center;background:rgba(255,255,255,.07);border:1px solid color-mix(in srgb,var(--k,#74bfeb) 50%,transparent);box-shadow:0 8px 18px -12px var(--k,#74bfeb)}
 .mtd-cal i{display:block;font-style:normal;font-size:10px;font-weight:800;letter-spacing:.14em;padding:3px 0 2px;background:var(--k,#74bfeb);color:#14203a}
