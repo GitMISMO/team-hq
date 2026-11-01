@@ -11,6 +11,83 @@
  * Each part runs on its own; if one fails, the rest of Team HQ is untouched. */
 (function(){
 'use strict';
+/*BOOT>*/
+/* ---------- the opening screen ----------
+   Team HQ loads your tasks, calendars and email before it can draw your dashboard. This card covers
+   that, the same way Member 360 and MISMO Money do, and lifts once everything is in place. */
+(function(){
+  var D=document, H=D.documentElement, t0=Date.now(), KEY='tools:team-hq:boot.ms', done=false;
+  var appx=/[?&]app=expenses/.test(location.search) || H.classList.contains('app-exp');
+  var est=6; try{ var v=+localStorage.getItem(KEY); if(v>1500 && v<30000) est=Math.max(3, Math.round(v/1000)); }catch(e){}
+  /* never cover the sign-in page */
+  function signin(){ if(window.__S && window.__S.ready) return false; var pw=D.querySelector('input[type=password]'); return !!(pw && pw.offsetParent!==null); }
+  window.__hqBooted=false;
+  function release(){ H.classList.remove('hq-boot'); if(!window.__hqBooted) setTimeout(function(){ window.__hqBooted=true; try{ window.dispatchEvent(new Event('hq:booted')); }catch(e){} }, 3000); }
+  if(signin()){ release(); return; }
+  var css=D.createElement('style'); css.id='hq-boot-css'; css.textContent=
+    '#hqo{position:fixed;inset:0;z-index:99990;display:flex;align-items:center;justify-content:center;padding:16px;background:radial-gradient(120% 90% at 100% 0%,rgba(116,191,235,.18),transparent 55%),linear-gradient(160deg,#10324a,#0b2436);transition:opacity .35s;font-family:"IBM Plex Sans",system-ui,sans-serif}'+
+    '#hqo.out{opacity:0;pointer-events:none}'+
+    '#hqo .c{max-width:440px;width:100%;box-sizing:border-box;background:#fff;color:#0d314c;border-radius:12px;padding:26px 26px 22px;box-shadow:0 24px 60px rgba(0,0,0,.35)}'+
+    ':root[data-theme="dark"] #hqo .c{background:#13283a;color:#e8f1f8}'+
+    '#hqo .eb{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#5b7083;margin:0 0 6px}'+
+    '#hqo h2{margin:0 0 10px;font-size:21px;font-weight:700;line-height:1.25}'+
+    '#hqo p{margin:0 0 14px;font-size:14px;line-height:1.5;color:#4a5f72}:root[data-theme="dark"] #hqo p{color:#a9bccb}'+
+    '#hqo .tm{display:flex;align-items:baseline;gap:8px;margin:0 0 8px}#hqo .tm b{font-size:32px;font-weight:700;letter-spacing:-.01em}#hqo .tm small{font-size:12.5px;color:#5b7083}'+
+    '#hqo .bar{height:5px;border-radius:3px;background:#e6f2fb;overflow:hidden;margin:0 0 16px}#hqo .bar i{display:block;height:100%;width:3%;background:linear-gradient(90deg,#0d314c,#74bfeb);transition:width .4s}'+
+    '#hqo ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}#hqo li{display:flex;align-items:center;gap:10px;font-size:13.5px;color:#4a5f72}:root[data-theme="dark"] #hqo li{color:#a9bccb}'+
+    '#hqo li .s{width:16px;height:16px;flex:0 0 auto;border-radius:50%;border:2px solid #b9dcf3;border-top-color:transparent;animation:hqspin .8s linear infinite;box-sizing:border-box}'+
+    '#hqo li.ok{color:#0d314c}:root[data-theme="dark"] #hqo li.ok{color:#e8f1f8}#hqo li.ok .s{animation:none;border:0;background:#2bb673;position:relative}#hqo li.ok .s::after{content:"";position:absolute;left:5px;top:2px;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}'+
+    '@keyframes hqspin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){#hqo li .s{animation:none}}';
+  (D.head||H).appendChild(css);
+  var steps=appx ? [['me','Signing You In'],['data','Your Expenses'],['dash','Getting Expenses Ready']]
+                 : [['me','Signing You In'],['data','Tasks and Team Projects'],['cal','Team Calendars'],['mail','Your Email'],['dash','Your Dashboard']];
+  var o=D.createElement('div'); o.id='hqo'; o.setAttribute('role','status'); o.setAttribute('aria-live','polite');
+  o.innerHTML='<div class="c"><div class="eb">'+(appx?'Expenses':'Team HQ')+'</div><h2>Opening '+(appx?'Expenses':'Team HQ')+'…</h2>'+
+    '<p>Getting your work, your team and your calendar in place so everything you see is ready to use. This usually takes about <b>'+est+'</b> seconds.</p>'+
+    '<div class="tm"><b>0:00</b><small>of about '+est+'s</small></div><div class="bar"><i></i></div><ul>'+
+    steps.map(function(s){ return '<li data-k="'+s[0]+'"><span class="s"></span><span>'+s[1]+'</span></li>'; }).join('')+'</ul></div>';
+  function mount(){ if(D.body && !o.isConnected) D.body.appendChild(o); H.classList.remove('hq-boot'); }
+  if(D.body) mount(); else D.addEventListener('DOMContentLoaded', mount);
+  var got={}, calSeen=0, calQuiet=0;
+  function mark(k){ if(got[k]) return; got[k]=1; var li=o.querySelector('li[data-k="'+k+'"]'); if(li) li.classList.add('ok'); }
+  function check(){
+    if(done) return;
+    var S=window.__S, el=Date.now()-t0;
+    if(signin()){ finish(true); return; }
+    if(S && (S.me || S.uid)) mark('me');
+    if(S && S.ready && S.tasks && S.tasks.length) mark('data');
+    if(appx){ if(S && S.ready) mark('data'); var ex=D.getElementById('app-expenses'); if(got.data && ex && ex.offsetParent!==null) mark('dash'); }
+    else {
+      try{ var n=performance.getEntriesByType('resource').filter(function(e){ return e.name.indexOf('/team-hq/data/cal-')>=0 && e.responseEnd>0; }).length;
+        if(n>calSeen){ calSeen=n; calQuiet=Date.now(); } if((calSeen && Date.now()-calQuiet>700) || el>7000) mark('cal'); }catch(e){ mark('cal'); }
+      var X=window.__hqx; if((X && X.MAIL && /^(ok|none|off|err)$/.test(X.MAIL.state)) || el>7000) mark('mail');
+      var g=D.querySelector('.nx-tiles'); if(got.data && ((g && g.children.length) || (window.__nx && el>5000))) mark('dash');
+    }
+    var need=appx ? ['me','data','dash'] : ['me','data','cal','mail','dash'];
+    var have=need.filter(function(k){ return got[k]; }).length;
+    var pct=Math.min(97, Math.max(have/need.length*100, el/(est*1000)*90));
+    o.querySelector('.bar i').style.width=pct+'%';
+    var s=Math.floor(el/1000); o.querySelector('.tm b').textContent=Math.floor(s/60)+':'+('0'+(s%60)).slice(-2);
+    if(have===need.length || (got.dash && el>9000) || el>20000){ finish(false); return; }
+    setTimeout(check, 150);
+  }
+  function finish(skip){
+    if(done) return; done=true; var el=Date.now()-t0;
+    if(!skip){ try{ localStorage.setItem(KEY, String(el)); }catch(e){} o.querySelector('.bar i').style.width='100%'; need().forEach(mark); }
+    /* two frames so the dashboard is drawn before the card lifts */
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){ o.classList.add('out'); setTimeout(function(){ o.remove(); css.remove(); }, 400); release(); }); });
+  }
+  function need(){ return appx ? ['me','data','dash'] : ['me','data','cal','mail','dash']; }
+  check();
+})();
+
+/*<BOOT*/
+
+
+
+
+
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -173,7 +250,17 @@ let counts={}; try{ counts=JSON.parse(localStorage.getItem(CK)||'{}')||{}; }catc
 function readNav(doc){ const out={}; try{ doc.querySelectorAll('.hq nav button, nav button').forEach(b=>{ const t=(b.textContent||'').replace(/\s+/g,' ').trim(); const m=/^(.*?)\s*(\d+)$/.exec(t); const label=(m?m[1]:t).trim(); if(label && label.length>1 && !/^(help|dark mode|light mode|theme|sign out|log out|menu|close)$/i.test(label)) out[label]=m?+m[2]:null; /* no number on the menu item means nothing to count, not zero */ }); }catch(e){} return out; }
 /* the page that is showing, and the sections on it that say how many items they hold ("Dues Deals to Confirm · 10 items") */
 function curNav(doc){ try{ const b=doc.querySelector('nav button[aria-current]:not([aria-current="false"]), nav a[aria-current]:not([aria-current="false"]), nav [role=tab][aria-selected="true"], button.navbtn[aria-selected="true"]') || [...doc.querySelectorAll('nav button, nav a, button.navbtn')].find(z=>/(^|\s)(on|active|is-active|current|sel|selected)(\s|$)/.test(z.className||'')); return b ? (b.textContent||'').replace(/\s+/g,' ').trim().replace(/\s*\d+$/,'') : ''; }catch(e){ return ''; } }
-function readSecs(doc){ const out={}; try{ doc.querySelectorAll('h2,h3').forEach(hd=>{ if(hd.offsetParent===null) return; const name=(hd.textContent||'').replace(/\s+/g,' ').trim(); const nx=hd.nextElementSibling; if(!name || !nx) return; const m=/^(\d[\d,]*)\s+items?\b\s*(.*)$/i.exec((nx.textContent||'').replace(/\s+/g,' ').trim()); if(!m) return; out[name]={n:+m[1].replace(/,/g,''), x:m[2].replace(/^[·\-–—:\s]+/,'').trim().slice(0,60)}; }); }catch(e){} return out; }
+/* only what's actually on screen in the other system: a hidden tab can hold hundreds of thousands of
+   elements, and looking through those is what made Team HQ freeze while it read a system */
+const SIDE=/(^|\s)(side|sidebar|side-inner|side-foot|rail|hq-rail|masthead|hqtop|topbar|app-header)(\s|$)/;
+function visList(doc){ const c=doc.__hqVis, now=performance.now(); if(c && now-c.t<400) return c.l; const l=[]; const b=doc.body; if(!b) return l;
+  const vw=doc.defaultView; const w=doc.createTreeWalker(b, 1, {acceptNode(n){ const tg=n.tagName; if(tg==='SCRIPT'||tg==='STYLE'||tg==='NOSCRIPT'||tg==='TEMPLATE'||tg==='IFRAME'||tg==='ASIDE'||tg==='NAV') return 2;
+    /* the system's own menu, side panel and top bar aren't part of the page (a sync note in a side panel once showed up as a tile) */
+    if((tg==='HEADER' && n.parentElement===b) || SIDE.test(typeof n.className==='string' ? n.className : '')) return 2;
+    if(!n.getClientRects().length){ try{ if(vw.getComputedStyle(n).display==='contents') return 1; }catch(e){} return 2; } return 1; }});
+  let n; while((n=w.nextNode())) l.push(n); doc.__hqVis={t:performance.now(), l}; return l; }
+function pick(doc, sel){ return visList(doc).filter(e=>e.matches(sel)); }
+function readSecs(doc){ const out={}; try{ pick(doc,'h2,h3').forEach(hd=>{ if(hd.offsetParent===null) return; const name=(hd.textContent||'').replace(/\s+/g,' ').trim(); const nx=hd.nextElementSibling; if(!name || !nx) return; const m=/^(\d[\d,]*)\s+items?\b\s*(.*)$/i.exec((nx.textContent||'').replace(/\s+/g,' ').trim()); if(!m) return; out[name]={n:+m[1].replace(/,/g,''), x:m[2].replace(/^[·\-–—:\s]+/,'').trim().slice(0,60)}; }); }catch(e){} return out; }
 /* scroll a page inside a frame to a section without moving Team HQ itself */
 function scrollToSec(doc, sec){ const hd=[...doc.querySelectorAll('h2,h3')].find(z=>(z.textContent||'').replace(/\s+/g,' ').trim()===sec); if(!hd) return false;
   let el=hd.parentElement; const win=doc.defaultView;
@@ -200,7 +287,7 @@ function driveFrame(fr, k, go, sec, done){
 /* ---------- system snapshots ----------
    The headline numbers, gauges and section counts on a system's tab, read in the background in a hidden
    copy of the page and kept in this browser, so a dashboard tile can show them the Team HQ way. */
-const DK='tools:team-hq:mismo.teamhq.sysdata7';
+const DK='tools:team-hq:mismo.teamhq.sysdata8';
 let SD={}; try{ SD=JSON.parse(localStorage.getItem(DK)||'{}')||{}; }catch(e){}
 const sdKey=(k,go)=>k+'|'+(go||'');
 const cleanT=x=>String(x||'').replace(/\s+/g,' ').trim();
@@ -221,7 +308,7 @@ function readCards(doc){
   const win=doc.defaultView, out=[], seen=new Set(), used=[];
   const vis=e=>e && e.offsetParent!==null;
   const LAB=/(^|[-_])(lab|label|kicker|eyebrow|eb|ttl|title|name|hd|heading|cap)$/i;
-  const labels=[...doc.querySelectorAll('span,div,b,small,h2,h3,h4,p,strong,em')].filter(e=>{ const isLab=hasTok(e, LAB); if(!isLab && e.children.length) return false;
+  const labels=pick(doc,'span,div,b,small,h2,h3,h4,p,strong,em').filter(e=>{ const isLab=hasTok(e, LAB); if(!isLab && e.children.length) return false;
     const raw=e.textContent; if(!raw || raw.length>80 || !vis(e) || e.closest('nav,[role=tab],header.masthead,.masthead,.hqtop,table')) return false;
     const tx=cleanT(isLab ? words(e) : raw); if(tx.length>40 || tx.length<3 || VAL.test(tx)) return false;
     if(isLab) return true; const cs=win.getComputedStyle(e); return cs.textTransform==='uppercase' && parseFloat(cs.letterSpacing)>0.4 && parseFloat(cs.fontSize)<=14; });
@@ -233,7 +320,7 @@ function readCards(doc){
     const r=card.getBoundingClientRect(); if(r.width<120 || r.height<50 || r.height>700) return;
     cands.push({lab, card, area:r.width*r.height, y:r.top+(doc.scrollingElement||doc.documentElement).scrollTop, x:r.left}); });
   /* stat tiles built as value + key + small line (class "v" / "k" / "s" and the like) */
-  [...doc.querySelectorAll('[class]')].forEach(v=>{ if(!hasTok(v, /^(v|val|value|num|n|big|figure|count|stat-v|kpi-v)$/i) || v.children.length>2) return; const tv=numText(v); if(!VAL.test(tv) || !vis(v)) return;
+  pick(doc,'[class]').forEach(v=>{ if(!hasTok(v, /^(v|val|value|num|n|big|figure|count|stat-v|kpi-v)$/i) || v.children.length>2) return; const tv=numText(v); if(!VAL.test(tv) || !vis(v)) return;
     const card=v.parentElement; if(!card || !vis(card) || card.closest('nav,table')) return; const lab=[...card.children].find(z=>z!==v && hasTok(z, /^(k|key|lab|label|l|name|t|title|cap|lbl)$/i)) || [...card.children].find(z=>z!==v && cleanT(z.textContent) && !VAL.test(cleanT(z.textContent)) && cleanT(z.textContent).length<=40);
     if(!lab) return; const r=card.getBoundingClientRect(); if(r.width<80 || r.height<40 || r.height>500) return;
     if(cands.some(c=>c.card===card)) return; cands.push({lab, card, area:r.width*r.height, y:r.top+(doc.scrollingElement||doc.documentElement).scrollTop, x:r.left}); });
@@ -273,7 +360,7 @@ function readCards(doc){
    where things stand, and the latest few rows */
 function readTables(doc){ const out=[]; const vis=e=>e && e.offsetParent!==null;
   const money=s=>{ const m=/[−\-]?\$\s?[\d,]+(\.\d+)?/.exec(s||''); return m ? parseFloat(m[0].replace(/[^\d.\-−]/g,'').replace('−','-')) : null; };
-  [...doc.querySelectorAll('table')].filter(vis).slice(0,3).forEach(tb=>{
+  pick(doc,'table').filter(vis).slice(0,3).forEach(tb=>{
     const body=[...tb.querySelectorAll('tbody tr')].filter(r=>vis(r) && r.children.length>=2); if(body.length<2) return;
     const hr=[...tb.querySelectorAll('thead tr')].pop(); const hds=hr ? [...hr.children].map(c=>cleanT(words(c))) : [];
     /* what the list is called: the nearest heading above it */
@@ -300,8 +387,8 @@ function readTables(doc){ const out=[]; const vis=e=>e && e.offsetParent!==null;
 function extract(doc){
   const win=doc.defaultView; const out={figs:[], gauges:[], cards:[], secs:readSecs(doc), at:Date.now()}; try{ out.cards=readCards(doc); }catch(e){} try{ readTables(doc).forEach(c=>{ if(!out.cards.some(z=>z.t===c.t)) out.cards.unshift(c); }); }catch(e){}
   const vis=e=>e.offsetParent!==null;
-  let GL=[...doc.querySelectorAll('[role=meter],[class*="gauge"]')].filter(g=>g.getAttribute('role')==='meter' || String(g.className||'').split(/\s+/).some(c=>/^gauge([-_](card|box|item|tile))?$/.test(c)));
-  if(!GL.length) GL=[...doc.querySelectorAll('[class*="gauge"]')].filter(g=>!g.querySelector('[class*="gauge"]'));
+  let GL=pick(doc,'[role=meter],[class*="gauge"]').filter(g=>g.getAttribute('role')==='meter' || String(g.className||'').split(/\s+/).some(c=>/^gauge([-_](card|box|item|tile))?$/.test(c)));
+  if(!GL.length) GL=pick(doc,'[class*="gauge"]').filter(g=>!g.querySelector('[class*="gauge"]'));
   GL.forEach(g=>{ if(out.gauges.length>=8 || !vis(g)) return;
     const pick=re=>{ const e=[...g.querySelectorAll('*')].find(z=>re.test(String(z.className&&z.className.baseVal!=null?z.className.baseVal:z.className||''))); return e ? cleanT(e.textContent) : ''; };
     let pct=pick(/(^|\s|-)g?pct(n|-?num)?(\s|$)|percent/); let pm=/(-?\d+(?:\.\d+)?)/.exec(pct);
@@ -312,7 +399,7 @@ function extract(doc){
     const v=pick(/(^|\s|-)g?val(ue)?(\s|$)/), b=pick(/(^|\s|-)g?bud(get)?(\s|$)|target|goal/);
     if(nm) out.gauges.push({n:nm.slice(0,40), p:+pm[1], v:VAL.test(v)?v:'', b:VAL.test(b)?b:''}); });
   const seen=new Set();
-  const scan=minFs=>doc.querySelectorAll('b,strong,span,div,p,h1,h2,h3,h4,dd').forEach(e=>{ if(out.figs.length>=10 || e.children.length) return; const tv=numText(e); if(!tv || tv.length>16 || !VAL.test(tv) || !vis(e)) return;
+  const scan=minFs=>pick(doc,'b,strong,span,div,p,h1,h2,h3,h4,dd').forEach(e=>{ if(out.figs.length>=10 || e.children.length) return; const tv=numText(e); if(!tv || tv.length>16 || !VAL.test(tv) || !vis(e)) return;
     if(e.closest('[class*="gauge"],[role=meter],nav,table,button.navbtn,[role=tab],.hqtop,.masthead,time,[class*="cal"],[class*="countdown"],[class*="clock"],[class*="timer"],[class*="week"],[class*="date"]')) return;
     if((parseFloat(win.getComputedStyle(e).fontSize)||0)<minFs) return;
     const box=e.parentElement; if(!box) return; const tx=[...box.children].filter(z=>z!==e).map(z=>cleanT(words(z))).filter(z=>z && z.length<100 && !VAL.test(z));
@@ -323,7 +410,7 @@ function extract(doc){
   scan(19); if(!out.figs.length) scan(15);
   /* pages built around a table: a summary line ("Revenue $3.9M · Expense $4.2M · Net …") and its Total / Net rows */
   const money=v=>{ v=cleanT(v).replace(/^-/,'−'); return /\.\d\d$/.test(v) && /\d{1,3},\d{3}/.test(v) ? v.replace(/\.\d\d$/,'') : v; };
-  if(out.figs.length<6){ [...doc.querySelectorAll('table')].filter(vis).slice(0,2).forEach(tb=>{
+  if(out.figs.length<6){ pick(doc,'table').filter(vis).slice(0,2).forEach(tb=>{
       const hr=[...tb.querySelectorAll('thead tr')].pop(); const hds=hr ? [...hr.children].map(c=>cleanT(c.textContent)) : [];
       const pref=['YTD ACTUAL','YEAR TO DATE','ACTUAL + REMAINING FORECAST','LIVE, FOR THE YEAR','FORECAST FOR THE YEAR','ACTUAL','TOTAL'];
       [...tb.querySelectorAll('tbody tr, tfoot tr')].forEach(tr=>{ if(out.figs.length>=6) return; const cells=[...tr.children]; const lab=cleanT(cells[0] && cells[0].textContent); if(!/^(total|net)\b/i.test(lab) || lab.length>40) return;
@@ -332,21 +419,29 @@ function extract(doc){
         if(col<0) return; const v=cleanT(cells[col].textContent).split(' ')[0]; if(!VAL.test(v.replace(/\.\d+$/,''))) return;
         const vv=money(v); if(!out.figs.some(f=>f.n===lab)) out.figs.push({n:lab.replace(/\b\w/g,c=>c.toUpperCase()).replace(/\B\w+/g,w=>w.toLowerCase()), v:(/\$/.test(vv)||!/\d,\d{3}/.test(vv)) ? vv : vv.replace(/^([−\-(]?)/,'$1$'), s:hds[col-off] ? hds[col-off].toLowerCase().replace(/^./,c=>c.toUpperCase()) : '', tone:/^[−\-(]/.test(v)?'bad':''}); }); }); }
   if(out.figs.length<3){ const RX=/([A-Z][A-Za-z’' ]{2,30}?)\s+([−\-]?\$[\d,]+(?:\.\d+)?)/g;
-    [...doc.querySelectorAll('p,div,span,small,li')].some(e=>{ if(!vis(e) || e.children.length>3) return false; const tx=String(e.innerText||e.textContent).replace(/[ \t]+/g,' '); if(tx.length>220 || !/[·|]/.test(tx)) return false; const m=[...tx.matchAll(RX)]; if(m.length<2) return false;
+    pick(doc,'p,div,span,small,li').some(e=>{ if(!vis(e) || e.children.length>3) return false; const tx=String(e.innerText||e.textContent).replace(/[ \t]+/g,' '); if(tx.length>220 || !/[·|]/.test(tx)) return false; const m=[...tx.matchAll(RX)]; if(m.length<2) return false;
       m.slice(0,4).forEach(z=>{ const n=cleanT(String(z[1]).split(/\n/).pop()); if(!out.figs.some(f=>f.n===n)) out.figs.push({n, v:money(z[2]), s:'', tone:''}); }); return true; }); }
   /* every headline number can be its own tile too, when the page's tiles don't already carry it */
   out.figs.forEach(f=>{ if(out.cards.length>=24) return; if(out.cards.some(c=>c.t===f.n || (c.big===f.v && c.t && f.n && (c.t.toLowerCase().indexOf(f.n.toLowerCase())>=0 || f.n.toLowerCase().indexOf(c.t.toLowerCase())>=0)))) return; out.cards.push({t:f.n, big:f.v, sub:f.s||'', fig:1}); });
   return out; }
 /* an app still on its own "Opening…" screen isn't ready to read yet */
 function stillLoading(doc){ try{
-  if([...doc.querySelectorAll('[class]')].some(e=>e.offsetParent!==null && hasTok(e, /(^|[-_])(loading|loader|boot|booting|splash|spinner|opening)$/i))) return true;
-  return [...doc.querySelectorAll('div,p,span,h1,h2,h3,b,strong,small')].some(e=>!e.children.length && e.offsetParent!==null && (e.textContent||'').length<140 && /^\s*(opening|loading|reading|fetching|getting)\b[^]*?(…|\.\.\.)/i.test(e.textContent||'')); }catch(e){ return false; } }
+  if(pick(doc,'[class]').some(e=>e.offsetParent!==null && hasTok(e, /(^|[-_])(loading|loader|boot|booting|splash|spinner|opening)$/i))) return true;
+  return pick(doc,'div,p,span,h1,h2,h3,b,strong,small').some(e=>!e.children.length && e.offsetParent!==null && (e.textContent||'').length<140 && /^\s*(opening|loading|reading|fetching|getting)\b[^]*?(…|\.\.\.)/i.test(e.textContent||'')); }catch(e){ return false; } }
 const hasData=d=>d && (d.figs.length || d.gauges.length || (d.cards||[]).length || Object.keys(d.secs||{}).length);
 function keepData(k, go, d){ if(!hasData(d)) return; SD[sdKey(k,go)]=d; try{ localStorage.setItem(DK, JSON.stringify(SD)); }catch(e){} try{ window.dispatchEvent(new Event('hq:counts')); }catch(e){} }
 function sysData(k, go){ return SD[sdKey(k,go)]||null; }
-const SQ=[], INF=new Set(); let sRun=0; const SMAX=2; /* two pages read at a time */
-function wantData(k, go, maxAge){ const d=SD[sdKey(k,go)]; if(d && Date.now()-d.at<(maxAge||20*60e3)) return; if(INF.has(sdKey(k,go)) || SQ.some(q=>q.k===k && q.go===(go||''))) return; SQ.push({k, go:go||''}); setTimeout(pump, 300); }
-function pump(){ while(sRun<SMAX && SQ.length && !document.hidden) pumpOne(); }
+const SQ=[], INF=new Set(); let sRun=0; const SMAX=1; /* one page read at a time */
+function wantData(k, go, maxAge){ const d=SD[sdKey(k,go)]; if(d && Date.now()-d.at<(maxAge||45*60e3)) return; if(INF.has(sdKey(k,go)) || SQ.some(q=>q.k===k && q.go===(go||''))) return; SQ.push({k, go:go||''}); setTimeout(pump, 300); }
+/* other systems are read in the background only once Team HQ has opened and settled, one at a time,
+   and only when the browser has a free moment, so opening Team HQ never feels slow */
+let pumpWait=null, lastAct=0, actWait=null;
+['pointermove','pointerdown','wheel','keydown','touchstart','scroll'].forEach(ev=>window.addEventListener(ev, ()=>{ lastAct=Date.now(); }, {passive:true, capture:true}));
+function pump(){
+  if(!document.hidden && Date.now()-lastAct<4000){ clearTimeout(actWait); actWait=setTimeout(pump, 1500); return; }
+  if(window.__hqBooted===false){ if(!pumpWait){ pumpWait=()=>{ window.removeEventListener('hq:booted', pumpWait); pumpWait=null; pump(); }; window.addEventListener('hq:booted', pumpWait); } return; }
+  const go=()=>{ while(sRun<SMAX && SQ.length) pumpOne(); };
+  if(window.requestIdleCallback) requestIdleCallback(go, {timeout:2500}); else setTimeout(go, 200); }
 function pumpOne(){ const q0=SQ.shift(); const s=SYS.find(z=>z.k===q0.k); if(!s || !canOpen(s.k)) return; sRun++;
   /* every page wanted from this system, read in one visit: its home page first, then each tab */
   const list=[q0.go]; for(let i=SQ.length-1;i>=0;i--) if(SQ[i].k===q0.k){ if(list.indexOf(SQ[i].go)<0) list.push(SQ[i].go); SQ.splice(i,1); }
@@ -361,14 +456,17 @@ function pumpOne(){ const q0=SQ.shift(); const s=SYS.find(z=>z.k===q0.k); if(!s 
     if(n<40 && stillLoading(doc)){ stable=0; setTimeout(tick, 1000); return; }
     const cur=curNav(doc);
     if(go && cur!==go && clicks<6 && n%2===1 && (idx>0 || n>=3)){ const b=[...doc.querySelectorAll('.hq nav button, nav button, nav a, [role=tab]')].find(z=>(z.textContent||'').replace(/\s+/g,' ').trim().replace(/\s*\d+$/,'')===go); if(b){ b.click(); clicks++; stable=0; } }
-    const onTab=!go || cur===go || (n>14 && !cur); let d=null; try{ d=extract(doc); }catch(e){}
+    const onTab=!go || cur===go || (n>14 && !cur);
+    const quick=(doc.body ? doc.body.textContent.length : 0)+':'+doc.getElementsByTagName('*').length;
+    if(quick!==fr._quick && n<40){ fr._quick=quick; stable=0; setTimeout(tick, 1000); return; }
+    let d=null; try{ d=extract(doc); }catch(e){}
     /* numbers still at zero across the board usually means the app hasn't filled them in yet */
     const bigs=d ? (d.cards||[]).map(c=>c.big).filter(Boolean).concat(d.figs.map(f=>f.v)) : []; const zeroish=bigs.filter(v=>/^[−\-+]?\$?0(\.0+)?%?$/.test(String(v).trim()));
     if(n<32 && bigs.length>=2 && zeroish.length===bigs.length){ stable=0; setTimeout(tick, 1000); return; }
     if(onTab && hasData(d)){ const sg=JSON.stringify([d.figs, d.gauges, d.cards, d.secs]); if(sg===last) stable++; else { stable=0; last=sg; } if(stable>=2 && n>=6){ store(go, d); snapSys(q0.k, doc); next(); return; } }
     if(n<45 && (n<22 || hasData(d))) setTimeout(tick, 1000); else { store(go, onTab && hasData(d) ? d : null); next(); } };
   setTimeout(tick, 2500); }
-document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) pump(); });
+document.addEventListener('visibilitychange', ()=>pump());
 function snapSys(k, doc){ if(!doc) return; const nav=readNav(doc); const pg=curNav(doc), sc=readSecs(doc); const old=counts[k]||{}; const sec=Object.assign({}, old.sec||{}); if(pg && Object.keys(sc).length) sec[pg]=sc; if(!Object.keys(nav).length && !(pg && Object.keys(sc).length)) return; counts[k]={at:Date.now(), nav:Object.keys(nav).length ? nav : (old.nav||{}), sec}; try{ localStorage.setItem(CK, JSON.stringify(counts)); }catch(e){} try{ window.dispatchEvent(new Event('hq:counts')); }catch(e){} }
 function storeCounts(k, nav){ if(!nav || !Object.keys(nav).length) return; counts[k]=Object.assign({}, counts[k]||{}, {at:Date.now(), nav}); try{ localStorage.setItem(CK, JSON.stringify(counts)); }catch(e){} try{ window.dispatchEvent(new Event('hq:counts')); }catch(e){} }
 function countFor(k, go, sec){ const c=counts[k]; if(!c || !go) return null; if(sec){ const s=c.sec && c.sec[go] && c.sec[go][sec]; return s ? {n:s.n, x:s.x, at:c.at} : null; } if(!c.nav || !Object.prototype.hasOwnProperty.call(c.nav, go)) return null; return {n:c.nav[go], at:c.at}; }
@@ -4555,7 +4653,7 @@ function tileEditor(cfg, i, L, inEdit){
         const opt=(on, label, val, unit, note, fn)=>{ const b=btn('nx-topt'+(on?' on':''), null, ()=>{ fn(); draw(); }); const t=h('span','t',label); b.appendChild(t); if(val){ const v=h('span','v'); v.appendChild(h('b',null,val)); if(unit) v.appendChild(h('small',null,unit)); b.appendChild(v); } if(note) b.appendChild(h('span','n',note)); g.appendChild(b); };
         if(d.figs.length || d.gauges.length) opt(!cur, 'Headline Numbers', d.figs[0] ? d.figs[0].v : (d.gauges[0] ? d.gauges[0].p+'%' : ''), d.figs[0] ? d.figs[0].n : (d.gauges[0]?d.gauges[0].n:''), (d.figs.length+d.gauges.length)+' numbers'+(d.gauges.length?' and gauges':'')+' from this page', ()=>{ work.card='#num'; });
         d.cards.filter(goodCard).forEach(c=>opt(cur===c, c.t, c.big||'', c.unit||'', c.rows && c.rows.length ? c.rows.length+' rows'+(c.groups?' · by status':'') : c.text ? c.text.slice(0,60) : c.sub ? c.sub.slice(0,60) : '', ()=>{ work.card=c.t; work.sec=''; }));
-        if(!g.childNodes.length) s2.appendChild(h('div','nx-tedw8', d.empty ? 'This page has no numbers to show. Pick another page above.' : 'Nothing to pick on this page yet.'));
+        if(!g.childNodes.length) s2.appendChild(h('div','nx-tedw8', d.empty ? 'Nothing is on this page right now, so the tile will say so. When something shows up there, it’ll appear here too.' : 'Nothing to pick on this page yet.'));
         else s2.appendChild(g);
         if(!cur && (d.figs.length + d.gauges.length)>1){ const s3=sec('3. Numbers to Include', 'Tick the ones you want. None ticked means all of them, in order.'); const ch=h('div','nx-tchk'); const pk=Array.isArray(work.pick) ? work.pick : (work.pick=[]);
           d.figs.map(f=>['f:'+f.n, f.n, f.v]).concat(d.gauges.map(gg=>['g:'+gg.n, gg.n+' gauge', gg.p+'%'])).forEach(([k,l,v])=>{ const b=btn(pk.indexOf(k)>=0?'on':'', null, ()=>{ const i2=pk.indexOf(k); if(i2>=0) pk.splice(i2,1); else pk.push(k); draw(); }); b.appendChild(h('i')); b.appendChild(h('span',null,l)); b.appendChild(h('b',null,v)); ch.appendChild(b); }); s3.appendChild(ch); } } }
@@ -4817,7 +4915,7 @@ function sysMeta(cfg){ const x=X(); const s=x && x.SYS.find(z=>z.k===cfg.s); if(
     else if(F.length){ lead.appendChild(figEl(F[0], true)); F=F.slice(1); }
     else if(G.length && small){ lead.appendChild(gaugeEl(G[0], false)); }
     else if(!d){ lead.appendChild(h('div','st-sub', cfg.go ? 'Getting the numbers from '+cfg.go+'…' : 'Getting the numbers…')); }
-    else if(d.empty){ lead.appendChild(h('div','st-sub', (cfg.go ? cfg.go+' has' : 'This page has')+' no headline numbers to show. Pick another page in this tile’s settings, or open it from here.')); }
+    else if(d.empty){ const b0=h('div','st-big'); b0.append('0'); b0.appendChild(h('small',null,'waiting')); lead.appendChild(b0); lead.appendChild(h('div','st-sub', 'Nothing on '+(cfg.go || (x.SHORT[s.k]||s.n))+' right now.')); }
     else lead.appendChild(h('div','st-sub', s.d));
     head.appendChild(lead); el.appendChild(head);
     if(!small){
@@ -4863,7 +4961,8 @@ function openCatalog(){
   const ft=h('div','hqx-ft'); const d=btn('btn','Done', close); ft.appendChild(d); box.appendChild(ft);
   ov.appendChild(box); ov.addEventListener('click', e=>{ if(e.target===ov) close(); }); document.body.appendChild(ov);
 }
-window.addEventListener('hq:counts', ()=>{ if(ui.on && viewKind()==='day' && !dashEdit && !tdrag) paint(); });
+/* new numbers from a system: redraw the dashboard once they've stopped arriving, not for every one */
+let countsT=null; window.addEventListener('hq:counts', ()=>{ clearTimeout(countsT); countsT=setTimeout(()=>{ if(ui.on && viewKind()==='day' && !dashEdit && !tdrag && !busy()) paint(); }, 1200); });
 
 /* ---------- email and people, shared by My Day, Inbox and People ---------- */
 const X=()=>window.__hqx;
@@ -5350,7 +5449,7 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-sysb{display:flex;gap:16px;align-items:center;min-width:0}
 .nx-sysh{display:flex;gap:14px;align-items:center;min-width:0}
 .nx-sym.sm{width:52px;height:52px;padding:9px;border-radius:12px}
-.nx-syl{flex:1;min-width:0}
+.nx-syl{flex:1;min-width:0;container-type:inline-size}.nx-syl .nx-fg.big b{font-size:min(34px,15.5cqi)}.nx-syl .st-big{font-size:min(40px,18cqi)}
 .nx-fg{display:flex;flex-direction:column;gap:1px;min-width:0}
 .nx-fg b{font-size:20px;font-weight:800;letter-spacing:-.01em;color:#fff;white-space:nowrap}
 .nx-fg span{font-size:12px;font-weight:600;color:rgba(255,255,255,.72);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -5402,10 +5501,15 @@ html.nx-tdragging .nx-tiles .st-tile{animation:none!important}
 .nx-tedg .st-tile.sz-s{grid-column:span 1}.nx-tedg .st-tile{animation:none!important}
 .nx-teds{margin-bottom:16px}.nx-teds h3{margin:0 0 2px;font-size:14px;color:var(--ink)}.nx-teds>p{margin:0 0 8px;font-size:12px;color:var(--ink-3)}
 .nx-tedw8{padding:12px;border:1px dashed var(--border-strong);border-radius:8px;font-size:12.5px;color:var(--ink-2)}
-.nx-topts{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.nx-topts{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
 .nx-topt{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:78px;padding:9px 11px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);font:inherit;text-align:left;color:var(--ink);cursor:pointer}
 .nx-topt:hover{border-color:var(--border-strong)}.nx-topt.on{border-color:var(--c1);background:var(--sky-wash);box-shadow:inset 0 0 0 1px var(--c1)}
-.nx-topt .t{font-size:12.5px;font-weight:700}.nx-topt .v b{font-size:20px;font-weight:800;color:var(--ink)}.nx-topt .v small{margin-left:5px;font-size:11px;color:var(--ink-3)}.nx-topt .n{font-size:11px;color:var(--ink-3);line-height:1.3}
+.nx-topt{min-width:0;overflow:hidden}
+.nx-topt .t{max-width:100%;font-size:12.5px;font-weight:700;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.nx-topt .v{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:5px;max-width:100%;min-width:0}
+.nx-topt .v b{max-width:100%;font-size:18px;font-weight:800;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nx-topt .v small{min-width:0;max-width:100%;font-size:11px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nx-topt .n{max-width:100%;font-size:11px;color:var(--ink-3);line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
 .nx-tchk{display:flex;flex-wrap:wrap;gap:6px}.nx-tchk button{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font:inherit;font-size:12.5px;color:var(--ink);cursor:pointer}
 .nx-tchk i{width:14px;height:14px;border:1.5px solid var(--border-strong);border-radius:3px}.nx-tchk button.on{border-color:var(--c1);background:var(--sky-wash)}.nx-tchk button.on i{background:var(--c1);border-color:var(--c1)}.nx-tchk b{font-size:12px;color:var(--ink-3)}
 .nx-tseg{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));border:1px solid var(--border);border-radius:8px;overflow:hidden}
