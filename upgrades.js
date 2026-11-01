@@ -99,6 +99,9 @@
 
 
 
+
+
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -373,6 +376,21 @@ function readCards(doc){
     seen.add(title); used.push(card); c.y=y; c.x=x; picked.push(c); });
   picked.sort((a,b)=>(Math.round(a.y/30)-Math.round(b.y/30)) || (a.x-b.x)); picked.forEach(c=>{ delete c.y; delete c.x; out.push(c); });
   return out; }
+/* Meeting Trackers' Today strip, read as what it is: the day, each meeting with its time, and
+   when nothing is on, the next day that has something and which groups meet then */
+function readMtToday(doc){
+  const box=doc.querySelector('.today:not([hidden])'); if(!box) return null;
+  const inr=box.querySelector('.td-in'); if(!inr) return null;
+  const tx=e=>e ? cleanT(e.textContent||'') : '';
+  const head=tx(inr.querySelector('.td-l b'));
+  const mtg=[...box.querySelectorAll('.td-m .td-i')].slice(0,12).map(w=>({tm:tx(w.querySelector('.td-t')), n:tx(w.querySelector('.td-n')), x:/cancel/i.test(tx(w.querySelector('.td-st')))?1:0})).filter(m=>m.n);
+  const none=box.querySelector('.td-m .td-none'); let nxt=null;
+  if(none){ const all=tx(none), b=none.querySelector('b'), m=/\u2014\s*(\d+)\s+meetings?:\s*(.+)$/.exec(all);
+    if(b) nxt={day:tx(b), n:m?+m[1]:0, names:m?m[2].replace(/\s+and\s+\d+\s+more\s*$/,'').split(/,\s*/).filter(Boolean):[]}; }
+  if(!head && !mtg.length && !none) return null;
+  const text=none ? tx(none) : mtg.map(m=>(m.tm?m.tm+' ':'')+m.n).join(' \u00b7 ');
+  return {t:'Today', k:'', head, text, mtg, nxt, mt:1};
+}
 /* a page built around a list (Square Payments, invoices, requests …): what it is, how many, the money in it,
    where things stand, and the latest few rows */
 function readTables(doc){ const out=[]; const vis=e=>e && e.offsetParent!==null;
@@ -402,7 +420,8 @@ function readTables(doc){ const out=[]; const vis=e=>e && e.offsetParent!==null;
     out.push(c); });
   return out; }
 function extract(doc){
-  const win=doc.defaultView; const out={figs:[], gauges:[], cards:[], secs:readSecs(doc), at:Date.now()}; try{ out.cards=readCards(doc); }catch(e){} try{ readTables(doc).forEach(c=>{ if(!out.cards.some(z=>z.t===c.t)) out.cards.unshift(c); }); }catch(e){}
+  const win=doc.defaultView; const out={figs:[], gauges:[], cards:[], secs:readSecs(doc), at:Date.now()}; try{ out.cards=readCards(doc); }catch(e){}
+  try{ const mt=readMtToday(doc); if(mt){ out.cards=out.cards.filter(c=>c.t!=='Today'); out.cards.unshift(mt); } }catch(e){} try{ readTables(doc).forEach(c=>{ if(!out.cards.some(z=>z.t===c.t)) out.cards.unshift(c); }); }catch(e){}
   const vis=e=>e.offsetParent!==null;
   let GL=pick(doc,'[role=meter],[class*="gauge"]').filter(g=>g.getAttribute('role')==='meter' || String(g.className||'').split(/\s+/).some(c=>/^gauge([-_](card|box|item|tile))?$/.test(c)));
   if(!GL.length) GL=pick(doc,'[class*="gauge"]').filter(g=>!g.querySelector('[class*="gauge"]'));
@@ -4984,10 +5003,70 @@ function pickCard(cfg, d){ if(!d || !Array.isArray(d.cards) || !d.cards.length) 
   const withBig=real.find(c=>c.big); if(withBig) return withBig;
   if(d.figs.length) return null;
   return d.cards.find(goodCard) || null; }
+/* ---------- Meeting Trackers' day, drawn as a day: a calendar leaf, the meetings in time order
+   with a live "On Now / in 20 min" beside each, and on a quiet day who meets next ---------- */
+const ETF=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York', weekday:'long', month:'long', day:'numeric', hour:'numeric', minute:'2-digit', hourCycle:'h23'});
+function etNowParts(){ const o={}; ETF.formatToParts(new Date()).forEach(p=>o[p.type]=p.value); return {label:o.weekday+', '+o.month+' '+o.day, mins:(+o.hour%24)*60+(+o.minute)}; }
+function mtSpan(t){ const m=/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?\s*[–\-]\s*(\d{1,2})(?::(\d{2}))?\s*(AM|PM)$/i.exec(String(t||'').trim()); if(!m) return null;
+  const ap2=m[6].toUpperCase(), ap1=(m[3]||ap2).toUpperCase(); const cv=(hh,mi,ap)=>{ hh=+hh%12; if(ap==='PM') hh+=12; return hh*60+(+mi||0); };
+  let a=cv(m[1],m[2],ap1); const b=cv(m[4],m[5],ap2); if(!m[3] && a>b) a-=720; return [a,b]; }
+function mtStatus(r, mins){ const a=+r.dataset.a, b=+r.dataset.b; if(!isFinite(a) || !isFinite(b) || r.dataset.today!=='1') return null;
+  if(r.classList.contains('x')) return {k:'x', t:'Cancelled'};
+  if(mins>=b) return {k:'done', t:'Done'}; if(mins>=a) return {k:'now', t:'On Now'};
+  const dd=a-mins; return dd<=90 ? {k:'soon', t:dd<=1?'Starting':'in '+(dd>=60 ? Math.floor(dd/60)+'h'+(dd%60?' '+dd%60+'m':'') : dd+' min')} : {k:'later', t:''}; }
+function mtTick(){ const n=etNowParts(); document.querySelectorAll('.mtd-r[data-a]').forEach(r=>{ const st=mtStatus(r, n.mins); if(!st) return; r.classList.toggle('now', st.k==='now'); r.classList.toggle('done', st.k==='done'); const sp=r.querySelector('.st'); if(sp){ sp.textContent=st.t; sp.hidden=!st.t; } });
+  document.querySelectorAll('.mtd').forEach(w=>{ const on=w.querySelectorAll('.mtd-r.now').length, pill=w.closest('.st-tile') && w.closest('.st-tile').querySelector('.st-pill'); if(pill){ pill.textContent=on ? 'On Now' : 'Today'; pill.classList.toggle('live', !!on); } }); }
+let mtTimer=0;
+const mtShortDay=s=>{ const m=/^(\w{3})\w*,\s+(\w{3})\w*\s+(\d+)/.exec(s||''); return m ? m[1]+', '+m[2]+' '+m[3] : s; };
+const mtInit=n=>{ const w=String(n).replace(/[^A-Za-z0-9 ]/g,' ').split(/\s+/).filter(Boolean); return ((w[0]||'?')[0]+((w[1]||'')[0]||'')).toUpperCase(); };
+function mtDay(el, top, c, SZ, s, cfg, d){
+  if(s.k!=='meeting-trackers' && !c.mt) return false;
+  let mtg=Array.isArray(c.mtg) ? c.mtg : [], nxt=c.nxt || null;
+  if(!c.mt){ const m=/^No workgroup meetings today\.\s*Next up\s+(.+?)\s+—\s+(\d+)\s+meetings?:\s*(.+)$/i.exec(c.text||'');
+    if(m) nxt={day:m[1], n:+m[2], names:m[3].replace(/\s+and\s+\d+\s+more\s*$/,'').split(/,\s*/)};
+    else if(!/^No workgroup meetings/i.test(c.text||'')) return false; }
+  const now=etNowParts(), isToday=!c.head || c.head===now.label;
+  const small=SZ==='s', cap=small?0:SZ==='b'?8:SZ==='t'?6:3;
+  const pill=h('span','st-pill','Today'); top.appendChild(pill);
+  const w=h('div','mtd'+(small?' sm':''));
+  const dm=/^(\w+),\s+(\w+)\s+(\d+)/.exec(c.head||now.label) || [];
+  const cal=h('div','mtd-cal'); cal.appendChild(h('i',null,(dm[2]||'').slice(0,3).toUpperCase())); cal.appendChild(h('b',null,dm[3]||'')); cal.appendChild(h('small',null,(dm[1]||'').slice(0,3).toUpperCase())); w.appendChild(cal);
+  const mn=h('div','mtd-m'); w.appendChild(mn);
+  const live=mtg.filter(x=>!x.x);
+  if(mtg.length){
+    mn.appendChild(h('div','mtd-h', mtg.length+' meeting'+(mtg.length===1?'':'s')+(isToday?' today':' on '+mtShortDay(c.head))));
+    const sub=h('div','mtd-s'); mn.appendChild(sub);
+    const ls=h('div','mtd-ls'); let firstUp=null;
+    mtg.forEach((x,i)=>{ const sp=mtSpan(x.tm); const r=h('div','mtd-r'+(x.x?' x':'')); if(sp){ r.dataset.a=sp[0]; r.dataset.b=sp[1]; } r.dataset.today=isToday?'1':'0';
+      r.appendChild(h('span','tm', x.tm || '—')); r.appendChild(h('span','nm', x.n)); const st=h('span','st'); st.hidden=true; r.appendChild(st);
+      const ss=mtStatus(r, now.mins); if(ss){ r.classList.toggle('now', ss.k==='now'); r.classList.toggle('done', ss.k==='done'); st.textContent=ss.t; st.hidden=!ss.t; if(!firstUp && (ss.k==='soon'||ss.k==='later')) firstUp=x; }
+      ls.appendChild(r); });
+    /* the rows that matter now: from the first one not yet over, with a finished one above it when there is room */
+    const rows=[...ls.children], fnd=rows.findIndex(r=>!r.classList.contains('done') && !r.classList.contains('x')), st0=Math.max(0, Math.min(fnd<0?rows.length:fnd, rows.length-cap));
+    rows.forEach((r,i)=>{ r.hidden=!(i>=st0 && i<st0+cap); });
+    const later=Math.max(0, rows.length-st0-cap), earlier=st0;
+    const onN=ls.querySelectorAll('.mtd-r.now').length;
+    sub.innerHTML=''; if(onN){ sub.appendChild(h('b',null,onN+' on now')); sub.append(firstUp ? ' · next at '+String(firstUp.tm).replace(/[–\-].*$/,'') : ''); }
+    else if(firstUp) sub.append('Next at '+String(firstUp.tm).replace(/[–\-].*$/,'')+' · '+firstUp.n);
+    else sub.append(live.length ? 'All done for today' : 'All cancelled today');
+    if(onN){ pill.textContent='On Now'; pill.classList.add('live'); }
+    if(cap){ if(later || earlier){ const mo=h('div','mtd-more',[later ? '+'+later+' more later' : '', earlier ? earlier+' earlier' : ''].filter(Boolean).join(' \u00b7 ')); ls.appendChild(mo); } mn.appendChild(ls); }
+  } else {
+    mn.appendChild(h('div','mtd-h','No meetings today'));
+    if(nxt){ const tm=new Date(Date.now()+864e5), tmo=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York', weekday:'long', month:'long', day:'numeric'}).format(tm).replace(/^(\w+)\s/,'$1, ');
+      const sub=h('div','mtd-s'); sub.append('Next up '); sub.appendChild(h('b',null, nxt.day===tmo ? 'tomorrow' : mtShortDay(nxt.day))); sub.append(' · '+nxt.n+' meeting'+(nxt.n===1?'':'s')); mn.appendChild(sub);
+      if(cap && nxt.names && nxt.names.length){ const cp=h('div','mtd-chips'); nxt.names.slice(0,cap).forEach(n=>{ const ch=h('span','mtd-chip'); ch.title=n; ch.appendChild(h('i',null,mtInit(n))); ch.appendChild(h('span',null,n)); cp.appendChild(ch); }); if(nxt.n>Math.min(cap,nxt.names.length)) cp.appendChild(h('span','mtd-chip more','+'+(nxt.n-Math.min(cap,nxt.names.length)))); mn.appendChild(cp); } }
+    else mn.appendChild(h('div','mtd-s','Nothing scheduled in the next two weeks'));
+  }
+  el.appendChild(w);
+  const nt=h('div','st-next'); nt.append((X().SHORT[s.k]||s.n)+(d && d.at ? ' · '+X().ago(d.at) : '')); nt.appendChild(h('b','opn',' Open →')); el.appendChild(nt);
+  if(!mtTimer) mtTimer=setInterval(mtTick, 30000);
+  return true; }
 function drawCard(el, top, c, SZ, lvl, s, cfg, d){ const x=X(), det=lvl==='det', small=SZ==='s', tall=SZ==='t'||SZ==='b';
   if(c.k && /^(#|rgb|hsl|var)/.test(c.k)) el.style.setProperty('--k', c.k);
   /* a page's day strip ("Today · Sunday, November 1 · No workgroup meetings today…") keeps the system's name on top */
   const dayStrip=/^(today|this week|the week ahead)$/i.test(c.t);
+  if(dayStrip && mtDay(el, top, c, SZ, s, cfg, d)) return;
   if(dayStrip){ top.appendChild(h('span','st-pill', c.t)); if(c.head) el.appendChild(h('div','nx-chd', c.head)); if(c.text) el.appendChild(h('div','nx-ctx nx-day', c.text)); const nt=h('div','st-next'); nt.append((x.SHORT[s.k]||s.n)+(cfg.go?' · '+cfg.go:'')+(d && d.at ? ' · '+x.ago(d.at) : '')); nt.appendChild(h('b','opn',' Open →')); el.appendChild(nt); return; }
   top.firstChild.textContent=c.t;
   if(c.pill) top.appendChild(h('span','st-pill'+(c.hot?' hot':''), c.pill));
@@ -5565,6 +5644,37 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-sysh{display:flex;gap:14px;align-items:center;min-width:0}
 .nx-sym.sm{width:52px;height:52px;padding:9px;border-radius:12px}
 .nx-syl{flex:1;min-width:0;container-type:inline-size}
+.mtd{display:flex;gap:14px;align-items:flex-start;min-width:0;min-height:0}
+.mtd-cal{flex:0 0 60px;border-radius:11px;overflow:hidden;text-align:center;background:rgba(255,255,255,.07);border:1px solid color-mix(in srgb,var(--k,#74bfeb) 50%,transparent);box-shadow:0 8px 18px -12px var(--k,#74bfeb)}
+.mtd-cal i{display:block;font-style:normal;font-size:10px;font-weight:800;letter-spacing:.14em;padding:3px 0 2px;background:var(--k,#74bfeb);color:#14203a}
+.mtd-cal b{display:block;font-size:27px;font-weight:800;line-height:1.05;padding-top:5px;color:#fff;font-variant-numeric:tabular-nums}
+.mtd-cal small{display:block;font-size:9.5px;font-weight:700;letter-spacing:.14em;color:rgba(255,255,255,.62);padding:1px 0 6px}
+.mtd-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.st-tile:has(.mtd){gap:8px}
+.mtd-h{font-size:19px;font-weight:800;line-height:1.15;color:#fff;letter-spacing:-.01em}
+.mtd-s{font-size:12.5px;line-height:1.4;color:rgba(255,255,255,.72);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mtd-s b{color:var(--k,#74bfeb);font-weight:700}
+.mtd-ls{display:flex;flex-direction:column;gap:4px;margin-top:3px;min-width:0}
+.mtd-r{display:flex;align-items:center;gap:10px;min-width:0;padding:4px 9px;border-radius:7px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);font-size:13px;transition:background .3s,border-color .3s,opacity .3s}
+.mtd-r[hidden]{display:none}
+.mtd-r .tm{flex:0 0 auto;min-width:76px;font-size:11.5px;font-weight:700;color:var(--k,#74bfeb);font-variant-numeric:tabular-nums;white-space:nowrap}
+.mtd-r .nm{flex:1;min-width:0;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mtd-r .st{flex:0 0 auto;font-size:9.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:2px 7px;border-radius:5px;background:rgba(255,255,255,.13);color:rgba(255,255,255,.85);white-space:nowrap}
+.mtd-r .st[hidden]{display:none}
+.mtd-r.now{background:color-mix(in srgb,var(--k,#74bfeb) 22%,transparent);border-color:var(--k,#74bfeb)}
+.mtd-r.now .st{display:inline-flex;align-items:center;gap:5px;background:var(--k,#74bfeb);color:#14203a}
+.mtd-r.now .st::before{content:"";width:6px;height:6px;border-radius:50%;background:#14203a;animation:mtdPulse 1.8s ease-in-out infinite}
+.mtd-r.done{opacity:.45}.mtd-r.x{opacity:.45}.mtd-r.x .nm{text-decoration:line-through}
+.mtd-more{font-size:11.5px;font-weight:700;color:rgba(255,255,255,.6);padding-left:9px}
+.mtd-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px;min-width:0}
+.mtd-chip{display:inline-flex;align-items:center;gap:7px;max-width:100%;min-width:0;padding:2px 11px 2px 2px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);font-size:12.5px;color:#fff}
+.mtd-chip>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.mtd-chip i{flex:0 0 22px;height:22px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:9.5px;font-weight:800;letter-spacing:.02em;background:color-mix(in srgb,var(--k,#74bfeb) 40%,transparent);color:#fff}
+.mtd-chip.more{padding:3px 10px;font-weight:700;color:rgba(255,255,255,.7)}
+.mtd.sm{gap:11px}.mtd.sm .mtd-cal{flex-basis:50px}.mtd.sm .mtd-cal b{font-size:22px}.mtd.sm .mtd-h{font-size:15.5px}
+.st-pill.live{background:var(--k,#74bfeb);color:#14203a}
+@keyframes mtdPulse{0%,100%{opacity:1}50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.mtd-r.now .st::before{animation:none}}
 .nx-day{font-size:14px;line-height:1.45;color:rgba(255,255,255,.85);display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
 .nx-skel{display:flex;flex-direction:column;gap:7px;padding:2px 0}.nx-skel i{display:block;height:12px;border-radius:4px;background:linear-gradient(90deg,rgba(255,255,255,.07),rgba(255,255,255,.16),rgba(255,255,255,.07));background-size:200% 100%;animation:nxsk 1.4s ease-in-out infinite}.nx-skel .a{width:55%;height:30px}.nx-skel .b{width:80%}.nx-skel .c{width:40%}@keyframes nxsk{0%{background-position:100% 0}100%{background-position:-100% 0}}@media (prefers-reduced-motion:reduce){.nx-skel i{animation:none}}.nx-syl .nx-fg.big b{font-size:min(34px,15.5cqi)}.nx-syl .st-big{font-size:min(40px,18cqi)}
 .nx-fg{display:flex;flex-direction:column;gap:1px;min-width:0}
