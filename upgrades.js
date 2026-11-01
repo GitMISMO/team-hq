@@ -117,6 +117,10 @@
 
 
 
+
+
+
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -4657,8 +4661,11 @@ function sizeOf(cfg, i, L){ if(cfg.sz) return cfg.sz; if(cfg.w===2) return 'w';
   if(cfg.t==='sys'){ const n=L.slice(0,i).filter(z=>z.t==='sys').length; return ['s','w','t','s','b','s','w'][n%7]; }
   return MIXDEF[cfg.t] || 's'; }
 function pinTile(k, go){ const L=dashLayout(); const i=L.findIndex(z=>z.t==='sys' && z.s===k && (z.go||'')===(go||'')); const had=i>=0; const t=had ? L.splice(i,1)[0] : {t:'sys', s:k, go:go||''}; L.splice(0,0,t); saveDash(L); toast((had?'Moved to the top of your dashboard':'Added to your dashboard')+(go?': '+go:''), null); if(viewKind()==='day' && !dashEdit) paint(); }
-function openSystem(k, go, sec, cfg){ const x=X(); if(cfg && cfg.open==='tab'){ const s=x && x.SYS.find(z=>z.k===k); if(s){ let u=s.u; try{ u=new URL(s.u, document.baseURI).href; }catch(e){} window.open(u, '_blank', 'noopener'); return; } } if(x && x.openSys) x.openSys(k, go, {onPin:pinTile, sec:sec||''}); }
-const opnTxt=cfg=>cfg && cfg.open==='tab' ? ' Open ↗' : ' Open →';
+const sysOpenAll=()=>{ const v=(S.bset||{}).hqSysOpen; return v==='tab'||v==='hq' ? v : 'tile'; };
+const opensInTab=cfg=>{ const g=sysOpenAll(); return g==='tile' ? !!(cfg && cfg.open==='tab') : g==='tab'; };
+function setSysOpenAll(v){ if(!S.bset) S.bset={}; if(v==='tile') delete S.bset.hqSysOpen; else S.bset.hqSysOpen=v; try{ window.__saveMine && window.__saveMine(); }catch(e){} toast(v==='tab' ? 'Every system tile now opens in a new tab' : v==='hq' ? 'Every system tile now opens in Team HQ' : 'Each system tile opens its own way — set it in the tile’s gear'); paint(); }
+function openSystem(k, go, sec, cfg){ const x=X(); if(opensInTab(cfg)){ const s=x && x.SYS.find(z=>z.k===k); if(s){ let u=s.u; try{ u=new URL(s.u, document.baseURI).href; }catch(e){} window.open(u, '_blank', 'noopener'); return; } } if(x && x.openSys) x.openSys(k, go, {onPin:pinTile, sec:sec||''}); }
+const opnTxt=cfg=>opensInTab(cfg) ? ' Open ↗' : ' Open →';
 const em=t=>{ const e=h('em'); e.textContent=t; return e; };
 function vDash(){
   const now=new Date(), hr=now.getHours();
@@ -4671,6 +4678,7 @@ function vDash(){
   const r=h('div','nx-dvr');
   if(dashEdit){ r.appendChild(btn('nx-mini', '+ Add a Tile', openCatalog));
     const mx=h('div','nx-seg'); [['mix','Mixed Sizes'],['same','All the Same']].forEach(([k,l])=>mx.appendChild(btn('nx-sg'+((dashMixed()?'mix':'same')===k?' on':''), l, ()=>{ dashMixEdit=k==='mix'; dashEdit.forEach(z=>{ delete z.sz; delete z.w; }); paint(); }))); r.appendChild(mx);
+    { const so=h('div','nx-seg nx-sysopen'); so.title='How system tiles open when you click them'; so.appendChild(h('span','nx-sgl','System Tiles Open')); [['hq','In Team HQ'],['tab','In a New Tab'],['tile','Each Tile']].forEach(([k,l])=>so.appendChild(btn('nx-sg'+(sysOpenAll()===k?' on':''), l, ()=>{ if(sysOpenAll()!==k) setSysOpenAll(k); }))); r.appendChild(so); }
     r.appendChild(btn('nx-mini', 'Shuffle Sizes', ()=>{ dashMixEdit=true; const pool=['s','s','w','t','b','w','s','t']; dashEdit.forEach(z=>{ delete z.w; z.sz=pool[Math.floor(Math.random()*pool.length)]; }); paint(); }));
     r.appendChild(btn('nx-mini', 'Reset', ()=>{ dashEdit=dashDefault(); dashMixEdit=null; paint(); }));
     r.appendChild(btn('nx-mini', 'Cancel', ()=>{ dashEdit=null; dashMixEdit=null; paint(); })); r.appendChild(btn('nx-mini pri', 'Save Layout', ()=>{ saveDash(dashEdit); dashEdit=null; dashMixEdit=null; toast('Your dashboard is saved', null); paint(); })); }
@@ -4882,7 +4890,7 @@ function tileEditor(cfg, i, L, inEdit){
     const sz=sizeOf(work, 0, [work]);
     const s4=sec(sysS ? (x && x.sysData(sysS.k, work.go||'') && !pickCard(work, x.sysData(sysS.k, work.go||'')) && 1 ? 'Size' : 'Size') : 'Size'); s4.appendChild(seg([['s','Small','one box'],['w','Wide','two across'],['t','Tall','two down'],['b','Large','two by two']], sz, k=>{ delete work.w; work.sz=k; }));
     const s5=sec('How Much Detail'); s5.appendChild(seg([['hi','High Level','just the top — no list'],['det','Detailed','adds the list underneath']], lvlOf(work), k=>{ work.lvl=k; }));
-    if(sysS){ const s6=sec('When You Click It'); s6.appendChild(seg([['hq','Open in Team HQ','opens right here'],['tab','Open in a New Tab','the system on its own']], work.open==='tab'?'tab':'hq', k=>{ if(k==='tab') work.open='tab'; else delete work.open; })); }
+    if(sysS){ const g=sysOpenAll(); if(g==='tile'){ const s6=sec('When You Click It'); s6.appendChild(seg([['hq','Open in Team HQ','opens right here'],['tab','Open in a New Tab','the system on its own']], work.open==='tab'?'tab':'hq', k=>{ if(k==='tab') work.open='tab'; else delete work.open; })); } else { sec('When You Click It', 'Every system tile is set to open '+(g==='tab'?'in a new tab':'in Team HQ')+'. To choose tile by tile, use Customize → System Tiles Open → Each Tile.'); } }
   }
   const close=()=>{ ov.remove(); document.removeEventListener('keydown', esc); window.removeEventListener('hq:counts', onData); };
   const commit=()=>{ if(inEdit) paint(); else { saveDash(L); paint(); } };
@@ -5051,16 +5059,19 @@ function tile(cfg, i, L){
     meta.go=()=>openClassic('mine'); }
   else if(cfg.t==='findtime'){ const ids=ftIds(cfg); const mins=cfg.mins||30;
     const row=h('div','nx-avrow'); let free=0; ids.forEach(id=>{ const pp=person(id); if(!pp) return; const s2=statusOf(pp); if(s2.k==='free') free++; const w=h('span','nx-avw'); w.appendChild(av(id, tall?34:28)); w.appendChild(h('i','nx-dot '+s2.k)); w.title=pp.name+' · '+s2.t+(s2.s?' '+s2.s:''); row.appendChild(w); });
-    if(!dashEdit){ const pk=btn('nx-ftpk', null, e=>{ e.stopPropagation(); ftPick(cfg, L); }); pk.innerHTML=ic('plus')+'<span>'+(cfg.who && cfg.who.length ? 'Change' : 'Pick People')+'</span>'; pk.title='Pick who this tile finds a time with'; row.appendChild(pk); }
+    if(!dashEdit){ const pk=btn('nx-ftpk', null, e=>{ e.stopPropagation(); ftPick(cfg, L); }); pk.textContent=(cfg.who && cfg.who.length ? 'Change People' : 'Pick People'); pk.title='Pick who this tile finds a time with'; row.appendChild(pk); }
     el.appendChild(row);
     const slot=nextShared([me()].concat(ids), mins);
     const b=h('div','nx-ftv'); b.appendChild(h('small',null, !slot ? 'Next time you’re free together' : slot.n===slot.of ? 'Next time you’re all free' : 'Best time in the next two weeks')); b.appendChild(h('b',null, slot ? WDL[new Date(slot.t).getDay()]+', '+MON[new Date(slot.t).getMonth()]+' '+new Date(slot.t).getDate()+' at '+tmL(slot.t) : 'Calendars aren’t in yet')); if(slot && slot.n<slot.of) b.appendChild(h('span',null, slot.n+' of '+slot.of+' free — not '+slot.out.map(first).join(', ')));
     if(slot && x && x.ACT && x.ACT.on && !dashEdit){ const bk=btn('nx-mini pri nx-ftb','Book It', e=>{ e.stopPropagation(); x.bookDialog({subject:'MISMO Meeting', start:slot.t, mins, who:ids}); }); bk.title='Book this time in Outlook and invite everyone'; b.appendChild(bk); }
     el.appendChild(b);
+    /* Tall and Large have room for the next few times too */
+    if(tall && slot && slot.n===slot.of){ const more=freeTimes([me()].concat(ids), mins, SZ==='b'?6:4).list.filter(z=>z.t!==slot.t).slice(0, SZ==='b'?4:2);
+      if(more.length){ const ls=h('div','nx-kl2 nx-ftmore'); ls.appendChild(h('small','nx-ftml','Also free')); more.forEach(z=>{ const d0=new Date(z.t); const r=h('div','kr'); r.appendChild(h('b',null, WD[d0.getDay()]+' '+MON[d0.getMonth()]+' '+d0.getDate())); r.appendChild(h('span',null, tmL(z.t)+' – '+tmL(z.e))); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) ftDialog(cfg, L); }); ls.appendChild(r); }); el.appendChild(ls); } }
     el.appendChild(h('div','st-next', free+' of '+ids.length+' free now · tap for more times'));
     meta.go=()=>ftDialog(cfg, L); }
   else if(cfg.t==='sys'){ meta.draw(el, top, SZ); }
-  if(cfg.t!=='sys' && lvlOf(cfg)==='hi'){ el.classList.add('lv-hi'); el.querySelectorAll('.nx-kl2,.nx-tl2,.nx-gaps,.mic-steps').forEach(z=>z.remove()); }
+  if(cfg.t!=='sys' && lvlOf(cfg)==='hi'){ el.classList.add('lv-hi'); el.querySelectorAll('.nx-kl2:not(.nx-ftmore),.nx-tl2,.nx-gaps,.mic-steps').forEach(z=>z.remove()); }
   el.addEventListener('click', e=>{ if(dashEdit || e.target.closest('button:not(.st-tile)')) return; go(); });
   el.addEventListener('keydown', e=>{ if((e.key==='Enter'||e.key===' ') && e.target===el && !dashEdit){ e.preventDefault(); go(); } });
   return el;
@@ -5538,6 +5549,7 @@ body.railmini .hq nav .nx-rl,body.railmini .hq nav .nx-rb.sub,body.railmini .nx-
 .nx-seg{display:flex;align-items:center;border:1px solid var(--border);border-radius:6px;background:var(--surface);overflow:hidden}
 .nx-sg{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 10px;border:0;border-right:1px solid var(--border);background:transparent;color:var(--ink-2);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap}
 .nx-sg:last-child{border-right:0}
+.nx-sgl{padding:0 10px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);border-right:1px solid var(--border);height:30px;display:inline-flex;align-items:center;white-space:nowrap}
 .nx-hr>.nx-sg{border:1px solid var(--border);border-radius:6px;background:var(--surface)}
 .nx-sg svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .nx-sg:hover{background:var(--surface-2);color:var(--ink)}
@@ -5731,9 +5743,10 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-sysh{display:flex;gap:14px;align-items:center;min-width:0}
 .nx-sym.sm{width:52px;height:52px;padding:9px;border-radius:12px}
 .nx-syl{flex:1;min-width:0;container-type:inline-size}
-.nx-ftpk{display:inline-flex;align-items:center;gap:4px;margin-left:4px;padding:4px 9px 4px 6px;border-radius:999px;border:1px dashed rgba(255,255,255,.35);background:transparent;color:rgba(255,255,255,.85);font:inherit;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap}
+.nx-ftpk{display:inline-flex;align-items:center;justify-content:center;text-align:center;line-height:1.2;margin-left:4px;padding:5px 10px;border-radius:6px;border:1px dashed rgba(255,255,255,.35);background:transparent;color:rgba(255,255,255,.85);font:inherit;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap}
 .nx-ftpk:hover{border-color:var(--k,#74bfeb);color:#fff}.nx-ftpk svg{width:12px;height:12px}
 .nx-ftd{width:min(560px,94vw)}
+.nx-ftml{display:block;font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.55);margin:2px 0 2px}.nx-ftmore .kr b{min-width:86px}
 .nx-ftdh h2{margin:0 0 4px}.nx-ftdh p{margin:0 0 12px;color:var(--ink-2);font-size:13.5px}
 .nx-ftdw{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px}
 .nx-ftc{display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 3px;border-radius:999px;background:var(--surface-2,#f6fafd);border:1px solid var(--border);font-size:13px;font-weight:600;color:var(--ink)}
