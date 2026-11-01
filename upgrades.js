@@ -4440,7 +4440,20 @@ function vDash(){
   const L=dashEdit || dashLayout();
   L.forEach((cfg, i)=>{ let el=null; try{ el=tile(cfg, i, L); }catch(e){ console.error(e); } if(el) grid.appendChild(el); });
   if(dashEdit){ const add=btn('nx-tadd', null, openCatalog); add.innerHTML='<b>+</b><span>Add a Tile</span>'; grid.appendChild(add); }
-  pg.appendChild(grid);
+  pg.appendChild(grid); packTiles(grid);
+}
+/* each tile takes the height it needs and no more, and the tiles around it fill in underneath,
+   so a Small tile never gets stretched to match a long tile beside it */
+let packRO=null;
+function packTiles(grid){
+  if(packRO){ packRO.disconnect(); packRO=null; }
+  grid.classList.add('nx-pack');
+  const ROW=6, GAP=14;
+  const fit=t=>{ if(!t.isConnected) return; const hgt=t.getBoundingClientRect().height; if(!hgt) return; const n=Math.max(1, Math.ceil((hgt+GAP)/ROW)); const v='span '+n; if(t.dataset.span!==v){ t.dataset.span=v; t.style.gridRow='auto / '+v; } };
+  const all=()=>[...grid.children].forEach(fit);
+  all(); requestAnimationFrame(all);
+  if(window.ResizeObserver){ packRO=new ResizeObserver(es=>es.forEach(e=>fit(e.target))); [...grid.children].forEach(t=>packRO.observe(t));
+    new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(nd=>{ if(nd.nodeType===1 && nd.parentNode===grid){ packRO && packRO.observe(nd); fit(nd); } }))).observe(grid, {childList:true}); }
 }
 function dashHero(now, hr){
   const hero=h('div','nx-hero');
@@ -4541,7 +4554,7 @@ function tileEditor(cfg, i, L, inEdit){
   const close=()=>{ ov.remove(); document.removeEventListener('keydown', esc); window.removeEventListener('hq:counts', onData); };
   const commit=()=>{ if(inEdit) paint(); else { saveDash(L); paint(); } };
   const ft=h('div','nx-tedf'); const fl=h('div','l'), fr=h('div','r');
-  if(sysS) fl.appendChild(btn('btn ghost', 'Add Another Tile from This App', ()=>{ L.splice(i+1, 0, {t:'sys', s:work.s}); close(); commit(); toast('Added a second '+(x.SHORT[sysS.k]||sysS.n)+' tile — click its gear to pick what it shows.'); }));
+  if(sysS) fl.appendChild(btn('btn ghost', 'Add Another Tile from This App', ()=>{ const nt={t:'sys', s:work.s}; L.splice(i+1, 0, nt); close(); commit(); setTimeout(()=>tileEditor(nt, i+1, L, inEdit), 60); }));
   fl.appendChild(btn('btn ghost danger', 'Take This Tile Off', ()=>{ L.splice(i,1); close(); commit(); toast('Tile taken off. Add it back any time from Customize.'); }));
   fr.appendChild(btn('btn ghost','Cancel', close));
   fr.appendChild(btn('btn','Save', ()=>{ Object.keys(cfg).forEach(k=>delete cfg[k]); Object.assign(cfg, work); if(Array.isArray(cfg.pick) && !cfg.pick.length) delete cfg.pick; close(); commit(); }));
@@ -4564,6 +4577,11 @@ function tileShell(cfg, meta, i, L){
   return el;
 }
 let tdrag=null;
+function dragReset(){ if(!tdrag && !document.documentElement.classList.contains('nx-tdragging')) return; tdrag=null; document.documentElement.classList.remove('nx-tdragging'); document.querySelectorAll('.st-tile.dragging').forEach(z=>z.classList.remove('dragging')); }
+/* mouse moves never arrive during a real drag, so one with no button held means a drag ended without telling us */
+document.addEventListener('mousemove', e=>{ if(tdrag && e.buttons===0) dragReset(); }, true);
+document.addEventListener('pointerdown', ()=>{ if(tdrag) dragReset(); }, true);
+document.addEventListener('drop', ()=>setTimeout(()=>{ if(tdrag && !tdrag.el.isConnected) dragReset(); }, 0), true);
 /* drag a tile anywhere on the dashboard: the others slide out of the way as you go, and the new order saves when you let go */
 function dragTile(el, i, L){
   el.draggable=true; el.dataset.i=i;
@@ -4773,7 +4791,7 @@ function openCatalog(){
   const sec=(t)=>box.appendChild(h('div','nx-sec',t));
   const card=(name, desc, k, symHtml, fn, on)=>{ const b=btn('nx-cti'+(on?' on':'')); b.style.setProperty('--k',k); const i=h('span','ci'); i.innerHTML=symHtml; b.appendChild(i); const t=h('span','tx'); t.appendChild(h('b',null,name)); t.appendChild(h('small',null,desc)); b.appendChild(t); b.appendChild(h('em',null,on?'On':'Add')); b.addEventListener('click', ()=>{ fn(); b.classList.add('on'); b.querySelector('em').textContent='Added'; }); return b; };
   ['Your Day','Team'].forEach(g=>{ sec(g); const gr=h('div','nx-ctg'); Object.keys(TILES).filter(k=>TILES[k].g===g).forEach(k=>{ const on=dashEdit.some(z=>z.t===k); gr.appendChild(card(TILES[k].n, TILES[k].d, TILES[k].k, ic(k==='email'?'mail':k==='people'||k==='team'?'ppl':k==='day'||k==='load'?'cal':k==='tasks'?'mine':k==='board'?'all':k==='asks'?'inbox':k==='findtime'?'search':'week'), ()=>{ if(!dashEdit.some(z=>z.t===k)) dashEdit.push({t:k}); paint(); }, on)); }); box.appendChild(gr); });
-  sec('MISMO Systems'); const gs=h('div','nx-ctg'); (x?x.SYS:[]).filter(z=>x.canOpen(z.k)).sort((a,b)=>a.n.localeCompare(b.n)).forEach(z=>{ let n=dashEdit.filter(q=>q.t==='sys' && q.s===z.k).length; const cb=card(z.n, z.d, z.c, x.symbol(z.k), ()=>{ dashEdit.push({t:'sys', s:z.k}); paint(); }, false); const ci=cb.querySelector('.ci'); const badge=h('i','cnt'); const setB=()=>{ badge.textContent=n?String(n):''; badge.title=n?n+' on your dashboard':''; badge.hidden=!n; }; setB(); ci.appendChild(badge); cb.addEventListener('click', ()=>{ n++; setB(); cb.classList.remove('on'); cb.querySelector('em').textContent='Add'; }); gs.appendChild(cb); }); box.appendChild(gs);
+  sec('MISMO Systems'); const gs=h('div','nx-ctg'); (x?x.SYS:[]).filter(z=>x.canOpen(z.k)).sort((a,b)=>a.n.localeCompare(b.n)).forEach(z=>{ let n=dashEdit.filter(q=>q.t==='sys' && q.s===z.k).length; const cb=card(z.n, z.d, z.c, x.symbol(z.k), ()=>{ const nt={t:'sys', s:z.k}; dashEdit.push(nt); paint(); if(n>0){ close(); setTimeout(()=>tileEditor(nt, dashEdit.length-1, dashEdit, true), 60); } }, false); const ci=cb.querySelector('.ci'); const badge=h('i','cnt'); const setB=()=>{ badge.textContent=n?String(n):''; badge.title=n?n+' on your dashboard':''; badge.hidden=!n; }; setB(); ci.appendChild(badge); cb.addEventListener('click', ()=>{ n++; setB(); cb.classList.remove('on'); cb.querySelector('em').textContent='Add'; }); gs.appendChild(cb); }); box.appendChild(gs);
   const ft=h('div','hqx-ft'); const d=btn('btn','Done', close); ft.appendChild(d); box.appendChild(ft);
   ov.appendChild(box); ov.addEventListener('click', e=>{ if(e.target===ov) close(); }); document.body.appendChild(ov);
 }
@@ -5288,7 +5306,7 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-tiles.editing .st-tile{cursor:grab;animation:nxWig .9s ease-in-out infinite alternate}
 .nx-tiles.editing .st-tile:nth-child(2n){animation-delay:.3s}
 @keyframes nxWig{from{transform:rotate(-.4deg)}to{transform:rotate(.4deg)}}
-.st-tile.dragging{opacity:.35;outline:2px dashed var(--sky);outline-offset:-2px}html.nx-tdragging .st-tile:not(.dragging){transition:transform .15s}html.nx-tdragging .nx-tgear{opacity:0!important}
+.st-tile.dragging{opacity:.35;outline:2px dashed var(--sky);outline-offset:-2px}html.nx-tdragging .st-tile:not(.dragging){transition:transform .15s}
 .nx-tiles:not(.editing) .st-tile[draggable=true]:active{cursor:grabbing}
 .nx-tctl{position:absolute;top:8px;right:8px;z-index:3;display:flex;gap:4px}
 .nx-tcb{height:26px;padding:0 9px;border:1px solid rgba(255,255,255,.3);border-radius:5px;background:rgba(6,32,47,.85);color:#fff;font:inherit;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap}
@@ -5329,6 +5347,10 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 @media(max-width:900px){.nx-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.nx-hero{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:640px){.nx-dash{padding:12px 12px 30px}.nx-hhi h1{font-size:24px}.nx-hhi p{font-size:14px}.nx-sw{display:flex;overflow-x:auto}.nx-swd{flex:0 0 96px}.nx-tiles{grid-template-columns:minmax(0,1fr)}.nx-ag{grid-template-columns:minmax(0,1fr)}.nx-dvr{margin-left:0}}
 .st-tile.sz-w{grid-column:span 2}.st-tile.sz-t{grid-row:span 2}.st-tile.sz-b{grid-column:span 2;grid-row:span 2}
+.nx-tiles.nx-pack{grid-auto-rows:6px;row-gap:0;align-items:start}
+.nx-tiles.nx-pack > *{align-self:start;margin-bottom:14px}
+.nx-tiles.nx-pack > .st-tile{min-height:150px}
+.nx-tiles.nx-pack > .st-tile.sz-t,.nx-tiles.nx-pack > .st-tile.sz-b{min-height:314px}
 .nx-tiles{grid-auto-flow:row dense}
 .nx-ag.one{grid-template-columns:minmax(0,1fr)}
 .nx-tl2{display:flex;flex-direction:column;gap:4px}
