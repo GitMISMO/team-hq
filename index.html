@@ -17097,7 +17097,7 @@ const HELP_SECS = [
 <li><b>Narrow the menu</b> with the arrow at its top (or press <span class="hk">\\</span>) to leave just the icons. Team HQ remembers your choice.</li>
 <li><b>Search</b> at the top of the menu finds tasks, team projects, parts, people, dates, plans, notes, expenses and these help sections.</li>
 <li><b>Jump to Anything</b>: press <span class="hk">Ctrl</span>+<span class="hk">K</span> (<span class="hk">⌘</span>+<span class="hk">K</span> on a Mac) anywhere to jump to a system, project, task or date, or to start something (see <i>Jump to Anything and Keyboard Shortcuts</i>).</li>
-<li><b>The add box</b> at the top of My Dashboard, My Tasks, Inbox and Calendar adds a task in one line (see <i>Adding a Task in One Line</i>). The <b>+</b> and <b>note</b> buttons in the navy bar across the top add a task or jot something down from anywhere.</li>
+<li><b>Add a Task</b> and <b>Jot It Down</b> in the navy bar across the top work from every page. On a team project's page or a person's page, a new task already has that project or person filled in. Press <span class="hk">C</span> to add a task from anywhere.</li>
 <li><b>The right-hand pane.</b> Almost anything you click (a task, a project, a note, a card) opens in a pane on the right. The arrows at its top right make it wider or put it back. The × closes it; a back arrow steps out one level when you have opened something from inside something else.</li>
 </ul>`},
 
@@ -17164,17 +17164,6 @@ const HELP_SECS = [
 <h4>The Meeting Trackers Tile</h4>
 <p>It shows today as a calendar date and lists the day's workgroup meetings in time order, each marked <b>On Now</b>, <b>in 20 min</b>, <b>Done</b> or <b>Cancelled</b>, updated every 30 seconds. On a day with no meetings it shows who meets next.</p>`},
 
-{id:'quickadd', t:'Adding a Task in One Line', d:'Type a task the way you would say it.', h:`
-<p>The add box at the top of My Dashboard, Inbox, My Tasks and Calendar (press <span class="hk">C</span> to jump to it) understands a few shortcuts:</p>
-<ul>
-<li><b>@name</b>: who is doing it, for example <b>@amy</b>. You can add more than one.</li>
-<li><b>#project</b>: the team project, for example <b>#summit</b>.</li>
-<li><b>!</b>: high priority.</li>
-<li><b>A date</b>: <b>today</b>, <b>tomorrow</b>, <b>next week</b>, a day like <b>fri</b>, or <b>11/6</b>.</li>
-</ul>
-<p>Example: <b>Send deck to Amy fri @amy #summit !</b>. A line under the box shows what it understood. Press <b>Enter</b> and the task opens ready to check and save.</p>
-<p>On a team project's page the task goes on that project. On a person's page it goes to them. On My Dashboard it is due today unless you say otherwise.</p>`},
-
 {id:'mytasks', t:'My Tasks', d:'Everything you are doing, grouped how you like, with quick changes.', h:`
 <h4>The List</h4>
 <ul>
@@ -17220,7 +17209,7 @@ const HELP_SECS = [
 
 {id:'views', t:'Team Project and Person Pages', d:'Everything on one project, or everything one person has on.', h:`
 <h4>A Team Project's Page</h4>
-<p>Click a project's name on a task or a dashboard tile. You see its progress, who is on it, and its open tasks grouped by workstream (or status, due date or person). The workstream chips at the top narrow the list, and the add box then adds to that workstream. <b>Timeline and More</b> opens the project on Team Projects.</p>
+<p>Click a project's name on a task or a dashboard tile. You see its progress, who is on it, and its open tasks grouped by workstream (or status, due date or person). The workstream chips at the top narrow the list. <b>Add a Task</b> on this page puts the task on this project (and the workstream you picked). <b>Timeline and More</b> opens the project on Team Projects.</p>
 <h4>A Person's Page</h4>
 <p>Click a person's name or picture, or <b>Their Work</b> on Today. You see their status, what they have open and late, and the projects they lead, with <b>Find a Time</b> and <b>Add a Task for</b> them. On the right is their day from Outlook, with free stretches marked (for example <b>45m open</b>). The arrows step through days.</p>`},
 
@@ -17238,7 +17227,7 @@ const HELP_SECS = [
 {id:'tasks', t:'Tasks', d:'The full task editor, and what each field means.', h:`
 <h4>Add a Task</h4>
 <ol>
-<li>Type in the add box at the top of a page and press <b>Enter</b>, or click the <b>+</b> in the navy bar.</li>
+<li>Click <b>Add a Task</b> in the navy bar (or press <span class="hk">C</span>).</li>
 <li>Fill in what you know. Only <b>Task</b> is needed.</li>
 <li>Click <b>Save</b>.</li>
 </ol>
@@ -17518,7 +17507,7 @@ const HELP_SECS = [
 <h4>Shortcuts</h4>
 <ul>
 <li><span class="hk">1</span> My Dashboard, <span class="hk">2</span> Inbox, <span class="hk">3</span> My Tasks, <span class="hk">4</span> Calendar, <span class="hk">5</span> Where My Team Is Today.</li>
-<li><span class="hk">C</span> the add box; <span class="hk">/</span> the filter.</li>
+<li><span class="hk">C</span> adds a task; <span class="hk">/</span> jumps to the filter.</li>
 <li><span class="hk">J</span> / <span class="hk">K</span> (or the arrow keys) move through tasks, <span class="hk">Enter</span> opens one, <span class="hk">X</span> marks it done.</li>
 <li><span class="hk">\\</span> narrows or widens the left menu.</li>
 </ul>
@@ -17789,5 +17778,5 @@ boot().then(()=>{ paintWho(); renderAll();
 })();
 </script>
 
-<script src="upgrades.js?v=20261101y" defer></script>
+<script src="upgrades.js?v=20261101z" defer></script>
 </body></html>
