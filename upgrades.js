@@ -121,6 +121,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -304,15 +305,17 @@ const HIDECSS='.hqtop,body>header.mast,body>header.hqtop,body>.topbar>.masthead,
 function driveFrame(fr, k, go, sec, done){
   fr.addEventListener('load', ()=>{ let doc=null; try{ doc=fr.contentDocument; }catch(e){} if(!doc) return;
     try{ const st=doc.createElement('style'); st.textContent=HIDECSS+(fr.classList.contains('nx-minif')?'html,body{scrollbar-width:none}::-webkit-scrollbar{display:none}':''); doc.head.appendChild(st); }catch(e){}
-    let g=go, sc=sec, tries=0, user=false; const stop=()=>{ user=true; }; fr._stopDrive=stop; try{ doc.addEventListener('pointerdown', stop, true); doc.addEventListener('keydown', stop, true); doc.addEventListener('wheel', stop, {capture:true, passive:true}); }catch(e){}
+    /* a scroll or click while the system is still loading doesn't count as choosing somewhere else —
+       only clicking one of its tabs does, or anything at all once the tile's page is showing */
+    let g=go, sc=sec, tries=0, user=false, reached=!go, streak=0; const stop=e=>{ const t=e && e.target; if(reached || (t && t.closest && t.closest('nav,[role=tab],.navbtn'))) user=true; }; fr._stopDrive=()=>{ user=true; }; try{ doc.addEventListener('pointerdown', stop, true); doc.addEventListener('keydown', stop, true); doc.addEventListener('wheel', stop, {capture:true, passive:true}); }catch(e){}
     const step=()=>{ tries++; if(!fr.isConnected && tries>2) return; if(user){ g=null; sc=null; }
       if(g){ const b=[...doc.querySelectorAll('.hq nav button, nav button, nav a, [role=tab]')].find(z=>(z.textContent||'').replace(/\s+/g,' ').trim().replace(/\s*\d+$/,'')===g);
         /* slow apps redraw once their data is in, so keep at it until the tab really is the one showing */
         if(b){ const on=b.getAttribute('aria-selected')==='true' || (b.hasAttribute('aria-current') && b.getAttribute('aria-current')!=='false') || /(^|\s)(on|active|is-active|current|selected)(\s|$)/.test(b.className||'');
-          if(on){ if(sc && scrollToSec(doc, sc) && tries>=30) sc=null; if(tries>=30) g=null; } else if(tries%2===1) b.click(); } }
+          if(on){ reached=true; streak++; if(sc && scrollToSec(doc, sc) && streak>=8) sc=null; if(streak>=8) g=null; } else { streak=0; if(tries%2===1) b.click(); } } }
       else if(sc && tries>1 && scrollToSec(doc, sc) && tries>=30) sc=null;
       snapSys(k, doc);
-      if(tries<50 && (g || sc || tries<8)) setTimeout(step, 700); else done && done();
+      if(tries<150 && (g || sc || tries<8)) setTimeout(step, 700); else done && done();
       if(tries===8 && !g && !sc) done && done(); };
     step();
     const iv=setInterval(()=>{ if(!fr.isConnected){ clearInterval(iv); return; } if(!document.hidden){ snapSys(k, doc); if(sec) scrollToSec(doc, sec); } }, 90e3);
@@ -544,6 +547,13 @@ let pane=null;
 function closeSys(){ if(!pane) return; const p=pane; pane=null; try{ const pd=p.fr.contentDocument; snapSys(p.k, pd); const cur=curNav(pd); const d=extract(pd); if(cur) keepData(p.k, cur, d); else keepData(p.k, p.go, d);
     /* opened at its home page and still on it: that's the tile's page too */
     if(cur && !p.go){ const nv=navOf(p.k); if(!nv.length || nv[0]===cur) keepData(p.k, '', d); } }catch(e){} p.el.classList.add('out'); setTimeout(()=>p.el.remove(), 200); document.removeEventListener('keydown', p.esc); document.documentElement.classList.remove('hqx-sys-on'); }
+/* a new tab that lands on one page of a system: the system itself when it's the home page, otherwise
+   Team HQ's small launcher (open.html), which opens the system full-size and takes it to that page */
+function tabUrl(s, go, sec){ if(!s) return ''; if(!go && !sec) return s.u;
+  let p=null; try{ p=new URL(s.u, document.baseURI); }catch(e){ return s.u; }
+  let base=''; try{ base=new URL(document.baseURI).origin; }catch(e){}
+  if(p.origin!==base) return s.u;
+  return '/team-hq/open.html?u='+encodeURIComponent(p.pathname)+(go?'&go='+encodeURIComponent(go):'')+(sec?'&sec='+encodeURIComponent(sec):'')+'&n='+encodeURIComponent(s.n||''); }
 function openSys(k, go, opt){
   opt=opt||{}; const s=typeof k==='object' ? k : SYS.find(x=>x.k===k); if(!s) return; let sec=opt.sec||null;
   if(pane) closeSys();
@@ -552,7 +562,9 @@ function openSys(k, go, opt){
   const hd=h('div','hqx-ph'); const ic=h('span','ic'); ic.innerHTML=symbol(s.k); hd.appendChild(ic);
   const tt=h('div','tt'); tt.appendChild(h('b',null,s.n)); const sub=h('small',null, go ? go+(sec?' › '+sec:'') : (s.d||'')); tt.appendChild(sub); hd.appendChild(tt);
   if(opt.onPin){ const pin=h('button','hqx-pb','Make This a Dashboard Tile'); pin.type='button'; pin.addEventListener('click', ()=>{ let cur=''; try{ cur=curNav(pane.fr.contentDocument); }catch(e){} opt.onPin(s.k, cur); pin.textContent='On Your Dashboard ✓'; pin.disabled=true; }); hd.appendChild(pin); }
-  const nt=h('a','hqx-pb ghost','Open in a New Tab'); nt.href=s.u; nt.target='_blank'; nt.rel='noopener'; hd.appendChild(nt);
+  const nt=h('a','hqx-pb ghost','Open in a New Tab'); nt.href=tabUrl(s, go||'', sec||''); nt.target='_blank'; nt.rel='noopener'; hd.appendChild(nt);
+  /* whatever page of the system is showing right now is the one the new tab opens on */
+  nt.addEventListener('click', ()=>{ let cur=''; try{ cur=curNav(pane && pane.fr && pane.fr.contentDocument); }catch(e){} nt.href=tabUrl(s, cur||go||'', cur && cur!==go ? '' : (sec||'')); });
   const x=h('button','hqx-px','×'); x.type='button'; x.setAttribute('aria-label','Close and go back to Team HQ'); x.title='Close (Esc)'; x.addEventListener('click', closeSys); hd.appendChild(x);
   box.appendChild(hd);
   const ld=h('div','hqx-load'); ld.appendChild(h('i')); ld.appendChild(h('span',null,'Opening '+s.n+'…')); box.appendChild(ld);
@@ -743,7 +755,7 @@ loadDone().then(()=>kick());
 
 loadMail(true);
 const timer=setInterval(()=>{ if(!document.hidden) loadMail(true); }, 5*60e3);
-window.__hqx={ version:'1.2', MAIL, loadMail, ACT, mailItems, mailAct, pickFolder, bookDialog, personEmail, lastErr, waitingCount, loadDone, ago, myPeople, setMyPeople, pickPeople, statusOf, dayLoad, nextWorkday, SYS, SHORT, canOpen, figsFor, symbol, openSys, closeSys, countFor, secsOf, navOf, driveFrame, sysData, wantData, extract, sig:()=>MAIL.state+':'+MAIL.at+':'+MAIL.items.length+':'+myPeople().join(',')+':'+ACT.on+':'+acts().map(z=>z.id+(z.fin?'f':'')+(z.err?'e':'')).join(','),
+window.__hqx={ version:'1.2', tabUrl, MAIL, loadMail, ACT, mailItems, mailAct, pickFolder, bookDialog, personEmail, lastErr, waitingCount, loadDone, ago, myPeople, setMyPeople, pickPeople, statusOf, dayLoad, nextWorkday, SYS, SHORT, canOpen, figsFor, symbol, openSys, closeSys, countFor, secsOf, navOf, driveFrame, sysData, wantData, extract, sig:()=>MAIL.state+':'+MAIL.at+':'+MAIL.items.length+':'+myPeople().join(',')+':'+ACT.on+':'+acts().map(z=>z.id+(z.fin?'f':'')+(z.err?'e':'')).join(','),
   destroy(){ clearInterval(timer); clearTimeout(actT); closeSys(); css.remove(); css2.remove(); css3.remove(); } };
 })();
 
@@ -4664,7 +4676,7 @@ function pinTile(k, go){ const L=dashLayout(); const i=L.findIndex(z=>z.t==='sys
 const sysOpenAll=()=>{ const v=(S.bset||{}).hqSysOpen; return v==='tab'||v==='hq' ? v : 'tile'; };
 const opensInTab=cfg=>{ const g=sysOpenAll(); return g==='tile' ? !!(cfg && cfg.open==='tab') : g==='tab'; };
 function setSysOpenAll(v){ if(!S.bset) S.bset={}; if(v==='tile') delete S.bset.hqSysOpen; else S.bset.hqSysOpen=v; try{ window.__saveMine && window.__saveMine(); }catch(e){} toast(v==='tab' ? 'Every system tile now opens in a new tab' : v==='hq' ? 'Every system tile now opens in Team HQ' : 'Each system tile opens its own way — set it in the tile’s gear'); paint(); }
-function openSystem(k, go, sec, cfg){ const x=X(); if(opensInTab(cfg)){ const s=x && x.SYS.find(z=>z.k===k); if(s){ let u=s.u; try{ u=new URL(s.u, document.baseURI).href; }catch(e){} window.open(u, '_blank', 'noopener'); return; } } if(x && x.openSys) x.openSys(k, go, {onPin:pinTile, sec:sec||''}); }
+function openSystem(k, go, sec, cfg){ const x=X(); if(opensInTab(cfg)){ const s=x && x.SYS.find(z=>z.k===k); if(s){ let u=x.tabUrl ? x.tabUrl(s, go||'', sec||'') : s.u; try{ u=new URL(u, document.baseURI).href; }catch(e){} window.open(u, '_blank', 'noopener'); return; } } if(x && x.openSys) x.openSys(k, go, {onPin:pinTile, sec:sec||''}); }
 const opnTxt=cfg=>opensInTab(cfg) ? ' Open ↗' : ' Open →';
 const em=t=>{ const e=h('em'); e.textContent=t; return e; };
 function vDash(){
