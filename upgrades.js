@@ -21,7 +21,7 @@
   var RE=/\.lambda-url\.[^\/]+\.on\.aws\/[^?#]+\/(data|file)\//, of=window.fetch.bind(window), C={};
   window.fetch=function(u,o){
     var url=String(u&&u.url||u), m=((o&&o.method)||(u&&u.method)||'GET').toUpperCase();
-    if(!RE.test(url)) return of(u,o);
+    if(!RE.test(url) || /\/data\/profiles(\?|$)/.test(url)) return of(u,o);   /* your own settings are always read fresh */
     var key=url.split('#')[0];
     if(m!=='GET'){ delete C[key]; return of(u,o).then(function(r){ delete C[key]; return r; }); }
     var hit=C[key]; if(hit && (!hit.done || Date.now()-hit.done<6000)) return hit.p.then(function(r){ return r.clone(); });
@@ -99,6 +99,10 @@
 })();
 
 /*<BOOT*/
+
+
+
+
 
 
 
@@ -234,36 +238,66 @@ function loadMail(force){
 }
 /* ---------- your settings, kept straight across tabs and devices ----------
    Everything personal (dashboard layout, mailbox order, people, Outlook requests …) is one saved record.
-   Before, any open Team HQ — another tab, your phone — saved its whole copy and could put back an older
-   dashboard. Now a save sends only what this tab changed, on top of the latest saved copy, and an open
-   Team HQ picks up changes made elsewhere every minute and whenever you come back to it. */
+   Every save of it, from anywhere in Team HQ, now goes through here:
+   - nothing is saved until this page has read the latest saved copy (so a page that opened while the
+     record couldn't be read — and is showing the starter dashboard — can never save that over yours);
+   - a save sends only what this page changed, on top of the latest saved copy;
+   - each setting carries the time it was last changed, so an older copy (a tab or phone still running an
+     earlier version of Team HQ) can't put back something you've since changed — the newer one is restored;
+   - an open Team HQ picks up changes made elsewhere every minute and whenever you come back to it. */
 (function(){
   if(window.__mineMerge) return;
   const cl=v=>v==null?v:JSON.parse(JSON.stringify(v)); const J=v=>JSON.stringify(v===undefined?null:v);
-  let base=null, baseLay, tmr=null, busy=false, again=false, orig=null;
-  const ref=()=>S.db.doc('data/users/'+S.uid+'/profile');
-  const dirty=()=>{ const b=S.bset||{}; return [...new Set(Object.keys(b).concat(Object.keys(base)))].filter(k=>J(b[k])!==J(base[k])); };
-  async function sync(save){
-    if(!base || !S.db || !S.uid){ if(save && orig) orig(); return; }
-    if(busy){ again=again||save; return; } busy=true;
-    try{
-      let d=null; try{ const snap=await ref().get(); d=snap.exists ? (snap.data()||{}) : {}; }catch(e){ d=null; }
-      if(d){ const R=cl(d.bset)||{}; const D=dirty(); if(!S.bset) S.bset={}; const ch=[];
-        Object.keys(R).forEach(k=>{ if(D.indexOf(k)<0 && J(S.bset[k])!==J(R[k])){ S.bset[k]=R[k]; ch.push(k); } });
-        Object.keys(S.bset).forEach(k=>{ if(!(k in R) && D.indexOf(k)<0 && (k in base)){ delete S.bset[k]; ch.push(k); } });
-        const nb=cl(R); D.forEach(k=>{ if(k in base) nb[k]=cl(base[k]); else delete nb[k]; }); base=nb;
-        if(J(S.layout)===J(baseLay) && d.layout!==undefined && J(d.layout)!==J(S.layout)){ S.layout=cl(d.layout); ch.push('layout'); baseLay=cl(d.layout); }
-        if(ch.length){ try{ window.dispatchEvent(new CustomEvent('hq:bset', {detail:ch})); }catch(e){} } }
-      if(save && orig){ orig(); base=cl(S.bset||{}); baseLay=cl(S.layout); }
-    } finally { busy=false; if(again){ const sv=again; again=false; sync(sv); } } }
+  const AT='_at';
+  let base=null, baseLay, pulled=false, trusted=false, chain=Promise.resolve(), oset=null, path='';
+  const isDash=k=>/^hqDash/.test(k);
+  /* read straight from the saved file (the page's own copy can be up to a poll behind) */
+  async function readRemote(){ try{ const R=window.__hqRelay; if(R && R.readOther){ const f=await R.readOther('team-hq','profiles'); if(f && f.docs) return f.docs[S.uid] || {}; }
+      const snap=await S.db.doc(path).get(); return snap.exists ? (snap.data()||{}) : {}; }catch(e){ return null; } }
+  const dirtyOf=b=>{ b=b||{}; return [...new Set(Object.keys(b).concat(Object.keys(base||{})))].filter(k=>k!==AT && J(b[k])!==J((base||{})[k])); };
+  /* fold a remote copy into this page; returns the keys that changed here */
+  function adopt(d, keepDirty){
+    const R=cl(d.bset)||{}; const RA=R[AT]||{}; if(!S.bset) S.bset={}; const LA=S.bset[AT]||{};
+    const D=keepDirty ? dirtyOf(S.bset) : []; const ch=[], ours=[];
+    if(!pulled && !trusted){ Object.keys(S.bset).forEach(k=>delete S.bset[k]); Object.assign(S.bset, R); base=cl(R); return {ch:['*'], ours}; }
+    Object.keys(R).forEach(k=>{ if(k===AT) return;
+      if(D.indexOf(k)>=0) return;
+      if((LA[k]||0)>(RA[k]||0) && J(S.bset[k])!==J(R[k])){ ours.push(k); return; }   /* ours is newer: an older copy was saved over it */
+      if(J(S.bset[k])!==J(R[k])){ S.bset[k]=R[k]; ch.push(k); } });
+    Object.keys(S.bset).forEach(k=>{ if(k!==AT && !(k in R) && D.indexOf(k)<0 && base && (k in base) && !((LA[k]||0)>(RA[k]||0))){ delete S.bset[k]; ch.push(k); } });
+    S.bset[AT]=Object.assign({}, RA, LA);
+    const nb=cl(R); D.concat(ours).forEach(k=>{ if(base && k in base) nb[k]=cl(base[k]); else delete nb[k]; }); base=nb;
+    if(J(S.layout)===J(baseLay) && d.layout!==undefined && J(d.layout)!==J(S.layout)){ S.layout=cl(d.layout); ch.push('layout'); baseLay=cl(d.layout); }
+    return {ch, ours}; }
+  const tell=ch=>{ if(ch.length){ try{ window.dispatchEvent(new CustomEvent('hq:bset', {detail:ch})); }catch(e){} } };
+  /* every write of the record comes through here */
+  function guardedSet(obj){
+    chain=chain.then(async ()=>{
+      let d=null; for(let i=0; i<6 && !d; i++){ d=await readRemote(); if(!d) await new Promise(r=>setTimeout(r, 2500)); }
+      if(!d) return;                                   /* still can't read it: don't save over it blind */
+      const firstPull=!pulled; const res=adopt(d, true); pulled=true; tell(res.ch);
+      if(firstPull && !trusted) return;                /* this page was showing the starter dashboard: drop its save */
+      const now=Date.now(); const D=dirtyOf(S.bset).concat(res.ours); const A=Object.assign({}, S.bset[AT]||{}); D.forEach(k=>{ if(!res.ours.includes(k)) A[k]=now; }); S.bset[AT]=A;
+      const out=Object.assign({}, obj, {bset:cl(S.bset), layout:cl(S.layout)});
+      await oset(out); base=cl(S.bset); baseLay=cl(S.layout);
+    }).catch(()=>{});
+    return chain; }
+  async function sync(){ chain=chain.then(async ()=>{ const d=await readRemote(); if(!d) return; const first=!pulled; const res=adopt(d, true); pulled=true; tell(res.ch);
+      if(res.ours.length && !first){ const now=Date.now(); const A=Object.assign({}, S.bset[AT]||{}); res.ours.forEach(k=>{ A[k]=A[k]||now; }); S.bset[AT]=A; await oset({layout:cl(S.layout), bset:cl(S.bset), me:S.me||null, view:S.view, nb:S.nb||null}); base=cl(S.bset); } }).catch(()=>{}); return chain; }
   function start(){
-    if(window.__mineMerge) return; orig=window.__saveMine; if(typeof orig!=='function') return; window.__mineMerge=true;
+    if(window.__mineMerge || !S.db || !S.uid || typeof S.db.doc!=='function') return; window.__mineMerge=true;
+    path='data/users/'+S.uid+'/profile';
+    trusted=!!(S.bset && Array.isArray(S.bset.hqDash) && S.bset.hqDash.length);
     base=cl(S.bset||{}); baseLay=cl(S.layout);
-    window.__saveMine=function(){ clearTimeout(tmr); tmr=setTimeout(()=>sync(true), 250); };
-    setInterval(()=>{ if(!document.hidden) sync(false); }, 60e3);
-    document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) sync(false); });
-    window.addEventListener('focus', ()=>sync(false)); }
-  const wait=()=>{ if(S.ready && typeof window.__saveMine==='function') start(); else setTimeout(wait, 400); }; wait();
+    const odoc=S.db.doc.bind(S.db);
+    S.db.doc=function(p){ const r=odoc(p); if(p!==path || !r || typeof r.set!=='function') return r; if(!oset) oset=r.set.bind(r); return Object.assign(Object.create(Object.getPrototypeOf(r)), r, {set:obj=>guardedSet(obj)}); };
+    { const r0=odoc(path); oset=r0.set.bind(r0); }
+    window.__mineSync=sync;
+    sync();
+    setInterval(()=>{ if(!document.hidden) sync(); }, 60e3);
+    document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) sync(); });
+    window.addEventListener('focus', ()=>sync()); }
+  const wait=()=>{ if(S.ready && S.db && S.uid) start(); else setTimeout(wait, 300); }; wait();
 })();
 const ago=ms=>{ const m=Math.round((Date.now()-ms)/60e3); if(m<1) return 'just now'; if(m<60) return m+'m ago'; const hh=Math.round(m/60); if(hh<24) return hh+'h ago'; const d=Math.round(hh/24); return d===1?'yesterday':d+'d ago'; };
 function myPeople(){ const b=S.bset||{}; const L=Array.isArray(b.hqPeople) ? b.hqPeople : []; return L.filter(id=>S.people.some(p=>p.id===id) && id!==S.me); }
