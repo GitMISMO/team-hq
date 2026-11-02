@@ -125,6 +125,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -4121,12 +4122,11 @@ function drawRail(){
   railNodes.forEach(n=>n.remove()); railNodes=[];
   const firstClassic=[...nav.querySelectorAll('button[data-hq]')].find(b=>b.dataset.hq!=='mine');
   const add=(n, before)=>{ railNodes.push(n); if(before) nav.insertBefore(n, before); else nav.appendChild(n); return n; };
-  const inboxN=myAsks().length+myNudges().length;
   add(railLbl('You'), firstClassic);
   add(railBtn('day','My Dashboard', ic('home')), firstClassic);
-  add(railBtn('inbox','Inbox', ic('inbox'), inboxN ? '<b class="nx-badge hot">'+inboxN+'</b>' : ''), firstClassic);
-  const mineN=myOpen().length;
-  add(railBtn('mine','My Tasks', ic('mine'), mineN ? '<b class="nx-badge">'+mineN+'</b>' : ''), firstClassic);
+  add(railBtn('inbox','Inbox', ic('inbox')), firstClassic);
+  /* no counts in the left menu: it's for getting around (Jonna's call) */
+  add(railBtn('mine','My Tasks', ic('mine')), firstClassic);
   const calB=add(railBtn('cal','Calendar', ic('cal')), firstClassic);
   placeBoardBtn(calB);
   add(railLbl('Team'), firstClassic);
