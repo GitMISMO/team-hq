@@ -12,6 +12,23 @@
 (function(){
 'use strict';
 /*BOOT>*/
+/* ---------- one read per file ----------
+   On opening, several parts of Team HQ ask for the same files (tasks, people, agenda …) within seconds of
+   each other; each answer is now shared, so the page waits on half as many reads. A save to a file always
+   clears it, so the next read after a save is fresh. */
+(function(){
+  if(window.__getShare) return; window.__getShare=true;
+  var RE=/\.lambda-url\.[^\/]+\.on\.aws\/[^?#]+\/(data|file)\//, of=window.fetch.bind(window), C={};
+  window.fetch=function(u,o){
+    var url=String(u&&u.url||u), m=((o&&o.method)||(u&&u.method)||'GET').toUpperCase();
+    if(!RE.test(url)) return of(u,o);
+    var key=url.split('#')[0];
+    if(m!=='GET'){ delete C[key]; return of(u,o).then(function(r){ delete C[key]; return r; }); }
+    var hit=C[key]; if(hit && (!hit.done || Date.now()-hit.done<6000)) return hit.p.then(function(r){ return r.clone(); });
+    var e={done:0}; C[key]=e;
+    e.p=of(u,o).then(function(r){ e.done=Date.now(); if(!r.ok) delete C[key]; return r; }, function(err){ delete C[key]; throw err; });
+    return e.p.then(function(r){ return r.clone(); }); };
+})();
 /* ---------- the opening screen ----------
    Team HQ loads your tasks, calendars and email before it can draw your dashboard. This card covers
    that, the same way Member 360 and MISMO Money do, and lifts once everything is in place. */
@@ -82,6 +99,8 @@
 })();
 
 /*<BOOT*/
+
+
 
 
 
@@ -213,6 +232,39 @@ function loadMail(force){
   }).catch(()=>{ MAIL.state='none'; MAIL.at=Date.now(); return MAIL; });
   return MAIL.p;
 }
+/* ---------- your settings, kept straight across tabs and devices ----------
+   Everything personal (dashboard layout, mailbox order, people, Outlook requests …) is one saved record.
+   Before, any open Team HQ — another tab, your phone — saved its whole copy and could put back an older
+   dashboard. Now a save sends only what this tab changed, on top of the latest saved copy, and an open
+   Team HQ picks up changes made elsewhere every minute and whenever you come back to it. */
+(function(){
+  if(window.__mineMerge) return;
+  const cl=v=>v==null?v:JSON.parse(JSON.stringify(v)); const J=v=>JSON.stringify(v===undefined?null:v);
+  let base=null, baseLay, tmr=null, busy=false, again=false, orig=null;
+  const ref=()=>S.db.doc('data/users/'+S.uid+'/profile');
+  const dirty=()=>{ const b=S.bset||{}; return [...new Set(Object.keys(b).concat(Object.keys(base)))].filter(k=>J(b[k])!==J(base[k])); };
+  async function sync(save){
+    if(!base || !S.db || !S.uid){ if(save && orig) orig(); return; }
+    if(busy){ again=again||save; return; } busy=true;
+    try{
+      let d=null; try{ const snap=await ref().get(); d=snap.exists ? (snap.data()||{}) : {}; }catch(e){ d=null; }
+      if(d){ const R=cl(d.bset)||{}; const D=dirty(); if(!S.bset) S.bset={}; const ch=[];
+        Object.keys(R).forEach(k=>{ if(D.indexOf(k)<0 && J(S.bset[k])!==J(R[k])){ S.bset[k]=R[k]; ch.push(k); } });
+        Object.keys(S.bset).forEach(k=>{ if(!(k in R) && D.indexOf(k)<0 && (k in base)){ delete S.bset[k]; ch.push(k); } });
+        const nb=cl(R); D.forEach(k=>{ if(k in base) nb[k]=cl(base[k]); else delete nb[k]; }); base=nb;
+        if(J(S.layout)===J(baseLay) && d.layout!==undefined && J(d.layout)!==J(S.layout)){ S.layout=cl(d.layout); ch.push('layout'); baseLay=cl(d.layout); }
+        if(ch.length){ try{ window.dispatchEvent(new CustomEvent('hq:bset', {detail:ch})); }catch(e){} } }
+      if(save && orig){ orig(); base=cl(S.bset||{}); baseLay=cl(S.layout); }
+    } finally { busy=false; if(again){ const sv=again; again=false; sync(sv); } } }
+  function start(){
+    if(window.__mineMerge) return; orig=window.__saveMine; if(typeof orig!=='function') return; window.__mineMerge=true;
+    base=cl(S.bset||{}); baseLay=cl(S.layout);
+    window.__saveMine=function(){ clearTimeout(tmr); tmr=setTimeout(()=>sync(true), 250); };
+    setInterval(()=>{ if(!document.hidden) sync(false); }, 60e3);
+    document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) sync(false); });
+    window.addEventListener('focus', ()=>sync(false)); }
+  const wait=()=>{ if(S.ready && typeof window.__saveMine==='function') start(); else setTimeout(wait, 400); }; wait();
+})();
 const ago=ms=>{ const m=Math.round((Date.now()-ms)/60e3); if(m<1) return 'just now'; if(m<60) return m+'m ago'; const hh=Math.round(m/60); if(hh<24) return hh+'h ago'; const d=Math.round(hh/24); return d===1?'yesterday':d+'d ago'; };
 function myPeople(){ const b=S.bset||{}; const L=Array.isArray(b.hqPeople) ? b.hqPeople : []; return L.filter(id=>S.people.some(p=>p.id===id) && id!==S.me); }
 function setMyPeople(L){ if(!S.bset) S.bset={}; S.bset.hqPeople=L.slice(); try{ window.__saveMine && window.__saveMine(); }catch(e){} try{ window.dispatchEvent(new Event('hq:people')); }catch(e){} }
@@ -4868,8 +4920,20 @@ function packTiles(grid, L){
   const colSpan=t=>/\bsz-(w|b)\b/.test(t.className) && cols()>=2 ? 2 : 1;
   /* a tile you dropped into a particular spot stays in that spot (for this screen width); the rest flow around it */
   const pinOf=t=>{ if(t._pin) return t._pin; const c=L && t.dataset.i!=null ? L[+t.dataset.i] : null; return c && c.at && c.at.c===cols() ? c.at : null; };
+  /* every tile of a size is the same height (Small 2 rows, Tall and Large 4). A tile with more than fits drops
+     its last list rows until it fits; only something that can't be shortened (a chart) is allowed to grow. */
+  const NOCUT='.st-top,.nx-tgear,.st-next,.nx-bars,.nx-pills,.nx-avrow,.nx-sysh,svg,.ring,.nx-env';
+  const trim=(t, maxH)=>{ for(let g=0; g<14 && t.getBoundingClientRect().height>maxH+SLACK; g++){
+      let best=null, bb=-1;
+      t.querySelectorAll('*').forEach(c=>{ if(c.children.length<2 || c.closest(NOCUT)) return; const last=c.lastElementChild; if(!last || last.closest(NOCUT)) return; const b=last.getBoundingClientRect(); if(b.height>=12 && b.bottom>bb){ bb=b.bottom; best=last; } });
+      if(!best){ const kids=[...t.children].filter(k=>!k.matches(NOCUT)); if(kids.length>1){ best=kids[kids.length-1]; } }
+      if(!best) return false; best.remove(); }
+    return t.getBoundingClientRect().height<=maxH+SLACK; };
   const fit=t=>{ if(!t.isConnected || t.classList.contains('nx-dropmark')) return; const tall=/\bsz-(t|b)\b/.test(t.className), min=tall?4:2;
-    const keepR=t.style.gridRow, keepC=t.style.gridColumn; t.style.alignSelf='start'; const hgt=t.getBoundingClientRect().height; t.style.alignSelf=''; if(!hgt) return;
+    const keepR=t.style.gridRow, keepC=t.style.gridColumn; t.style.alignSelf='start'; let hgt=t.getBoundingClientRect().height; if(!hgt){ t.style.alignSelf=''; return; }
+    const fixed=cols()>=2 && /\bsz-[stwb]\b/.test(t.className); const maxH=min*ROW+(min-1)*GAP;
+    if(fixed && hgt>maxH+SLACK && trim(t, maxH)) hgt=t.getBoundingClientRect().height;
+    t.style.alignSelf='';
     const n=Math.max(min, Math.ceil((hgt+GAP-SLACK)/(ROW+GAP))); t.dataset.n=n; const pin=pinOf(t);
     const cs=colSpan(t), px=pin ? Math.max(1, Math.min(pin.x, cols()-cs+1)) : 0;
     const r=(pin ? pin.y : 'auto')+' / span '+n, c=pin ? px+' / span '+cs : '';
@@ -5389,6 +5453,7 @@ function openCatalog(){
   ov.appendChild(box); ov.addEventListener('click', e=>{ if(e.target===ov) close(); }); document.body.appendChild(ov);
 }
 /* new numbers from a system: redraw the dashboard once they've stopped arriving, not for every one */
+window.addEventListener('hq:bset', ()=>{ if(!ui.on || dashEdit || busy() || !shell || shell.hidden) return; drawRail(); paint(); });
 let countsT=null; window.addEventListener('hq:counts', ()=>{ clearTimeout(countsT); countsT=setTimeout(refreshSysTiles, 600); });
 function refreshSysTiles(){ if(!ui.on || viewKind()!=='day' || tdrag || !shell || shell.hidden) return; const grid=body.querySelector('.nx-tiles'); if(!grid) return;
   const L=dashEdit || dashLayout();
@@ -5876,7 +5941,8 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-prj .tp{display:flex;gap:8px;font-size:12.5px}.nx-prj .tp b{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nx-prj .tp span{color:rgba(255,255,255,.7);font-weight:700}
 .nx-prj:hover .tp b{color:var(--sky)}
 .nx-prj .pn{display:flex;gap:8px;align-items:baseline;padding:5px 8px;border-radius:5px;background:rgba(255,255,255,.06);font-size:12px;min-width:0}.nx-prj .pn b{flex:0 0 auto;color:var(--rc);font-size:11px}.nx-prj .pn span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(255,255,255,.85)}.nx-prj .pn em{font-style:normal;flex:0 0 auto;font-size:11px;color:rgba(255,255,255,.55)}
-.nx-bars{display:flex;gap:10px;align-items:stretch;flex:1 1 104px;min-height:104px;max-height:320px}.st-tile.sz-s .nx-bars{flex-basis:90px;min-height:90px}
+.nx-bars{display:flex;gap:10px;align-items:stretch;flex:1 1 104px;min-height:104px;max-height:320px}.st-tile.sz-s .nx-bars{flex-basis:60px;min-height:60px;gap:6px}
+.st-tile.sz-s .ring{width:84px;height:84px}.st-tile.sz-s .ring b{font-size:24px}
 .nx-bars .bc{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px}.nx-bars .bc .bw{flex:1 1 0;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px}
 .nx-bars .bc i{display:block;width:100%;max-width:46px;border-radius:4px 4px 2px 2px;background:linear-gradient(180deg,var(--k),color-mix(in srgb,var(--k) 45%,transparent))}
 .nx-bars .bc b{font-size:11px;color:rgba(255,255,255,.8)}.nx-bars .bc span{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:rgba(255,255,255,.55)}
