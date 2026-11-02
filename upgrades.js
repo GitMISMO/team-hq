@@ -127,6 +127,8 @@
 
 
 
+
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -4543,7 +4545,7 @@ function dayPanel(id, withNav){
    - One List: asks, email to look at, waiting and hand-offs in one column (everyone else starts here). */
 const IBX_SPLIT_DEF=['jonna','vanessa'];
 function ibxLay(){ const x=X(); const c=x && x.ibCfg ? x.ibCfg() : {}; return c.lay || (IBX_SPLIT_DEF.indexOf(me())>=0 ? 'split' : 'list'); }
-function layoutSeg(){ return seg([['split','Side by Side'],['list','One List']], ibxLay(), k=>{ const x=X(); if(x && x.setInbox) x.setInbox({lay:k}); paint(); }, 'nx-ibl'); }
+function layoutSeg(){ return seg([['split','By Mailbox'],['list','One List']], ibxLay(), k=>{ const x=X(); if(x && x.setInbox) x.setInbox({lay:k}); paint(); }, 'nx-ibl'); }
 function vInbox(){ if(ibxLay()==='split') vInboxSplit(); else vInboxList(); }
 const IBX_SHOW=8;
 function vInboxSplit(){
@@ -4552,7 +4554,7 @@ function vInboxSplit(){
   const ol=h('a','nx-mini'); ol.href='https://outlook.office.com/mail/'; ol.target='_blank'; ol.rel='noopener'; ol.innerHTML=ic('ext')+'<span>Outlook</span>'; ol.title='Open Outlook';
   const boxes=x && x.MAIL.state==='ok' && x.mailBoxes ? x.mailBoxes() : [];
   const un=boxes.filter(b=>!b.k || !x.boxShut(b.k)).reduce((n,b)=>n+b.items.filter(m=>m.unread).length,0);
-  header('Inbox', ic('inbox'), boxes.length ? (boxes.length>1 ? boxes.length+' mailboxes · ' : '')+un+' unread' : 'Your email and your tasks, side by side', [layoutSeg(), ol, askB]);
+  header('Inbox', ic('inbox'), boxes.length ? (boxes.length>1 ? boxes.length+' mailboxes · ' : '')+un+' unread' : 'Every mailbox you can read, yours on top', [layoutSeg(), ol, askB]);
   body.classList.add('has-split');
   const wrap=h('div','nx-ibx');
   /* ---- left: mailboxes ---- */
@@ -4593,30 +4595,6 @@ function vInboxSplit(){
     if(x.MAIL.sent) left.appendChild(h('div','nx-ibup','Email last came through '+x.ago(x.MAIL.sent)+'. It checks every few minutes.'));
   }
   wrap.appendChild(left);
-  /* ---- right: tasks ---- */
-  const right=h('div','nx-ibt'); right.setAttribute('aria-label','Tasks');
-  const tsec=(k, title, n, fill, tone, add)=>{ const fk='inbox|'+k; const s2=h('section','nx-grp'+(ui.fold[fk]?' shut':'')); const gh=h('div','nx-gh'+(tone?' '+tone:''));
-    const f=btn('nx-fold', null, ()=>{ ui.fold[fk]=!s2.classList.contains('shut'); save(); s2.classList.toggle('shut'); }); f.innerHTML=ic('down'); gh.appendChild(f);
-    gh.appendChild(h('b',null,title)); gh.appendChild(h('span','nx-cnt',String(n)));
-    if(add){ const a=btn('nx-add', null, add); a.innerHTML=ic('plus'); a.title='Add a task'; gh.appendChild(a); }
-    s2.appendChild(gh); const it=h('div','nx-items'); fill(it); s2.appendChild(it); right.appendChild(s2); };
-  const askRow=a=>{ const r=btn('nx-row nx-ask', null, ()=>window.__editAsk && window.__editAsk(a)); if(a.by) r.appendChild(av(a.by,22)); r.appendChild(h('span','nx-tt', a.t)); r.appendChild(h('span','nx-sp')); r.appendChild(h('span','nx-state '+String(a.state||'New').toLowerCase().replace(/\s+/g,'-'), a.state||'New')); return r; };
-  if(asks.length || nudges.length) tsec('needs', me()==='jonna'?'Asks for You':'Your Open Asks', asks.length+nudges.length, it=>{
-    asks.sort((a,b)=>(b.at||0)-(a.at||0)).forEach(a=>it.appendChild(askRow(a)));
-    nudges.forEach(n=>{ const r=h('div','nx-row nx-ask'); if(n.by) r.appendChild(av(n.by,22)); r.appendChild(h('span','nx-tt', n.m||n.k)); r.appendChild(h('span','nx-sp')); r.appendChild(btn('nx-mini','Done', ()=>put('nudges', Object.assign({}, n, {done:1})))); it.appendChild(r); }); }, asks.length?'warn':'');
-  const mineL=myOpen().filter(t=>st(t)!=='Waiting on Someone').sort(byDue);
-  const soonB=['Overdue','Today','Tomorrow','This Week'];
-  const now=mineL.filter(t=>soonB.indexOf(dueBucket(t))>=0);
-  tsec('tasks','My Tasks — Due This Week', now.length, it=>{
-    if(!now.length) it.appendChild(h('div','nx-drope','Nothing due this week.'));
-    soonB.forEach(bk=>{ const g=now.filter(t=>dueBucket(t)===bk); if(!g.length) return; it.appendChild(h('div','nx-ibsub'+(bk==='Overdue'?' bad':bk==='Today'?' warn':''), bk)); g.forEach(t=>it.appendChild(row(t, {pull:bk!=='Today'}))); }); }, '', ()=>newTask({due:iso(today())}));
-  const later=mineL.filter(t=>soonB.indexOf(dueBucket(t))<0);
-  tsec('later','Later and No Date', later.length, it=>{ if(!later.length) it.appendChild(h('div','nx-drope','Nothing further out.')); later.slice(0,25).forEach(t=>it.appendChild(row(t))); if(later.length>25) it.appendChild(btn('nx-morel','See all '+later.length+' in My Tasks', ()=>open('mine'))); });
-  const waiting=myOpen().filter(t=>st(t)==='Waiting on Someone').sort(byDue);
-  tsec('wait','Waiting on Someone', waiting.length, it=>{ if(!waiting.length) it.appendChild(h('div','nx-drope','Nothing of yours is waiting on anyone.')); waiting.forEach(t=>it.appendChild(row(t))); });
-  const watch=S.tasks.filter(t=>isOpen(t) && t.o===me() && doers(t).indexOf(me())<0).sort(byDue);
-  tsec('watch','You’re Accountable, Others Are Doing', watch.length, it=>{ if(!watch.length) it.appendChild(h('div','nx-drope','Nothing handed off right now.')); watch.forEach(t=>it.appendChild(row(t))); });
-  wrap.appendChild(right);
   body.appendChild(wrap);
 }
 /* drag a mailbox by its handle (mouse, touch or pen), or move it with the arrow keys; the order is saved */
@@ -4686,6 +4664,8 @@ function vList(kind){
   header(VIEWS[kind].t, ic(VIEWS[kind].i), L.filter(isOpen).length+' open', ctl);
   const tv=taskView(L, g, m, key, {empty: ui.q ? 'Nothing matches “'+ui.q+'”.' : 'Nothing open. Nice.', noProj: false});
   if(kind==='mine' && !ui.q){ const sy=syncBand(m); if(sy.length){ const e=tv.querySelector(':scope > .nx-empty'); if(e) e.remove(); sy.forEach(x=>tv.appendChild(x)); } }
+  if(kind==='mine' && !ui.q && ibxLay()==='split'){ const ex=inboxBand(m); if(ex.top.length || ex.end.length){ const e=tv.querySelector(':scope > .nx-empty'); if(e) e.remove(); }
+    ex.top.reverse().forEach(x=>tv.insertBefore(x, tv.firstChild)); ex.end.forEach(x=>tv.appendChild(x)); }
   withPeek(tv, L, m);
 }
 
@@ -4713,6 +4693,23 @@ function syncDone(c){ const N=window.__notes||{}; const cur=(N.card && N.card(c.
   if(SY && SY.mode) pr=N.put(nx);
   else { const body=Object.assign({}, nx); delete body.id; try{ pr=S.db.collection('syncitems').doc(nx.id).set(body); }catch(e){ pr=Promise.reject(e); } }
   Promise.resolve(pr).then(()=>toast('Done — ticked off in your Sync Up too.'), ()=>toast('That didn’t save. Try again in a moment.')); paint(); }
+/* When Inbox is by mailbox, the things that used to sit beside the mail and aren't tasks of yours live here
+   instead: asks and nudges for you (on top) and work you handed off (at the bottom). Nothing is shown twice. */
+function inboxBand(mode){
+  const board=mode==='board', top=[], end=[];
+  const part=(k, title, n, fill, tone)=>{ const fk='mine|ibx|'+k; const shut=!!ui.fold[fk];
+    const sec=h('section', board ? 'nx-col nx-ibxgrp' : 'nx-grp nx-ibxgrp'+(shut?' shut':'')); const gh=h('div','nx-gh'+(tone?' '+tone:''));
+    if(!board){ const f=btn('nx-fold', null, ()=>{ ui.fold[fk]=!sec.classList.contains('shut'); save(); sec.classList.toggle('shut'); }); f.innerHTML=ic('down'); f.setAttribute('aria-label','Show or hide '+title); gh.appendChild(f); }
+    gh.appendChild(h('b',null,title)); gh.appendChild(h('span','nx-cnt',String(n))); sec.appendChild(gh);
+    const it=h('div','nx-items'); fill(it); sec.appendChild(it); return sec; };
+  const asks=myAsks(), nudges=myNudges();
+  if(asks.length || nudges.length) top.push(part('asks', me()==='jonna' ? 'Asks for You' : 'Your Open Asks', asks.length+nudges.length, it=>{
+    asks.slice().sort((a,b)=>(b.at||0)-(a.at||0)).forEach(a=>{ const r=btn('nx-row nx-ask'+(board?' nx-card':''), null, ()=>window.__editAsk && window.__editAsk(a)); if(a.by) r.appendChild(av(a.by,22)); r.appendChild(h('span','nx-tt', a.t)); r.appendChild(h('span','nx-sp')); r.appendChild(h('span','nx-state '+String(a.state||'New').toLowerCase().replace(/\s+/g,'-'), a.state||'New')); it.appendChild(r); });
+    nudges.forEach(n=>{ const r=h('div','nx-row nx-ask'+(board?' nx-card':'')); if(n.by) r.appendChild(av(n.by,22)); r.appendChild(h('span','nx-tt', n.m||n.k)); r.appendChild(h('span','nx-sp')); r.appendChild(btn('nx-mini','Done', ()=>put('nudges', Object.assign({}, n, {done:1})))); it.appendChild(r); }); }, asks.length?'warn':''));
+  const watch=S.tasks.filter(t=>isOpen(t) && t.o===me() && doers(t).indexOf(me())<0).sort(byDue);
+  if(watch.length) end.push(part('handed', 'Handed Off — Others Are Doing', watch.length, it=>watch.forEach(t=>it.appendChild(row(t)))));
+  return {top, end};
+}
 function syncBand(mode){
   const L=syncTodos(); if(!L || !L.length) return [];
   const mine=L.filter(x=>x.o.id===me()), out=L.filter(x=>x.o.id!==me());
@@ -6153,8 +6150,8 @@ html.nx-tdragging .nx-tiles .st-tile{animation:none!important}
 .nx-row.sel{background:color-mix(in srgb,var(--sky) 14%,var(--surface));box-shadow:inset 3px 0 0 var(--c1)}
 .nx-peek{min-height:0;overflow:auto;background:var(--surface);padding:14px 18px 20px;display:flex;flex-direction:column;gap:12px}
 /* Inbox, side by side: mailboxes left, tasks right */
-.nx-ibx{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(340px,1fr);height:100%}
-.nx-ibm{min-height:0;overflow:auto;border-right:1px solid var(--border);background:var(--surface)}
+.nx-ibx{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(0,1fr);height:100%}
+.nx-ibm{min-height:0;overflow:auto;background:var(--surface)}
 .nx-ibt{min-height:0;overflow:auto;background:var(--surface);padding-bottom:40px}
 .nx-ibf{position:sticky;top:0;z-index:3;display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--surface);border-bottom:1px solid var(--rule)}
 .nx-ibf .nx-sg{height:28px}
@@ -6178,6 +6175,7 @@ html.nx-boxing .nx-box .nx-gh{position:static}
 .nx-ibt .nx-gh{padding-left:8px}
 .nx-ibl .nx-sg{height:30px}
 a.nx-mini{text-decoration:none}
+@media(min-width:1100px){.nx-box .nx-mrow{padding-top:6px;padding-bottom:6px}.nx-box .nx-mrow .tx{display:grid;grid-template-columns:minmax(140px,230px) minmax(0,1fr) auto;column-gap:16px;align-items:baseline}.nx-box .nx-mrow .tp{display:contents}.nx-box .nx-mrow .tp b{grid-column:1;grid-row:1}.nx-box .nx-mrow .sj{grid-column:2;grid-row:1}.nx-box .nx-mrow .ag{grid-column:3;grid-row:1;margin-left:0}}
 .nx-mrow .mi.rd{background:transparent}
 .nx-box .nx-mrow:not(.unread) .sj{color:var(--ink-2)}
 @media(max-width:1000px){.nx-body.nx-v-inbox.has-split{overflow:auto;display:block}.nx-ibx{display:block;height:auto}.nx-ibm,.nx-ibt{overflow:visible;border-right:0}.nx-ibt{border-top:6px solid var(--surface-3)}.nx-ibf{position:static}.nx-box .nx-gh{top:0}.nx-ibh{display:none}}
