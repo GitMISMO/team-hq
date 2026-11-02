@@ -17186,24 +17186,17 @@ const HELP_SECS = [
 <h4>From Your Sync Ups</h4>
 <p>Sync Up cards that are yours show under <b>From Your Sync Ups</b>. Ticking one here ticks it in the Sync Up too. Things you handed to others in a Sync Up are under <b>Handed Off in Your Sync Ups</b>.</p>
 <h4>Asks and Handed-Off Work</h4>
-<p>If your Inbox is set to <b>By Mailbox</b>, <b>Asks for You</b> (asks and nudges) shows at the top of My Tasks, and <b>Handed Off — Others Are Doing</b> (tasks you're accountable for that someone else is doing) shows at the bottom.</p>`},
+<p><b>Asks for You</b> (for everyone else, <b>Your Open Asks</b>) and nudges show at the top of My Tasks when there are any. At the bottom: <b>Handed Off — Others Are Doing</b> (tasks you're accountable for that someone else is doing) and <b>Due Soon on Projects You Lead</b> (other people's tasks due within a week on your team projects).</p>`},
 
-{id:'inbox', t:'Inbox', d:'Every mailbox you can read, yours on top — or asks and email in one list.', h:`
-<p>Inbox has two layouts. Switch with <b>By Mailbox</b> and <b>One List</b> at the top; your choice is saved for you only.</p>
-<h4>By Mailbox</h4>
+{id:'inbox', t:'Inbox', d:'Every mailbox you can read, yours on top.', h:`
+<p>Inbox is your email. Asks, nudges and work you've handed off are on <b>My Tasks</b>.</p>
 <ul>
 <li><b>My Inbox</b> is mail sent to you. Each shared mailbox you can read, like <b>info@mismo.org</b> and <b>membership@mismo.org</b>, is its own list marked <b>Shared</b>. A copy that reached your inbox only because it went to a shared mailbox is listed with that mailbox, not yours.</li>
 <li><b>Fold</b> any mailbox, My Inbox included, with the arrow next to its name or by clicking its title bar. A folded shared mailbox doesn't count on your dashboard's <b>Email to Look At</b> tile (your own mail always counts). info@ and membership@ start folded at the bottom.</li>
-<li><b>Reorder</b> by dragging a mailbox by its handle (the dots on the left). While you drag, every mailbox shrinks to its title so the whole list fits; hold near the top or bottom edge to scroll. You can also click the handle and use the up and down arrow keys. The order is saved.</li>
+<li><b>Reorder</b> by dragging a mailbox by its handle (the dots on the left). While you drag, every mailbox shrinks to its title so the whole list fits; hold near the top or bottom edge to scroll. You can also click the handle and use the up and down arrow keys. The order is saved for you.</li>
 <li><b>Everything</b> shows the latest mail in each mailbox. <b>Needs a Look</b> shows only unread, flagged and important mail. Each mailbox shows 8 messages; click <b>Show more</b> for the rest.</li>
 <li>Click a message to open it in Outlook, or click <b>+</b> to make it a task. Flag, mark read, file and delete work on My Inbox. For shared-mailbox mail, make those changes in Outlook.</li>
-<li>Asks and nudges for you, and work you handed off, are on <b>My Tasks</b> in this layout, so nothing shows in two places.</li>
-</ul>
-<h4>One List</h4>
-<ul>
-<li><b>Your Open Asks</b> (for Jonna, <b>Asks for You</b>): asks and where they stand (New, Looking at It, Built, Not Doing), plus nudges, each with a <b>Done</b> button.</li>
-<li><b>Email to Look At</b>: flagged, important and unread mail (see <i>Outlook, Email and Your Calendar</i>).</li>
-<li><b>Waiting on Someone</b>, <b>You're Accountable, Others Are Doing</b>, <b>Due Soon on Projects You Lead</b> and <b>Recently Closed Asks</b>.</li>
+<li>If your Outlook email isn't connected yet, Inbox says so. Click <b>Ask to Turn It On</b> or ask Jonna.</li>
 </ul>
 <p><b>Ask for Something</b> at the top sends a request for a change or a new panel. <b>Outlook</b> opens Outlook in a new tab.</p>`},
 
@@ -17243,7 +17236,7 @@ const HELP_SECS = [
 <h4>The Fields</h4>
 <ul>
 <li><b>Accountable</b>: the one person answerable for it getting done.</li>
-<li><b>Who Is Working It</b>: anyone doing the hands-on work. They can be different from the person accountable; the accountable person then sees it in their Inbox under <i>You're Accountable, Others Are Doing</i>.</li>
+<li><b>Who Is Working It</b>: anyone doing the hands-on work. They can be different from the person accountable; the accountable person then sees it on their My Tasks under <i>Handed Off — Others Are Doing</i>.</li>
 <li><b>Status</b>: Not Started, In Progress, Waiting on Someone or Done.</li>
 <li><b>Priority</b>: High, Normal or Low.</li>
 <li><b>Due Date</b>: when it is due. Past due tasks show how many days late.</li>
@@ -17490,7 +17483,7 @@ const HELP_SECS = [
 <li><b>Team HQ also works it out for you</b> from Outlook and Key Dates: <b>Free</b>, <b>In a meeting until 2:30p</b>, <b>Out</b>, <b>Traveling</b>, <b>Not in yet</b> or <b>Done for the day</b>. Green means free, red in a meeting, amber away.</li>
 <li><b>My Working Hours</b> (under your status) sets your hours and time zone.</li>
 <li><b>My People</b>: <b>Choose My People</b> (on the My People tile or on Today) picks your direct reports or anyone you keep an eye on. Only you see this list.</li>
-<li><b>Nudges</b>: open someone's card on Today and click <b>Send a Nudge</b>. It lands in their Inbox with a <b>Done</b> button. Everyone can see nudges, so keep them to what you would say out loud.</li>
+<li><b>Nudges</b>: open someone's card on Today and click <b>Send a Nudge</b>. It lands at the top of their My Tasks with a <b>Done</b> button. Everyone can see nudges, so keep them to what you would say out loud.</li>
 </ul>`},
 
 {id:'outlook', t:'Outlook, Email and Your Calendar', d:'What Team HQ reads from Outlook, and what it can do there for you.', h:`
@@ -17505,7 +17498,7 @@ const HELP_SECS = [
 </ul>
 <h4>Email to Look At</h4>
 <ul>
-<li>Flagged, important and unread mail from people shows on the <b>Email to Look At</b> tile and in Inbox. Shared mailboxes you've folded in Inbox aren't counted. Only the subject, sender and a short preview are kept, never the message itself. Auto-replies and meeting responses are left out.</li>
+<li>Flagged, important and unread mail from people shows on the <b>Email to Look At</b> tile. Shared mailboxes you've folded in Inbox aren't counted. Only the subject, sender and a short preview are kept, never the message itself. Auto-replies and meeting responses are left out.</li>
 <li>Click a message to open it in Outlook. The buttons on each row: <b>Flag in Outlook</b>, <b>Mark read in Outlook</b>, <b>File into a folder</b>, <b>Delete</b> (it goes to Deleted Items) and <b>Make it a task</b>. Outlook catches up in a couple of minutes. These buttons work on your own mailbox; shared-mailbox mail is changed in Outlook.</li>
 </ul>
 <p>Someone whose Outlook isn't connected shows <b>Outlook not connected</b>. To connect yours, click <b>Ask to Turn It On</b> or ask Jonna.</p>`},
@@ -17787,5 +17780,5 @@ boot().then(()=>{ paintWho(); renderAll();
 })();
 </script>
 
-<script src="upgrades.js?v=20261102e" defer></script>
+<script src="upgrades.js?v=20261102f" defer></script>
 </body></html>
