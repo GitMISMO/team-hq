@@ -17187,17 +17187,24 @@ const HELP_SECS = [
 <h4>From Your Sync Ups</h4>
 <p>Sync Up cards that are yours show under <b>From Your Sync Ups</b>. Ticking one here ticks it in the Sync Up too. Things you handed to others in a Sync Up are under <b>Handed Off in Your Sync Ups</b>.</p>`},
 
-{id:'inbox', t:'Inbox', d:'Asks, nudges, email to look at, and work waiting on others.', h:`
-<p>Inbox gathers what needs a look:</p>
+{id:'inbox', t:'Inbox', d:'Your mailboxes and your tasks side by side, or everything in one list.', h:`
+<p>Inbox has two layouts. Switch with <b>Side by Side</b> and <b>One List</b> at the top; your choice is saved for you only.</p>
+<h4>Side by Side</h4>
+<ul>
+<li><b>On the left, your mailboxes.</b> <b>My Inbox</b> is mail sent to you. Each shared mailbox you can read, like <b>info@mismo.org</b> and <b>membership@mismo.org</b>, is its own list marked <b>Shared</b>. A copy that reached your inbox only because it went to a shared mailbox is listed with that mailbox, not yours.</li>
+<li><b>Fold</b> a mailbox with the arrow next to its name, or click its title bar. A folded mailbox doesn't count on your dashboard's <b>Email to Look At</b> tile. info@ and membership@ start folded at the bottom.</li>
+<li><b>Reorder</b> by dragging a mailbox by its handle (the dots on the left), or click the handle and use the up and down arrow keys. The order is saved.</li>
+<li><b>Everything</b> shows the latest mail in each mailbox. <b>Needs a Look</b> shows only unread, flagged and important mail. Each mailbox shows 8 messages; click <b>Show more</b> for the rest.</li>
+<li>Click a message to open it in Outlook, or click <b>+</b> to make it a task. Flag, mark read, file and delete work on My Inbox. For shared-mailbox mail, make those changes in Outlook.</li>
+<li><b>On the right, your tasks.</b> Asks for you (when there are any), <b>My Tasks — Due This Week</b> (Overdue, Today, Tomorrow, This Week), <b>Later and No Date</b>, <b>Waiting on Someone</b>, and <b>You're Accountable, Others Are Doing</b>.</li>
+</ul>
+<h4>One List</h4>
 <ul>
 <li><b>Your Open Asks</b> (for Jonna, <b>Asks for You</b>): asks and where they stand (New, Looking at It, Built, Not Doing), plus nudges, each with a <b>Done</b> button.</li>
-<li><b>Email to Look At</b>: flagged, important and unread mail from people (see <i>Outlook, Email and Your Calendar</i>).</li>
-<li><b>Waiting on Someone</b>: your tasks that are waiting.</li>
-<li><b>You're Accountable, Others Are Doing</b>: work you handed off.</li>
-<li><b>Due Soon on Projects You Lead</b>: other people's tasks due within a week on your projects.</li>
-<li><b>Recently Closed Asks</b>.</li>
+<li><b>Email to Look At</b>: flagged, important and unread mail (see <i>Outlook, Email and Your Calendar</i>).</li>
+<li><b>Waiting on Someone</b>, <b>You're Accountable, Others Are Doing</b>, <b>Due Soon on Projects You Lead</b> and <b>Recently Closed Asks</b>.</li>
 </ul>
-<p><b>Ask for Something</b> at the top sends a request for a change or a new panel.</p>`},
+<p><b>Ask for Something</b> at the top sends a request for a change or a new panel. <b>Outlook</b> opens Outlook in a new tab.</p>`},
 
 {id:'calendar', t:'Calendar', d:'Your week from Outlook, with tasks and key dates, and others laid over it.', h:`
 <ul>
@@ -17497,8 +17504,8 @@ const HELP_SECS = [
 </ul>
 <h4>Email to Look At</h4>
 <ul>
-<li>Flagged, important and unread mail from people shows on the <b>Email to Look At</b> tile and in Inbox. Only the subject, sender and a short preview are kept, never the message itself. Auto-replies and meeting responses are left out.</li>
-<li>Click a message to open it in Outlook. The buttons on each row: <b>Flag in Outlook</b>, <b>Mark read in Outlook</b>, <b>File into a folder</b>, <b>Delete</b> (it goes to Deleted Items) and <b>Make it a task</b>. Outlook catches up in a couple of minutes.</li>
+<li>Flagged, important and unread mail from people shows on the <b>Email to Look At</b> tile and in Inbox. Shared mailboxes you've folded in Inbox aren't counted. Only the subject, sender and a short preview are kept, never the message itself. Auto-replies and meeting responses are left out.</li>
+<li>Click a message to open it in Outlook. The buttons on each row: <b>Flag in Outlook</b>, <b>Mark read in Outlook</b>, <b>File into a folder</b>, <b>Delete</b> (it goes to Deleted Items) and <b>Make it a task</b>. Outlook catches up in a couple of minutes. These buttons work on your own mailbox; shared-mailbox mail is changed in Outlook.</li>
 </ul>
 <p>Someone whose Outlook isn't connected shows <b>Outlook not connected</b>. To connect yours, click <b>Ask to Turn It On</b> or ask Jonna.</p>`},
 
@@ -17779,5 +17786,5 @@ boot().then(()=>{ paintWho(); renderAll();
 })();
 </script>
 
-<script src="upgrades.js?v=20261101zd" defer></script>
+<script src="upgrades.js?v=20261102a" defer></script>
 </body></html>
