@@ -126,6 +126,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -165,7 +166,7 @@ const NOISE=/^\s*(automatic reply|auto[- ]?reply|autoreply|out of (the )?office|
    on the dashboard — it's the "not right now" pile. */
 const IBLOW=/^(info|membership)@/i;
 function ibCfg(){ const c=S.bset && S.bset.hqInbox; return c && typeof c==='object' ? c : {}; }
-function boxShut(k){ if(!k) return false; const s=ibCfg().shut||{}; return Object.prototype.hasOwnProperty.call(s,k) ? !!s[k] : IBLOW.test(k); }
+function boxShut(k){ k=k||''; const s=ibCfg().shut||{}; if(!k) return !!s[''];  return Object.prototype.hasOwnProperty.call(s,k) ? !!s[k] : IBLOW.test(k); }
 function setInbox(patch){ if(!S.bset) S.bset={}; S.bset.hqInbox=Object.assign({}, ibCfg(), patch); try{ window.__saveMine && window.__saveMine(); }catch(e){} try{ window.dispatchEvent(new Event('hq:inbox')); }catch(e){} }
 function myAddrs(){ const set={}; const add=a=>{ a=str(a).toLowerCase().trim(); if(/@/.test(a)) set[a]=1; };
   const p=(S.people||[]).find(z=>z.id===S.me)||{}; add(p.email); (Array.isArray(p.emails)?p.emails:[]).forEach(add);
@@ -685,7 +686,7 @@ function mailFx(list){ const out=[]; (list||[]).forEach(m=>{ const P=pendFor(m.i
     P.forEach(z=>{ if(z.k==='del'||z.k==='move') gone=true; else if(z.k==='flag') c.flagged=true; else if(z.k==='unflag') c.flagged=false; else if(z.k==='read') c.unread=false; else if(z.k==='unread') c.unread=true; });
     const w=P.filter(z=>!z.fin); c.pend=w.length ? VERB[w[w.length-1].k]+'…' : ''; if(!gone) out.push(c); }); return out; }
 /* the mail that counts: your own and any mailbox you haven't folded away */
-function mailItems(){ return mailBoxes().filter(b=>!boxShut(b.k)).reduce((a,b)=>a.concat(b.items),[]).sort((x,y)=>y.at-x.at); }
+function mailItems(){ return mailBoxes().filter(b=>!b.k || !boxShut(b.k)).reduce((a,b)=>a.concat(b.items),[]).sort((x,y)=>y.at-x.at); }
 function lastErr(mid){ const z=acts().filter(q=>q.mid===mid && q.err).pop(); return z ? z : null; }
 /* folders, fetched from Outlook through the same queue and kept with the person's settings */
 const SKIPF=/^(deleted items|drafts|junk email|outbox|sent items|conversation history|sync issues|rss feeds|rss subscriptions|scheduled|snoozed|social activity notifications|yammer root|externalcontacts|files)$/i;
@@ -4550,7 +4551,7 @@ function vInboxSplit(){
   const askB=btn('nx-mini pri', 'Ask for Something', ()=>window.__ask2 && window.__ask2());
   const ol=h('a','nx-mini'); ol.href='https://outlook.office.com/mail/'; ol.target='_blank'; ol.rel='noopener'; ol.innerHTML=ic('ext')+'<span>Outlook</span>'; ol.title='Open Outlook';
   const boxes=x && x.MAIL.state==='ok' && x.mailBoxes ? x.mailBoxes() : [];
-  const un=boxes.filter(b=>!x.boxShut(b.k)).reduce((n,b)=>n+b.items.filter(m=>m.unread).length,0);
+  const un=boxes.filter(b=>!b.k || !x.boxShut(b.k)).reduce((n,b)=>n+b.items.filter(m=>m.unread).length,0);
   header('Inbox', ic('inbox'), boxes.length ? (boxes.length>1 ? boxes.length+' mailboxes · ' : '')+un+' unread' : 'Your email and your tasks, side by side', [layoutSeg(), ol, askB]);
   body.classList.add('has-split');
   const wrap=h('div','nx-ibx');
@@ -4577,7 +4578,7 @@ function vInboxSplit(){
       if(b.k) gh.appendChild(h('span','nx-ibtag','Shared'));
       gh.appendChild(h('span','nx-cnt', unread ? unread+' unread' : (b.items.length ? 'all read' : '')));
       gh.appendChild(h('span','nx-sp'));
-      if(shut) gh.appendChild(h('span','nx-ibz','Folded — not counted on your dashboard'));
+      if(shut && b.k) gh.appendChild(h('span','nx-ibz','Folded — not counted on your dashboard'));
       gh.addEventListener('click', e=>{ if(e.target.closest('button,a')) return; f.click(); });
       sec2.appendChild(gh);
       const it=h('div','nx-items');
@@ -4624,16 +4625,23 @@ function boxDrag(grip, sec2, list){
   grip.addEventListener('keydown', e=>{ if(e.key!=='ArrowUp' && e.key!=='ArrowDown') return; e.preventDefault();
     const sib=e.key==='ArrowUp' ? sec2.previousElementSibling : sec2.nextElementSibling; if(!sib) return;
     if(e.key==='ArrowUp') list.insertBefore(sec2, sib); else list.insertBefore(sib, sec2); saveOrder(); grip.focus(); });
-  grip.addEventListener('pointerdown', e=>{ if(e.button>0) return; e.preventDefault(); try{ grip.setPointerCapture(e.pointerId); }catch(x){}
-    const y0=e.clientY; let moved=false; sec2.classList.add('nx-boxdrag'); document.documentElement.classList.add('nx-boxing');
-    const mv=ev=>{ if(Math.abs(ev.clientY-y0)>4) moved=true; if(!moved) return;
-      const others=[...list.querySelectorAll(':scope > .nx-box')].filter(z=>z!==sec2);
-      let before=null; for(const z of others){ const r=z.getBoundingClientRect(); if(ev.clientY < r.top + Math.min(r.height,36)/2){ before=z; break; } }
-      if(before) { if(sec2.nextElementSibling!==before) list.insertBefore(sec2, before); } else if(list.lastElementChild!==sec2) list.appendChild(sec2);
-      const sc=sec2.closest('.nx-ibm'); if(sc){ const R=sc.getBoundingClientRect(); if(ev.clientY<R.top+40) sc.scrollTop-=12; else if(ev.clientY>R.bottom-40) sc.scrollTop+=12; } };
-    const up=()=>{ grip.removeEventListener('pointermove', mv); grip.removeEventListener('pointerup', up); grip.removeEventListener('pointercancel', up);
-      sec2.classList.remove('nx-boxdrag'); document.documentElement.classList.remove('nx-boxing'); if(moved) saveOrder(); };
-    grip.addEventListener('pointermove', mv); grip.addEventListener('pointerup', up); grip.addEventListener('pointercancel', up); });
+  /* while dragging, every mailbox shrinks to its title bar so the whole list fits and any spot is reachable;
+     holding near the top or bottom edge keeps scrolling */
+  grip.addEventListener('pointerdown', e=>{ if(e.button>0) return; e.preventDefault();
+    const sc=sec2.closest('.nx-ibm'); let y=e.clientY, moved=false;
+    const before0=sec2.getBoundingClientRect().top;
+    sec2.classList.add('nx-boxdrag'); document.documentElement.classList.add('nx-boxing');
+    /* keep the grabbed title bar under the pointer after the list shrinks */
+    if(sc){ const d=sec2.getBoundingClientRect().top-before0; sc.scrollTop+=d; }
+    const place=()=>{ const others=[...list.querySelectorAll(':scope > .nx-box')].filter(z=>z!==sec2);
+      let before=null; for(const z of others){ const r=z.getBoundingClientRect(); if(y < r.top + r.height/2){ before=z; break; } }
+      if(before){ if(sec2.nextElementSibling!==before) list.insertBefore(sec2, before); } else if(list.lastElementChild!==sec2) list.appendChild(sec2); };
+    const tick=setInterval(()=>{ if(!moved || !sc) return; const R=sc.getBoundingClientRect(); const edge=56;
+      if(y<R.top+edge){ sc.scrollTop-=Math.ceil((R.top+edge-y)/4); place(); } else if(y>R.bottom-edge){ sc.scrollTop+=Math.ceil((y-(R.bottom-edge))/4); place(); } }, 30);
+    const mv=ev=>{ y=ev.clientY; if(Math.abs(y-e.clientY)>4) moved=true; if(moved) place(); };
+    const up=()=>{ clearInterval(tick); document.removeEventListener('pointermove', mv, true); document.removeEventListener('pointerup', up, true); document.removeEventListener('pointercancel', up, true);
+      sec2.classList.remove('nx-boxdrag'); document.documentElement.classList.remove('nx-boxing'); if(moved){ saveOrder(); sec2.scrollIntoView({block:'nearest'}); } };
+    document.addEventListener('pointermove', mv, true); document.addEventListener('pointerup', up, true); document.addEventListener('pointercancel', up, true); });
 }
 function vInboxList(){
   const asks=myAsks(), nudges=myNudges();
@@ -6158,6 +6166,8 @@ html.nx-tdragging .nx-tiles .st-tile{animation:none!important}
 .nx-grip svg{width:14px;height:14px;fill:currentColor}
 .nx-grip:hover,.nx-grip:focus-visible{background:var(--surface-3);color:var(--ink)}
 html.nx-boxing,html.nx-boxing *{cursor:grabbing!important;user-select:none}
+html.nx-boxing .nx-box .nx-items,html.nx-boxing .nx-ibz{display:none}
+html.nx-boxing .nx-box .nx-gh{position:static}
 .nx-box.nx-boxdrag{position:relative;z-index:4;box-shadow:0 6px 22px rgba(6,32,47,.22);outline:2px solid var(--c1);outline-offset:-2px}
 .nx-ibtag{font-size:10.5px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:var(--ink-3);border:1px solid var(--border);border-radius:4px;padding:1px 5px}
 .nx-ibz{font-size:11.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
