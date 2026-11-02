@@ -1,0 +1,16 @@
+{
+  "name": "MISMO Team HQ",
+  "short_name": "Team HQ",
+  "description": "The MISMO team's tasks, projects, calendar and email in one place.",
+  "id": "/team-hq/",
+  "start_url": "/team-hq/",
+  "scope": "/team-hq/",
+  "display": "standalone",
+  "background_color": "#0d314c",
+  "theme_color": "#0d314c",
+  "icons": [
+    { "src": "/team-hq/hq-icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/team-hq/hq-icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/team-hq/hq-icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

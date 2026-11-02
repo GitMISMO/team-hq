@@ -131,6 +131,8 @@
 
 
 
+
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -823,17 +825,20 @@ const added=[];
 function add(el){ document.head.appendChild(el); added.push(el); return el; }
 const qs=new URLSearchParams(location.search);
 const standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
-/* the only thing Team HQ installs as is Expenses, so any launch from an installed icon opens Expenses */
-const appExp = qs.get('app')==='expenses' || standalone;
+/* Two home-screen apps: Team HQ itself, and Expenses (opened with ?app=expenses). Saving Team HQ to the home
+   screen gives a Team HQ icon; saving from the Expenses page gives an Expenses icon. */
+const appExp = qs.get('app')==='expenses';
 
 /* ---------- phone app: manifest + home-screen tags ---------- */
 function meta(name, content){ const m=document.createElement('meta'); m.name=name; m.content=content; return add(m); }
 function link(rel, href, extra){ const l=document.createElement('link'); l.rel=rel; l.href=href; if(extra) Object.assign(l, extra); return add(l); }
-if(!document.querySelector('link[rel="manifest"]')) link('manifest', '/team-hq/expenses.webmanifest');
-link('apple-touch-icon', '/team-hq/expenses-icon-180.png');
+{ const mf=appExp ? '/team-hq/expenses.webmanifest' : '/team-hq/team-hq.webmanifest';
+  const cur=document.querySelector('link[rel="manifest"]'); if(cur) cur.href=mf; else link('manifest', mf);
+  document.querySelectorAll('link[rel="apple-touch-icon"],meta[name="apple-mobile-web-app-title"]').forEach(e=>e.remove()); }
+link('apple-touch-icon', appExp ? '/team-hq/expenses-icon-180.png' : '/team-hq/hq-icon-180.png');
 meta('apple-mobile-web-app-capable','yes');
 meta('mobile-web-app-capable','yes');
-meta('apple-mobile-web-app-title','Expenses');
+meta('apple-mobile-web-app-title', appExp ? 'Expenses' : 'Team HQ');
 meta('apple-mobile-web-app-status-bar-style','black-translucent');
 if(!document.querySelector('meta[name="theme-color"]')) meta('theme-color','#0d314c');
 if(appExp) document.documentElement.classList.add('app-exp');
@@ -976,11 +981,15 @@ function paintExp(){
     const tx=document.createElement('div');
     const b=document.createElement('b'); b.textContent='Put Expenses on your phone'; tx.appendChild(b);
     const s=document.createElement('small');
-    s.textContent = isiOS ? 'In Safari, tap Share, then Add to Home Screen. It opens straight to Expenses, like an app.'
+    /* the home-screen icon has to be saved from the Expenses page itself, or it's a Team HQ icon */
+    const onApp=appExp;
+    s.textContent = !onApp ? 'Open the Expenses page, then add it to your home screen. It opens straight to Expenses, like an app.'
+                  : isiOS ? 'In Safari, tap Share, then Add to Home Screen. It opens straight to Expenses, like an app.'
                   : deferred ? 'Install it and it opens straight to Expenses, like an app.'
                   : 'In Chrome, open the menu and tap Add to Home screen. It opens straight to Expenses, like an app.';
     tx.appendChild(s); tip.appendChild(tx);
-    if(deferred && !isiOS){ const ib=document.createElement('button'); ib.className='btn'; ib.type='button'; ib.textContent='Install'; ib.onclick=async()=>{ deferred.prompt(); try{ await deferred.userChoice; }catch(e){} deferred=null; tip.remove(); }; tip.appendChild(ib); }
+    if(!onApp){ const a=document.createElement('a'); a.className='btn'; a.href='/team-hq/?app=expenses'; a.textContent='Open the Expenses Page'; tip.appendChild(a); }
+    if(onApp && deferred && !isiOS){ const ib=document.createElement('button'); ib.className='btn'; ib.type='button'; ib.textContent='Install'; ib.onclick=async()=>{ deferred.prompt(); try{ await deferred.userChoice; }catch(e){} deferred=null; tip.remove(); }; tip.appendChild(ib); }
     const x=document.createElement('button'); x.className='x'; x.type='button'; x.setAttribute('aria-label','Hide this tip'); x.textContent='×';
     x.onclick=()=>{ try{ localStorage.setItem('tools:team-hq:exp.install.x','1'); }catch(e){} tip.remove(); }; tip.appendChild(x);
     const vh=exp.querySelector(':scope > .vhead'); vh ? vh.after(tip) : exp.prepend(tip);
@@ -5805,8 +5814,8 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-swd small{max-width:100%;font-size:11px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nx-swd.now{background:var(--navy);border-color:var(--navy)}.nx-swd.now span{color:var(--sky)}.nx-swd.now b{color:#fff}.nx-swd.now small{color:rgba(255,255,255,.75)}
 .nx-swd.wkd:not(.now){background:var(--surface-2)}
-.nx-pills{display:flex;gap:3px;align-items:center;min-height:8px;margin:2px 0}
-.nx-pills i{width:16px;height:5px;border-radius:3px;background:var(--k)}
+.nx-pills{display:flex;gap:3px;align-items:center;align-self:stretch;min-width:0;max-width:100%;min-height:8px;margin:2px 0;overflow:hidden}
+.nx-pills i{flex:0 1 16px;min-width:4px;height:5px;border-radius:3px;background:var(--k)}
 .nx-dvb{display:flex;align-items:center;gap:14px;margin-bottom:12px;flex-wrap:wrap}
 .nx-dvb h2{margin:0;font-size:17px;font-weight:700;color:var(--ink)}
 .nx-dvr{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
