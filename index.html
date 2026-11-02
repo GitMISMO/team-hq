@@ -17184,18 +17184,20 @@ const HELP_SECS = [
 <h4>Undo</h4>
 <p>Every change shows a note at the bottom with <b>Undo</b> for six seconds.</p>
 <h4>From Your Sync Ups</h4>
-<p>Sync Up cards that are yours show under <b>From Your Sync Ups</b>. Ticking one here ticks it in the Sync Up too. Things you handed to others in a Sync Up are under <b>Handed Off in Your Sync Ups</b>.</p>`},
+<p>Sync Up cards that are yours show under <b>From Your Sync Ups</b>. Ticking one here ticks it in the Sync Up too. Things you handed to others in a Sync Up are under <b>Handed Off in Your Sync Ups</b>.</p>
+<h4>Asks and Handed-Off Work</h4>
+<p>If your Inbox is set to <b>By Mailbox</b>, <b>Asks for You</b> (asks and nudges) shows at the top of My Tasks, and <b>Handed Off — Others Are Doing</b> (tasks you're accountable for that someone else is doing) shows at the bottom.</p>`},
 
-{id:'inbox', t:'Inbox', d:'Your mailboxes and your tasks side by side, or everything in one list.', h:`
-<p>Inbox has two layouts. Switch with <b>Side by Side</b> and <b>One List</b> at the top; your choice is saved for you only.</p>
-<h4>Side by Side</h4>
+{id:'inbox', t:'Inbox', d:'Every mailbox you can read, yours on top — or asks and email in one list.', h:`
+<p>Inbox has two layouts. Switch with <b>By Mailbox</b> and <b>One List</b> at the top; your choice is saved for you only.</p>
+<h4>By Mailbox</h4>
 <ul>
-<li><b>On the left, your mailboxes.</b> <b>My Inbox</b> is mail sent to you. Each shared mailbox you can read, like <b>info@mismo.org</b> and <b>membership@mismo.org</b>, is its own list marked <b>Shared</b>. A copy that reached your inbox only because it went to a shared mailbox is listed with that mailbox, not yours.</li>
-<li><b>Fold</b> a mailbox with the arrow next to its name, or click its title bar. A folded mailbox doesn't count on your dashboard's <b>Email to Look At</b> tile. info@ and membership@ start folded at the bottom.</li>
-<li><b>Reorder</b> by dragging a mailbox by its handle (the dots on the left), or click the handle and use the up and down arrow keys. The order is saved.</li>
+<li><b>My Inbox</b> is mail sent to you. Each shared mailbox you can read, like <b>info@mismo.org</b> and <b>membership@mismo.org</b>, is its own list marked <b>Shared</b>. A copy that reached your inbox only because it went to a shared mailbox is listed with that mailbox, not yours.</li>
+<li><b>Fold</b> any mailbox, My Inbox included, with the arrow next to its name or by clicking its title bar. A folded shared mailbox doesn't count on your dashboard's <b>Email to Look At</b> tile (your own mail always counts). info@ and membership@ start folded at the bottom.</li>
+<li><b>Reorder</b> by dragging a mailbox by its handle (the dots on the left). While you drag, every mailbox shrinks to its title so the whole list fits; hold near the top or bottom edge to scroll. You can also click the handle and use the up and down arrow keys. The order is saved.</li>
 <li><b>Everything</b> shows the latest mail in each mailbox. <b>Needs a Look</b> shows only unread, flagged and important mail. Each mailbox shows 8 messages; click <b>Show more</b> for the rest.</li>
 <li>Click a message to open it in Outlook, or click <b>+</b> to make it a task. Flag, mark read, file and delete work on My Inbox. For shared-mailbox mail, make those changes in Outlook.</li>
-<li><b>On the right, your tasks.</b> Asks for you (when there are any), <b>My Tasks — Due This Week</b> (Overdue, Today, Tomorrow, This Week), <b>Later and No Date</b>, <b>Waiting on Someone</b>, and <b>You're Accountable, Others Are Doing</b>.</li>
+<li>Asks and nudges for you, and work you handed off, are on <b>My Tasks</b> in this layout, so nothing shows in two places.</li>
 </ul>
 <h4>One List</h4>
 <ul>
@@ -17785,5 +17787,5 @@ boot().then(()=>{ paintWho(); renderAll();
 })();
 </script>
 
-<script src="upgrades.js?v=20261102d" defer></script>
+<script src="upgrades.js?v=20261102e" defer></script>
 </body></html>
