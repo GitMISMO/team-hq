@@ -124,6 +124,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -169,6 +170,9 @@ function myAddrs(){ const set={}; const add=a=>{ a=str(a).toLowerCase().trim(); 
   const p=(S.people||[]).find(z=>z.id===S.me)||{}; add(p.email); (Array.isArray(p.emails)?p.emails:[]).forEach(add);
   const pe=personEmail(S.me); add(pe); const loc=pe.split('@')[0]; if(loc){ add(loc+'@mismo.org'); add(loc+'@mba.org'); }
   return set; }
+/* MISMO's shared mailboxes live at mba.org with mismo.org aliases (info@, mismosummit@ …): either spelling is the same mailbox */
+const ORGD=/@(mba|mismo)\.org$/i;
+const canon=a=>{ a=str(a).toLowerCase().trim(); return ORGD.test(a) ? a.replace(ORGD,'@mismo.org') : a; };
 function boxName(k){ return k ? k : 'My Inbox'; }
 function mailBoxes(){
   const mine=myAddrs(); const shared=(MAIL.shared||[]);
@@ -176,7 +180,7 @@ function mailBoxes(){
   const own=[], into={};
   MAIL.items.forEach(m=>{
     let k='';
-    if(m.rc.length && !m.rc.some(a=>mine[a]) && !mine[(m.fromEmail||'').toLowerCase()]){ const hit=m.rc.find(a=>known[a]); if(hit) k=hit; }
+    if(m.rc.length && !m.rc.some(a=>mine[a]) && !mine[(m.fromEmail||'').toLowerCase()]){ const hit=m.rc.map(canon).find(a=>known[a]); if(hit) k=hit; }
     if(!k){ own.push(m); return; }
     /* the shared mailbox has its own copy: keep that one */
     const dup=known[k].items.some(z=>z.subject===m.subject && Math.abs(z.at-m.at)<3*60e3);
@@ -196,7 +200,7 @@ function loadMail(force){
     MAIL.data=d||null; const list=d ? (Array.isArray(d) ? d : (d.msgs||d.mail||d.value||d.items||[])) : [];
     MAIL.items=list.map(norm).filter(m=>!NOISE.test(m.subject)).sort((a,b)=>b.at-a.at);
     /* shared mailboxes the flow reads: [{a:'info@mismo.org', ok:true, msgs:[…]}] */
-    MAIL.shared=(d && Array.isArray(d.boxes) ? d.boxes : []).filter(b=>b && b.a).map(b=>{ const a=str(b.a).toLowerCase();
+    MAIL.shared=(d && Array.isArray(d.boxes) ? d.boxes : []).filter(b=>b && b.a).map(b=>{ const a=canon(b.a);
       return {a, ok:b.ok!==false, items:(Array.isArray(b.msgs)?b.msgs:[]).map(norm).filter(m=>!NOISE.test(m.subject)).map(m=>Object.assign(m, {box:a, id:a+'|'+m.id})).sort((x,y)=>y.at-x.at)}; }); MAIL.state=d ? 'ok' : 'none'; MAIL.at=Date.now(); MAIL.sent=d && Date.parse(d.at||'') || 0; try{ if(ACT.on) settle(); }catch(e){} return MAIL;
   }).catch(()=>{ MAIL.state='none'; MAIL.at=Date.now(); return MAIL; });
   return MAIL.p;
