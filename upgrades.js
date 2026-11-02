@@ -122,6 +122,8 @@
 
 
 
+
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -138,7 +140,7 @@ MODS.push(function(){
 'use strict';
 if(window.__hqx && window.__hqx.destroy) window.__hqx.destroy();
 const S=window.__S; if(!S) return;
-const MAIL={state:'idle', at:0, data:null, items:[]};
+const MAIL={state:'idle', at:0, data:null, items:[], shared:[]};
 const str=v=>v==null?'':String(v);
 function norm(m){
   const from=m.from && typeof m.from==='object' ? ((m.from.emailAddress||m.from).name || (m.from.emailAddress||m.from).address) : (m.from||m.f||m.sender||'');
@@ -147,8 +149,44 @@ function norm(m){
   const imp=m.important!=null ? !!m.important : /high/i.test(str(m.importance||m.imp));
   const unread=m.unread!=null ? !!m.unread : m.isRead!=null ? !m.isRead : false;
   const at=Date.parse(m.received||m.receivedDateTime||m.at||m.date||'') || 0;
-  return { id:str(m.id||m.link||m.webLink||m.subject+at), subject:str(m.subject||m.s||'(no subject)'), from:str(from), fromEmail:str(fromEmail), at, link:str(m.link||m.webLink||m.u||''), flagged:flag, important:imp, unread, preview:str(m.preview||m.bodyPreview||m.pv||'').slice(0,180) };
+  const rc=[].concat(m.toRecipients||[], m.ccRecipients||[]).map(z=>str(((z&&z.emailAddress)||z||{}).address).toLowerCase().trim()).filter(Boolean);
+  return { id:str(m.id||m.link||m.webLink||m.subject+at), subject:str(m.subject||m.s||'(no subject)'), from:str(from), fromEmail:str(fromEmail), at, link:str(m.link||m.webLink||m.u||''), flagged:flag, important:imp, unread, preview:str(m.preview||m.bodyPreview||m.pv||'').slice(0,180), rc, box:'' };
 }
+/* leave out automatic replies, out-of-office notes, bounce-backs and meeting responses — not email anyone needs to look at */
+const NOISE=/^\s*(automatic reply|auto[- ]?reply|autoreply|out of (the )?office|ooo\b|undeliverable|delivery (status notification|has failed)|mail delivery failed|accepted:|declined:|tentative:|tentatively accepted:|canceled:|cancelled:|read:|not read:|recall:)/i;
+
+/* ---------- mailboxes ----------
+   Mail is sorted into the mailbox it was sent to. "My Inbox" is mail sent to you. Shared mailboxes you can
+   read (info@, membership@ …) come through as their own lists, and a copy that reached your own inbox only
+   because it was sent to one of them goes with that mailbox, not yours. Each person orders and folds their
+   mailboxes (bset.hqInbox); info@ and membership@ start folded at the bottom. A folded mailbox doesn't count
+   on the dashboard — it's the "not right now" pile. */
+const IBLOW=/^(info|membership)@/i;
+function ibCfg(){ const c=S.bset && S.bset.hqInbox; return c && typeof c==='object' ? c : {}; }
+function boxShut(k){ if(!k) return false; const s=ibCfg().shut||{}; return Object.prototype.hasOwnProperty.call(s,k) ? !!s[k] : IBLOW.test(k); }
+function setInbox(patch){ if(!S.bset) S.bset={}; S.bset.hqInbox=Object.assign({}, ibCfg(), patch); try{ window.__saveMine && window.__saveMine(); }catch(e){} try{ window.dispatchEvent(new Event('hq:inbox')); }catch(e){} }
+function myAddrs(){ const set={}; const add=a=>{ a=str(a).toLowerCase().trim(); if(/@/.test(a)) set[a]=1; };
+  const p=(S.people||[]).find(z=>z.id===S.me)||{}; add(p.email); (Array.isArray(p.emails)?p.emails:[]).forEach(add);
+  const pe=personEmail(S.me); add(pe); const loc=pe.split('@')[0]; if(loc){ add(loc+'@mismo.org'); add(loc+'@mba.org'); }
+  return set; }
+function boxName(k){ return k ? k : 'My Inbox'; }
+function mailBoxes(){
+  const mine=myAddrs(); const shared=(MAIL.shared||[]);
+  const known={}; shared.forEach(b=>{ known[b.a]=b; });
+  const own=[], into={};
+  MAIL.items.forEach(m=>{
+    let k='';
+    if(m.rc.length && !m.rc.some(a=>mine[a]) && !mine[(m.fromEmail||'').toLowerCase()]){ const hit=m.rc.find(a=>known[a]); if(hit) k=hit; }
+    if(!k){ own.push(m); return; }
+    /* the shared mailbox has its own copy: keep that one */
+    const dup=known[k].items.some(z=>z.subject===m.subject && Math.abs(z.at-m.at)<3*60e3);
+    if(!dup) (into[k]=into[k]||[]).push(Object.assign({}, m, {box:k, viaMe:true})); });
+  const L=[{k:'', n:'My Inbox', ok:true, items:mailFx(own)}];
+  shared.forEach(b=>L.push({k:b.a, n:b.a, ok:b.ok!==false, items:mailFx(b.items.concat(into[b.a]||[])).sort((x,y)=>y.at-x.at)}));
+  const ord=Array.isArray(ibCfg().order) ? ibCfg().order : [];
+  const rank=b=>{ const i=ord.indexOf(b.k); if(i>=0) return i; return 1000+(b.k===''?0:IBLOW.test(b.k)?2000:1000)+L.indexOf(b); };
+  return L.sort((x,y)=>rank(x)-rank(y)); }
+function allMail(){ return mailBoxes().reduce((a,b)=>a.concat(b.items),[]); }
 function loadMail(force){
   const R=window.__hqRelay; if(!R || !R.readOther || !S.me) return Promise.resolve(MAIL);
   if(MAIL.state==='loading') return MAIL.p;
@@ -156,9 +194,10 @@ function loadMail(force){
   MAIL.state='loading';
   MAIL.p=R.readOther('team-hq','mail-'+S.me).then(d=>{
     MAIL.data=d||null; const list=d ? (Array.isArray(d) ? d : (d.msgs||d.mail||d.value||d.items||[])) : [];
-    /* leave out automatic replies, out-of-office notes, bounce-backs and meeting responses — not email anyone needs to look at */
-    const NOISE=/^\s*(automatic reply|auto[- ]?reply|autoreply|out of (the )?office|ooo\b|undeliverable|delivery (status notification|has failed)|mail delivery failed|accepted:|declined:|tentative:|tentatively accepted:|canceled:|cancelled:|read:|not read:|recall:)/i;
-    MAIL.items=list.map(norm).filter(m=>!NOISE.test(m.subject)).sort((a,b)=>b.at-a.at); MAIL.state=d ? 'ok' : 'none'; MAIL.at=Date.now(); MAIL.sent=d && Date.parse(d.at||'') || 0; try{ if(ACT.on) settle(); }catch(e){} return MAIL;
+    MAIL.items=list.map(norm).filter(m=>!NOISE.test(m.subject)).sort((a,b)=>b.at-a.at);
+    /* shared mailboxes the flow reads: [{a:'info@mismo.org', ok:true, msgs:[…]}] */
+    MAIL.shared=(d && Array.isArray(d.boxes) ? d.boxes : []).filter(b=>b && b.a).map(b=>{ const a=str(b.a).toLowerCase();
+      return {a, ok:b.ok!==false, items:(Array.isArray(b.msgs)?b.msgs:[]).map(norm).filter(m=>!NOISE.test(m.subject)).map(m=>Object.assign(m, {box:a, id:a+'|'+m.id})).sort((x,y)=>y.at-x.at)}; }); MAIL.state=d ? 'ok' : 'none'; MAIL.at=Date.now(); MAIL.sent=d && Date.parse(d.at||'') || 0; try{ if(ACT.on) settle(); }catch(e){} return MAIL;
   }).catch(()=>{ MAIL.state='none'; MAIL.at=Date.now(); return MAIL; });
   return MAIL.p;
 }
@@ -626,6 +665,8 @@ const gid=id=>String(id).replace(/\//g,'%2F'); /* Graph ids are already URL-safe
 const msgUrl=id=>'/me/messages/'+gid(id);
 function mailAct(m, k, extra){
   if(!m || !m.id || /^https?:/i.test(m.id)) return null;
+  /* shared-mailbox mail is changed in Outlook itself: Do It in Outlook only works on your own mailbox */
+  if(m.box) return null;
   const q={k, mid:m.id, subj:String(m.subject||'').slice(0,80)};
   if(k==='flag'||k==='unflag'){ q.method='PATCH'; q.url=msgUrl(m.id); q.body={flag:{flagStatus:k==='flag'?'flagged':'notFlagged'}}; }
   else if(k==='read'||k==='unread'){ q.method='PATCH'; q.url=msgUrl(m.id); q.body={isRead:k==='read'}; }
@@ -638,7 +679,8 @@ function pendFor(mid){ return acts().filter(z=>z.mid===mid && !z.err && !(z.fin 
 function mailFx(list){ const out=[]; (list||[]).forEach(m=>{ const P=pendFor(m.id); if(!P.length){ out.push(m); return; } const c=Object.assign({}, m); let gone=false;
     P.forEach(z=>{ if(z.k==='del'||z.k==='move') gone=true; else if(z.k==='flag') c.flagged=true; else if(z.k==='unflag') c.flagged=false; else if(z.k==='read') c.unread=false; else if(z.k==='unread') c.unread=true; });
     const w=P.filter(z=>!z.fin); c.pend=w.length ? VERB[w[w.length-1].k]+'…' : ''; if(!gone) out.push(c); }); return out; }
-function mailItems(){ return mailFx(MAIL.items); }
+/* the mail that counts: your own and any mailbox you haven't folded away */
+function mailItems(){ return mailBoxes().filter(b=>!boxShut(b.k)).reduce((a,b)=>a.concat(b.items),[]).sort((x,y)=>y.at-x.at); }
 function lastErr(mid){ const z=acts().filter(q=>q.mid===mid && q.err).pop(); return z ? z : null; }
 /* folders, fetched from Outlook through the same queue and kept with the person's settings */
 const SKIPF=/^(deleted items|drafts|junk email|outbox|sent items|conversation history|sync issues|rss feeds|rss subscriptions|scheduled|snoozed|social activity notifications|yammer root|externalcontacts|files)$/i;
@@ -755,7 +797,7 @@ loadDone().then(()=>kick());
 
 loadMail(true);
 const timer=setInterval(()=>{ if(!document.hidden) loadMail(true); }, 5*60e3);
-window.__hqx={ version:'1.2', tabUrl, MAIL, loadMail, ACT, mailItems, mailAct, pickFolder, bookDialog, personEmail, lastErr, waitingCount, loadDone, ago, myPeople, setMyPeople, pickPeople, statusOf, dayLoad, nextWorkday, SYS, SHORT, canOpen, figsFor, symbol, openSys, closeSys, countFor, secsOf, navOf, driveFrame, sysData, wantData, extract, sig:()=>MAIL.state+':'+MAIL.at+':'+MAIL.items.length+':'+myPeople().join(',')+':'+ACT.on+':'+acts().map(z=>z.id+(z.fin?'f':'')+(z.err?'e':'')).join(','),
+window.__hqx={ version:'1.2', tabUrl, MAIL, loadMail, ACT, mailItems, mailBoxes, allMail, boxShut, setInbox, ibCfg, boxName, mailAct, pickFolder, bookDialog, personEmail, lastErr, waitingCount, loadDone, ago, myPeople, setMyPeople, pickPeople, statusOf, dayLoad, nextWorkday, SYS, SHORT, canOpen, figsFor, symbol, openSys, closeSys, countFor, secsOf, navOf, driveFrame, sysData, wantData, extract, sig:()=>MAIL.state+':'+MAIL.at+':'+MAIL.items.length+':'+JSON.stringify(ibCfg().shut||{})+':'+myPeople().join(',')+':'+ACT.on+':'+acts().map(z=>z.id+(z.fin?'f':'')+(z.err?'e':'')).join(','),
   destroy(){ clearInterval(timer); clearTimeout(actT); closeSys(); css.remove(); css2.remove(); css3.remove(); } };
 })();
 
@@ -3918,7 +3960,7 @@ if(!Array.isArray(ui.tpeople)) ui.tpeople=[];
 if(['home','work','team','time'].indexOf(ui.view)>=0 || !ui.view) ui.view='day';
 /* the new Team HQ is the only Team HQ now — no classic switch */
 ui.on=true;
-const save=()=>{ try{ localStorage.setItem(KEY, JSON.stringify({on:ui.on, view:ui.view, modes:ui.modes, groups:ui.groups, who:ui.who, proj:ui.proj, showDone:ui.showDone, tpeople:ui.tpeople, fold:ui.fold})); }catch(e){} };
+const save=()=>{ try{ localStorage.setItem(KEY, JSON.stringify({on:ui.on, view:ui.view, modes:ui.modes, groups:ui.groups, who:ui.who, proj:ui.proj, showDone:ui.showDone, tpeople:ui.tpeople, fold:ui.fold, ibf:ui.ibf})); }catch(e){} };
 
 /* ---------- helpers ---------- */
 function h(tag, cls, txt){ const e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e; }
@@ -4488,11 +4530,111 @@ function dayPanel(id, withNav){
   return c;
 }
 
-/* ---------- INBOX ---------- */
-function vInbox(){
+/* ---------- INBOX ----------
+   Two ways to lay it out, each person's choice (bset.hqInbox.lay):
+   - Side by Side: every mailbox you can read on the left — My Inbox first, then each shared mailbox
+     (info@, membership@ …) as its own list you can drag into any order and fold away — and your
+     asks and tasks on the right. Jonna and Vanessa start here.
+   - One List: asks, email to look at, waiting and hand-offs in one column (everyone else starts here). */
+const IBX_SPLIT_DEF=['jonna','vanessa'];
+function ibxLay(){ const x=X(); const c=x && x.ibCfg ? x.ibCfg() : {}; return c.lay || (IBX_SPLIT_DEF.indexOf(me())>=0 ? 'split' : 'list'); }
+function layoutSeg(){ return seg([['split','Side by Side'],['list','One List']], ibxLay(), k=>{ const x=X(); if(x && x.setInbox) x.setInbox({lay:k}); paint(); }, 'nx-ibl'); }
+function vInbox(){ if(ibxLay()==='split') vInboxSplit(); else vInboxList(); }
+const IBX_SHOW=8;
+function vInboxSplit(){
+  const x=X(); const asks=myAsks(), nudges=myNudges();
+  const askB=btn('nx-mini pri', 'Ask for Something', ()=>window.__ask2 && window.__ask2());
+  const ol=h('a','nx-mini'); ol.href='https://outlook.office.com/mail/'; ol.target='_blank'; ol.rel='noopener'; ol.innerHTML=ic('ext')+'<span>Outlook</span>'; ol.title='Open Outlook';
+  const boxes=x && x.MAIL.state==='ok' && x.mailBoxes ? x.mailBoxes() : [];
+  const un=boxes.filter(b=>!x.boxShut(b.k)).reduce((n,b)=>n+b.items.filter(m=>m.unread).length,0);
+  header('Inbox', ic('inbox'), boxes.length ? (boxes.length>1 ? boxes.length+' mailboxes · ' : '')+un+' unread' : 'Your email and your tasks, side by side', [layoutSeg(), ol, askB]);
+  body.classList.add('has-split');
+  const wrap=h('div','nx-ibx');
+  /* ---- left: mailboxes ---- */
+  const left=h('div','nx-sl nx-ibm'); left.setAttribute('aria-label','Mailboxes');
+  const fl=h('div','nx-ibf'); const flt=ui.ibf||'all';
+  fl.appendChild(seg([['all','Everything'],['look','Needs a Look']], flt, k=>{ ui.ibf=k; save(); paint(); }));
+  fl.appendChild(h('span','nx-ibh', boxes.length>1 ? 'Drag a mailbox by its handle to reorder' : ''));
+  left.appendChild(fl);
+  if(!x || x.MAIL.state!=='ok'){ const c=mailPanel(); c.querySelector('.nx-gh').remove(); left.appendChild(c); }
+  else {
+    const list=h('div','nx-ibxs');
+    boxes.forEach(b=>{
+      const shut=x.boxShut(b.k);
+      const items=flt==='look' ? b.items.filter(m=>m.unread || m.flagged || m.important) : b.items;
+      const unread=b.items.filter(m=>m.unread).length;
+      const sec2=h('section','nx-grp nx-box'+(shut?' shut':'')+(b.k?' shared':' mine')); sec2.dataset.k=b.k;
+      const gh=h('div','nx-gh');
+      const grip=btn('nx-grip', null, null); grip.innerHTML='<svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>';
+      grip.title='Drag to reorder (or use the arrow keys)'; grip.setAttribute('aria-label','Move '+(b.k||'My Inbox')+' — use the up and down arrow keys');
+      gh.appendChild(grip);
+      const f=btn('nx-fold', null, ()=>{ x.setInbox({shut:Object.assign({}, x.ibCfg().shut||{}, {[b.k]:!shut})}); paint(); }); f.innerHTML=ic('down'); f.setAttribute('aria-label',(shut?'Open ':'Fold ')+(b.k||'My Inbox')); f.setAttribute('aria-expanded', String(!shut)); gh.appendChild(f);
+      const nm=h('b',null, b.k ? b.k : 'My Inbox'); gh.appendChild(nm);
+      if(b.k) gh.appendChild(h('span','nx-ibtag','Shared'));
+      gh.appendChild(h('span','nx-cnt', unread ? unread+' unread' : (b.items.length ? 'all read' : '')));
+      gh.appendChild(h('span','nx-sp'));
+      if(shut) gh.appendChild(h('span','nx-ibz','Folded — not counted on your dashboard'));
+      gh.addEventListener('click', e=>{ if(e.target.closest('button,a')) return; f.click(); });
+      sec2.appendChild(gh);
+      const it=h('div','nx-items');
+      if(!b.ok) it.appendChild(h('div','nx-drope','Team HQ can’t read this mailbox right now — check you still have access to it in Outlook.'));
+      else if(!items.length) it.appendChild(h('div','nx-drope', flt==='look' ? 'Nothing unread, flagged or important.' : 'Nothing here.'));
+      else { const more=!!ui.ibMore && ui.ibMore[b.k]; items.slice(0, more ? 60 : IBX_SHOW).forEach(m=>it.appendChild(mailRow(m)));
+        if(items.length>IBX_SHOW) it.appendChild(btn('nx-morel', more ? 'Show fewer' : 'Show '+(Math.min(items.length,60)-IBX_SHOW)+' more', ()=>{ ui.ibMore=Object.assign({}, ui.ibMore||{}, {[b.k]:!more}); paint(); })); }
+      sec2.appendChild(it);
+      boxDrag(grip, sec2, list);
+      list.appendChild(sec2); });
+    left.appendChild(list);
+    if(x.MAIL.sent) left.appendChild(h('div','nx-ibup','Email last came through '+x.ago(x.MAIL.sent)+'. It checks every few minutes.'));
+  }
+  wrap.appendChild(left);
+  /* ---- right: tasks ---- */
+  const right=h('div','nx-ibt'); right.setAttribute('aria-label','Tasks');
+  const tsec=(k, title, n, fill, tone, add)=>{ const fk='inbox|'+k; const s2=h('section','nx-grp'+(ui.fold[fk]?' shut':'')); const gh=h('div','nx-gh'+(tone?' '+tone:''));
+    const f=btn('nx-fold', null, ()=>{ ui.fold[fk]=!s2.classList.contains('shut'); save(); s2.classList.toggle('shut'); }); f.innerHTML=ic('down'); gh.appendChild(f);
+    gh.appendChild(h('b',null,title)); gh.appendChild(h('span','nx-cnt',String(n)));
+    if(add){ const a=btn('nx-add', null, add); a.innerHTML=ic('plus'); a.title='Add a task'; gh.appendChild(a); }
+    s2.appendChild(gh); const it=h('div','nx-items'); fill(it); s2.appendChild(it); right.appendChild(s2); };
+  const askRow=a=>{ const r=btn('nx-row nx-ask', null, ()=>window.__editAsk && window.__editAsk(a)); if(a.by) r.appendChild(av(a.by,22)); r.appendChild(h('span','nx-tt', a.t)); r.appendChild(h('span','nx-sp')); r.appendChild(h('span','nx-state '+String(a.state||'New').toLowerCase().replace(/\s+/g,'-'), a.state||'New')); return r; };
+  if(asks.length || nudges.length) tsec('needs', me()==='jonna'?'Asks for You':'Your Open Asks', asks.length+nudges.length, it=>{
+    asks.sort((a,b)=>(b.at||0)-(a.at||0)).forEach(a=>it.appendChild(askRow(a)));
+    nudges.forEach(n=>{ const r=h('div','nx-row nx-ask'); if(n.by) r.appendChild(av(n.by,22)); r.appendChild(h('span','nx-tt', n.m||n.k)); r.appendChild(h('span','nx-sp')); r.appendChild(btn('nx-mini','Done', ()=>put('nudges', Object.assign({}, n, {done:1})))); it.appendChild(r); }); }, asks.length?'warn':'');
+  const mineL=myOpen().filter(t=>st(t)!=='Waiting on Someone').sort(byDue);
+  const soonB=['Overdue','Today','Tomorrow','This Week'];
+  const now=mineL.filter(t=>soonB.indexOf(dueBucket(t))>=0);
+  tsec('tasks','My Tasks — Due This Week', now.length, it=>{
+    if(!now.length) it.appendChild(h('div','nx-drope','Nothing due this week.'));
+    soonB.forEach(bk=>{ const g=now.filter(t=>dueBucket(t)===bk); if(!g.length) return; it.appendChild(h('div','nx-ibsub'+(bk==='Overdue'?' bad':bk==='Today'?' warn':''), bk)); g.forEach(t=>it.appendChild(row(t, {pull:bk!=='Today'}))); }); }, '', ()=>newTask({due:iso(today())}));
+  const later=mineL.filter(t=>soonB.indexOf(dueBucket(t))<0);
+  tsec('later','Later and No Date', later.length, it=>{ if(!later.length) it.appendChild(h('div','nx-drope','Nothing further out.')); later.slice(0,25).forEach(t=>it.appendChild(row(t))); if(later.length>25) it.appendChild(btn('nx-morel','See all '+later.length+' in My Tasks', ()=>open('mine'))); });
+  const waiting=myOpen().filter(t=>st(t)==='Waiting on Someone').sort(byDue);
+  tsec('wait','Waiting on Someone', waiting.length, it=>{ if(!waiting.length) it.appendChild(h('div','nx-drope','Nothing of yours is waiting on anyone.')); waiting.forEach(t=>it.appendChild(row(t))); });
+  const watch=S.tasks.filter(t=>isOpen(t) && t.o===me() && doers(t).indexOf(me())<0).sort(byDue);
+  tsec('watch','You’re Accountable, Others Are Doing', watch.length, it=>{ if(!watch.length) it.appendChild(h('div','nx-drope','Nothing handed off right now.')); watch.forEach(t=>it.appendChild(row(t))); });
+  wrap.appendChild(right);
+  body.appendChild(wrap);
+}
+/* drag a mailbox by its handle (mouse, touch or pen), or move it with the arrow keys; the order is saved */
+function boxDrag(grip, sec2, list){
+  const saveOrder=()=>{ const x=X(); const ord=[...list.querySelectorAll(':scope > .nx-box')].map(e=>e.dataset.k); if(x && x.setInbox) x.setInbox({order:ord}); };
+  grip.addEventListener('keydown', e=>{ if(e.key!=='ArrowUp' && e.key!=='ArrowDown') return; e.preventDefault();
+    const sib=e.key==='ArrowUp' ? sec2.previousElementSibling : sec2.nextElementSibling; if(!sib) return;
+    if(e.key==='ArrowUp') list.insertBefore(sec2, sib); else list.insertBefore(sib, sec2); saveOrder(); grip.focus(); });
+  grip.addEventListener('pointerdown', e=>{ if(e.button>0) return; e.preventDefault(); try{ grip.setPointerCapture(e.pointerId); }catch(x){}
+    const y0=e.clientY; let moved=false; sec2.classList.add('nx-boxdrag'); document.documentElement.classList.add('nx-boxing');
+    const mv=ev=>{ if(Math.abs(ev.clientY-y0)>4) moved=true; if(!moved) return;
+      const others=[...list.querySelectorAll(':scope > .nx-box')].filter(z=>z!==sec2);
+      let before=null; for(const z of others){ const r=z.getBoundingClientRect(); if(ev.clientY < r.top + Math.min(r.height,36)/2){ before=z; break; } }
+      if(before) { if(sec2.nextElementSibling!==before) list.insertBefore(sec2, before); } else if(list.lastElementChild!==sec2) list.appendChild(sec2);
+      const sc=sec2.closest('.nx-ibm'); if(sc){ const R=sc.getBoundingClientRect(); if(ev.clientY<R.top+40) sc.scrollTop-=12; else if(ev.clientY>R.bottom-40) sc.scrollTop+=12; } };
+    const up=()=>{ grip.removeEventListener('pointermove', mv); grip.removeEventListener('pointerup', up); grip.removeEventListener('pointercancel', up);
+      sec2.classList.remove('nx-boxdrag'); document.documentElement.classList.remove('nx-boxing'); if(moved) saveOrder(); };
+    grip.addEventListener('pointermove', mv); grip.addEventListener('pointerup', up); grip.addEventListener('pointercancel', up); });
+}
+function vInboxList(){
   const asks=myAsks(), nudges=myNudges();
   const askB=btn('nx-mini pri', 'Ask for Something', ()=>window.__ask2 && window.__ask2());
-  header('Inbox', ic('inbox'), me()==='jonna' ? 'Every ask from the team comes here' : 'Your asks, nudges and hand-offs', [askB]);
+  header('Inbox', ic('inbox'), me()==='jonna' ? 'Every ask from the team comes here' : 'Your asks, nudges and hand-offs', [layoutSeg(), askB]);
   const list=h('div','nx-list');
   const sec=(k, title, n, fill, tone)=>{ const fk='inbox|'+k; const s2=h('section','nx-grp'+(ui.fold[fk]?' shut':'')); const gh=h('div','nx-gh'+(tone?' '+tone:''));
     const f=btn('nx-fold', null, ()=>{ ui.fold[fk]=!s2.classList.contains('shut'); save(); s2.classList.toggle('shut'); }); f.innerHTML=ic('down'); gh.appendChild(f);
@@ -5266,18 +5408,18 @@ function refreshSysTiles(){ if(!ui.on || viewKind()!=='day' || tdrag || !shell |
 /* ---------- email and people, shared by My Day, Inbox and People ---------- */
 const X=()=>window.__hqx;
 function mailRow(m){ const x=X(); const r=h('div','nx-mrow'+(m.unread?' unread':''));
-  const ic2=h('span','mi'+(m.flagged?' flag':m.important?' imp':'')); ic2.textContent=m.flagged?'⚑':m.important?'!':'•'; ic2.title=m.flagged?'Flagged':m.important?'Important':'Unread'; r.appendChild(ic2);
+  const ic2=h('span','mi'+(m.flagged?' flag':m.important?' imp':m.unread?'':' rd')); ic2.textContent=m.flagged?'⚑':m.important?'!':m.unread?'•':''; if(m.flagged||m.important||m.unread) ic2.title=m.flagged?'Flagged':m.important?'Important':'Unread'; r.appendChild(ic2);
   const tx=h('div','tx'); const tp=h('div','tp'); tp.appendChild(h('b',null,m.from||'Someone')); tp.appendChild(h('span','ag', m.at?x.ago(m.at):'')); tx.appendChild(tp); tx.appendChild(h('div','sj', m.subject)); r.appendChild(tx);
   if(m.pend){ r.classList.add('pend'); tp.querySelector('.ag').textContent=m.pend; }
   const ac=h('div','ac');
-  const live=x && x.ACT && x.ACT.on && m.id && !/^https?:/i.test(m.id) && !m.pend;
+  const live=x && x.ACT && x.ACT.on && m.id && !m.box && !/^https?:/i.test(m.id) && !m.pend;
   const ob=(k, title, fn)=>{ const b=btn('nx-ib ox', null, e=>{ e.stopPropagation(); fn(); }); b.innerHTML=ic(k); b.title=title; b.setAttribute('aria-label', title); ac.appendChild(b); };
   if(live){
     ob(m.flagged?'unflag':'flag', m.flagged?'Unflag in Outlook':'Flag in Outlook', ()=>x.mailAct(m, m.flagged?'unflag':'flag'));
     ob(m.unread?'read':'unread', m.unread?'Mark read in Outlook':'Mark unread in Outlook', ()=>x.mailAct(m, m.unread?'read':'unread'));
     ob('folder', 'File into a folder', ()=>x.pickFolder(m));
     ob('trash', 'Delete (goes to Deleted Items)', ()=>x.mailAct(m, 'del')); }
-  const mk=btn('nx-ib', null, e=>{ e.stopPropagation(); newTask({t:m.subject, p:m.important?'High':'Normal', notes:'From '+(m.from||'')+(m.link?' — '+m.link:'')}); }); mk.innerHTML=ic('plus'); mk.title='Make it a task'; ac.appendChild(mk);
+  const mk=btn('nx-ib', null, e=>{ e.stopPropagation(); newTask({t:m.subject, p:m.important?'High':'Normal', notes:'From '+(m.from||'')+(m.box?' (to '+m.box+')':'')+(m.link?' — '+m.link:'')}); }); mk.innerHTML=ic('plus'); mk.title='Make it a task'; ac.appendChild(mk);
   r.appendChild(ac);
   const er=x && x.lastErr && x.lastErr(m.id); if(er){ r.classList.add('err'); r.title='Outlook couldn’t do the last change ('+er.err+')'; }
   if(m.link){ r.addEventListener('click', ()=>window.open(m.link, '_blank', 'noopener')); r.title='Open in Outlook'; }
@@ -5459,7 +5601,7 @@ function setOn(v){ ui.on=v; save(); paintSwitch();
 let lastSig='';
 function hsh(str){ let x=0; for(let i=0;i<str.length;i++){ x=((x<<5)-x+str.charCodeAt(i))|0; } return x; }
 const sig=()=>[S.tasks.length, hsh(S.tasks.map(t=>[t.id,t.at,t.s,t.due,t.w,t.r,t.o,(t.d||[]).join(','),t.p,t.t,(t.notes||'').length].join('|')).join('~')), (S.asks||[]).length, (S.asks||[]).map(a=>a.state).join(''), (S.nudges||[]).filter(n=>!n.done).length, S.rocks.length, (window.__hqx&&window.__hqx.sig?window.__hqx.sig():''), (ui.view==='mine'?syncSig():''), Object.keys((window.__cal&&window.__cal.CAL&&window.__cal.CAL.by)||{}).length, (window.__cal&&window.__cal.CAL&&window.__cal.CAL.at)||0].join(':');
-function busy(){ if(drag || tdrag!=null || menuEl || document.querySelector('.hqx-ov')) return true; const a=document.activeElement; return !!(a && (a.tagName==='INPUT' || a.tagName==='SELECT' || a.tagName==='TEXTAREA') && (shell && shell.contains(a))); }
+function busy(){ if(drag || tdrag!=null || menuEl || document.documentElement.classList.contains('nx-boxing') || document.querySelector('.hqx-ov')) return true; const a=document.activeElement; return !!(a && (a.tagName==='INPUT' || a.tagName==='SELECT' || a.tagName==='TEXTAREA') && (shell && shell.contains(a))); }
 const live=setInterval(()=>{ if(!ui.on || document.hidden) return; const s=sig(); if(s===lastSig) return; if(busy()) return; lastSig=s; drawRail(); paint(); }, 1200);
 const clock=setInterval(()=>{ if(!ui.on || document.hidden || busy()) return; drawRail(); if(shell && !shell.hidden && (viewKind()==='day' || viewKind()==='person')) paint(); }, 60e3);
 /* if the classic page redraws its rail, put our items back */
@@ -5998,6 +6140,34 @@ html.nx-tdragging .nx-tiles .st-tile{animation:none!important}
 .nx-sl .nx-list{min-height:100%}
 .nx-row.sel{background:color-mix(in srgb,var(--sky) 14%,var(--surface));box-shadow:inset 3px 0 0 var(--c1)}
 .nx-peek{min-height:0;overflow:auto;background:var(--surface);padding:14px 18px 20px;display:flex;flex-direction:column;gap:12px}
+/* Inbox, side by side: mailboxes left, tasks right */
+.nx-ibx{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(340px,1fr);height:100%}
+.nx-ibm{min-height:0;overflow:auto;border-right:1px solid var(--border);background:var(--surface)}
+.nx-ibt{min-height:0;overflow:auto;background:var(--surface);padding-bottom:40px}
+.nx-ibf{position:sticky;top:0;z-index:3;display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--surface);border-bottom:1px solid var(--rule)}
+.nx-ibf .nx-sg{height:28px}
+.nx-ibh{margin-left:auto;font-size:11.5px;color:var(--ink-3)}
+.nx-box .nx-gh{top:45px;padding-left:4px;cursor:pointer}
+.nx-box.mine .nx-gh{background:var(--sky-wash)}
+.nx-box.mine .nx-gh b{font-size:13.5px}
+.nx-grip{display:inline-flex;align-items:center;justify-content:center;width:20px;height:26px;padding:0;border:0;border-radius:4px;background:transparent;color:var(--ink-3);cursor:grab;touch-action:none}
+.nx-grip svg{width:14px;height:14px;fill:currentColor}
+.nx-grip:hover,.nx-grip:focus-visible{background:var(--surface-3);color:var(--ink)}
+html.nx-boxing,html.nx-boxing *{cursor:grabbing!important;user-select:none}
+.nx-box.nx-boxdrag{position:relative;z-index:4;box-shadow:0 6px 22px rgba(6,32,47,.22);outline:2px solid var(--c1);outline-offset:-2px}
+.nx-ibtag{font-size:10.5px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:var(--ink-3);border:1px solid var(--border);border-radius:4px;padding:1px 5px}
+.nx-ibz{font-size:11.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nx-box .nx-drope{padding-left:48px}
+.nx-ibup{padding:12px 16px 30px;font-size:11.5px;color:var(--ink-3)}
+.nx-ibsub{padding:6px 20px 4px 40px;font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--ink-3);background:var(--surface)}
+.nx-ibsub.bad{color:var(--bad)}.nx-ibsub.warn{color:#b8641d}
+.nx-ibt .nx-gh{padding-left:8px}
+.nx-ibl .nx-sg{height:30px}
+a.nx-mini{text-decoration:none}
+.nx-mrow .mi.rd{background:transparent}
+.nx-box .nx-mrow:not(.unread) .sj{color:var(--ink-2)}
+@media(max-width:1000px){.nx-body.nx-v-inbox.has-split{overflow:auto;display:block}.nx-ibx{display:block;height:auto}.nx-ibm,.nx-ibt{overflow:visible;border-right:0}.nx-ibt{border-top:6px solid var(--surface-3)}.nx-ibf{position:static}.nx-box .nx-gh{top:0}.nx-ibh{display:none}}
+@media(max-width:640px){.nx-ibl{display:none}.nx-ibz{display:none}}
 .nx-pk-top{display:flex;align-items:center;gap:8px;min-width:0}
 .nx-pk-top .nx-pj{cursor:pointer;background:var(--surface);font:inherit;font-size:11.5px;font-weight:600}
 .nx-pk-none{font-size:12px;color:var(--ink-3);font-weight:600}
