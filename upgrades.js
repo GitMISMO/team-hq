@@ -129,6 +129,8 @@
 
 
 
+
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -4436,7 +4438,7 @@ function vDay(){
   const stat=(n,l,cls,fn)=>{ const b=btn('nx-stat'+(cls?' '+cls:''), null, fn); b.appendChild(h('b',null,String(n))); b.appendChild(h('span',null,l)); strip.appendChild(b); };
   const wk=M.filter(t=>t.due && days(t.due)>=0 && days(t.due)<=7);
   stat(M.length,'open','',()=>open('mine')); stat(late.length,'late', late.length?'bad':'', ()=>{ ui.groups.mine='due'; open('mine'); }); stat(tod.length,'due today', tod.length?'warn':'', ()=>{ ui.groups.mine='due'; open('mine'); }); stat(wk.length,'next 7 days','',()=>{ ui.groups.mine='due'; open('mine'); });
-  const nIn=myAsks().length+myNudges().length; if(nIn) stat(nIn, me()==='jonna'?'asks for you':'your asks','hot',()=>open('inbox'));
+  const nIn=myAsks().length+myNudges().length; if(nIn) stat(nIn, me()==='jonna'?'asks for you':'your asks','hot',()=>open('mine'));
   L.appendChild(strip);
   /* the team, right now */
   const team=h('div','nx-teamstrip');
@@ -4538,15 +4540,9 @@ function dayPanel(id, withNav){
 }
 
 /* ---------- INBOX ----------
-   Two ways to lay it out, each person's choice (bset.hqInbox.lay):
-   - Side by Side: every mailbox you can read on the left — My Inbox first, then each shared mailbox
-     (info@, membership@ …) as its own list you can drag into any order and fold away — and your
-     asks and tasks on the right. Jonna and Vanessa start here.
-   - One List: asks, email to look at, waiting and hand-offs in one column (everyone else starts here). */
-const IBX_SPLIT_DEF=['jonna','vanessa'];
-function ibxLay(){ const x=X(); const c=x && x.ibCfg ? x.ibCfg() : {}; return c.lay || (IBX_SPLIT_DEF.indexOf(me())>=0 ? 'split' : 'list'); }
-function layoutSeg(){ return seg([['split','By Mailbox'],['list','One List']], ibxLay(), k=>{ const x=X(); if(x && x.setInbox) x.setInbox({lay:k}); paint(); }, 'nx-ibl'); }
-function vInbox(){ if(ibxLay()==='split') vInboxSplit(); else vInboxList(); }
+   Every mailbox you can read: My Inbox first, then each shared mailbox (info@, membership@ …) as its own
+   list you can drag into any order and fold away. Email only — asks and hand-offs are on My Tasks. */
+function vInbox(){ vInboxSplit(); }
 const IBX_SHOW=8;
 function vInboxSplit(){
   const x=X(); const asks=myAsks(), nudges=myNudges();
@@ -4554,7 +4550,7 @@ function vInboxSplit(){
   const ol=h('a','nx-mini'); ol.href='https://outlook.office.com/mail/'; ol.target='_blank'; ol.rel='noopener'; ol.innerHTML=ic('ext')+'<span>Outlook</span>'; ol.title='Open Outlook';
   const boxes=x && x.MAIL.state==='ok' && x.mailBoxes ? x.mailBoxes() : [];
   const un=boxes.filter(b=>!b.k || !x.boxShut(b.k)).reduce((n,b)=>n+b.items.filter(m=>m.unread).length,0);
-  header('Inbox', ic('inbox'), boxes.length ? (boxes.length>1 ? boxes.length+' mailboxes · ' : '')+un+' unread' : 'Every mailbox you can read, yours on top', [layoutSeg(), ol, askB]);
+  header('Inbox', ic('inbox'), boxes.length ? (boxes.length>1 ? boxes.length+' mailboxes · ' : '')+un+' unread' : 'Every mailbox you can read, yours on top', [ol, askB]);
   body.classList.add('has-split');
   const wrap=h('div','nx-ibx');
   /* ---- left: mailboxes ---- */
@@ -4621,33 +4617,6 @@ function boxDrag(grip, sec2, list){
       sec2.classList.remove('nx-boxdrag'); document.documentElement.classList.remove('nx-boxing'); if(moved){ saveOrder(); sec2.scrollIntoView({block:'nearest'}); } };
     document.addEventListener('pointermove', mv, true); document.addEventListener('pointerup', up, true); document.addEventListener('pointercancel', up, true); });
 }
-function vInboxList(){
-  const asks=myAsks(), nudges=myNudges();
-  const askB=btn('nx-mini pri', 'Ask for Something', ()=>window.__ask2 && window.__ask2());
-  header('Inbox', ic('inbox'), me()==='jonna' ? 'Every ask from the team comes here' : 'Your asks, nudges and hand-offs', [layoutSeg(), askB]);
-  const list=h('div','nx-list');
-  const sec=(k, title, n, fill, tone)=>{ const fk='inbox|'+k; const s2=h('section','nx-grp'+(ui.fold[fk]?' shut':'')); const gh=h('div','nx-gh'+(tone?' '+tone:''));
-    const f=btn('nx-fold', null, ()=>{ ui.fold[fk]=!s2.classList.contains('shut'); save(); s2.classList.toggle('shut'); }); f.innerHTML=ic('down'); gh.appendChild(f);
-    gh.appendChild(h('b',null,title)); gh.appendChild(h('span','nx-cnt',String(n))); s2.appendChild(gh); const it=h('div','nx-items'); fill(it); s2.appendChild(it); list.appendChild(s2); };
-  const askRow=a=>{ const r=btn('nx-row nx-ask', null, ()=>window.__editAsk && window.__editAsk(a)); if(a.by) r.appendChild(av(a.by,22)); r.appendChild(h('span','nx-tt', a.t)); if(a.by) r.appendChild(h('span','nx-ws', 'from '+first(a.by)));
-    r.appendChild(h('span','nx-sp')); if(a.kind||a.k) r.appendChild(h('span','nx-ws', a.kind||a.k)); r.appendChild(h('span','nx-state '+String(a.state||'New').toLowerCase().replace(/\s+/g,'-'), a.state||'New')); return r; };
-  sec('needs', me()==='jonna'?'Asks for You':'Your Open Asks', asks.length+nudges.length, it=>{
-    if(!asks.length && !nudges.length) it.appendChild(h('div','nx-drope','All clear. New asks land here the moment someone sends one.'));
-    asks.sort((a,b)=>(b.at||0)-(a.at||0)).forEach(a=>it.appendChild(askRow(a)));
-    nudges.forEach(n=>{ const r=h('div','nx-row nx-ask'); if(n.by) r.appendChild(av(n.by,22)); r.appendChild(h('span','nx-tt', n.m||n.k)); r.appendChild(h('span','nx-sp')); r.appendChild(btn('nx-mini','Done', ()=>put('nudges', Object.assign({}, n, {done:1})))); it.appendChild(r); }); }, asks.length?'warn':'');
-  const xm=X(); if(xm && xm.MAIL.state==='ok'){ const mi=xm.mailItems().filter(m=>m.flagged || m.important || m.unread); sec('mail','Email to Look At', mi.length, it=>{ if(!mi.length) it.appendChild(h('div','nx-drope','Nothing flagged or waiting.')); mi.slice(0,15).forEach(m=>it.appendChild(mailRow(m))); }); }
-  else { sec('mail','Email to Look At', 0, it=>{ const c=mailPanel(); c.querySelector('.nx-gh').remove(); it.appendChild(c); }); }
-  const waiting=myOpen().filter(t=>st(t)==='Waiting on Someone').sort(byDue);
-  sec('wait','Waiting on Someone', waiting.length, it=>{ if(!waiting.length) it.appendChild(h('div','nx-drope','Nothing of yours is waiting on anyone.')); waiting.forEach(t=>it.appendChild(row(t))); });
-  const watch=S.tasks.filter(t=>isOpen(t) && t.o===me() && doers(t).indexOf(me())<0).sort(byDue);
-  sec('watch','You’re Accountable, Others Are Doing', watch.length, it=>{ if(!watch.length) it.appendChild(h('div','nx-drope','Nothing handed off right now.')); watch.forEach(t=>it.appendChild(row(t))); });
-  const soon=S.tasks.filter(t=>isOpen(t) && t.due && days(t.due)<=7 && doers(t).indexOf(me())<0 && S.rocks.some(r=>r.id===t.r && r.lead===me())).sort(byDue);
-  if(soon.length) sec('soon','Due Soon on Projects You Lead', soon.length, it=>soon.forEach(t=>it.appendChild(row(t))));
-  const closed=(S.asks||[]).filter(a=>(a.state==='Built' || a.state==='Not Doing') && (me()==='jonna' || a.by===me())).sort((a,b)=>(b.at||0)-(a.at||0)).slice(0,8);
-  sec('closed','Recently Closed Asks', closed.length, it=>{ if(!closed.length) it.appendChild(h('div','nx-drope','No closed asks yet.')); closed.forEach(a=>it.appendChild(askRow(a))); });
-  withPeek(list, [], 'list');
-}
-
 /* ---------- MY TASKS / ALL TASKS ---------- */
 function vList(kind){
   const key=kind, defG=kind==='mine'?'due':'status', defM=kind==='mine'?'list':'board';
@@ -4664,7 +4633,7 @@ function vList(kind){
   header(VIEWS[kind].t, ic(VIEWS[kind].i), L.filter(isOpen).length+' open', ctl);
   const tv=taskView(L, g, m, key, {empty: ui.q ? 'Nothing matches “'+ui.q+'”.' : 'Nothing open. Nice.', noProj: false});
   if(kind==='mine' && !ui.q){ const sy=syncBand(m); if(sy.length){ const e=tv.querySelector(':scope > .nx-empty'); if(e) e.remove(); sy.forEach(x=>tv.appendChild(x)); } }
-  if(kind==='mine' && !ui.q && ibxLay()==='split'){ const ex=inboxBand(m); if(ex.top.length || ex.end.length){ const e=tv.querySelector(':scope > .nx-empty'); if(e) e.remove(); }
+  if(kind==='mine' && !ui.q){ const ex=inboxBand(m); if(ex.top.length || ex.end.length){ const e=tv.querySelector(':scope > .nx-empty'); if(e) e.remove(); }
     ex.top.reverse().forEach(x=>tv.insertBefore(x, tv.firstChild)); ex.end.forEach(x=>tv.appendChild(x)); }
   withPeek(tv, L, m);
 }
@@ -4693,8 +4662,9 @@ function syncDone(c){ const N=window.__notes||{}; const cur=(N.card && N.card(c.
   if(SY && SY.mode) pr=N.put(nx);
   else { const body=Object.assign({}, nx); delete body.id; try{ pr=S.db.collection('syncitems').doc(nx.id).set(body); }catch(e){ pr=Promise.reject(e); } }
   Promise.resolve(pr).then(()=>toast('Done — ticked off in your Sync Up too.'), ()=>toast('That didn’t save. Try again in a moment.')); paint(); }
-/* When Inbox is by mailbox, the things that used to sit beside the mail and aren't tasks of yours live here
-   instead: asks and nudges for you (on top) and work you handed off (at the bottom). Nothing is shown twice. */
+/* Inbox is only email, so the things that aren't your own tasks but still need you live here: asks and nudges
+   (on top), work you handed off and other people's tasks due soon on projects you lead (at the bottom).
+   Nothing is shown twice. */
 function inboxBand(mode){
   const board=mode==='board', top=[], end=[];
   const part=(k, title, n, fill, tone)=>{ const fk='mine|ibx|'+k; const shut=!!ui.fold[fk];
@@ -4708,6 +4678,8 @@ function inboxBand(mode){
     nudges.forEach(n=>{ const r=h('div','nx-row nx-ask'+(board?' nx-card':'')); if(n.by) r.appendChild(av(n.by,22)); r.appendChild(h('span','nx-tt', n.m||n.k)); r.appendChild(h('span','nx-sp')); r.appendChild(btn('nx-mini','Done', ()=>put('nudges', Object.assign({}, n, {done:1})))); it.appendChild(r); }); }, asks.length?'warn':''));
   const watch=S.tasks.filter(t=>isOpen(t) && t.o===me() && doers(t).indexOf(me())<0).sort(byDue);
   if(watch.length) end.push(part('handed', 'Handed Off — Others Are Doing', watch.length, it=>watch.forEach(t=>it.appendChild(row(t)))));
+  const soon=S.tasks.filter(t=>isOpen(t) && t.due && days(t.due)<=7 && doers(t).indexOf(me())<0 && t.o!==me() && S.rocks.some(r=>r.id===t.r && r.lead===me())).sort(byDue);
+  if(soon.length) end.push(part('lead', 'Due Soon on Projects You Lead', soon.length, it=>soon.forEach(t=>it.appendChild(row(t)))));
   return {top, end};
 }
 function syncBand(mode){
@@ -5181,7 +5153,7 @@ function tile(cfg, i, L){
     if(nw.length) top.appendChild(h('span','st-pill hot', nw.length+' new'));
     const b=h('div','st-big'); b.append(String(A.length)); b.appendChild(h('small',null, me()==='jonna'?'asks for you':'open asks')); el.appendChild(b);
     if(A[0]){ const n=h('div','st-next'); n.append('Newest: '); n.appendChild(h('b',null,A.slice().sort((a,c)=>(c.at||0)-(a.at||0))[0].t)); el.appendChild(n); } else el.appendChild(h('div','st-sub','Nothing waiting. Ask for something any time.'));
-    meta.go=()=>open('inbox'); }
+    meta.go=()=>open('mine'); }
   else if(cfg.t==='load'){ let mon=addD(t0, -((t0.getDay()+6)%7)); if(t0.getDay()%6===0) mon=addD(mon,7); const D=[0,1,2,3,4].map(k=>addD(mon,k));
     const bars=h('div','nx-bars'); let free=0; const LD=D.map(d=>x && x.dayLoad ? x.dayLoad(me(), d) : null); const top=Math.max(2, ...LD.map(z=>z?z.busy/60:0)); D.forEach((d,di)=>{ const Ld=LD[di]; const hrs=Ld?Ld.busy/60:0; if(Ld) free+=Ld.free; const c=h('div','bc'+(+d===+t0?' on':'')); const bb=h('i'); bb.style.height=Math.max(4, Math.min(82, hrs/top*82))+'%'; const bw=h('div','bw'); bw.appendChild(h('b',null,(Math.round(hrs*2)/2)+'h')); bw.appendChild(bb); c.appendChild(bw); c.appendChild(h('span',null,WD[d.getDay()])); bars.appendChild(c); }); el.appendChild(bars);
     el.appendChild(h('div','st-next', (Math.round(free/30)/2)+' hours open this week between meetings'));
@@ -6149,7 +6121,7 @@ html.nx-tdragging .nx-tiles .st-tile{animation:none!important}
 .nx-sl .nx-list{min-height:100%}
 .nx-row.sel{background:color-mix(in srgb,var(--sky) 14%,var(--surface));box-shadow:inset 3px 0 0 var(--c1)}
 .nx-peek{min-height:0;overflow:auto;background:var(--surface);padding:14px 18px 20px;display:flex;flex-direction:column;gap:12px}
-/* Inbox, side by side: mailboxes left, tasks right */
+/* Inbox: every mailbox, full width */
 .nx-ibx{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(0,1fr);height:100%}
 .nx-ibm{min-height:0;overflow:auto;background:var(--surface)}
 .nx-ibt{min-height:0;overflow:auto;background:var(--surface);padding-bottom:40px}
