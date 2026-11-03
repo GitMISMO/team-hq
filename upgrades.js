@@ -156,6 +156,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -6041,6 +6042,12 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-fg.big b{font-size:34px;line-height:1.05}.nx-fg.big span{font-size:13px;color:var(--k)}
 .nx-fg.good b{color:#7ee2a8}.nx-fg.bad b{color:#ff9b8a}
 .nx-fgr{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+/* Tall tiles: each number is one compact row (number, then what it is) so they all fit without trimming */
+.st-tile.sz-t .nx-fgr{grid-template-columns:minmax(0,1fr);gap:6px}
+.st-tile.sz-t .nx-fgr .nx-fg{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:10px;align-items:center;padding:7px 11px}
+.st-tile.sz-t .nx-fgr .nx-fg b,.st-tile.sz-t .nx-fgr .nx-fg.big b{grid-row:1 / span 2;font-size:24px;line-height:1}
+.st-tile.sz-t .nx-fgr .nx-fg span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-tile.sz-t .nx-fgr .nx-fg small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .nx-fgr .nx-fg{padding:9px 11px;border-radius:8px;background:rgba(0,0,0,.2);border:1px solid var(--st-line)}
 .nx-fgr .nx-fg{container-type:inline-size}.nx-fgr .nx-fg b{font-size:min(20px,15cqi)}.nx-fgr .nx-fg.big b{font-size:min(34px,15.5cqi)}
 .nx-ggr{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px}
@@ -6051,6 +6058,10 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-gg .l{display:flex;flex-direction:column;min-width:0}.nx-gg .l span{font-size:12px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nx-gg .l small{font-size:11px;color:rgba(255,255,255,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .nx-gg.big{flex-direction:column;align-items:center;text-align:center;padding:12px 8px}.nx-gg.big svg{width:76px;height:76px}.nx-gg.big .c{left:50%;top:12px;width:76px;height:76px;transform:translateX(-50%)}.nx-gg.big .c b{font-size:15px}.nx-gg.big .l{align-items:center}
 .st-tile.lv-hi.t-keydate{justify-content:center}.st-tile.lv-hi.t-keydate .st-top{position:absolute;top:16px;left:18px;right:18px}
+/* Small: the ring sits beside the date's name, under the label, so nothing touches */
+.st-tile.sz-s.lv-hi.t-keydate{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;column-gap:14px;padding-top:42px}
+.st-tile.sz-s.lv-hi.t-keydate .ring{width:80px;height:80px;align-self:center}
+.st-tile.sz-s.lv-hi.t-keydate .nx-kdt{text-align:left}
 .nx-sym{flex:0 0 auto;width:64px;height:64px;padding:10px;border-radius:14px;background:color-mix(in srgb,var(--k) 16%,transparent);border:1px solid color-mix(in srgb,var(--k) 40%,transparent);color:var(--k);transition:transform .25s}
 .st-tile:hover .nx-sym{transform:scale(1.06) rotate(-3deg)}
 .nx-sysv{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
