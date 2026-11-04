@@ -15307,15 +15307,17 @@ function calLoad(force){
   CAL.busy=true;
   const proj=(window.__hqRelay.config && window.__hqRelay.config.PROJECT) || 'team-hq';
   Promise.all(S.people.map(p=> window.__hqRelay.readOther(proj, 'cal-'+p.id)
-      .then(d=>[p.id, d], ()=>[p.id, null])))
+      .then(d=>[p.id, d], ()=>[p.id, undefined])))
     .then(list=>{
       const by={};
       /* a person counts as connected only once their own flow has sent meetings. An empty
          file — a starter ({"who":"perry","ev":[]}) or a placeholder ({"ev":[]}) — only makes
          room for a flow (Oct 8: empty placeholders were showing as "No meetings"). A real
          calendar is never empty for the 31 days the flow reads. */
-      list.forEach(([id,d])=>{ if(d && Array.isArray(d.ev) && d.ev.length) by[id]=d.ev.map(calEv).filter(Boolean); });
-      CAL.by=by; CAL.at=Date.now(); CAL.busy=false; CAL.tried=true;
+      /* a read that failed (not an empty calendar) keeps what was there before, and is never shown as not connected */
+        list.forEach(([id,d])=>{ if(d===undefined){ if(CAL.by && CAL.by[id]) by[id]=CAL.by[id]; return; } if(d && Array.isArray(d.ev) && d.ev.length) by[id]=d.ev.map(calEv).filter(Boolean); });
+        const failed=list.length>0 && list.every(([id,d])=>d===undefined);
+      CAL.by=by; CAL.busy=false; if(failed){ setTimeout(()=>calLoad(true), 15000); return; } CAL.at=Date.now(); CAL.tried=true;
       if(S.tab==='today') render('today');
     }, ()=>{ CAL.busy=false; CAL.tried=true; });
 }
@@ -15633,7 +15635,7 @@ function dayStrip(p){
   const lab=el('div','dbl'); wrap.appendChild(lab);
   if(!calOn() || !calHas(p.id)){
     track.classList.add('off');
-    lab.textContent = calOn()? 'Outlook not connected' : 'Meetings show on resources.mismo.org';
+    lab.textContent = calOn()? (CAL.tried ? 'Outlook not connected' : 'Loading calendar…') : 'Meetings show on resources.mismo.org';
     wrap.title=loadTxt; return wrap;
   }
   if(dow===0 || dow===6){ track.classList.add('off'); lab.textContent='Not a working day'; wrap.title=loadTxt; return wrap; }
@@ -17780,5 +17782,5 @@ boot().then(()=>{ paintWho(); renderAll();
 })();
 </script>
 
-<script src="upgrades.js?v=20261103j" defer></script>
+<script src="upgrades.js?v=20261104a" defer></script>
 </body></html>
