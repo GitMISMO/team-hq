@@ -169,6 +169,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -4980,6 +4981,19 @@ function settleBoxes(list, first){ const done=[]; const hit=(a,b)=>a.x<b.x+b.w &
   if(first) done.push(first);
   list.forEach(b=>{ if(b===first) return; let guard=0; for(;;){ const o=done.filter(d=>hit(b,d)); if(!o.length || guard++>200) break; b.y=Math.max(...o.map(d=>d.y+d.n)); } done.push(b); });
   return done; }
+/* every tile of a size is the same height; a tile with more than fits loses list rows (then footer hints) until it fits */
+const NOCUT='.st-top,.nx-tgear,.st-next,.nx-bars,.nx-pills,.nx-avrow,.nx-sysh,svg,.ring,.nx-env';
+function trimTile(t, maxH){ for(let g=0; g<14 && t.getBoundingClientRect().height>maxH+1; g++){
+      let best=null, bb=-1;
+      /* only rows of a list (three or more alike, side by side in the same box) are dropped, the last one first,
+         and every list keeps at least one row — headings and the tile's own parts are never removed */
+      t.querySelectorAll('*').forEach(c=>{ if(c.closest(NOCUT)) return; const vis=[...c.children].filter(k=>!k.hidden && k.getClientRects().length); if(vis.length<2) return;
+        const last=vis[vis.length-1]; const alike=vis.filter(k=>k.tagName===last.tagName && k.className===last.className); if(alike.length<2 || alike.length<Math.min(3, vis.length)) return;
+        const b=last.getBoundingClientRect(); if(b.height>=12 && b.bottom>bb){ bb=b.bottom; best=last; } });
+      /* no list left to shorten: drop the tile's extra footer lines (a hint like "Raise something…") rather than cut text off */
+      if(!best){ const opt=[...t.querySelectorAll('.mic-steps,.st-next')].filter(k=>!k.hidden && k.getClientRects().length).pop(); if(opt){ opt.hidden=true; continue; } }
+      if(!best) return false; if(best.matches('.mtd-r')) best.hidden=true; else best.remove(); }
+    return t.getBoundingClientRect().height<=maxH+1; };
 function packTiles(grid, L){
   if(packRO){ packRO.disconnect(); packRO=null; } if(packMO){ packMO.disconnect(); packMO=null; }
   grid.classList.add('nx-pack');
@@ -4993,18 +5007,7 @@ function packTiles(grid, L){
   const pinOf=t=>{ if(t._pin) return t._pin; const c=L && t.dataset.i!=null ? L[+t.dataset.i] : null; return pinOk(c) ? c.at : null; };
   /* every tile of a size is the same height (Small 2 rows, Tall and Large 4). A tile with more than fits drops
      its last list rows until it fits; only something that can't be shortened (a chart) is allowed to grow. */
-  const NOCUT='.st-top,.nx-tgear,.st-next,.nx-bars,.nx-pills,.nx-avrow,.nx-sysh,svg,.ring,.nx-env';
-  const trim=(t, maxH)=>{ for(let g=0; g<14 && t.getBoundingClientRect().height>maxH+1; g++){
-      let best=null, bb=-1;
-      /* only rows of a list (three or more alike, side by side in the same box) are dropped, the last one first,
-         and every list keeps at least one row — headings and the tile's own parts are never removed */
-      t.querySelectorAll('*').forEach(c=>{ if(c.closest(NOCUT)) return; const vis=[...c.children].filter(k=>!k.hidden && k.getClientRects().length); if(vis.length<2) return;
-        const last=vis[vis.length-1]; const alike=vis.filter(k=>k.tagName===last.tagName && k.className===last.className); if(alike.length<2 || alike.length<Math.min(3, vis.length)) return;
-        const b=last.getBoundingClientRect(); if(b.height>=12 && b.bottom>bb){ bb=b.bottom; best=last; } });
-      /* no list left to shorten: drop the tile's extra footer lines (a hint like "Raise something…") rather than cut text off */
-      if(!best){ const opt=[...t.querySelectorAll('.mic-steps,.st-next')].filter(k=>!k.hidden && k.getClientRects().length).pop(); if(opt){ opt.hidden=true; continue; } }
-      if(!best) return false; if(best.matches('.mtd-r')) best.hidden=true; else best.remove(); }
-    return t.getBoundingClientRect().height<=maxH+1; };
+  const trim=trimTile;
   const fit=t=>{ if(!t.isConnected || t.classList.contains('nx-dropmark')) return; const tall=/\bsz-(t|b)\b/.test(t.className), min=tall?4:2;
     const keepR=t.style.gridRow, keepC=t.style.gridColumn; t.style.alignSelf='start'; let hgt=t.getBoundingClientRect().height; if(!hgt){ t.style.alignSelf=''; return; }
     const fixed=cols()>=2; const maxH=min*ROW+(min-1)*GAP; grid.classList.toggle('fixed', fixed);
@@ -5157,7 +5160,16 @@ function tileEditor(cfg, i, L, inEdit){
   const wrap=h('div','nx-tedw'); const left=h('div','nx-tedp'); left.appendChild(h('div','nx-tedl','Preview')); const pv=h('div','nx-tiles nx-tedg'); left.appendChild(pv); const right=h('div','nx-tedr'); wrap.appendChild(left); wrap.appendChild(right); box.appendChild(wrap);
   const sec=(title, note)=>{ const s0=h('section','nx-teds'); s0.appendChild(h('h3',null,title)); if(note) s0.appendChild(h('p',null,note)); right.appendChild(s0); return s0; };
   const seg=(opts, cur, fn)=>{ const g=h('div','nx-tseg'); opts.forEach(([k,l,sub])=>{ const b=btn(k===cur?'on':'', null, ()=>{ fn(k); draw(); }); b.appendChild(h('b',null,l)); if(sub) b.appendChild(h('small',null,sub)); g.appendChild(b); }); return g; };
-  function preview(){ pv.textContent=''; const keep=dashEdit; dashEdit=null; let el=null; try{ el=tile(work, 0, [work]); }catch(e){ console.error(e); } dashEdit=keep; if(el){ el.querySelectorAll('.nx-tgear,.nx-tctl').forEach(z=>z.remove()); el.tabIndex=-1; pv.appendChild(el); } }
+  function preview(){ pv.textContent=''; const keep=dashEdit; dashEdit=null; let el=null; try{ el=tile(work, 0, [work]); }catch(e){ console.error(e); } dashEdit=keep; if(el){ el.querySelectorAll('.nx-tgear,.nx-tctl').forEach(z=>z.remove()); el.tabIndex=-1; pv.appendChild(el); try{ asOnDash(el); }catch(e){} } }
+  /* the preview is the tile exactly as your dashboard will show it: same width, same height, same rows dropped to fit */
+  function asOnDash(el){ const main=document.querySelector('.nx-dash .nx-tiles.nx-pack'); const cols=main ? getComputedStyle(main).gridTemplateColumns.split(' ').filter(Boolean) : [];
+    if(cols.length<2) return;
+    const colW=parseFloat(cols[0]), sz=(el.className.match(/\bsz-(\w)\b/)||[])[1]||'s', cs=(sz==='w'||sz==='b')?2:1, rows=(sz==='t'||sz==='b')?4:2;
+    const W=cs*colW+(cs-1)*10, H=rows*84+(rows-1)*10;
+    pv.style.setProperty('display','block','important'); pv.style.height='';
+    el.style.width=W+'px'; el.style.height=''; el.style.transform='';
+    trimTile(el, H); el.style.height=H+'px'; el.style.overflow='hidden';
+    const avail=pv.clientWidth; if(avail && W>avail){ const k=avail/W; el.style.transform='scale('+k.toFixed(4)+')'; el.style.transformOrigin='top left'; pv.style.height=Math.ceil(H*k)+'px'; } }
   function draw(){ preview(); right.textContent='';
     if(sysS){
       const nav=x.navOf(sysS.k); const s1=sec('1. Page', nav.length ? 'Which page of '+(x.SHORT[sysS.k]||sysS.n)+' this tile comes from.' : 'Open '+(x.SHORT[sysS.k]||sysS.n)+' once and its pages show up here.');
@@ -6065,8 +6077,10 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .mtd-r{display:flex;align-items:center;gap:10px;min-width:0;padding:4px 9px;border-radius:7px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);font-size:13px;transition:background .3s,border-color .3s,opacity .3s}
 .mtd-r[hidden],.st-next[hidden],.mic-steps[hidden]{display:none!important}
 /* Wide: the meetings sit side by side under the heading, so the tile stays Wide-sized */
-.st-tile.sz-w .mtd-ls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
-.st-tile.sz-w .mtd-r{padding:4px 8px}.st-tile.sz-w .mtd-r .tm{min-width:0}.st-tile.sz-w .mtd-r .st{display:none}
+/* Wide: one meeting per line with its full name (as many as fit); the heading already says how many there are */
+.st-tile.sz-w .mtd-m{gap:3px}.st-tile.sz-w .mtd-ls{gap:3px;margin-top:0}
+.st-tile.sz-w .mtd-r{padding:2px 9px;line-height:1.3}.st-tile.sz-w .mtd-r .tm{min-width:62px}
+.st-tile.sz-w .mtd-m:has(.mtd-ls) > .mtd-s{display:none}
 .mtd-r .tm{flex:0 0 auto;min-width:76px;font-size:11.5px;font-weight:700;color:var(--k,#74bfeb);font-variant-numeric:tabular-nums;white-space:nowrap}
 .mtd-r .nm{flex:1;min-width:0;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mtd-r .st{flex:0 0 auto;font-size:9.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:2px 7px;border-radius:5px;background:rgba(255,255,255,.13);color:rgba(255,255,255,.85);white-space:nowrap}
