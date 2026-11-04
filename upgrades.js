@@ -160,6 +160,8 @@
 
 
 
+
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -4915,7 +4917,7 @@ function vDash(){
     { const so=h('div','nx-seg nx-sysopen'); so.title='How system tiles open when you click them'; so.appendChild(h('span','nx-sgl','System Tiles Open')); [['hq','In Team HQ'],['tab','In a New Tab'],['tile','Each Tile']].forEach(([k,l])=>so.appendChild(btn('nx-sg'+(sysOpenAll()===k?' on':''), l, ()=>{ if(sysOpenAll()!==k) setSysOpenAll(k); }))); r.appendChild(so); }
     r.appendChild(btn('nx-mini', 'Shuffle Sizes', ()=>{ dashMixEdit=true; const pool=['s','s','w','t','b','w','s','t']; dashEdit.forEach(z=>{ delete z.w; z.sz=pool[Math.floor(Math.random()*pool.length)]; }); paint(); }));
     r.appendChild(btn('nx-mini', 'Reset', ()=>{ dashEdit=dashDefault(); dashMixEdit=null; paint(); }));
-    r.appendChild(btn('nx-mini', 'Cancel', ()=>{ dashEdit=null; dashMixEdit=null; paint(); })); r.appendChild(btn('nx-mini pri', 'Save Layout', ()=>{ saveDash(dashEdit); dashEdit=null; dashMixEdit=null; toast('Your dashboard is saved', null); paint(); })); }
+    r.appendChild(btn('nx-mini', 'Cancel', ()=>{ dashEdit=null; dashMixEdit=null; paint(); })); r.appendChild(btn('nx-mini pri', 'Save Layout', ()=>{ dashEdit.forEach((c,k)=>{ if(!c.sz){ c.sz=sizeOf(c, k, dashEdit); delete c.w; } }); saveDash(dashEdit); dashEdit=null; dashMixEdit=null; toast('Your dashboard is saved', null); paint(); })); }
   else { r.appendChild(btn('nx-mini', '+ Add a Tile', ()=>{ dashEdit=dashLayout(); paint(); openCatalog(); })); r.appendChild(btn('nx-mini', null, ()=>{ dashEdit=dashLayout(); paint(); })).innerHTML=ic('gear')+'<span>Customize</span>'; }
   vb.appendChild(r); pg.appendChild(vb);
   if(dashEdit) pg.appendChild(h('p','nx-dtip','Drag tiles to put them in order (you can do that any time, not just here), click a tile’s size to make it Small, Wide, Tall or Large, take off what you don’t need, then Save Layout. Open any system and use Make This a Dashboard Tile to pin the exact page you want — like an approval queue.'));
@@ -4957,7 +4959,9 @@ function packTiles(grid, L){
   const cols=()=>getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length || 1;
   const colSpan=t=>/\bsz-(w|b)\b/.test(t.className) && cols()>=2 ? 2 : 1;
   /* a tile you dropped into a particular spot stays in that spot (for this screen width); the rest flow around it */
-  const pinOf=t=>{ if(t._pin) return t._pin; const c=L && t.dataset.i!=null ? L[+t.dataset.i] : null; return c && c.at && c.at.c===cols() ? c.at : null; };
+  /* spots saved on an older, narrower grid are used on the 4-column one too, rather than thrown away */
+  const pinOk=c=>!!(c && c.at && (c.at.c===cols() || (cols()>=4 && c.at.c>=2)));
+  const pinOf=t=>{ if(t._pin) return t._pin; const c=L && t.dataset.i!=null ? L[+t.dataset.i] : null; return pinOk(c) ? c.at : null; };
   /* every tile of a size is the same height (Small 2 rows, Tall and Large 4). A tile with more than fits drops
      its last list rows until it fits; only something that can't be shortened (a chart) is allowed to grow. */
   const NOCUT='.st-top,.nx-tgear,.st-next,.nx-bars,.nx-pills,.nx-avrow,.nx-sysh,svg,.ring,.nx-env';
@@ -4972,10 +4976,11 @@ function packTiles(grid, L){
     return t.getBoundingClientRect().height<=maxH+SLACK; };
   const fit=t=>{ if(!t.isConnected || t.classList.contains('nx-dropmark')) return; const tall=/\bsz-(t|b)\b/.test(t.className), min=tall?4:2;
     const keepR=t.style.gridRow, keepC=t.style.gridColumn; t.style.alignSelf='start'; let hgt=t.getBoundingClientRect().height; if(!hgt){ t.style.alignSelf=''; return; }
-    const fixed=cols()>=2 && /\bsz-[stwb]\b/.test(t.className); const maxH=min*ROW+(min-1)*GAP;
-    if(fixed && hgt>maxH+SLACK && trim(t, maxH)) hgt=t.getBoundingClientRect().height;
+    const fixed=cols()>=2; const maxH=min*ROW+(min-1)*GAP; grid.classList.toggle('fixed', fixed);
+    if(fixed && hgt>maxH+SLACK) trim(t, maxH);
     t.style.alignSelf='';
-    const n=Math.max(min, Math.ceil((hgt+GAP-SLACK)/(ROW+GAP))); t.dataset.n=n; const pin=pinOf(t);
+    /* on the grid every tile is exactly its size; stacked on a phone it takes what its contents need */
+    const n=fixed ? min : Math.max(min, Math.ceil((hgt+GAP-SLACK)/(ROW+GAP))); t.dataset.n=n; const pin=pinOf(t);
     const cs=colSpan(t), px=pin ? Math.max(1, Math.min(pin.x, cols()-cs+1)) : 0;
     const r=(pin ? pin.y : 'auto')+' / span '+n, c=pin ? px+' / span '+cs : '';
     if(keepR!==r) t.style.gridRow=r; if(keepC!==c) t.style.gridColumn=c; };
@@ -4983,7 +4988,7 @@ function packTiles(grid, L){
   /* measure every tile, then lay the placed ones out; if a tile grew and now runs into the one below,
      the lower one is shown pushed down (only on screen; the saved spots don't change) */
   const all=()=>{ const kids=[...grid.children].filter(k=>!k.classList.contains('nx-dropmark')); kids.forEach(fit); const C=cols();
-    const placed=kids.filter(t=>{ const c=L && t.dataset.i!=null ? L[+t.dataset.i] : null; return c && c.at && c.at.c===C; })
+    const placed=kids.filter(t=>{ const c=L && t.dataset.i!=null ? L[+t.dataset.i] : null; return pinOk(c); })
       .map(t=>{ const c=L[+t.dataset.i]; const w=colSpan(t); return {t, x:Math.max(1, Math.min(c.at.x, C-w+1)), y:c.at.y, w, n:+t.dataset.n||2}; })
       .sort((a,b)=>a.y-b.y || a.x-b.x);
     settleBoxes(placed).forEach(b=>{ const r=b.y+' / span '+b.n, c=b.x+' / span '+b.w; if(b.t.style.gridRow!==r) b.t.style.gridRow=r; if(b.t.style.gridColumn!==c) b.t.style.gridColumn=c; }); };
@@ -6124,12 +6129,16 @@ html.nx-tdragging .nx-tiles .st-tile{animation:none!important}
 .btn.danger{color:var(--bad)}
 @media(max-width:760px){.nx-tedw{grid-template-columns:1fr}.nx-tedp{position:static}}
 .nx-cti em{font-style:normal;flex:0 0 auto;font-size:11.5px;font-weight:700;color:var(--c1)}.nx-cti.on em{color:var(--good)}
-@media(max-width:1250px){.nx-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:900px){.nx-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.nx-hero{grid-template-columns:minmax(0,1fr)}}
+/* your dashboard is always the 4-column grid you arranged — the same spots and sizes on any computer screen;
+   only when the space is phone-narrow do the tiles stack, in your order */
+@media(max-width:900px){.nx-hero{grid-template-columns:minmax(0,1fr)}}
+.nx-dash{container-type:inline-size}
+@container (max-width:600px){.nx-tiles{grid-template-columns:minmax(0,1fr)!important}.nx-tiles .st-tile.sz-w,.nx-tiles .st-tile.sz-b{grid-column:auto!important}.nx-tiles .st-tile.sz-t,.nx-tiles .st-tile.sz-b{grid-row:auto}}
 @media(max-width:640px){.nx-dash{padding:12px 12px 30px}.nx-hhi h1{font-size:24px}.nx-hhi p{font-size:14px}.nx-sw{display:flex;overflow-x:auto}.nx-swd{flex:0 0 96px}.nx-tiles{grid-template-columns:minmax(0,1fr)}.nx-ag{grid-template-columns:minmax(0,1fr)}.nx-dvr{margin-left:0}}
 .st-tile.sz-w{grid-column:span 2}.st-tile.sz-t{grid-row:span 2}.st-tile.sz-b{grid-column:span 2;grid-row:span 2}
 .nx-tiles.nx-pack{grid-auto-rows:84px;gap:10px}
 .nx-tiles.nx-pack > .st-tile{min-height:0}
+.nx-tiles.nx-pack.fixed > .st-tile{overflow:hidden}
 .nx-tiles{grid-auto-flow:row dense}
 .nx-ag.one{grid-template-columns:minmax(0,1fr)}
 .nx-tl2{display:flex;flex-direction:column;gap:4px}
