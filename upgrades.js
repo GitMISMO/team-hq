@@ -170,6 +170,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -3349,8 +3350,8 @@ const css=h('style'); css.id='td-css'; css.textContent=`
 .td-seg button+button{border-left:1px solid var(--border)}.td-seg button.on{background:var(--navy,#0d314c);color:#fff}
 .td-team .pcard.td-off{display:none}
 .td-pn{display:flex;gap:12px;margin-top:6px;font-size:11.5px;color:var(--ink-3)}.td-pn b{font-size:13px;color:var(--ink);margin-right:3px}.td-pn .bad b{color:var(--bad)}
-.td-pa{display:flex;gap:6px;margin-top:8px}
-.td-pa span{display:inline-flex;align-items:center;height:26px;padding:0 9px;border:1px solid var(--border);border-radius:5px;background:var(--surface);font-size:11.5px;font-weight:700;color:var(--c1);cursor:pointer}
+.td-pa{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.td-pa span{display:inline-flex;align-items:center;height:26px;padding:0 9px;border:1px solid var(--border);border-radius:5px;background:var(--surface);font-size:11.5px;font-weight:700;color:var(--c1);cursor:pointer;white-space:nowrap}
 .td-pa span:hover,.td-pa span:focus-visible{border-color:var(--c1);background:var(--sky-wash);outline:none}
 .td-mp{display:inline-block;margin-left:6px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--c1)}
 @media(max-width:640px){.td-card{flex-basis:72%}.td-row{grid-template-columns:110px 1fr}}
