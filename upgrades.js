@@ -171,6 +171,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -1039,6 +1040,10 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed color-mix(in srgb,va
   #app-expenses button,#app-expenses .btn,#app-expenses input,#app-expenses select{min-height:44px;font-size:16px}
   #app-expenses .filterbar .pill{min-height:38px;font-size:14px}
 }
+/* Expenses: everyone's, one heading per person with their trips under it */
+.exppers{display:flex;align-items:baseline;gap:10px;margin:20px 0 8px;padding:0 2px 6px;border-bottom:2px solid var(--navy,#0d314c)}
+.exppers b{font-size:16px;color:var(--ink)}.exppers small{font-size:12.5px;color:var(--ink-3)}.exppers .amt{margin-left:auto;font-weight:700;color:var(--ink)}
+:root[data-theme="dark"] .exppers{border-bottom-color:var(--sky)}
 .exp-install{display:none}
 @media (max-width:820px){ .exp-install{display:flex} }
 .exp-install{align-items:center;gap:12px;padding:12px 14px;margin:0 0 14px;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--sky);border-radius:8px;font-size:13.5px;color:var(--ink)}
