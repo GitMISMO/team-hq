@@ -12650,7 +12650,7 @@ function vExpenses(root){
     snapReceipts(ev.dataTransfer && ev.dataTransfer.files); });
   root.appendChild(snap);
 
-  if(!S.expScope) S.expScope=expSeesAll() ? 'all' : 'mine';   /* Jonna and Vanessa open on everyone's */
+  if(!S.expScope || S.expScopeFor!==S.me){ S.expScope=expSeesAll() ? 'all' : 'mine'; S.expScopeFor=S.me; }   /* Jonna and Vanessa open on everyone's */
   const canP=canProcess();
   if(canP){
     const bar=el('div','filterbar');
@@ -17792,5 +17792,5 @@ boot().then(()=>{ paintWho(); renderAll();
 })();
 </script>
 
-<script src="upgrades.js?v=20261104c" defer></script>
+<script src="upgrades.js?v=20261104d" defer></script>
 </body></html>
