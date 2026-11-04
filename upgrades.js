@@ -164,6 +164,8 @@
 
 
 
+
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -4996,6 +4998,8 @@ function packTiles(grid, L){
       t.querySelectorAll('*').forEach(c=>{ if(c.closest(NOCUT)) return; const vis=[...c.children].filter(k=>!k.hidden && k.getClientRects().length); if(vis.length<2) return;
         const last=vis[vis.length-1]; const alike=vis.filter(k=>k.tagName===last.tagName && k.className===last.className); if(alike.length<2 || alike.length<Math.min(3, vis.length)) return;
         const b=last.getBoundingClientRect(); if(b.height>=12 && b.bottom>bb){ bb=b.bottom; best=last; } });
+      /* no list left to shorten: drop the tile's extra footer lines (a hint like "Raise something…") rather than cut text off */
+      if(!best){ const opt=[...t.querySelectorAll('.mic-steps,.st-next')].filter(k=>!k.hidden && k.getClientRects().length).pop(); if(opt){ opt.hidden=true; continue; } }
       if(!best) return false; if(best.matches('.mtd-r')) best.hidden=true; else best.remove(); }
     return t.getBoundingClientRect().height<=maxH+SLACK; };
   const fit=t=>{ if(!t.isConnected || t.classList.contains('nx-dropmark')) return; const tall=/\bsz-(t|b)\b/.test(t.className), min=tall?4:2;
@@ -6049,7 +6053,7 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .mtd-s b{color:var(--k,#74bfeb);font-weight:700}
 .mtd-ls{display:flex;flex-direction:column;gap:4px;margin-top:3px;min-width:0}
 .mtd-r{display:flex;align-items:center;gap:10px;min-width:0;padding:4px 9px;border-radius:7px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);font-size:13px;transition:background .3s,border-color .3s,opacity .3s}
-.mtd-r[hidden]{display:none}
+.mtd-r[hidden],.st-next[hidden],.mic-steps[hidden]{display:none!important}
 /* Wide: the meetings sit side by side under the heading, so the tile stays Wide-sized */
 .st-tile.sz-w .mtd-ls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 .st-tile.sz-w .mtd-r{padding:4px 8px}.st-tile.sz-w .mtd-r .tm{min-width:0}.st-tile.sz-w .mtd-r .st{display:none}
