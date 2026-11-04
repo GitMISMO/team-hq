@@ -163,6 +163,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -1050,6 +1051,8 @@ html.app-exp main{padding:16px 14px calc(100px + env(safe-area-inset-bottom,0px)
 html.app-exp #app-expenses > .vhead{display:none}
 html.app-exp #app-expenses .snapzone{min-height:180px}
 .exp-dock{display:none}
+.exp-hq{display:none}
+html.app-exp .exp-hq{display:inline-flex;align-items:center;min-height:34px;padding:0 12px;border:1px solid rgba(255,255,255,.35);border-radius:6px;color:#fff;font-size:13.5px;font-weight:700;text-decoration:none;white-space:nowrap}
 html.app-exp .exp-dock{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:90;gap:10px;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--border);box-shadow:0 -6px 20px rgba(6,32,47,.10)}
 .exp-dock button{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;min-height:52px;border-radius:8px;font:inherit;font-size:16px;font-weight:700;cursor:pointer;border:1px solid var(--navy);white-space:nowrap}
 .exp-dock .snap{background:var(--navy);color:#fff}
@@ -1065,7 +1068,7 @@ let deferred=null;
 const onBIP=e=>{ e.preventDefault(); deferred=e; paintExp(); };
 window.addEventListener('beforeinstallprompt', onBIP);
 const isiOS=/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
-function dismissed(){ try{ return localStorage.getItem('tools:team-hq:exp.install.x')==='1'; }catch(e){ return false; } }
+function dismissed(){ try{ return localStorage.getItem('tools:team-hq:exp.install.x2')==='1'; }catch(e){ return false; } }
 function paintExp(){
   if(!exp) return;
   mo && mo.disconnect();
@@ -1075,21 +1078,39 @@ function paintExp(){
     const tx=document.createElement('div');
     const b=document.createElement('b'); b.textContent='Put Expenses on your phone'; tx.appendChild(b);
     const s=document.createElement('small');
-    /* the home-screen icon has to be saved from the Expenses page itself, or it's a Team HQ icon */
-    const onApp=appExp;
-    s.textContent = !onApp ? 'Open the Expenses page, then add it to your home screen. It opens straight to Expenses, like an app.'
-                  : isiOS ? 'In Safari, tap Share, then Add to Home Screen. It opens straight to Expenses, like an app.'
-                  : deferred ? 'Install it and it opens straight to Expenses, like an app.'
-                  : 'In Chrome, open the menu and tap Add to Home screen. It opens straight to Expenses, like an app.';
+    /* while Expenses is open, this page is the Expenses app (see setApp below), so saving it now gives an Expenses icon */
+    s.textContent = isiOS ? 'Tap Share, then Add to Home Screen. You get an Expenses icon that opens straight to Expenses. Team HQ stays its own icon.'
+                  : deferred ? 'Install it and you get an Expenses icon that opens straight to Expenses. Team HQ stays its own icon.'
+                  : 'Open the browser menu and tap Add to Home screen (or Install). You get an Expenses icon that opens straight to Expenses.';
     tx.appendChild(s); tip.appendChild(tx);
-    if(!onApp){ const a=document.createElement('a'); a.className='btn'; a.href='/team-hq/?app=expenses'; a.textContent='Open the Expenses Page'; tip.appendChild(a); }
-    if(onApp && deferred && !isiOS){ const ib=document.createElement('button'); ib.className='btn'; ib.type='button'; ib.textContent='Install'; ib.onclick=async()=>{ deferred.prompt(); try{ await deferred.userChoice; }catch(e){} deferred=null; tip.remove(); }; tip.appendChild(ib); }
+    if(deferred && !isiOS){ const ib=document.createElement('button'); ib.className='btn'; ib.type='button'; ib.textContent='Install'; ib.onclick=async()=>{ const d=deferred; deferred=null; tip.remove(); try{ d.prompt(); await d.userChoice; }catch(e){} }; tip.appendChild(ib); }
     const x=document.createElement('button'); x.className='x'; x.type='button'; x.setAttribute('aria-label','Hide this tip'); x.textContent='×';
-    x.onclick=()=>{ try{ localStorage.setItem('tools:team-hq:exp.install.x','1'); }catch(e){} tip.remove(); }; tip.appendChild(x);
+    x.onclick=()=>{ try{ localStorage.setItem('tools:team-hq:exp.install.x2','1'); }catch(e){} tip.remove(); }; tip.appendChild(x);
     const vh=exp.querySelector(':scope > .vhead'); vh ? vh.after(tip) : exp.prepend(tip);
   }
   mo && mo.observe(exp, {childList:true});
 }
+/* Picking Expenses in Team HQ turns this page into the Expenses app while it's open: its name, icon and address
+   switch to Expenses, so Add to Home Screen (or Install) right there gives an Expenses icon. Leaving Expenses
+   switches everything back to Team HQ. */
+let expOnNow=false;
+function setApp(on){
+  if(on===expOnNow) return; expOnNow=on;
+  const mf=document.querySelector('link[rel="manifest"]'); if(mf) mf.href=on ? '/team-hq/expenses.webmanifest' : '/team-hq/team-hq.webmanifest';
+  const ti=document.querySelector('link[rel="apple-touch-icon"]'); if(ti) ti.href=on ? '/team-hq/expenses-icon-180.png' : '/team-hq/hq-icon-180.png';
+  const tm=document.querySelector('meta[name="apple-mobile-web-app-title"]'); if(tm) tm.content=on ? 'Expenses' : 'Team HQ';
+  try{ const u=new URL(location.href); if(on) u.searchParams.set('app','expenses'); else u.searchParams.delete('app'); history.replaceState(history.state, '', u.pathname+u.search+u.hash); }catch(e){}
+  deferred=null; const t=exp && exp.querySelector(':scope > .exp-install'); if(t){ t.remove(); paintExp(); } }
+function watchExp(){
+  if(appExp || standalone || !exp) return;
+  const H=document.documentElement;
+  const check=()=>setApp(!exp.hidden && !H.classList.contains('nx-show') && exp.offsetParent!==null);
+  const o=new MutationObserver(check); o.observe(exp, {attributes:true, attributeFilter:['hidden','style','class']}); o.observe(H, {attributes:true, attributeFilter:['class']});
+  window.addEventListener('pagehide', ()=>setApp(false)); check(); }
+/* the Expenses app always has a way back to Team HQ */
+function backLink(){ const r=document.querySelector('.hqtop-r'); if(!r){ setTimeout(backLink, 300); return; } if(r.querySelector('.exp-hq')) return;
+  const a=document.createElement('a'); a.className='exp-hq'; a.href='/team-hq/'; a.textContent='Team HQ'; a.title='Go to Team HQ'; r.insertBefore(a, r.firstChild); }
+if(appExp) backLink();
 let dock=null;
 if(appExp){
   dock=document.createElement('div'); dock.className='exp-dock';
@@ -1101,6 +1122,7 @@ if(appExp){
 }
 const mo=exp ? new MutationObserver(()=>paintExp()) : null;
 if(exp){ mo.observe(exp, {childList:true}); paintExp(); }
+watchExp();
 
 /* ---------- My Board: Tidy Up (lays the panels out in a neat grid; Undo puts them back) ---------- */
 const mineRoot=document.getElementById('app-mine');
