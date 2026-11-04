@@ -166,6 +166,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -5991,6 +5992,8 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .st-tile .mic-row{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
 .st-tile .mic-ep{flex:1 1 180px;min-width:0;display:flex;flex-direction:column;gap:2px}.st-tile .mic-ep b{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.st-tile .mic-ep small{font-size:12.5px;color:rgba(255,255,255,.7)}
 .st-tile .mic-cd{display:flex;gap:6px}
+/* Small and Tall tiles: the countdown stays beside the date, and the place line takes at most two lines */
+.st-tile:not(.sz-w):not(.sz-b) .mic-row{flex-wrap:nowrap;gap:10px;align-items:center}.st-tile:not(.sz-w):not(.sz-b) .mic-ep{flex:1 1 0}.st-tile:not(.sz-w):not(.sz-b) .mic-loc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .st-tile .mic-cd span{background:rgba(0,0,0,.25);border:1px solid var(--st-line);border-radius:8px;padding:5px 8px;text-align:center;min-width:50px}
 .st-tile .mic-cd b{display:block;font-size:20px;line-height:1.1}
 .st-tile .mic-cd small{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.6)}
