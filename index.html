@@ -12650,7 +12650,7 @@ function vExpenses(root){
     snapReceipts(ev.dataTransfer && ev.dataTransfer.files); });
   root.appendChild(snap);
 
-  if(!S.expScope) S.expScope='mine';
+  if(!S.expScope) S.expScope=expSeesAll() ? 'all' : 'mine';   /* Jonna and Vanessa open on everyone's */
   const canP=canProcess();
   if(canP){
     const bar=el('div','filterbar');
@@ -12705,31 +12705,41 @@ function vExpenses(root){
     root.appendChild(bx); return;
   }
 
-  /* grouped by trip, newest first */
-  const trips={};
-  list.forEach(x=>{ const k=x.trip||'No Trip Name Yet'; (trips[k]=trips[k]||[]).push(x); });
-  const latest=k=> trips[k].reduce((m,x)=>{ const d=String(x.date||''); return d>m?d:m; }, '');
-  const names=Object.keys(trips).sort((a,b)=> latest(b).localeCompare(latest(a)));
+  /* grouped by person (for the people who see everyone's), then by trip, newest first */
   if(!S.openTrips) S.openTrips={};
-  names.forEach(n=>{
-    const rows=trips[n].slice().sort((a,b)=>String(b.date||'9').localeCompare(String(a.date||'9')) || (b.at||0)-(a.at||0));
-    const sum=rows.reduce((a,x)=>a+(Number(x.amt)||0),0);
-    const open=S.openTrips[n]!==false;
-    const box=el('div','trip');
-    const h=el('button','triph'); h.type='button';
-    const tn=el('span','tn'); tn.appendChild(document.createTextNode(n));
-    const who=Array.from(new Set(rows.map(x=>x.who))).map(pname).join(', ');
-    tn.appendChild(el('small',null, rows.length+(rows.length===1?' expense':' expenses')+' · '+who));
-    h.appendChild(tn);
-    const nsub=rows.filter(x=>!x.submitted).length;
-    if(nsub) h.appendChild(el('span','chip ch-soon', nsub+' to submit'));
-    else h.appendChild(el('span','chip ch-dn','All Submitted'));
-    h.appendChild(el('span','amt money', money(sum)));
-    h.addEventListener('click', ()=>{ S.openTrips[n]=!open; vExpenses(root); });
-    box.appendChild(h);
-    if(open) rows.forEach(x=> box.appendChild(expRow(x)));
-    root.appendChild(box);
-  });
+  const byTrips=(rowsIn, pre)=>{
+    const trips={};
+    rowsIn.forEach(x=>{ const k=x.trip||'No Trip Name Yet'; (trips[k]=trips[k]||[]).push(x); });
+    const latest=k=> trips[k].reduce((m,x)=>{ const d=String(x.date||''); return d>m?d:m; }, '');
+    Object.keys(trips).sort((a,b)=> latest(b).localeCompare(latest(a))).forEach(n=>{
+      const key=pre+n;
+      const rows=trips[n].slice().sort((a,b)=>String(b.date||'9').localeCompare(String(a.date||'9')) || (b.at||0)-(a.at||0));
+      const sum=rows.reduce((a,x)=>a+(Number(x.amt)||0),0);
+      const open=S.openTrips[key]!==false;
+      const box=el('div','trip');
+      const h=el('button','triph'); h.type='button';
+      const tn=el('span','tn'); tn.appendChild(document.createTextNode(n));
+      const who=Array.from(new Set(rows.map(x=>x.who))).map(pname).join(', ');
+      tn.appendChild(el('small',null, rows.length+(rows.length===1?' expense':' expenses')+(pre ? '' : ' · '+who)));
+      h.appendChild(tn);
+      const nsub=rows.filter(x=>!x.submitted).length;
+      if(nsub) h.appendChild(el('span','chip ch-soon', nsub+' to submit'));
+      else h.appendChild(el('span','chip ch-dn','All Submitted'));
+      h.appendChild(el('span','amt money', money(sum)));
+      h.addEventListener('click', ()=>{ S.openTrips[key]=!open; vExpenses(root); });
+      box.appendChild(h);
+      if(open) rows.forEach(x=> box.appendChild(expRow(x)));
+      root.appendChild(box);
+    });
+  };
+  const ppl=Array.from(new Set(list.map(x=>x.who)));
+  if(expSeesAll() && S.expScope!=='mine' && ppl.length){
+    ppl.sort((a,b)=> (a===S.me ? -1 : b===S.me ? 1 : 0) || String(pname(a)||'').localeCompare(String(pname(b)||'')));
+    ppl.forEach(id=>{ const rows=list.filter(x=>x.who===id); const sum=rows.reduce((a,x)=>a+(Number(x.amt)||0),0);
+      const ph=el('div','exppers'); ph.appendChild(el('b',null, pname(id)||'Someone')); ph.appendChild(el('small',null, rows.length+(rows.length===1?' expense':' expenses')));
+      ph.appendChild(el('span','amt money', money(sum))); root.appendChild(ph);
+      byTrips(rows, id+'|'); });
+  } else byTrips(list, '');
 
   const c=el('div','callout');
   c.innerHTML='<b>The rules built in here</b> come from MBA’s January 2019 travel and expense policy: receipts over '+money(RECEIPT_OVER)+' (meals over '+money(MEAL_RECEIPT_OVER)+'), meal guidelines of '+money(20)+' breakfast, '+money(35)+' lunch, '+money(50)+' dinner, '+money(10)+' snacks, and '+money(DAILY_MEAL_CAP)+' per person per day.';
@@ -17782,5 +17792,5 @@ boot().then(()=>{ paintWho(); renderAll();
 })();
 </script>
 
-<script src="upgrades.js?v=20261104a" defer></script>
+<script src="upgrades.js?v=20261104b" defer></script>
 </body></html>
