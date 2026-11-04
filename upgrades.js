@@ -162,6 +162,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -285,11 +286,12 @@ function loadMail(force){
       if(firstPull && !trusted) return;                /* this page was showing the starter dashboard: drop its save */
       const now=Date.now(); const D=dirtyOf(S.bset).concat(res.ours); const A=Object.assign({}, S.bset[AT]||{}); D.forEach(k=>{ if(!res.ours.includes(k)) A[k]=now; }); S.bset[AT]=A;
       const out=Object.assign({}, obj, {bset:cl(S.bset), layout:cl(S.layout)});
-      await oset(out); base=cl(S.bset); baseLay=cl(S.layout);
+      /* remember what was actually sent: a click made while this save is on its way stays unsaved (and wins next time) */
+      await oset(out); base=cl(out.bset); baseLay=cl(out.layout);
     }).catch(()=>{});
     return chain; }
   async function sync(){ chain=chain.then(async ()=>{ const d=await readRemote(); if(!d) return; const first=!pulled; const res=adopt(d, true); pulled=true; tell(res.ch);
-      if(res.ours.length && !first){ const now=Date.now(); const A=Object.assign({}, S.bset[AT]||{}); res.ours.forEach(k=>{ A[k]=A[k]||now; }); S.bset[AT]=A; await oset({layout:cl(S.layout), bset:cl(S.bset), me:S.me||null, view:S.view, nb:S.nb||null}); base=cl(S.bset); } }).catch(()=>{}); return chain; }
+      if(res.ours.length && !first){ const now=Date.now(); const A=Object.assign({}, S.bset[AT]||{}); res.ours.forEach(k=>{ A[k]=A[k]||now; }); dirtyOf(S.bset).forEach(k=>{ A[k]=now; }); S.bset[AT]=A; const o2={layout:cl(S.layout), bset:cl(S.bset), me:S.me||null, view:S.view, nb:S.nb||null}; await oset(o2); base=cl(o2.bset); } }).catch(()=>{}); return chain; }
   function start(){
     if(window.__mineMerge || !S.db || !S.uid || typeof S.db.doc!=='function') return; window.__mineMerge=true;
     path='data/users/'+S.uid+'/profile';
