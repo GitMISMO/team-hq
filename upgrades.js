@@ -157,6 +157,9 @@
 
 
 
+
+
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -637,7 +640,7 @@ function stillLoading(doc){ try{
 const hasData=d=>d && (d.figs.length || d.gauges.length || (d.cards||[]).length || Object.keys(d.secs||{}).length);
 function keepData(k, go, d){ if(!hasData(d) || d.failed) return; SD[sdKey(k,go)]=d; try{ localStorage.setItem(DK, JSON.stringify(SD)); }catch(e){} try{ window.dispatchEvent(new Event('hq:counts')); }catch(e){} }
 function sysData(k, go){ return SD[sdKey(k,go)]||null; }
-const SQ=[], INF=new Set(); let sRun=0; const SMAX=1; /* one page read at a time */
+const SQ=[], INF=new Set(); let sRun=0; const SMAX=2; /* two page reads at a time, so a new tile fills sooner */
 function wantData(k, go, maxAge){ const d=SD[sdKey(k,go)]; if(d && Date.now()-d.at<(maxAge||20*60e3)) return; if(INF.has(sdKey(k,go)) || SQ.some(q=>q.k===k && q.go===(go||''))) return; SQ.push({k, go:go||'', miss:!(d && hasData(d))}); setTimeout(pump, 300); }
 /* other systems are read in the background only once Team HQ has opened and settled, one at a time,
    and only when the browser has a free moment, so opening Team HQ never feels slow */
@@ -4960,9 +4963,12 @@ function packTiles(grid, L){
   const NOCUT='.st-top,.nx-tgear,.st-next,.nx-bars,.nx-pills,.nx-avrow,.nx-sysh,svg,.ring,.nx-env';
   const trim=(t, maxH)=>{ for(let g=0; g<14 && t.getBoundingClientRect().height>maxH+SLACK; g++){
       let best=null, bb=-1;
-      t.querySelectorAll('*').forEach(c=>{ if(c.children.length<2 || c.closest(NOCUT)) return; const last=c.lastElementChild; if(!last || last.closest(NOCUT)) return; const b=last.getBoundingClientRect(); if(b.height>=12 && b.bottom>bb){ bb=b.bottom; best=last; } });
-      if(!best){ const kids=[...t.children].filter(k=>!k.matches(NOCUT)); if(kids.length>1){ best=kids[kids.length-1]; } }
-      if(!best) return false; best.remove(); }
+      /* only rows of a list (three or more alike, side by side in the same box) are dropped, the last one first,
+         and every list keeps at least one row — headings and the tile's own parts are never removed */
+      t.querySelectorAll('*').forEach(c=>{ if(c.closest(NOCUT)) return; const vis=[...c.children].filter(k=>!k.hidden && k.getClientRects().length); if(vis.length<2) return;
+        const last=vis[vis.length-1]; const alike=vis.filter(k=>k.tagName===last.tagName && k.className===last.className); if(alike.length<2 || alike.length<Math.min(3, vis.length)) return;
+        const b=last.getBoundingClientRect(); if(b.height>=12 && b.bottom>bb){ bb=b.bottom; best=last; } });
+      if(!best) return false; if(best.matches('.mtd-r')) best.hidden=true; else best.remove(); }
     return t.getBoundingClientRect().height<=maxH+SLACK; };
   const fit=t=>{ if(!t.isConnected || t.classList.contains('nx-dropmark')) return; const tall=/\bsz-(t|b)\b/.test(t.className), min=tall?4:2;
     const keepR=t.style.gridRow, keepC=t.style.gridColumn; t.style.alignSelf='start'; let hgt=t.getBoundingClientRect().height; if(!hgt){ t.style.alignSelf=''; return; }
@@ -6015,6 +6021,9 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .mtd-ls{display:flex;flex-direction:column;gap:4px;margin-top:3px;min-width:0}
 .mtd-r{display:flex;align-items:center;gap:10px;min-width:0;padding:4px 9px;border-radius:7px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);font-size:13px;transition:background .3s,border-color .3s,opacity .3s}
 .mtd-r[hidden]{display:none}
+/* Wide: the meetings sit side by side under the heading, so the tile stays Wide-sized */
+.st-tile.sz-w .mtd-ls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.st-tile.sz-w .mtd-r{padding:4px 8px}.st-tile.sz-w .mtd-r .tm{min-width:0}.st-tile.sz-w .mtd-r .st{display:none}
 .mtd-r .tm{flex:0 0 auto;min-width:76px;font-size:11.5px;font-weight:700;color:var(--k,#74bfeb);font-variant-numeric:tabular-nums;white-space:nowrap}
 .mtd-r .nm{flex:1;min-width:0;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mtd-r .st{flex:0 0 auto;font-size:9.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:2px 7px;border-radius:5px;background:rgba(255,255,255,.13);color:rgba(255,255,255,.85);white-space:nowrap}
