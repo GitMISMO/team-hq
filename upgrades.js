@@ -168,6 +168,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -4951,7 +4952,7 @@ function vDash(){
   if(dashEdit) pg.appendChild(h('p','nx-dtip','Drag tiles to put them in order (you can do that any time, not just here), click a tile’s size to make it Small, Wide, Tall or Large, take off what you don’t need, then Save Layout. Open any system and use Make This a Dashboard Tile to pin the exact page you want — like an approval queue.'));
   const grid=h('div','nx-tiles'+(dashEdit?' editing':''));
   const L=dashEdit || dashLayout();
-  L.forEach((cfg, i)=>{ let el=null; try{ el=tile(cfg, i, L); }catch(e){ console.error(e); } if(el) grid.appendChild(el); });
+  L.forEach((cfg, i)=>{ let el=null; try{ el=tile(cfg, i, L); }catch(e){ console.error(e); } if(el){ el._sig=el.innerHTML; grid.appendChild(el); } });
   if(dashEdit){ const add=btn('nx-tadd', null, openCatalog); add.innerHTML='<b>+</b><span>Add a Tile</span>'; grid.appendChild(add); }
   pg.appendChild(grid); packTiles(grid, L); liven(grid);
 }
@@ -5535,7 +5536,11 @@ let countsT=null; window.addEventListener('hq:counts', ()=>{ clearTimeout(counts
 function refreshSysTiles(){ if(!ui.on || viewKind()!=='day' || tdrag || !shell || shell.hidden) return; const grid=body.querySelector('.nx-tiles'); if(!grid) return;
   const L=dashEdit || dashLayout();
   grid.querySelectorAll(':scope > .t-sys').forEach(el=>{ const i=+el.dataset.i; const cfg=L[i]; if(!cfg || cfg.t!=='sys' || el.contains(document.activeElement)) return; let nu=null; try{ nu=tile(cfg, i, L); }catch(e){} if(!nu) return;
-    nu.style.gridRow=el.style.gridRow; nu.style.gridColumn=el.style.gridColumn; nu.style.animation='none'; el.replaceWith(nu); countUps(nu); }); }
+    /* nothing changed: leave the tile alone (redrawing it made it flicker) */
+    const sig=nu.innerHTML; if(el._sig===sig) return; nu._sig=sig;
+    nu.style.gridRow=el.style.gridRow; nu.style.gridColumn=el.style.gridColumn; nu.style.animation='none'; el.replaceWith(nu);
+    /* fit it to its size straight away, so it never shows a frame of too much */
+    try{ grid._fit && grid._fit(nu); }catch(e){} countUps(nu); }); }
 
 /* ---------- email and people, shared by My Day, Inbox and People ---------- */
 const X=()=>window.__hqx;
