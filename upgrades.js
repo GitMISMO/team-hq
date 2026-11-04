@@ -167,6 +167,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -4992,7 +4993,7 @@ function packTiles(grid, L){
   /* every tile of a size is the same height (Small 2 rows, Tall and Large 4). A tile with more than fits drops
      its last list rows until it fits; only something that can't be shortened (a chart) is allowed to grow. */
   const NOCUT='.st-top,.nx-tgear,.st-next,.nx-bars,.nx-pills,.nx-avrow,.nx-sysh,svg,.ring,.nx-env';
-  const trim=(t, maxH)=>{ for(let g=0; g<14 && t.getBoundingClientRect().height>maxH+SLACK; g++){
+  const trim=(t, maxH)=>{ for(let g=0; g<14 && t.getBoundingClientRect().height>maxH+1; g++){
       let best=null, bb=-1;
       /* only rows of a list (three or more alike, side by side in the same box) are dropped, the last one first,
          and every list keeps at least one row — headings and the tile's own parts are never removed */
@@ -5002,11 +5003,12 @@ function packTiles(grid, L){
       /* no list left to shorten: drop the tile's extra footer lines (a hint like "Raise something…") rather than cut text off */
       if(!best){ const opt=[...t.querySelectorAll('.mic-steps,.st-next')].filter(k=>!k.hidden && k.getClientRects().length).pop(); if(opt){ opt.hidden=true; continue; } }
       if(!best) return false; if(best.matches('.mtd-r')) best.hidden=true; else best.remove(); }
-    return t.getBoundingClientRect().height<=maxH+SLACK; };
+    return t.getBoundingClientRect().height<=maxH+1; };
   const fit=t=>{ if(!t.isConnected || t.classList.contains('nx-dropmark')) return; const tall=/\bsz-(t|b)\b/.test(t.className), min=tall?4:2;
     const keepR=t.style.gridRow, keepC=t.style.gridColumn; t.style.alignSelf='start'; let hgt=t.getBoundingClientRect().height; if(!hgt){ t.style.alignSelf=''; return; }
     const fixed=cols()>=2; const maxH=min*ROW+(min-1)*GAP; grid.classList.toggle('fixed', fixed);
-    if(fixed && hgt>maxH+SLACK) trim(t, maxH);
+    /* on the grid nothing may run past the tile's edge, not even a few pixels */
+    if(fixed && hgt>maxH+1) trim(t, maxH);
     t.style.alignSelf='';
     /* on the grid every tile is exactly its size; stacked on a phone it takes what its contents need */
     const n=fixed ? min : Math.max(min, Math.ceil((hgt+GAP-SLACK)/(ROW+GAP))); t.dataset.n=n; const pin=pinOf(t);
