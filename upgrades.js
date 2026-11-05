@@ -174,6 +174,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -1076,7 +1077,6 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed color-mix(in srgb,va
 .exp-install b{display:block}
 .exp-install small{display:block;color:var(--ink-2);font-size:12.5px;line-height:1.4}
 .exp-install .x{margin-left:auto;border:0;background:transparent;color:var(--ink-3);font-size:20px;line-height:1;cursor:pointer;padding:6px}
-.app-exp .exp-install{display:none!important}
 
 /* app mode: launched from the home screen */
 html.app-exp body{padding-left:0!important}
@@ -1141,7 +1141,12 @@ function setApp(on){
 function watchExp(){
   if(appExp || standalone || !exp) return;
   const H=document.documentElement;
-  const check=()=>setApp(!exp.hidden && !H.classList.contains('nx-show') && exp.offsetParent!==null);
+  /* On a phone, Safari keeps the app details it read when the page first opened, so swapping them later still saves a
+     Team HQ icon. Opening Expenses on a phone therefore loads the Expenses page itself, ready for Add to Home Screen. */
+  const phone=isiOS || (window.matchMedia && matchMedia('(max-width:820px)').matches);
+  const check=()=>{ const on=!exp.hidden && !H.classList.contains('nx-show') && exp.offsetParent!==null;
+    if(on && phone){ try{ location.replace('/team-hq/?app=expenses'); }catch(e){} return; }
+    setApp(on); };
   const o=new MutationObserver(check); o.observe(exp, {attributes:true, attributeFilter:['hidden','style','class']}); o.observe(H, {attributes:true, attributeFilter:['class']});
   window.addEventListener('pagehide', ()=>setApp(false)); check(); }
 /* the Expenses app always has a way back to Team HQ */
