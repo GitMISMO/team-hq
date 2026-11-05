@@ -12565,6 +12565,8 @@ async function rcptReadAndSave(id, blob){
   await put('expenses', e);
   return {ok:true, got:got};
 }
+/* for the expense inbox (expense@mismo.org): lets Team HQ turn an emailed receipt into an expense the same way a snapped one is */
+window.__expApi={ put:(c,o)=>put(c,o), expOf:id=>expOf(id), readAndSave:(id,b)=>rcptReadAndSave(id,b), attBlob:id=>attBlob(id), members:e=>expMembers(e), seesAll:()=>expSeesAll(), person:id=>person(id), list:()=>S.expenses };
 
 /* ---------- snap one or more receipts: each becomes an expense, saved at once ---------- */
 async function snapReceipts(files){
@@ -17799,5 +17801,5 @@ boot().then(()=>{ paintWho(); renderAll();
 })();
 </script>
 
-<script src="upgrades.js?v=20261105e" defer></script>
+<script src="upgrades.js?v=20261105f" defer></script>
 </body></html>
