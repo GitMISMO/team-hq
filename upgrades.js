@@ -172,6 +172,8 @@
 
 
 
+
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -405,9 +407,31 @@ const SYS=[
   ['hub-requests','Work Requests','/initiative-hub/work-requests.html','#74BFEB','Requests coming in for the standards work'],
   ['glossary','Business Glossary','/glossary/','#2DD4BF','MISMO’s terms and definitions'],
   ['mismo-link','MISMO Link','/mismo-link/','#818CF8','The MISMO Link AI beta'],
-  ['qr','QR Code Manager','/qr/','#74BFEB','Codes, scan tracking and expiry']
+  ['qr','QR Code Manager','/qr/','#74BFEB','Codes, scan tracking and expiry'],
+  ['mms','MISMO Manufacturing System','/mms/','#A78BFA','Work requests, reviews and the facilitator queue']
 ].map(([k,n,u,c,d])=>({k,n,u,c,d}));
-const SHORT={'cms':'CMS','so':'Service Orders','website-migration':'Website Migration','iif-hq':'IIF Planning','hub-requests':'Work Requests','marketing-hq':'MISMO Media'};
+/* New apps show up by themselves: any app you've been given in People & Access that isn't listed above is added
+   to Add a Tile (marked New), named and coloured from the app's own page. A dashboard tile is only placed when you add it. */
+const DISC='tools:team-hq:mismo.teamhq.sysfound', SYS_SKIP=/^(team-hq.*|so-.+|as-.+|admin|forms?|people|relay|test.*)$|-(files|data|routes|private|public|hours)$/i;
+function discover(){ const a=access(); if(!a) return false; let seen={}; try{ seen=JSON.parse(localStorage.getItem(DISC)||'{}')||{}; }catch(e){}
+  const save=()=>{ try{ localStorage.setItem(DISC, JSON.stringify(seen)); }catch(e){} }, tell=()=>{ try{ window.dispatchEvent(new Event('hq:sys')); }catch(e){} };
+  const paths=new Set(SYS.map(z=>z.u));
+  Object.keys(a).forEach(k=>{ if(!a[k] || SYS.some(z=>z.k===k) || SYS_SKIP.test(k)) return; const u='/'+k+'/'; if(paths.has(u)) return;
+    const c=seen[k]||{}; if(c.bad && Date.now()-(c.at||0)<864e5) return;
+    const nice=k.replace(/[-_]+/g,' ').replace(/\b(hq|mms|cms|iif|qr)\b/gi,m=>m.toUpperCase()).replace(/\b\w/g,m=>m.toUpperCase());
+    const ent={k, n:c.n||nice, u, c:c.c||'#74BFEB', d:c.d||'Opens right here in Team HQ', auto:1}; if(!c.bad) SYS.push(ent);
+    if(c.n && Date.now()-(c.at||0)<864e5) return;
+    fetch(u, {credentials:'same-origin'}).then(r=>r.ok ? r.text() : Promise.reject(r.status)).then(html=>{
+      const doc=new DOMParser().parseFromString(html,'text/html');
+      const t=((doc.querySelector('title')||{}).textContent||'').split(/\s+[|·–—]\s+/).map(z=>z.trim()).filter(z=>z && !/^MISMO$/i.test(z)).sort((p,q)=>q.length-p.length)[0]||'';   /* "MMS · MISMO Manufacturing System" → the longer, plainer name */
+      const d=((doc.querySelector('meta[name="description"]')||{}).content||'').trim();
+      const col=((doc.querySelector('meta[name="theme-color"]')||{}).content||'').trim();
+      seen[k]={n:t||nice, d:d.length>90 ? d.slice(0,88).replace(/\s+\S*$/,'')+'…' : d, c:/^#[0-9a-f]{6}$/i.test(col) && !/^#0[0-9a-f]314c$/i.test(col) ? col : '', at:Date.now()}; save();
+      let e2=SYS.find(z=>z.k===k); if(!e2){ e2=ent; SYS.push(e2); } Object.assign(e2, {n:seen[k].n, d:seen[k].d||e2.d, c:seen[k].c||e2.c}); tell();
+    }).catch(()=>{ seen[k]={bad:1, at:Date.now()}; save(); const i=SYS.findIndex(z=>z.k===k && z.auto); if(i>=0){ SYS.splice(i,1); tell(); } }); });
+  tell(); return true; }
+{ let tries=0; const go=()=>{ if(discover() || ++tries>40) return; setTimeout(go, 1500); }; setTimeout(go, 1500); }
+const SHORT={'cms':'CMS','so':'Service Orders','website-migration':'Website Migration','iif-hq':'IIF Planning','hub-requests':'Work Requests','marketing-hq':'MISMO Media','mms':'MMS'};
 const FIGSRC={ 'Meeting Trackers':'meeting-trackers', 'Certification Management System':'cms', 'Member 360':'member-360', 'Financial System':'financials', 'Service Orders':'so', 'Sponsorship Portal':'sponsorship' };
 function access(){ try{ const x=window.ResourcesSession && window.ResourcesSession.current(); return (x && x.access) || null; }catch(e){ return null; } }
 function canOpen(k){ const a=access(); if(!a) return true; if(k==='so') return Object.keys(a).some(x=>/^so-/.test(x)); if(k==='scheduler') return true; return !!a[k]; }
@@ -429,9 +453,10 @@ const SYM={
   'hub-requests':'<path d="M6 28l5-18h26l5 18v10H6z"/><path d="M6 28h10l3 5h10l3-5h10"/>',
   'glossary':'<path d="M24 12c-5-4-12-4-18-2v28c6-2 13-2 18 2 5-4 12-4 18-2V10c-6-2-13-2-18 2z"/><path d="M24 12v28"/>',
   'mismo-link':'<path d="M20 28l8-8"/><path d="M22 14l4-4a8 8 0 0 1 12 12l-4 4M26 34l-4 4a8 8 0 0 1-12-12l4-4"/>',
+  'mms':'<circle cx="18" cy="20" r="7"/><path d="M18 9v4M18 27v4M7 20h4M25 20h4M10.2 12.2l2.9 2.9M22.9 24.9l2.9 2.9M10.2 27.8l2.9-2.9M22.9 15.1l2.9-2.9"/><path d="M6 40h36M30 40V28l6-4v16M36 24l6-4v20"/>',
   'qr':'<rect x="7" y="7" width="13" height="13" rx="1"/><rect x="28" y="7" width="13" height="13" rx="1"/><rect x="7" y="28" width="13" height="13" rx="1"/><path d="M28 28h5v5h-5zM36 36h5v5h-5zM36 28h5M28 38v3"/>'
 };
-const symbol=k=>'<svg class="hqx-sym" viewBox="0 0 48 48" aria-hidden="true">'+(SYM[k]||'<circle cx="24" cy="24" r="16"/>')+'</svg>';
+const symbol=k=>'<svg class="hqx-sym" viewBox="0 0 48 48" aria-hidden="true">'+(SYM[k]||'<rect x="7" y="7" width="14" height="14" rx="3"/><rect x="27" y="7" width="14" height="14" rx="3"/><rect x="7" y="27" width="14" height="14" rx="3"/><circle cx="34" cy="34" r="7"/>')+'</svg>';
 /* counts a system shows on its own menu (e.g. "Action Queue 24"), remembered whenever it is opened here */
 const CK='tools:team-hq:mismo.teamhq.syscount';
 let counts={}; try{ counts=JSON.parse(localStorage.getItem(CK)||'{}')||{}; }catch(e){}
@@ -5544,11 +5569,13 @@ function openCatalog(){
   const sec=(t)=>box.appendChild(h('div','nx-sec',t));
   const card=(name, desc, k, symHtml, fn, on)=>{ const b=btn('nx-cti'+(on?' on':'')); b.style.setProperty('--k',k); const i=h('span','ci'); i.innerHTML=symHtml; b.appendChild(i); const t=h('span','tx'); t.appendChild(h('b',null,name)); t.appendChild(h('small',null,desc)); b.appendChild(t); b.appendChild(h('em',null,on?'On':'Add')); b.addEventListener('click', ()=>{ fn(); b.classList.add('on'); b.querySelector('em').textContent='Added'; }); return b; };
   ['Your Day','Team'].forEach(g=>{ sec(g); const gr=h('div','nx-ctg'); Object.keys(TILES).filter(k=>TILES[k].g===g).forEach(k=>{ const on=dashEdit.some(z=>z.t===k); gr.appendChild(card(TILES[k].n, TILES[k].d, TILES[k].k, ic(k==='email'?'mail':k==='people'||k==='team'?'ppl':k==='day'||k==='load'?'cal':k==='tasks'?'mine':k==='board'?'all':k==='asks'?'inbox':k==='findtime'?'search':'week'), ()=>{ if(!dashEdit.some(z=>z.t===k)) dashEdit.push({t:k}); paint(); }, on)); }); box.appendChild(gr); });
-  sec('MISMO Systems'); const gs=h('div','nx-ctg'); (x?x.SYS:[]).filter(z=>x.canOpen(z.k)).sort((a,b)=>a.n.localeCompare(b.n)).forEach(z=>{ let n=dashEdit.filter(q=>q.t==='sys' && q.s===z.k).length; const cb=card(z.n, z.d, z.c, x.symbol(z.k), ()=>{ const nt={t:'sys', s:z.k}; dashEdit.push(nt); paint(); if(n>0){ close(); setTimeout(()=>tileEditor(nt, dashEdit.length-1, dashEdit, true), 60); } }, false); const ci=cb.querySelector('.ci'); const badge=h('i','cnt'); const setB=()=>{ badge.textContent=n?String(n):''; badge.title=n?n+' on your dashboard':''; badge.hidden=!n; }; setB(); ci.appendChild(badge); cb.addEventListener('click', ()=>{ n++; setB(); cb.classList.remove('on'); cb.querySelector('em').textContent='Add'; }); gs.appendChild(cb); }); box.appendChild(gs);
+  sec('MISMO Systems'); const gs=h('div','nx-ctg'); (x?x.SYS:[]).filter(z=>x.canOpen(z.k)).sort((a,b)=>a.n.localeCompare(b.n)).forEach(z=>{ let n=dashEdit.filter(q=>q.t==='sys' && q.s===z.k).length; const cb=card(z.n, (z.auto ? 'New · ' : '')+z.d, z.c, x.symbol(z.k), ()=>{ const nt={t:'sys', s:z.k}; dashEdit.push(nt); paint(); if(n>0){ close(); setTimeout(()=>tileEditor(nt, dashEdit.length-1, dashEdit, true), 60); } }, false); const ci=cb.querySelector('.ci'); const badge=h('i','cnt'); const setB=()=>{ badge.textContent=n?String(n):''; badge.title=n?n+' on your dashboard':''; badge.hidden=!n; }; setB(); ci.appendChild(badge); cb.addEventListener('click', ()=>{ n++; setB(); cb.classList.remove('on'); cb.querySelector('em').textContent='Add'; }); gs.appendChild(cb); }); box.appendChild(gs);
   const ft=h('div','hqx-ft'); const d=btn('btn','Done', close); ft.appendChild(d); box.appendChild(ft);
   ov.appendChild(box); ov.addEventListener('click', e=>{ if(e.target===ov) close(); }); document.body.appendChild(ov);
 }
 /* new numbers from a system: redraw the dashboard once they've stopped arriving, not for every one */
+/* an app newly found on resources.mismo.org: show it in the menus straight away */
+window.addEventListener('hq:sys', ()=>{ if(!ui.on || dashEdit || busy() || !shell || shell.hidden) return; drawRail(); });
 window.addEventListener('hq:bset', ()=>{ if(!ui.on || dashEdit || busy() || !shell || shell.hidden) return; drawRail(); paint(); });
 let countsT=null; window.addEventListener('hq:counts', ()=>{ clearTimeout(countsT); countsT=setTimeout(refreshSysTiles, 600); });
 function refreshSysTiles(){ if(!ui.on || viewKind()!=='day' || tdrag || !shell || shell.hidden) return; const grid=body.querySelector('.nx-tiles'); if(!grid) return;
