@@ -178,6 +178,8 @@
 
 
 
+
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -6765,7 +6767,9 @@ async function importOne(id, d, who){
   const text=clean(d.text||'') || clean(d.preview||'');
   const made=[];
   /* the same email sent through again updates the expense it already made, instead of adding a second one */
-  const again=(A.list()||[]).find(x=>x.viaEmail && x.viaEmail.at===via.at && x.viaEmail.from===via.from && x.viaEmail.subject===via.subject && !x.submitted);
+  const same=x=>x.viaEmail && !x.submitted && x.viaEmail.from===via.from && x.viaEmail.subject===via.subject;
+  const again=(A.list()||[]).find(x=>same(x) && x.viaEmail.at===via.at)
+    || (files.length ? null : (A.list()||[]).find(x=>same(x) && !x.asset && !x.amt && !x.rcptAmt));   /* a re-forward fills in one that came through blank */
   if(files.length){
     for(const f of files){
       const e={trip:'', who, by:S.me, cat:'', date:'', name:'', receipt:1, rcptAmt:'', amt:'', submitted:0,
