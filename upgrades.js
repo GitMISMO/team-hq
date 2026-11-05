@@ -177,6 +177,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -6742,6 +6743,8 @@ const seesAll=()=>{ try{ return !!(api() && api().seesAll()); }catch(e){ return 
 const firstName=id=>{ const p=(S.people||[]).find(z=>z.id===id); return p ? String(p.name||'').split(' ')[0] : ''; };
 const when=ms=>{ const d=new Date(ms); if(isNaN(d)) return ''; const n=new Date(); const same=d.toDateString()===n.toDateString();
   return same ? d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : d.toLocaleDateString([], {month:'short', day:'numeric'}); };
+/* the email's text without MBA's “CAUTION: This email originated from outside…” banner */
+const clean=t=>String(t||'').replace(/^\s*CAUTION:[\s\S]*?(content is safe\.?|is safe\.)\s*/i,'').replace(/\s+\n/g,'\n').trim();
 const atOf=d=>{ const t=Date.parse(d.at||d.received||''); return isNaN(t) ? 0 : t; };
 
 async function readAll(){ const R=window.__hqRelay; if(!R || !R.readOther) return null;
@@ -6757,9 +6760,12 @@ async function importOne(id, d, who){
   const fresh=await readAll(); const cur=fresh && fresh[id];
   if(!cur || cur.done || !cur.claim || cur.claim.by!==S.me || cur.claim.at!==now) return;
   const files=(Array.isArray(d.files) ? d.files : []).filter(f=>f && f.path);
-  const note=String(d.subject||'').trim();
+  const note=String(d.subject||'').replace(/^\s*(fwd?|fw|re)\s*:\s*/i,'').trim();
   const via={id, from:d.from||'', subject:note, at:d.at||''};
+  const text=clean(d.text||'') || clean(d.preview||'');
   const made=[];
+  /* the same email sent through again updates the expense it already made, instead of adding a second one */
+  const again=(A.list()||[]).find(x=>x.viaEmail && x.viaEmail.at===via.at && x.viaEmail.from===via.from && x.viaEmail.subject===via.subject && !x.submitted);
   if(files.length){
     for(const f of files){
       const e={trip:'', who, by:S.me, cat:'', date:'', name:'', receipt:1, rcptAmt:'', amt:'', submitted:0,
@@ -6767,15 +6773,22 @@ async function importOne(id, d, who){
       e.members=A.members(e);
       const eid=await A.put('expenses', e); made.push(eid);
       try{ const blob=await A.attBlob(f.path); if(blob && /^image\//.test(blob.type||f.type||'')) await A.readAndSave(eid, blob);
+        else if(text && A.readText) await A.readText(eid, text);
         else { const x=Object.assign({}, A.expOf(eid)); x.reading=0; await A.put('expenses', x); } }
       catch(err){ try{ const x=Object.assign({}, A.expOf(eid)); x.reading=0; x.readFail=Date.now(); await A.put('expenses', x); }catch(e2){} }
     }
   } else {
-    const e={trip:'', who, by:S.me, cat:'', date:(d.at||'').slice(0,10), name:note.slice(0,80), receipt:0, rcptAmt:'', amt:'', submitted:0,
-      notes:String(d.preview||'').trim().slice(0,400), at:Date.now(), viaEmail:via};
-    e.members=A.members(e); made.push(await A.put('expenses', e));
+    /* no attachment: the receipt is the email itself (an Uber or airline email, say) — read the email's text */
+    let eid;
+    if(again) eid=again.id;
+    else { const e={trip:'', who, by:S.me, cat:'', date:(d.at||'').slice(0,10), name:note.slice(0,80), receipt:0, rcptAmt:'', amt:'', submitted:0,
+        notes:'Emailed: '+note, at:Date.now(), reading:text ? Date.now() : 0, viaEmail:via};
+      e.members=A.members(e); eid=await A.put('expenses', e); }
+    made.push(eid);
+    if(text && A.readText){ try{ await A.readText(eid, text); }catch(err){} }
   }
-  await setDoc(id, Object.assign({}, cur, {claim:null, done:Date.now(), doneBy:S.me, who, exp:made}));
+  const fin=Object.assign({}, cur, {claim:null, done:Date.now(), doneBy:S.me, who, exp:made}); delete fin.text;   /* the full email text isn't kept once it's been read */
+  await setDoc(id, fin);
 }
 
 async function tick(force){
