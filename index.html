@@ -83,7 +83,7 @@
   var MAX_FILE = 940000;              /* the relay takes at most 1,000,000 bytes a save */
   var MAX_RECEIPT = 4 * 1024 * 1024;  /* base64 adds a third; the relay's request limit is about 6 MB */
   var COLLS = ['people', 'rocks', 'tasks', 'dates', 'notes', 'agenda', 'expenses', 'figures', 'nudges',
-    'leads', 'apps', 'blocks', 'asks', 'plans', 'planitems', 'plankinds', 'datekinds', 'myitems', 'outbox'];
+    'leads', 'apps', 'blocks', 'asks', 'plans', 'planitems', 'plankinds', 'datekinds', 'myitems', 'outbox', 'expinbox'];
 
   /* ---------- browser storage: every tool shares this web address ----------
      Team HQ's own keys (mismo.teamhq.…, hq.rail.off) are filed under
@@ -17801,5 +17801,5 @@ boot().then(()=>{ paintWho(); renderAll();
 })();
 </script>
 
-<script src="upgrades.js?v=20261105g" defer></script>
+<script src="upgrades.js?v=20261105h" defer></script>
 </body></html>
