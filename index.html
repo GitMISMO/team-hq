@@ -12566,7 +12566,13 @@ async function rcptReadAndSave(id, blob){
   return {ok:true, got:got};
 }
 /* for the expense inbox (expense@mismo.org): lets Team HQ turn an emailed receipt into an expense the same way a snapped one is */
-window.__expApi={ put:(c,o)=>put(c,o), expOf:id=>expOf(id), readAndSave:(id,b)=>rcptReadAndSave(id,b), attBlob:id=>attBlob(id), members:e=>expMembers(e), seesAll:()=>expSeesAll(), person:id=>person(id), list:()=>S.expenses };
+window.__expApi={ put:(c,o)=>put(c,o), expOf:id=>expOf(id), readAndSave:(id,b)=>rcptReadAndSave(id,b), attBlob:id=>attBlob(id), members:e=>expMembers(e), seesAll:()=>expSeesAll(), person:id=>person(id), list:()=>S.expenses,
+  /* a receipt that is the email itself (no photo): read its text the same way a photo is read */
+  readText: async (id, text)=>{ const base=expOf(id); if(!base) return {ok:false}; const c=await rcptCaps(); if(!c) return {ok:false}; let v;
+    try{ const res=await c.s(rcptPrompt(base)+'\n\nThere is no photo for this one. The receipt is this email, as plain text:\n\n'+String(text||'').slice(0,6000), {modelTier:'default'});
+      const r=rcptParse(res && res.text); if(r && r.isReceipt===false) throw {code:'not_receipt'}; v=rcptValues(r||{}); }
+    catch(x){ const e0=Object.assign({}, expOf(id)||base); e0.reading=0; await put('expenses', e0); return {ok:false}; }
+    const e=Object.assign({}, expOf(id)||base); const got=rcptApply(e, v); e.reading=0; e.readFail=0; await put('expenses', e); return {ok:true, got:got}; } };
 
 /* ---------- snap one or more receipts: each becomes an expense, saved at once ---------- */
 async function snapReceipts(files){
@@ -17801,5 +17807,5 @@ boot().then(()=>{ paintWho(); renderAll();
 })();
 </script>
 
-<script src="upgrades.js?v=20261105h" defer></script>
+<script src="upgrades.js?v=20261105i" defer></script>
 </body></html>
