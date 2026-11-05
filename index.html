@@ -822,8 +822,15 @@
 })();
 
 </script>
-<style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><link rel="manifest" href="team-hq.webmanifest">
-<link rel="apple-touch-icon" href="expenses-icon-180.png">
+<style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><script>/* home-screen app details: Team HQ, or Expenses when opened as /team-hq/?app=expenses. Set here, while the page
+   is still opening, because an iPhone reads them only once. */
+(function(){ var e=/[?&]app=expenses(&|$)/.test(location.search), H=document.head;
+  function add(tag, a){ var x=document.createElement(tag); for(var k in a) x.setAttribute(k, a[k]); H.appendChild(x); }
+  add('link', {rel:'manifest', href:(e?'expenses':'team-hq')+'.webmanifest'});
+  add('link', {rel:'apple-touch-icon', href:e?'expenses-icon-180.png':'hq-icon-180.png'});
+  add('meta', {name:'apple-mobile-web-app-title', content:e?'Expenses':'Team HQ'});
+  add('meta', {name:'apple-mobile-web-app-capable', content:'yes'});
+  if(e) document.title='Expenses'; })();</script>
 </head><body>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17792,5 +17799,5 @@ boot().then(()=>{ paintWho(); renderAll();
 })();
 </script>
 
-<script src="upgrades.js?v=20261105c" defer></script>
+<script src="upgrades.js?v=20261105d" defer></script>
 </body></html>
