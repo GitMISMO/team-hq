@@ -180,6 +180,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -6784,12 +6785,15 @@ async function importOne(id, d, who){
   } else {
     /* no attachment: the receipt is the email itself (an Uber or airline email, say) — read the email's text */
     let eid;
-    if(again) eid=again.id;
-    else { const e={trip:'', who, by:S.me, cat:'', date:(d.at||'').slice(0,10), name:note.slice(0,80), receipt:0, rcptAmt:'', amt:'', submitted:0,
+    const sent=(d.at||'').slice(0,10);
+    /* the date comes from the receipt (the day of the ride or stay), not the day it was emailed — the email date is only the fallback */
+    if(again){ eid=again.id; if(text && again.date===sent){ const x=Object.assign({}, A.expOf(eid)); x.date=''; await A.put('expenses', x); } }
+    else { const e={trip:'', who, by:S.me, cat:'', date:text ? '' : sent, name:note.slice(0,80), receipt:0, rcptAmt:'', amt:'', submitted:0,
         notes:'Emailed: '+note, at:Date.now(), reading:text ? Date.now() : 0, viaEmail:via};
       e.members=A.members(e); eid=await A.put('expenses', e); }
     made.push(eid);
     if(text && A.readText){ try{ await A.readText(eid, text); }catch(err){} }
+    try{ const x=A.expOf(eid); if(x && !x.date){ const y=Object.assign({}, x, {date:sent}); await A.put('expenses', y); } }catch(err){}
   }
   const fin=Object.assign({}, cur, {claim:null, done:Date.now(), doneBy:S.me, who, exp:made}); delete fin.text;   /* the full email text isn't kept once it's been read */
   await setDoc(id, fin);
