@@ -175,6 +175,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -6703,6 +6704,140 @@ async function sync(){
 let t1=setTimeout(function tick(){ if(document.visibilityState==='visible' && window.__hqBooted!==false) sync().catch(()=>{}); t1=setTimeout(tick, 15*60e3); }, 20000);
 let t2=setInterval(()=>{ const C=window.__cal && window.__cal.CAL; if(C && C.at && C.at!==window.__oofd.calAt){ window.__oofd.calAt=C.at; setTimeout(()=>sync().catch(()=>{}), 3000); } }, 30000);
 window.__oofd={ stop(){ clearTimeout(t1); clearInterval(t2); }, sync, runsFor, calAt:0 };
+})();
+
+});
+/* ===== expinbox.js ===== */
+MODS.push(function(){
+/* Expense inbox — receipts emailed to expense@mismo.org.
+   A Power Automate flow saves each email (who sent it, the subject, a short preview and any receipt photos or PDFs)
+   into the expinbox file. Team HQ turns each one into an expense for the person who sent it, reads the receipt the
+   same way a snapped one is read, and fills in what it can. The person still reviews and submits it.
+   Jonna and Vanessa see everything that came in, including mail from someone who isn't on the team. */
+(function(){
+'use strict';
+if(window.__expIn && window.__expIn.destroy) window.__expIn.destroy();
+const S=window.__S, root=document.getElementById('app-expenses');
+if(!S || !root) return;
+const ADDR='expense@mismo.org';
+let docs={}, lastRead=0, busy=false, timer=0, mo=null;
+const h=(tag, cls, txt)=>{ const e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e; };
+const api=()=>window.__expApi;
+const local=a=>String(a||'').toLowerCase().trim().split('@')[0];
+const dom=a=>String(a||'').toLowerCase().trim().split('@')[1]||'';
+const OURS=/^(mismo\.org|mba\.org)$/;
+/* the person an email came from: their work address, at mismo.org or mba.org */
+function whoFrom(addr){ if(!OURS.test(dom(addr))) return null; const l=local(addr);
+  const p=(S.people||[]).find(p=>p.email && local(p.email)===l); return p ? p.id : null; }
+const seesAll=()=>{ try{ return !!(api() && api().seesAll()); }catch(e){ return false; } };
+const firstName=id=>{ const p=(S.people||[]).find(z=>z.id===id); return p ? String(p.name||'').split(' ')[0] : ''; };
+const when=ms=>{ const d=new Date(ms); if(isNaN(d)) return ''; const n=new Date(); const same=d.toDateString()===n.toDateString();
+  return same ? d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : d.toLocaleDateString([], {month:'short', day:'numeric'}); };
+const atOf=d=>{ const t=Date.parse(d.at||d.received||''); return isNaN(t) ? 0 : t; };
+
+async function readAll(){ const R=window.__hqRelay; if(!R || !R.readOther) return null;
+  try{ const f=await R.readOther('team-hq','expinbox'); return (f && f.docs) || {}; }catch(e){ return null; } }
+function setDoc(id, d){ return S.db.collection('expinbox').doc(id).set(d); }
+
+/* one email → one expense per receipt (or one expense from the email itself when nothing was attached) */
+async function importOne(id, d, who){
+  const A=api(); const now=Date.now();
+  /* claim it first, so two open Team HQs don't both add it */
+  const claim={by:S.me, at:now}; await setDoc(id, Object.assign({}, d, {claim}));
+  await new Promise(r=>setTimeout(r, 2500));
+  const fresh=await readAll(); const cur=fresh && fresh[id];
+  if(!cur || cur.done || !cur.claim || cur.claim.by!==S.me || cur.claim.at!==now) return;
+  const files=(Array.isArray(d.files) ? d.files : []).filter(f=>f && f.path);
+  const note=String(d.subject||'').trim();
+  const via={id, from:d.from||'', subject:note, at:d.at||''};
+  const made=[];
+  if(files.length){
+    for(const f of files){
+      const e={trip:'', who, by:S.me, cat:'', date:'', name:'', receipt:1, rcptAmt:'', amt:'', submitted:0,
+        notes: note ? 'Emailed: '+note : 'Emailed receipt', asset:f.path, rcptName:f.name||'receipt', rcptType:f.type||'', at:Date.now(), reading:Date.now(), viaEmail:via};
+      e.members=A.members(e);
+      const eid=await A.put('expenses', e); made.push(eid);
+      try{ const blob=await A.attBlob(f.path); if(blob && /^image\//.test(blob.type||f.type||'')) await A.readAndSave(eid, blob);
+        else { const x=Object.assign({}, A.expOf(eid)); x.reading=0; await A.put('expenses', x); } }
+      catch(err){ try{ const x=Object.assign({}, A.expOf(eid)); x.reading=0; x.readFail=Date.now(); await A.put('expenses', x); }catch(e2){} }
+    }
+  } else {
+    const e={trip:'', who, by:S.me, cat:'', date:(d.at||'').slice(0,10), name:note.slice(0,80), receipt:0, rcptAmt:'', amt:'', submitted:0,
+      notes:String(d.preview||'').trim().slice(0,400), at:Date.now(), viaEmail:via};
+    e.members=A.members(e); made.push(await A.put('expenses', e));
+  }
+  await setDoc(id, Object.assign({}, cur, {claim:null, done:Date.now(), doneBy:S.me, who, exp:made}));
+}
+
+async function tick(force){
+  if(busy || !S.me || !S.db || !api()) return; if(!force && Date.now()-lastRead<60e3) return;
+  busy=true;
+  try{
+    const all=await readAll(); if(!all) return; docs=all; lastRead=Date.now();
+    const mineOrAll=seesAll();
+    for(const [id, d] of Object.entries(docs)){
+      if(!d || d.done || d.skip) continue;
+      const who=whoFrom(d.from); if(!who) continue;                     /* not someone on the team: Vanessa sees it below */
+      if(who!==S.me && !mineOrAll) continue;
+      if(d.claim && Date.now()-(d.claim.at||0)<120e3 && d.claim.by!==S.me) continue;
+      try{ await importOne(id, d, who); }catch(e){ console.warn('expense inbox', e); }
+    }
+    const again=await readAll(); if(again) docs=again;
+  } finally { busy=false; paint(); }
+}
+
+/* ---------- what came in, on the Expenses page ---------- */
+const css=h('style'); css.id='expin-css'; css.textContent=`
+.expin{margin:0 0 14px;padding:12px 14px;border:1px solid var(--border);border-left:3px solid var(--sky,#74bfeb);border-radius:8px;background:var(--surface)}
+.expin-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}.expin-h b{font-size:14.5px;color:var(--ink)}
+.expin-h small{font-size:12.5px;color:var(--ink-2)}.expin-h .x{margin-left:auto;font-size:12px;color:var(--ink-3)}
+.expin ul{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:5px}
+.expin li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 9px;border-radius:6px;background:var(--surface-2,rgba(0,0,0,.03));font-size:13px}
+.expin li .w{font-weight:700;color:var(--ink);white-space:nowrap}.expin li .s{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-2)}
+.expin li .st{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:5px;white-space:nowrap}
+.expin li .st.ok{background:rgba(43,182,115,.14);color:#1d8a56}.expin li .st.wait{background:rgba(232,163,58,.16);color:#a46a10}.expin li .st.who{background:rgba(240,96,122,.14);color:#b8354f}
+.expin .more{margin-top:6px;font-size:12px;color:var(--ink-3)}
+:root[data-theme="dark"] .expin li .st.ok{color:#5fd59b}:root[data-theme="dark"] .expin li .st.wait{color:#f2c46b}:root[data-theme="dark"] .expin li .st.who{color:#f59aab}
+`;
+document.head.appendChild(css);
+function paint(){
+  if(mo) mo.disconnect();
+  try{
+    const old=root.querySelector(':scope > .expin'); if(old) old.remove();
+    if(!S.me) return;
+    const all=seesAll(); const cut=Date.now()-21*864e5;
+    let L=Object.entries(docs).map(([id,d])=>Object.assign({id}, d)).filter(d=>atOf(d)>=cut || (!d.done && !d.skip));
+    L=L.map(d=>Object.assign(d, {who:d.who||whoFrom(d.from)}));
+    if(!all) L=L.filter(d=>d.who===S.me);
+    L.sort((a,b)=>atOf(b)-atOf(a));
+    const box=h('div','expin');
+    const hd=h('div','expin-h'); hd.appendChild(h('b', null, all ? 'Emailed In' : 'Your Emailed Receipts'));
+    hd.appendChild(h('small', null, L.length ? (all ? L.length+' in the last three weeks' : L.length+' — review and submit them below') : 'Forward or email a receipt to '+ADDR+' from your work email and it shows up in your expenses'));
+    if(L.length) hd.appendChild(h('span','x', 'Send to '+ADDR));
+    box.appendChild(hd);
+    if(L.length){ const ul=h('ul');
+      L.slice(0, 8).forEach(d=>{ const li=h('li');
+        li.appendChild(h('span','w', d.who ? (firstName(d.who)||d.fromName||d.from) : (d.fromName||d.from||'Someone')));
+        const n=(Array.isArray(d.files)?d.files.length:0);
+        li.appendChild(h('span','s', (d.subject||'(no subject)')+(n ? ' · '+n+(n===1?' receipt':' receipts') : ' · no receipt attached')+' · '+when(atOf(d))));
+        const st=d.done ? h('span','st ok','Added') : !d.who ? h('span','st who','Not on the team') : h('span','st wait','Coming in');
+        if(!d.who) st.title='Sent from '+(d.from||'an unknown address')+'. Ask them to send it from their work email.';
+        li.appendChild(st); ul.appendChild(li); });
+      box.appendChild(ul);
+      if(L.length>8) box.appendChild(h('div','more', '+'+(L.length-8)+' more'));
+    }
+    const vh=root.querySelector(':scope > .vhead');
+    const after=root.querySelector(':scope > .exp-install') || vh;
+    if(after) after.after(box); else root.prepend(box);
+  } finally { if(mo) mo.observe(root, {childList:true}); }
+}
+mo=new MutationObserver(()=>{ if(!root.querySelector(':scope > .expin')) paint(); });
+mo.observe(root, {childList:true});
+const vis=new MutationObserver(()=>{ if(!root.hidden) tick(false); }); vis.observe(root, {attributes:true, attributeFilter:['hidden']});
+const start=()=>{ if(S.ready && S.me && api() && window.__hqRelay){ tick(true); timer=setInterval(()=>{ if(!document.hidden) tick(false); }, 120e3); } else setTimeout(start, 1000); };
+setTimeout(start, 4000);
+window.__expIn={ version:'1.0', tick:()=>tick(true), docs:()=>docs, whoFrom,
+  destroy(){ clearInterval(timer); mo && mo.disconnect(); vis.disconnect(); css.remove(); const b=root.querySelector(':scope > .expin'); b && b.remove(); } };
 })();
 
 });
