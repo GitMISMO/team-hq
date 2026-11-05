@@ -176,6 +176,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -6727,8 +6728,16 @@ const local=a=>String(a||'').toLowerCase().trim().split('@')[0];
 const dom=a=>String(a||'').toLowerCase().trim().split('@')[1]||'';
 const OURS=/^(mismo\.org|mba\.org)$/;
 /* the person an email came from: their work address, at mismo.org or mba.org */
-function whoFrom(addr){ if(!OURS.test(dom(addr))) return null; const l=local(addr);
-  const p=(S.people||[]).find(p=>p.email && local(p.email)===l); return p ? p.id : null; }
+/* who an email is from: their work address first; from a personal address (Gmail …) the name on the email
+   (“Jonna Critchley”, or “Critchley, Jonna”); or whoever Vanessa or Jonna picked for it */
+const norm=t=>String(t||'').toLowerCase().replace(/["'()]/g,' ').replace(/\s+/g,' ').trim();
+function byName(name){ let n=norm(name); if(!n) return null; if(n.indexOf(',')>0){ const [a,b]=n.split(','); n=norm(b+' '+a); }
+  const ppl=S.people||[]; let p=ppl.find(z=>norm(z.name)===n); if(p) return p.id;
+  const w=n.split(' '); if(w.length>=2){ p=ppl.filter(z=>{ const zw=norm(z.name).split(' '); return zw[0]===w[0] && zw[zw.length-1]===w[w.length-1]; }); if(p.length===1) return p[0].id; }
+  return null; }
+function whoFrom(addr, name, d){ if(d && d.assign) return d.assign;
+  if(OURS.test(dom(addr))){ const l=local(addr); const p=(S.people||[]).find(p=>p.email && local(p.email)===l); if(p) return p.id; }
+  return byName(name); }
 const seesAll=()=>{ try{ return !!(api() && api().seesAll()); }catch(e){ return false; } };
 const firstName=id=>{ const p=(S.people||[]).find(z=>z.id===id); return p ? String(p.name||'').split(' ')[0] : ''; };
 const when=ms=>{ const d=new Date(ms); if(isNaN(d)) return ''; const n=new Date(); const same=d.toDateString()===n.toDateString();
@@ -6777,7 +6786,7 @@ async function tick(force){
     const mineOrAll=seesAll();
     for(const [id, d] of Object.entries(docs)){
       if(!d || d.done || d.skip) continue;
-      const who=whoFrom(d.from); if(!who) continue;                     /* not someone on the team: Vanessa sees it below */
+      const who=whoFrom(d.from, d.fromName, d); if(!who) continue;                     /* not someone on the team: Vanessa sees it below */
       if(who!==S.me && !mineOrAll) continue;
       if(d.claim && Date.now()-(d.claim.at||0)<120e3 && d.claim.by!==S.me) continue;
       try{ await importOne(id, d, who); }catch(e){ console.warn('expense inbox', e); }
@@ -6795,6 +6804,7 @@ const css=h('style'); css.id='expin-css'; css.textContent=`
 .expin li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 9px;border-radius:6px;background:var(--surface-2,rgba(0,0,0,.03));font-size:13px}
 .expin li .w{font-weight:700;color:var(--ink);white-space:nowrap}.expin li .s{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-2)}
 .expin li .st{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:5px;white-space:nowrap}
+.expin li.has-asg{grid-template-columns:auto minmax(0,1fr) auto auto}.expin li .asg{font:inherit;font-size:12.5px;padding:3px 6px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--ink)}
 .expin li .st.ok{background:rgba(43,182,115,.14);color:#1d8a56}.expin li .st.wait{background:rgba(232,163,58,.16);color:#a46a10}.expin li .st.who{background:rgba(240,96,122,.14);color:#b8354f}
 .expin .more{margin-top:6px;font-size:12px;color:var(--ink-3)}
 :root[data-theme="dark"] .expin li .st.ok{color:#5fd59b}:root[data-theme="dark"] .expin li .st.wait{color:#f2c46b}:root[data-theme="dark"] .expin li .st.who{color:#f59aab}
@@ -6807,7 +6817,7 @@ function paint(){
     if(!S.me) return;
     const all=seesAll(); const cut=Date.now()-21*864e5;
     let L=Object.entries(docs).map(([id,d])=>Object.assign({id}, d)).filter(d=>atOf(d)>=cut || (!d.done && !d.skip));
-    L=L.map(d=>Object.assign(d, {who:d.who||whoFrom(d.from)}));
+    L=L.map(d=>Object.assign(d, {who:d.who||whoFrom(d.from, d.fromName, d)}));
     if(!all) L=L.filter(d=>d.who===S.me);
     L.sort((a,b)=>atOf(b)-atOf(a));
     const box=h('div','expin');
@@ -6817,12 +6827,18 @@ function paint(){
     box.appendChild(hd);
     if(L.length){ const ul=h('ul');
       L.slice(0, 8).forEach(d=>{ const li=h('li');
-        li.appendChild(h('span','w', d.who ? (firstName(d.who)||d.fromName||d.from) : (d.fromName||d.from||'Someone')));
+        li.appendChild(h('span','w', d.who ? (firstName(d.who)||d.fromName||d.from) : (d.fromName ? d.fromName+' ('+d.from+')' : (d.from||'Someone'))));
         const n=(Array.isArray(d.files)?d.files.length:0);
         li.appendChild(h('span','s', (d.subject||'(no subject)')+(n ? ' · '+n+(n===1?' receipt':' receipts') : ' · no receipt attached')+' · '+when(atOf(d))));
         const st=d.done ? h('span','st ok','Added') : !d.who ? h('span','st who','Not on the team') : h('span','st wait','Coming in');
-        if(!d.who) st.title='Sent from '+(d.from||'an unknown address')+'. Ask them to send it from their work email.';
-        li.appendChild(st); ul.appendChild(li); });
+        if(!d.who) st.title='Sent from '+(d.from||'an unknown address')+' — pick whose expense it is.';
+        li.appendChild(st);
+        /* not matched to anyone: Jonna or Vanessa picks who it belongs to, and it's added for them */
+        if(!d.who && all && !d.done){ const sel=h('select','asg'); sel.setAttribute('aria-label','Whose expense is this?'); sel.appendChild(new Option('Whose is it?',''));
+          (S.people||[]).forEach(p=>sel.appendChild(new Option(p.name, p.id)));
+          sel.addEventListener('change', async ()=>{ if(!sel.value) return; sel.disabled=true; try{ const cur=Object.assign({}, docs[d.id]||{}); cur.assign=sel.value; await setDoc(d.id, cur); docs[d.id]=cur; await tick(true); }catch(e){ sel.disabled=false; } });
+          li.appendChild(sel); li.classList.add('has-asg'); }
+        ul.appendChild(li); });
       box.appendChild(ul);
       if(L.length>8) box.appendChild(h('div','more', '+'+(L.length-8)+' more'));
     }
