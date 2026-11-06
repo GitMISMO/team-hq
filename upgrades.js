@@ -191,6 +191,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -5393,13 +5394,15 @@ function tile(cfg, i, L){
     else { const row=h('div','nx-avrow'); const tally={free:0,busy:0,away:0,off:0,unk:0}; ids.forEach(id=>{ const pp=person(id); if(!pp) return; const s2=statusOf(pp); tally[s2.k]=(tally[s2.k]||0)+1; const w=h('span','nx-avw'); w.appendChild(av(id,34)); w.appendChild(h('i','nx-dot '+s2.k)); w.title=pp.name+' · '+s2.t+(s2.s?' '+s2.s:''); row.appendChild(w); }); el.appendChild(row);
       const parts=[]; if(tally.free) parts.push(tally.free+' free'); if(tally.busy) parts.push(tally.busy+' in meetings'); if(tally.away) parts.push(tally.away+' out'); if(tally.off) parts.push(t0.getDay()%6===0?'weekend':tally.off+' off');
       el.appendChild(h('div','st-sub', parts.join(' · ')||'—'));
-      if(tall){ const ls=h('div','nx-pl2'); ids.slice(0,SZ==='b'?8:5).forEach(id=>{ const pp=person(id); if(!pp) return; const s2=statusOf(pp); const r=h('div','pr'); r.appendChild(h('i','nx-dot '+s2.k)); r.appendChild(h('b',null,first(id))); r.appendChild(h('span',null,s2.t+(s2.s?' · '+s2.s:''))); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) open('u:'+id); }); ls.appendChild(r); }); el.appendChild(ls); }
+      if(tall || wide){ const ls=h('div','nx-pl2'+(wide?' two':'')); ids.slice(0,SZ==='b'?8:tall?5:4).forEach(id=>{ const pp=person(id); if(!pp) return; const s2=statusOf(pp); const r=h('div','pr'); r.appendChild(h('i','nx-dot '+s2.k)); r.appendChild(h('b',null,first(id))); r.appendChild(h('span',null,s2.t+(s2.s?' · '+s2.s:''))); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) open('u:'+id); }); ls.appendChild(r); }); el.appendChild(ls); }
+      /* a tall tile: what they're working on, late first */
+      if(tall){ const W=S.tasks.filter(t=>isOpen(t) && doers(t).some(d=>ids.indexOf(d)>=0)).sort(byDue).slice(0, SZ==='b'?6:4); if(W.length){ const wl=h('div','nx-kl2'); wl.appendChild(h('small','nx-ftml', cfg.t==='team' ? 'The Team’s Next Work' : 'What They’re On')); W.forEach(t=>{ const r=h('div','kr'+(t.due && days(t.due)<0?' late':'')); r.appendChild(h('b',null, first(doers(t).find(d=>ids.indexOf(d)>=0)))); r.appendChild(h('span',null,t.t)); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) editTask(t); }); wl.appendChild(r); }); el.appendChild(wl); } }
       const late=S.tasks.filter(t=>isOpen(t) && t.due && days(t.due)<0 && doers(t).some(d=>ids.indexOf(d)>=0)).length; const n=h('div','st-next'); n.appendChild(h('b',null,String(S.tasks.filter(t=>isOpen(t) && doers(t).some(d=>ids.indexOf(d)>=0)).length))); n.append(' open'); if(late){ n.append(' · '); n.appendChild(h('b',null,late+' late')); } el.appendChild(n);
       meta.go=()=>open('people'); } }
   else if(cfg.t==='projects'){ const R=activeRocks().filter(r=>r.lead===me() || S.tasks.some(t=>t.r===r.id && isOpen(t) && doers(t).indexOf(me())>=0));
     if(!R.length) el.appendChild(h('div','st-sub','You’re not on a Team Project right now.'));
     const pc=SZ==='b'?8:tall?6:wide?4:3; R.slice(0,pc).forEach(r=>{ const ts=S.tasks.filter(t=>t.r===r.id), op=ts.filter(isOpen), pct=ts.length?Math.round((ts.length-op.length)/ts.length*100):0; const rw=btn('nx-prj', null, e=>{ e.stopPropagation(); if(!dashEdit) open('p:'+r.id); }); rw.style.setProperty('--rc', rcol(r)); const tp=h('div','tp'); tp.appendChild(h('b',null,r.name)); tp.appendChild(h('span',null,pct+'%')); rw.appendChild(tp); const m=h('div','st-meter'); const f=h('i'); f.style.width=pct+'%'; f.style.background=rcol(r); m.appendChild(f); rw.appendChild(m);
-      if(tall && R.length<=3){ op.slice().sort(byDue).slice(0, R.length===1?(SZ==='b'?8:6):2).forEach(t=>{ const q=h('div','pn'); q.appendChild(h('b',null, !t.due ? 'No date' : days(t.due)<0 ? (-days(t.due))+'d late' : fmt(t.due))); q.appendChild(h('span',null, t.t)); q.appendChild(h('em',null, first(doers(t)[0]))); rw.appendChild(q); }); }
+      if(R.length<=3 && (tall || R.length<=2)){ op.slice().sort(byDue).slice(0, tall ? (R.length===1?(SZ==='b'?8:6):2) : wide ? 2 : 1).forEach(t=>{ const q=h('div','pn'); q.appendChild(h('b',null, !t.due ? 'No date' : days(t.due)<0 ? (-days(t.due))+'d late' : fmt(t.due))); q.appendChild(h('span',null, t.t)); q.appendChild(h('em',null, first(doers(t)[0]))); rw.appendChild(q); }); }
       el.appendChild(rw); });
     if(R.length>pc) el.appendChild(h('div','st-next','+'+(R.length-pc)+' more'));
     meta.go=()=>openClassic('rocks'); }
@@ -5465,7 +5468,7 @@ function pickCard(cfg, d){ if(!d || !Array.isArray(d.cards) || !d.cards.length) 
   const tbl=real.find(c=>c.tbl); if(tbl) return tbl;
   const withBig=real.find(c=>c.big); if(withBig) return withBig;
   if(d.figs.length) return null;
-  return d.cards.find(c=>goodCard(c) && (c.big || (c.rows && c.rows.length) || (c.meter!=null && isFinite(c.meter)) || c.pill)) || null; }
+  return d.cards.find(c=>goodCard(c) && (c.big || (c.rows && c.rows.length) || (c.meter!=null && isFinite(c.meter)) || c.pill || /^(today|this week|the week ahead)$/i.test(c.t||''))) || null; }
 /* ---------- Meeting Trackers' day, drawn as a day: a calendar leaf, the meetings in time order
    with a live "On Now / in 20 min" beside each, and on a quiet day who meets next ---------- */
 const ETF=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York', weekday:'long', month:'long', day:'numeric', hour:'numeric', minute:'2-digit', hourCycle:'h23'});
@@ -5600,7 +5603,7 @@ function sysMeta(cfg){ const x=X(); const s=x && x.SYS.find(z=>z.k===cfg.s); if(
     else if(!d){ el.classList.add('nx-filling'); const sk=h('div','nx-skel'); sk.appendChild(h('i','a')); sk.appendChild(h('i','b')); sk.appendChild(h('i','c')); lead.appendChild(sk); }
     else if(d.empty){ const b0=h('div','st-big'); b0.append('0'); b0.appendChild(h('small',null,'waiting')); lead.appendChild(b0); lead.appendChild(h('div','st-sub', 'Nothing on '+(cfg.go || (x.SHORT[s.k]||s.n))+' right now.')); }
     else { const cs0=d.cards||[], intro=cs0[0] && cs0[0].head ? cs0[0] : null;
-      dirL=cs0.filter(c=>c!==intro && !c.big && !c.tbl && !c.fig && c.t && c.t.length<=40 && !/^(today|this week|at a glance)$/i.test(c.t));
+      dirL=cs0.filter(c=>c!==intro && !c.mt && !c.big && !c.tbl && !c.fig && c.t && c.t.length<=40 && !/^(today|this week|at a glance)$/i.test(c.t));
       if(dirL.length>=2){ const b=h('div','st-big'); b.append(String(dirL.length)); b.appendChild(h('small',null, intro ? intro.t : 'on '+(cfg.go||'the page'))); lead.appendChild(b); }
       else { dirL=null; lead.appendChild(h('div','st-sub', (intro && (intro.text||intro.sub)) || s.d)); } }
     head.appendChild(lead); el.appendChild(head);
@@ -5613,7 +5616,7 @@ function sysMeta(cfg){ const x=X(); const s=x && x.SYS.find(z=>z.k===cfg.s); if(
     { const gl=d && (d.cards||[]).find(c=>/^at a glance$/i.test(c.t||'') && c.text); if(gl && !(Array.isArray(cfg.pick) && cfg.pick.length)){ const g=h('div','nx-glance'+(small?' sm':''), String(gl.text).replace(/\s+([;,.])/g,'$1').replace(/\s+/g,' ').trim()); el.appendChild(g); } }
     if(!small){
       F=F.filter(f=>!isZero(f));
-      const fr=F.slice(0, Math.max(0, nF-1)); if(fr.length){ const row=h('div','nx-fgr'); fr.forEach(f=>row.appendChild(figEl(f, det))); el.appendChild(row); }
+      const fr=F.slice(0, Math.max(0, SZ==='w' ? Math.min(nF-1, 2) : nF-1)); if(fr.length){ const row=h('div','nx-fgr'); fr.forEach(f=>row.appendChild(figEl(f, det))); if(SZ==='w'){ row.classList.add('side'); head.appendChild(row); } else el.appendChild(row); }
       const gr=G.slice(0, nG); if(gr.length){ const row=h('div','nx-ggr'); gr.forEach(g=>row.appendChild(gaugeEl(g, det && gr.length<=3))); el.appendChild(row); }
       /* the page's own highlight tiles under the numbers ("MISMO Matters · November · 0 of 13 approved") */
       if(d && !(Array.isArray(cfg.pick) && cfg.pick.length)){ const nH=det ? (SZ==='b'?4:wide||tall?2:1) : (SZ==='b'?2:wide||tall?1:0);
@@ -6161,6 +6164,8 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .st-tile.t-sys.sz-s .nx-sysh{flex:1 1 auto;align-items:center}
 .st-tile.nx-calm{justify-content:center}.st-tile.nx-calm .st-top{position:absolute;top:16px;left:18px;right:18px}
 .nx-dir .kr{flex-direction:column;align-items:stretch;gap:1px}.nx-dir .kr b{font-size:12.5px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nx-dir .kr span{font-size:11.5px;color:rgba(255,255,255,.62);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nx-sysh .nx-fgr.side{flex:1.3 1 0;min-width:0;grid-template-columns:repeat(auto-fit,minmax(110px,1fr))}.nx-sysh .nx-fgr.side .nx-fg span{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.nx-pl2.two{display:grid;grid-template-columns:1fr 1fr;gap:4px 8px}.nx-kl2 .kr.late b{color:#ff8a7a}
 .st-tile .mic-locw{font-size:12.5px;line-height:1.35;margin-top:-4px}
 /* Small and Tall tiles: the countdown stays beside the date, and the place line takes at most two lines */
 .st-tile:not(.sz-w):not(.sz-b) .mic-row{flex-wrap:nowrap;gap:10px;align-items:center}.st-tile:not(.sz-w):not(.sz-b) .mic-ep{flex:1 1 0}.st-tile:not(.sz-w):not(.sz-b) .mic-loc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
