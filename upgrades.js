@@ -190,6 +190,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -5047,6 +5048,7 @@ function trimTile(t, maxH){ for(let g=0; g<14 && t.getBoundingClientRect().heigh
       /* no list left: first tighten the spacing, then (on an app's tile) drop a line of extra text — the footer that says
          which app it's from goes last (November 5, 2026: Checks for Later lost "MISMO Money") */
       if(!best && !t.classList.contains('tight')){ t.classList.add('tight'); continue; }
+      if(!best){ const blk=[...t.querySelectorAll('.nx-tbl,.nx-hlg,.nx-kl2,.nx-ggr,.nx-fgr,.mms-pl,.nx-ml2,.nx-tl2,.nx-ag')].filter(k=>!k.hidden && k.getClientRects().length && !k.closest(NOCUT)).pop(); if(blk){ blk.hidden=true; continue; } }
       if(!best && t.classList.contains('t-sys')){ const ex=[...t.querySelectorAll('.nx-glance,.st-sub,.nx-ctx')].filter(k=>!k.hidden && k.getClientRects().length).pop(); if(ex){ ex.hidden=true; continue; } }
       if(!best){ const vis=k=>k && !k.hidden && k.getClientRects().length; const ms=t.querySelector('.mic-steps'), nx=[...t.querySelectorAll('.st-next')].filter(vis).pop(); const opt=vis(ms) ? ms : nx; if(opt){ opt.hidden=true; continue; } }
       if(!best) return false; if(best.matches('.mtd-r')) best.hidden=true; else best.remove(); }
@@ -5357,9 +5359,10 @@ function tile(cfg, i, L){
     ep.appendChild(h('b',null, !calIn ? 'Getting your calendar…' : cur ? 'In: '+(cur.t||'Busy') : nx ? 'Next: '+(nx.t||'Busy') : ev.length ? 'Meetings done' : 'No meetings'));
     ep.appendChild(h('small',null, !calIn ? 'from Outlook' : cur ? 'until '+tmL(cur.e) : nx ? tmL(nx.s)+(+day!==+t0?' '+WD[day.getDay()]:'') : 'the day is yours'));
     row.appendChild(ep);
-    if(nx && !cur){ const ms=Math.max(0,nx.s-now), dd=Math.floor(ms/864e5), hh=Math.floor(ms%864e5/36e5), mm=Math.floor(ms%36e5/6e4); const cd=h('div','mic-cd'); (dd?[[dd,'Days'],[hh,'Hrs']]:[[hh,'Hrs'],[mm,'Min']]).forEach(([v,l])=>{ const sp=h('span'); sp.appendChild(h('b',null,String(v).padStart(2,'0'))); sp.appendChild(h('small',null,l)); cd.appendChild(sp); }); row.appendChild(cd); }
+    if(nx && !cur && SZ==='s'){ const ms=Math.max(0,nx.s-now), hh=Math.floor(ms/36e5), mm=Math.floor(ms%36e5/6e4); const sm=ep.querySelector('small'); if(sm) sm.append(' · in '+(hh>=24 ? Math.floor(hh/24)+'d' : hh ? hh+'h '+mm+'m' : mm+' min')); row.classList.remove('mic-stack'); }
+    else if(nx && !cur){ const ms=Math.max(0,nx.s-now), dd=Math.floor(ms/864e5), hh=Math.floor(ms%864e5/36e5), mm=Math.floor(ms%36e5/6e4); const cd=h('div','mic-cd'); (dd?[[dd,'Days'],[hh,'Hrs']]:[[hh,'Hrs'],[mm,'Min']]).forEach(([v,l])=>{ const sp=h('span'); sp.appendChild(h('b',null,String(v).padStart(2,'0'))); sp.appendChild(h('small',null,l)); cd.appendChild(sp); }); row.appendChild(cd); }
     el.appendChild(row);
-    const cap=SZ==='b'?10:tall?6:wide?4:2; const ag=h('div','nx-ag'+(wide?'':' one')); ev.slice(0,cap).forEach(e=>{ const r=h('div','ae'+(e.e<now?' past':'')+(e.s<=now&&e.e>now?' on':'')); r.appendChild(h('span','t',tm(e.s))); r.appendChild(h('span','n',e.t||'Busy')); ag.appendChild(r); }); if(ev.length>cap) ag.appendChild(h('div','ae more','+'+(ev.length-cap)+' more')); el.appendChild(ag);
+    const cap=SZ==='b'?10:tall?6:wide?4:1; const ag=h('div','nx-ag'+(wide?'':' one')); ev.slice(0,cap).forEach(e=>{ const r=h('div','ae'+(e.e<now?' past':'')+(e.s<=now&&e.e>now?' on':'')); r.appendChild(h('span','t',tm(e.s))); r.appendChild(h('span','n',e.t||'Busy')); ag.appendChild(r); }); if(ev.length>cap) ag.appendChild(h('div','ae more','+'+(ev.length-cap)+' more')); el.appendChild(ag);
     if(SZ==='b'){ const w9=etAt(day,9), w5=etAt(day,17); const gaps=[]; let c2=Math.max(w9, +day===+t0?now:0); ev.filter(e=>e.show!=='oof').map(e=>[Math.max(e.s,w9),Math.min(e.e,w5)]).filter(z=>z[1]>z[0]).sort((a,b)=>a[0]-b[0]).concat([[w5,w5]]).forEach(([a,b2])=>{ if(a-c2>=30*6e4) gaps.push([c2,a]); c2=Math.max(c2,b2); });
       if(gaps.length){ const gl=h('div','nx-gaps'); gl.appendChild(h('small',null,'Open Time to Get Things Done')); const gw=h('div','gw'); gaps.slice(0,6).forEach(([a,b2])=>{ const m=Math.round((b2-a)/6e4); const g=h('span'); g.appendChild(h('b',null,tm(a)+'–'+tm(b2))); g.append(' '+(m>=60?(Math.round(m/30)/2)+'h':m+'m')); gw.appendChild(g); }); gl.appendChild(gw); el.appendChild(gl); } }
     const Ld=x && x.dayLoad ? x.dayLoad(me(), day) : null; if(Ld){ const n=h('div','st-next'); n.appendChild(h('b',null,(Math.round(Ld.free/30)/2)+'h open')); n.append(' 9–5 · '+ev.length+(ev.length===1?' meeting':' meetings')); el.appendChild(n); }
@@ -5367,11 +5370,16 @@ function tile(cfg, i, L){
   else if(cfg.t==='email'){ const ok=x && x.MAIL.state==='ok'; const items=ok ? x.mailItems().filter(m=>m.flagged||m.important||m.unread) : [];
     const art=h('div','nx-env'); art.innerHTML='<svg viewBox="0 0 64 44"><rect x="2" y="2" width="60" height="40" rx="4"/><path d="M4 5l28 21L60 5"/></svg>'; if(ok && items.length) art.appendChild(h('b',null,String(items.length))); el.appendChild(art);
     if(!ok){ el.appendChild(h('div','st-sub','Connect your Outlook email and what you’ve flagged or need to read shows up here.')); }
-    else { const fl=items.filter(m=>m.flagged).length; const im=items.filter(m=>m.important && !m.flagged).length, un=items.filter(m=>m.unread).length; el.appendChild(h('div','st-sub', items.length ? [fl?fl+' flagged':'', im?im+' important':'', un?un+' unread':''].filter(Boolean).join(' · ') : 'All caught up — nothing flagged, important or unread')); const show=items.slice(0, SZ==='b'?6:tall?4:wide?2:1); if(show.length>1 || tall){ const ls=h('div','nx-ml2'); show.forEach(m=>{ const r=h('div','mr'); r.appendChild(h('b',null,m.from)); r.appendChild(h('span',null,m.subject)); if(m.link) r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) window.open(m.link,'_blank','noopener'); }); ls.appendChild(r); }); el.appendChild(ls); } else if(items[0]){ const n=h('div','st-next'); n.appendChild(h('b',null,items[0].from)); n.append(' · '+items[0].subject); el.appendChild(n); } }
+    else { const fl=items.filter(m=>m.flagged).length; const im=items.filter(m=>m.important && !m.flagged).length, un=items.filter(m=>m.unread).length; el.appendChild(h('div','st-sub', items.length ? [fl?fl+' flagged':'', im?im+' important':'', un?un+' unread':''].filter(Boolean).join(' · ') : 'All caught up — nothing flagged, important or unread'));
+      /* nothing waiting on a tall tile: the latest mail from people, so the room still says something */
+      if(!items.length && tall){ const lt=x.mailItems().slice(0, SZ==='b'?6:4); if(lt.length){ el.appendChild(h('small','nx-ftml','Latest')); const ls=h('div','nx-ml2'); lt.forEach(m=>{ const r=h('div','mr'); r.appendChild(h('b',null,m.from)); r.appendChild(h('span',null,m.subject)); if(m.link) r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) window.open(m.link,'_blank','noopener'); }); ls.appendChild(r); }); el.appendChild(ls); } else el.classList.add('nx-calm'); }
+      const show=items.slice(0, SZ==='b'?6:tall?4:wide?2:1); if(show.length>1 || tall){ const ls=h('div','nx-ml2'); show.forEach(m=>{ const r=h('div','mr'); r.appendChild(h('b',null,m.from)); r.appendChild(h('span',null,m.subject)); if(m.link) r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) window.open(m.link,'_blank','noopener'); }); ls.appendChild(r); }); el.appendChild(ls); } else if(items[0]){ const n=h('div','st-next'); n.appendChild(h('b',null,items[0].from)); n.append(' · '+items[0].subject); el.appendChild(n); } }
     meta.go=()=>open('inbox'); }
   else if(cfg.t==='asks'){ const A=myAsks(), nw=A.filter(a=>(a.state||'New')==='New');
     if(nw.length) top.appendChild(h('span','st-pill hot', nw.length+' new'));
     const b=h('div','st-big'); b.append(String(A.length)); b.appendChild(h('small',null, me()==='jonna'?'asks for you':'open asks')); el.appendChild(b);
+    if(A[0] && tall){ const ls=h('div','nx-kl2'); A.slice().sort((a,c)=>(c.at||0)-(a.at||0)).slice(0, SZ==='b'?8:5).forEach(a=>{ const r=h('div','kr'); r.appendChild(h('b',null,a.state||'New')); r.appendChild(h('span',null,a.t)); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit && window.__editAsk) window.__editAsk(a); }); ls.appendChild(r); }); el.appendChild(ls); }
+    if(!A.length) el.classList.add('nx-calm');
     if(A[0]){ const n=h('div','st-next'); n.append('Newest: '); n.appendChild(h('b',null,A.slice().sort((a,c)=>(c.at||0)-(a.at||0))[0].t)); el.appendChild(n); } else el.appendChild(h('div','st-sub','Nothing waiting. Ask for something any time.'));
     meta.go=()=>open('mine'); }
   else if(cfg.t==='load'){ let d0=nextWorkday(t0); if(+d0===+t0 && Date.now()>etAt(d0,17)) d0=nextWorkday(addD(d0,1)); const D=[d0]; while(D.length<5) D.push(nextWorkday(addD(D[D.length-1],1)));
@@ -5391,14 +5399,14 @@ function tile(cfg, i, L){
   else if(cfg.t==='projects'){ const R=activeRocks().filter(r=>r.lead===me() || S.tasks.some(t=>t.r===r.id && isOpen(t) && doers(t).indexOf(me())>=0));
     if(!R.length) el.appendChild(h('div','st-sub','You’re not on a Team Project right now.'));
     const pc=SZ==='b'?8:tall?6:wide?4:3; R.slice(0,pc).forEach(r=>{ const ts=S.tasks.filter(t=>t.r===r.id), op=ts.filter(isOpen), pct=ts.length?Math.round((ts.length-op.length)/ts.length*100):0; const rw=btn('nx-prj', null, e=>{ e.stopPropagation(); if(!dashEdit) open('p:'+r.id); }); rw.style.setProperty('--rc', rcol(r)); const tp=h('div','tp'); tp.appendChild(h('b',null,r.name)); tp.appendChild(h('span',null,pct+'%')); rw.appendChild(tp); const m=h('div','st-meter'); const f=h('i'); f.style.width=pct+'%'; f.style.background=rcol(r); m.appendChild(f); rw.appendChild(m);
-      if(tall && R.length<=3){ op.filter(t=>t.due).sort(byDue).slice(0, R.length===1?4:2).forEach(t=>{ const q=h('div','pn'); q.appendChild(h('b',null, days(t.due)<0 ? (-days(t.due))+'d late' : fmt(t.due))); q.appendChild(h('span',null, t.t)); q.appendChild(h('em',null, first(doers(t)[0]))); rw.appendChild(q); }); }
+      if(tall && R.length<=3){ op.slice().sort(byDue).slice(0, R.length===1?(SZ==='b'?8:6):2).forEach(t=>{ const q=h('div','pn'); q.appendChild(h('b',null, !t.due ? 'No date' : days(t.due)<0 ? (-days(t.due))+'d late' : fmt(t.due))); q.appendChild(h('span',null, t.t)); q.appendChild(h('em',null, first(doers(t)[0]))); rw.appendChild(q); }); }
       el.appendChild(rw); });
     if(R.length>pc) el.appendChild(h('div','st-next','+'+(R.length-pc)+' more'));
     meta.go=()=>openClassic('rocks'); }
   else if(cfg.t==='keydate'){ const kd=nextKeyDate(); if(!kd){ el.appendChild(h('div','st-sub','No key dates coming up.')); meta.go=()=>openClassic('dates'); }
     else { const n=Math.max(0,days(kd.d)), C=2*Math.PI*44, frac=Math.max(.04, 1-Math.min(n,120)/120); const rg=h('div','ring'); rg.innerHTML='<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44"/><circle class="rv" cx="50" cy="50" r="44" stroke-dasharray="'+(C*frac).toFixed(1)+' '+C.toFixed(1)+'"/></svg>'; const dv=h('div'); dv.appendChild(h('b',null,String(n))); dv.appendChild(h('small',null,n===1?'day':'days')); rg.appendChild(dv); el.appendChild(rg);
       el.appendChild(h('div','nx-kdt', kd.t)); el.lastChild.appendChild(h('small',null, fmt(kd.d)+(kd.e&&kd.e!==kd.d?' – '+fmt(kd.e):'')));
-      if(tall || wide){ const more=(S.dates||[]).filter(d=>d!==kd && d.d && days(d.d)>=0).sort((a,b)=>a.d<b.d?-1:1).slice(0, SZ==='b'?5:3); if(more.length){ const ls=h('div','nx-kl2'); more.forEach(d=>{ const r=h('div','kr'); r.appendChild(h('b',null,days(d.d)+'d')); r.appendChild(h('span',null,d.t)); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit && window.__editDate) window.__editDate(d); }); ls.appendChild(r); }); el.appendChild(ls); } }
+      if(tall || wide){ const more=(S.dates||[]).filter(d=>d!==kd && d.d && days(d.d)>=0).sort((a,b)=>a.d<b.d?-1:1).slice(0, SZ==='b'?7:tall?5:2); if(more.length){ const ls=h('div','nx-kl2'); more.forEach(d=>{ const r=h('div','kr'); r.appendChild(h('b',null,days(d.d)+'d')); r.appendChild(h('span',null,d.t)); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit && window.__editDate) window.__editDate(d); }); ls.appendChild(r); }); el.appendChild(ls); } }
       meta.go=()=>openClassic('dates'); } }
   else if(cfg.t==='meeting'){ let md=''; try{ const nm=window.__mtg && window.__mtg.next && window.__mtg.next(); md=typeof nm==='string'?nm:''; }catch(e){}
     if(md){ const n=Math.max(0,days(md)); const cd=h('div','mic-cd'); [[n,n===1?'Day':'Days']].forEach(([v,l])=>{ const sp=h('span'); sp.appendChild(h('b',null,String(v).padStart(2,'0'))); sp.appendChild(h('small',null,l)); cd.appendChild(sp); }); const row=h('div','mic-row'); const ep=h('div','mic-ep'); ep.appendChild(h('b',null, wide ? WDL[pd(md).getDay()]+', '+fmt(md) : fmt(md))); const items=(S.agenda||[]).filter(a=>a.mtg===md && !a.done); ep.appendChild(h('small',null, (wide?'':WDL[pd(md).getDay()]+' · ')+items.length+(items.length===1?' item':' items')+(wide?' on the agenda':''))); { const ip=(S.dates||[]).find(d=>d.d===md && /meeting/i.test(d.k||'') && d.loc); if(ip){ const miss=people().map(p=>p.id).filter(id=>(ip.who||[]).indexOf(id)<0).map(first); var locEl=h('div','mic-loc mic-locw','In person · '+ip.loc+(miss.length ? ' · '+miss.join(', ')+' out' : '')); } } row.appendChild(ep); row.appendChild(cd); el.appendChild(row); if(typeof locEl!=='undefined' && locEl) el.appendChild(locEl);
@@ -5416,11 +5424,11 @@ function tile(cfg, i, L){
     meta.go=()=>openClassic('mine'); }
   else if(cfg.t==='findtime'){ const ids=ftIds(cfg); const mins=cfg.mins||30;
     const row=h('div','nx-avrow'); let free=0; ids.forEach(id=>{ const pp=person(id); if(!pp) return; const s2=statusOf(pp); if(s2.k==='free') free++; const w=h('span','nx-avw'); w.appendChild(av(id, tall?34:28)); w.appendChild(h('i','nx-dot '+s2.k)); w.title=pp.name+' · '+s2.t+(s2.s?' '+s2.s:''); row.appendChild(w); });
-    if(!dashEdit){ const pk=btn('nx-ftpk', null, e=>{ e.stopPropagation(); ftPick(cfg, L); }); pk.textContent=(cfg.who && cfg.who.length ? 'Change People' : 'Pick People'); pk.title='Pick who this tile finds a time with'; row.appendChild(pk); }
+    if(!dashEdit && SZ!=='s'){ const pk=btn('nx-ftpk', null, e=>{ e.stopPropagation(); ftPick(cfg, L); }); pk.textContent=(cfg.who && cfg.who.length ? 'Change People' : 'Pick People'); pk.title='Pick who this tile finds a time with'; row.appendChild(pk); }
     el.appendChild(row);
     const slot=nextShared([me()].concat(ids), mins);
     const b=h('div','nx-ftv'); b.appendChild(h('small',null, !slot ? 'Next time you’re free together' : slot.n===slot.of ? 'Next time you’re all free' : 'Best time in the next two weeks')); b.appendChild(h('b',null, slot ? WDL[new Date(slot.t).getDay()]+', '+MON[new Date(slot.t).getMonth()]+' '+new Date(slot.t).getDate()+' at '+tmL(slot.t) : 'Calendars aren’t in yet')); if(slot && slot.n<slot.of) b.appendChild(h('span',null, slot.n+' of '+slot.of+' free — not '+slot.out.map(first).join(', ')));
-    if(slot && x && x.ACT && x.ACT.on && !dashEdit){ const bk=btn('nx-mini pri nx-ftb','Book It', e=>{ e.stopPropagation(); x.bookDialog({subject:'MISMO Meeting', start:slot.t, mins, who:ids}); }); bk.title='Book this time in Outlook and invite everyone'; b.appendChild(bk); }
+    if(slot && x && x.ACT && x.ACT.on && !dashEdit && SZ!=='s'){ const bk=btn('nx-mini pri nx-ftb','Book It', e=>{ e.stopPropagation(); x.bookDialog({subject:'MISMO Meeting', start:slot.t, mins, who:ids}); }); bk.title='Book this time in Outlook and invite everyone'; b.appendChild(bk); }
     el.appendChild(b);
     /* Tall and Large have room for the next few times too */
     if(tall && slot && slot.n===slot.of){ const more=freeTimes([me()].concat(ids), mins, SZ==='b'?6:4).list.filter(z=>z.t!==slot.t).slice(0, SZ==='b'?4:2);
@@ -5428,7 +5436,7 @@ function tile(cfg, i, L){
     el.appendChild(h('div','st-next', free+' of '+ids.length+' free now · tap for more times'));
     meta.go=()=>ftDialog(cfg, L); }
   else if(cfg.t==='sys'){ meta.draw(el, top, SZ); }
-  if(cfg.t!=='sys' && lvlOf(cfg)==='hi'){ el.classList.add('lv-hi'); el.querySelectorAll('.nx-kl2:not(.nx-ftmore),.nx-tl2,.nx-gaps,.mic-steps').forEach(z=>z.remove()); }
+  if(cfg.t!=='sys' && lvlOf(cfg)==='hi' && !tall){ el.classList.add('lv-hi'); el.querySelectorAll('.nx-kl2:not(.nx-ftmore),.nx-tl2,.nx-gaps,.mic-steps').forEach(z=>z.remove()); }
   el.addEventListener('click', e=>{ if(dashEdit || e.target.closest('button:not(.st-tile)')) return; go(); });
   el.addEventListener('keydown', e=>{ if((e.key==='Enter'||e.key===' ') && e.target===el && !dashEdit){ e.preventDefault(); go(); } });
   return el;
@@ -5450,13 +5458,14 @@ function pickCard(cfg, d){ if(!d || !Array.isArray(d.cards) || !d.cards.length) 
   if(cfg.card){ return d.cards.find(c=>c.t===cfg.card) || null; }
   /* first time on a page: its headline numbers when it has gauges or no tiles of its own, otherwise its first real tile */
   if(d.gauges.length) return null;
+  if(d.figs.length>=3 && d.cards.some(c=>/^at a glance$/i.test(c.t||'') && c.text)) return null;
   const real=d.cards.filter(c=>!c.fig && c.t!=='Today');
   const rich=real.find(c=>!c.tbl && c.big && ((c.rows && c.rows.length) || c.meter!=null)); if(rich) return rich;
   if(d.figs.length>=3) return null;
   const tbl=real.find(c=>c.tbl); if(tbl) return tbl;
   const withBig=real.find(c=>c.big); if(withBig) return withBig;
   if(d.figs.length) return null;
-  return d.cards.find(goodCard) || null; }
+  return d.cards.find(c=>goodCard(c) && (c.big || (c.rows && c.rows.length) || (c.meter!=null && isFinite(c.meter)) || c.pill)) || null; }
 /* ---------- Meeting Trackers' day, drawn as a day: a calendar leaf, the meetings in time order
    with a live "On Now / in 20 min" beside each, and on a quiet day who meets next ---------- */
 const ETF=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York', weekday:'long', month:'long', day:'numeric', hour:'numeric', minute:'2-digit', hourCycle:'h23'});
@@ -5584,14 +5593,19 @@ function sysMeta(cfg){ const x=X(); const s=x && x.SYS.find(z=>z.k===cfg.s); if(
     /* the app's mark sits small beside its name, so the numbers get the room (November 5, 2026) */
     { const ti=h('span','nx-tsym'); ti.innerHTML=x.symbol(s.k); top.appendChild(ti); }
     const head=h('div','nx-sysh');
-    const lead=h('div','nx-syl');
+    const lead=h('div','nx-syl'); let dirL=null;
     if(c && !(cfg.go && !cfg.sec && F.length)){ const b=h('div','st-big'); b.append(String(c.n)); b.appendChild(h('small',null, cfg.sec ? (c.n===1?'item':'items') : cfg.go)); lead.appendChild(b); if(cfg.sec && c.x) lead.appendChild(h('div','st-sub', c.x)); }
     else if(F.length){ lead.appendChild(figEl(F[0], true)); F=F.slice(1); }
     else if(G.length && small){ lead.appendChild(gaugeEl(G[0], false)); }
     else if(!d){ el.classList.add('nx-filling'); const sk=h('div','nx-skel'); sk.appendChild(h('i','a')); sk.appendChild(h('i','b')); sk.appendChild(h('i','c')); lead.appendChild(sk); }
     else if(d.empty){ const b0=h('div','st-big'); b0.append('0'); b0.appendChild(h('small',null,'waiting')); lead.appendChild(b0); lead.appendChild(h('div','st-sub', 'Nothing on '+(cfg.go || (x.SHORT[s.k]||s.n))+' right now.')); }
-    else lead.appendChild(h('div','st-sub', s.d));
+    else { const cs0=d.cards||[], intro=cs0[0] && cs0[0].head ? cs0[0] : null;
+      dirL=cs0.filter(c=>c!==intro && !c.big && !c.tbl && !c.fig && c.t && c.t.length<=40 && !/^(today|this week|at a glance)$/i.test(c.t));
+      if(dirL.length>=2){ const b=h('div','st-big'); b.append(String(dirL.length)); b.appendChild(h('small',null, intro ? intro.t : 'on '+(cfg.go||'the page'))); lead.appendChild(b); }
+      else { dirL=null; lead.appendChild(h('div','st-sub', (intro && (intro.text||intro.sub)) || s.d)); } }
     head.appendChild(lead); el.appendChild(head);
+    if(dirL){ if(small || SZ==='w') el.appendChild(h('div','nx-glance'+(small?' sm':''), dirL.map(c=>c.t).join(' · ')));
+      else { const ls=h('div','nx-kl2 nx-dir'); dirL.slice(0, SZ==='b'?10:7).forEach(c=>{ const r=h('div','kr'); r.appendChild(h('b',null,c.t)); if(c.sub||c.text) r.appendChild(h('span',null,c.sub||c.text)); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) openSystem(s.k, cfg.go||'', '', cfg); }); ls.appendChild(r); }); el.appendChild(ls); } }
     const pg=cfg.sec || cfg.go || '';
     if(pg && !wide){ top.firstChild.textContent=pg; const ti=top.querySelector('.nx-tsym'); if(ti && pg.length>14) ti.remove(); }
     else if(pg && lead.textContent.toLowerCase().indexOf(pg.toLowerCase())<0) top.appendChild(h('span','st-pill', pg));
@@ -5603,7 +5617,8 @@ function sysMeta(cfg){ const x=X(); const s=x && x.SYS.find(z=>z.k===cfg.s); if(
       const gr=G.slice(0, nG); if(gr.length){ const row=h('div','nx-ggr'); gr.forEach(g=>row.appendChild(gaugeEl(g, det && gr.length<=3))); el.appendChild(row); }
       /* the page's own highlight tiles under the numbers ("MISMO Matters · November · 0 of 13 approved") */
       if(d && !(Array.isArray(cfg.pick) && cfg.pick.length)){ const nH=det ? (SZ==='b'?4:wide||tall?2:1) : (SZ==='b'?2:wide||tall?1:0);
-        const HL=(d.cards||[]).filter(c=>goodCard(c) && !c.fig && !c.tbl && c.t!=='Today' && !/^(at a glance|today|this week)$/i.test(c.t) && (c.meter!=null || c.pill || c.big || c.head) && (c.sub || c.text || c.big)).slice(0, nH);
+        const shownN=new Set(d.figs.map(f=>f.n).concat(d.gauges.map(g=>g.n)));
+        const HL=(d.cards||[]).filter(c=>goodCard(c) && !shownN.has(c.t) && !c.fig && !c.tbl && c.t!=='Today' && !/^(at a glance|today|this week)$/i.test(c.t) && (c.meter!=null || c.pill || c.big || c.head) && (c.sub || c.text || c.big)).slice(0, nH);
         if(HL.length){ const ls=h('div','nx-hlg'); HL.forEach(c=>{ const r=h('div','hl'); if(c.k && /^(#|rgb|hsl)/.test(c.k)) r.style.setProperty('--hk', c.k);
           const t1=h('div','t'); t1.appendChild(h('b',null,c.t)); const tag=c.big ? c.big+(c.unit?' '+c.unit:'') : (c.pill || c.head || ''); if(tag) t1.appendChild(h('em',null,tag)); r.appendChild(t1);
           if(c.meter!=null && isFinite(c.meter)){ const m=h('div','st-meter'); const f=h('i'); f.style.width=Math.max(0,Math.min(100,c.meter))+'%'; m.appendChild(f); r.appendChild(m); }
@@ -6144,6 +6159,8 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-bars .bc .dn{display:block;font-size:10px;font-weight:700;color:rgba(255,255,255,.5);line-height:1;margin-top:1px}
 .st-tile.t-sys.sz-t .nx-fgr .nx-fg span{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.25}
 .st-tile.t-sys.sz-s .nx-sysh{flex:1 1 auto;align-items:center}
+.st-tile.nx-calm{justify-content:center}.st-tile.nx-calm .st-top{position:absolute;top:16px;left:18px;right:18px}
+.nx-dir .kr{flex-direction:column;align-items:stretch;gap:1px}.nx-dir .kr b{font-size:12.5px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nx-dir .kr span{font-size:11.5px;color:rgba(255,255,255,.62);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .st-tile .mic-locw{font-size:12.5px;line-height:1.35;margin-top:-4px}
 /* Small and Tall tiles: the countdown stays beside the date, and the place line takes at most two lines */
 .st-tile:not(.sz-w):not(.sz-b) .mic-row{flex-wrap:nowrap;gap:10px;align-items:center}.st-tile:not(.sz-w):not(.sz-b) .mic-ep{flex:1 1 0}.st-tile:not(.sz-w):not(.sz-b) .mic-loc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
