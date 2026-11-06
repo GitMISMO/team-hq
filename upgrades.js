@@ -184,6 +184,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -6176,7 +6177,7 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .mms-bar{display:flex;gap:2px;height:8px;border-radius:4px;overflow:hidden;flex:0 0 auto}.mms-bar i{display:block;min-width:4px}
 .mms-lg{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;font-size:11.5px;color:rgba(255,255,255,.72)}.mms-lg span{display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.mms-lg i{width:7px;height:7px;border-radius:2px;flex:0 0 auto}.mms-lg b{color:#fff;font-weight:800}
 .mms-a{display:flex;flex-direction:column;gap:4px}.mms-ar{display:flex;align-items:baseline;gap:7px;padding:4px 9px;border-radius:6px;background:rgba(255,255,255,.07);cursor:pointer;font-size:12px;color:rgba(255,255,255,.8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.mms-ar:hover{background:rgba(255,255,255,.13)}.mms-ar b{font-size:13.5px;font-weight:800;color:#fff;min-width:14px}.mms-ar.bad b{color:#ff8a7a}.mms-ar.warn b{color:#f5b85a}.mms-ar.ok b{color:#5fd3a0}
-.mms.sm .mms-lg{display:none}.mms.sm .mms-a{flex-direction:row;gap:5px}.mms.sm .mms-ar{padding:3px 7px;font-size:11px;gap:4px;flex:0 1 auto}.mms.sm .mms-ar b{min-width:0;font-size:12.5px}
+.mms.sm .mms-lg{display:none}.mms.sm .mms-l{gap:6px}.mms.sm .mms-a{flex-direction:row;gap:5px}.mms.sm .mms-ar{padding:2px 7px;font-size:11px;gap:4px;flex:0 1 auto}.st-tile:has(.mms.sm) .st-big{font-size:36px}.st-tile:has(.mms.sm) .st-next{padding-top:7px}.mms.sm .mms-ar b{min-width:0;font-size:12.5px}
 .mms-pl{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:8px;background:rgba(167,139,250,.12);border-left:3px solid var(--k);cursor:pointer;min-width:0;flex:0 0 auto}.st-tile > .mms-pl{margin-top:10px}.mms-pl:hover{background:rgba(167,139,250,.2)}
 .mms-pl em{font-style:normal;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--k)}.mms-pl b{font-size:12.5px;font-weight:700;color:#fff;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.mms-pl small{font-size:11px;color:rgba(255,255,255,.65);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mms.tl:not(.wd){flex-direction:column}.mms.tl .mms-l{flex:0 0 auto}
