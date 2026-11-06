@@ -181,6 +181,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -3498,7 +3499,7 @@ const st=t=>/^waiting/i.test(t.s||'') ? 'Waiting on Someone' : (t.s||'Not Starte
 const isOpen=t=>st(t)!=='Done';
 const doers=t=>(t.d && t.d.length) ? t.d.slice() : (t.o ? [t.o] : []);
 const txt=v=>String(v||'').replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/\s+/g,' ').trim();
-const put=(c,o,b)=>window.__put ? window.__put(c,o,b) : Promise.resolve();
+const put=(c,o)=>window.__put ? window.__put(c,o) : Promise.resolve();
 
 /* ---------- the meeting ---------- */
 function sel(){ try{ return S.mtgPick || window.__mtg.next(); }catch(e){ return ''; } }
@@ -3636,7 +3637,7 @@ function slideItem(body, s, m){
   card.appendChild(g);
   const acts=h('div','mt-acts');
   const cov=h('label','mt-cov'); const cb=h('input'); cb.type='checkbox'; cb.checked=!!x.done; cov.appendChild(cb); cov.append('Covered'); acts.appendChild(cov);
-  const sv=btn('btn','Save', async()=>{ sv.disabled=true; await put('agenda', Object.assign({}, x, {outcome:i1.value.trim(), notes:i2.value.trim(), done:cb.checked?1:0}), x); sv.textContent='Saved'; setTimeout(()=>{ sv.textContent='Save'; sv.disabled=false; }, 1400); });
+  const sv=btn('btn','Save', async()=>{ sv.disabled=true; await put('agenda', Object.assign({}, x, {outcome:i1.value.trim(), notes:i2.value.trim(), done:cb.checked?1:0})); sv.textContent='Saved'; setTimeout(()=>{ sv.textContent='Save'; sv.disabled=false; }, 1400); });
   acts.appendChild(sv);
   acts.appendChild(btn('btn ghost','Make It a Task', ()=>{ window.__edit && window.__edit({t:x.t, o:x.who||S.me||'', d:[], r:'', w:'', s:'Not Started', p:'Normal', due:'', notes:'', rail:0, ord:(S.tasks.length+1)*10, at:Date.now()}); }));
   card.appendChild(acts);
@@ -3676,7 +3677,7 @@ function slidePerson(body, s, m){
   const up=h('div','mt-up'); up.appendChild(h('h4',null,'Their Update'));
   const ta=h('textarea'); ta.rows=3; ta.placeholder='What '+p.name.split(' ')[0]+' shared — wins, what’s next, where they need help'; ta.value=u ? txt(u.notes) : ''; up.appendChild(ta);
   const sv=btn('btn','Save Update', async()=>{ sv.disabled=true; const rec=u ? Object.assign({}, u, {notes:ta.value.trim()}) : {t:'Around the Room: '+p.name, kind:'Update', who:p.id, mtg:m, mins:0, notes:ta.value.trim(), outcome:'', info:'', done:1, ord:900+people().indexOf(p), at:Date.now()};
-    await put('agenda', rec, u); sv.textContent='Saved'; setTimeout(()=>{ sv.textContent='Save Update'; sv.disabled=false; }, 1400); });
+    await put('agenda', rec); sv.textContent='Saved'; setTimeout(()=>{ sv.textContent='Save Update'; sv.disabled=false; }, 1400); });
   up.appendChild(sv); right.appendChild(up);
   w.appendChild(right);
   slideHead(body, 3, p.name, (s.i+1)+' of '+people().length+' around the room');
@@ -3688,7 +3689,7 @@ function slideGood(body, s, m){
   const ta=h('textarea'); ta.rows=6; ta.placeholder='Notes from the open floor'; ta.value=g ? txt(g.notes) : ''; card.appendChild(ta);
   const acts=h('div','mt-acts');
   const sv=btn('btn','Save', async()=>{ sv.disabled=true; const rec=g ? Object.assign({}, g, {notes:ta.value.trim()}) : {t:'For the Good of the Order', kind:'Good of the Order', who:S.me||'', mtg:m, mins:0, notes:ta.value.trim(), outcome:'', info:'', done:1, ord:999, at:Date.now()};
-    await put('agenda', rec, g); sv.textContent='Saved'; setTimeout(()=>{ sv.textContent='Save'; sv.disabled=false; }, 1400); });
+    await put('agenda', rec); sv.textContent='Saved'; setTimeout(()=>{ sv.textContent='Save'; sv.disabled=false; }, 1400); });
   acts.appendChild(sv);
   acts.appendChild(btn('btn ghost','Add a Task', ()=>{ const b=document.getElementById('newtask'); b && b.click(); }));
   card.appendChild(acts); body.appendChild(card);
@@ -4195,7 +4196,7 @@ function av(id, size){ const p=person(id), a=h('span','av'); if(!p) return a; a.
 const byDue=(a,b)=>{ const x=a.due||'9999', y=b.due||'9999'; return x<y?-1:x>y?1:(a.ord||0)-(b.ord||0); };
 const editTask=t=>window.__edit && window.__edit(t);
 const newTask=o=>editTask(Object.assign({t:'', o:me()||'', d:[], r:'', w:'', s:'Not Started', p:'Normal', due:'', notes:'', rail:0, ord:(S.tasks.length+1)*10, at:Date.now()}, o||{}));
-const put=(c,o,b)=>window.__put ? window.__put(c,o,b) : Promise.resolve();
+const put=(c,o)=>window.__put ? window.__put(c,o) : Promise.resolve();
 const cal=id=>{ const by=(window.__cal && window.__cal.CAL && window.__cal.CAL.by)||{}; return Array.isArray(by[id]) ? by[id] : null; };
 function etAt(day, hour){ let t=Date.UTC(day.getFullYear(), day.getMonth(), day.getDate(), hour+5, 0); const e=+new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York', hour:'numeric', hourCycle:'h23'}).format(t); return t+(hour-e)*3600e3; }
 function holiday(d){ try{ const r=window.__t && window.__t.holidayOn(d); return r ? (typeof r==='string'?r:(r.n||r.t||r.name||'Holiday')) : ''; }catch(e){ return ''; } }
@@ -4213,11 +4214,9 @@ function toast(msg, undo){ if(toastEl) toastEl.remove(); clearTimeout(toastTimer
 function burst(x, y){ const n=14, w=h('div','nx-burst'); w.style.left=x+'px'; w.style.top=y+'px';
   for(let i=0;i<n;i++){ const p=h('i'); const a=i/n*Math.PI*2, r=30+Math.random()*20; p.style.setProperty('--x', Math.cos(a)*r+'px'); p.style.setProperty('--y', Math.sin(a)*r+'px'); p.style.background='var(--c'+((i%7)+1)+')'; w.appendChild(p); }
   document.body.appendChild(w); setTimeout(()=>w.remove(), 700); }
-/* each change, and its Undo, writes only the fields it touched, so a teammate's change in between stays (November 5, 2026) */
-function undoOf(before, after, patch){ const back=Object.assign({}, after); Object.keys(patch).forEach(k=>{ if(before[k]===undefined) delete back[k]; else back[k]=before[k]; }); return put('tasks', back, after); }
-function change(t, patch, msg){ const before=Object.assign({}, t), after=Object.assign({}, t, patch); put('tasks', after, t); toast(msg, ()=>undoOf(before, after, patch)); }
+function change(t, patch, msg){ const before=Object.assign({}, t); put('tasks', Object.assign({}, t, patch)); toast(msg, ()=>put('tasks', before)); }
 function complete(t, el, ev){ if(ev && ev.clientX) burst(ev.clientX, ev.clientY); if(el) el.classList.add('done');
-  const before=Object.assign({}, t), after=Object.assign({}, t, {s:'Done'}); setTimeout(()=>put('tasks', after, t), el ? 320 : 0); toast('Done: '+t.t, ()=>undoOf(before, after, {s:'Done'})); }
+  const before=Object.assign({}, t); setTimeout(()=>put('tasks', Object.assign({}, t, {s:'Done'})), el ? 320 : 0); toast('Done: '+t.t, ()=>put('tasks', before)); }
 
 /* ---------- quick add: "Call Amy about sponsors fri @amy #summit !" ---------- */
 function parseQuick(text){
@@ -4850,7 +4849,7 @@ function inboxBand(mode){
   const asks=myAsks(), nudges=myNudges();
   if(asks.length || nudges.length) top.push(part('asks', me()==='jonna' ? 'Asks for You' : 'Your Open Asks', asks.length+nudges.length, it=>{
     asks.slice().sort((a,b)=>(b.at||0)-(a.at||0)).forEach(a=>{ const r=btn('nx-row nx-ask'+(board?' nx-card':''), null, ()=>window.__editAsk && window.__editAsk(a)); if(a.by) r.appendChild(av(a.by,22)); r.appendChild(h('span','nx-tt', a.t)); r.appendChild(h('span','nx-sp')); r.appendChild(h('span','nx-state '+String(a.state||'New').toLowerCase().replace(/\s+/g,'-'), a.state||'New')); it.appendChild(r); });
-    nudges.forEach(n=>{ const r=h('div','nx-row nx-ask'+(board?' nx-card':'')); if(n.by) r.appendChild(av(n.by,22)); r.appendChild(h('span','nx-tt', n.m||n.k)); r.appendChild(h('span','nx-sp')); r.appendChild(btn('nx-mini','Done', ()=>put('nudges', Object.assign({}, n, {done:1}), n))); it.appendChild(r); }); }, asks.length?'warn':''));
+    nudges.forEach(n=>{ const r=h('div','nx-row nx-ask'+(board?' nx-card':'')); if(n.by) r.appendChild(av(n.by,22)); r.appendChild(h('span','nx-tt', n.m||n.k)); r.appendChild(h('span','nx-sp')); r.appendChild(btn('nx-mini','Done', ()=>put('nudges', Object.assign({}, n, {done:1})))); it.appendChild(r); }); }, asks.length?'warn':''));
   const watch=S.tasks.filter(t=>isOpen(t) && t.o===me() && doers(t).indexOf(me())<0).sort(byDue);
   if(watch.length) end.push(part('handed', 'Handed Off — Others Are Doing', watch.length, it=>watch.forEach(t=>it.appendChild(row(t)))));
   const soon=S.tasks.filter(t=>isOpen(t) && t.due && days(t.due)<=7 && doers(t).indexOf(me())<0 && t.o!==me() && S.rocks.some(r=>r.id===t.r && r.lead===me())).sort(byDue);
@@ -5501,6 +5500,36 @@ function mtDay(el, top, c, SZ, s, cfg, d){
   const nt=h('div','st-next'); nt.append((X().SHORT[s.k]||s.n)+(d && d.at ? ' · '+X().ago(d.at) : '')); nt.appendChild(h('b','opn', opnTxt(cfg))); el.appendChild(nt);
   if(!mtTimer) mtTimer=setInterval(mtTick, 30000);
   return true; }
+/* ---------- MMS home, drawn as a pipeline: how many are live, where they sit, and what needs a hand ---------- */
+const MMS_STAGE={'Building':'#A78BFA','In Review':'#74bfeb','Review':'#74bfeb','Comment':'#f5b85a','Publishing':'#5fd3a0','Governance':'#f08ca8'};
+function mmsHome(el, top, SZ, s, cfg, d){
+  if(s.k!=='mms' || cfg.go || cfg.sec || (cfg.card && cfg.card!=='#mms') || !d || !Array.isArray(d.cards)) return false;
+  const C=t=>d.cards.find(c=>c.t===t); const N=t=>{ const c=C(t); const v=c && parseInt(String(c.big||'').replace(/[^\d]/g,''),10); return isFinite(v) ? v : null; };
+  const wc=d.cards.find(c=>/^Where the \d+/i.test(c.t||'')); const live=N('Live Work') ?? (wc ? +(/\d+/.exec(wc.t)||[0])[0] : null);
+  if(live==null) return false;
+  const st=[]; if(wc && wc.text){ const re=/([A-Za-z][A-Za-z ]*?)\s+(\d+)(?=\s|$)/g; let m; while((m=re.exec(wc.text))) st.push({n:m[1].trim(), v:+m[2]}); }
+  const small=SZ==='s', wide=SZ==='w'||SZ==='b', tall=SZ==='t'||SZ==='b';
+  const go=(page)=>e=>{ e.stopPropagation(); if(!dashEdit) openSystem(s.k, page, '', cfg); };
+  const mine=N('Your Move')||0, late=N('Past Target')||0, soon=N('Closing in 7 Days')||0, moved=N('Moved This Week')||0, gov=N('With Governance')||0, pub=N('Published');
+  top.firstChild.textContent='MMS';
+  if(mine){ const p=h('span','st-pill mms-you', mine+' your move'); p.addEventListener('click', go('My Queue')); top.appendChild(p); }
+  const w=h('div','mms'+(small?' sm':'')+(wide?' wd':'')+(tall?' tl':'')); el.appendChild(w);
+  const L=h('div','mms-l'); w.appendChild(L); const Rc=wide ? h('div','mms-r') : null; if(Rc) w.appendChild(Rc);
+  const b=h('div','st-big'); b.append(String(live)); b.appendChild(h('small',null,'live work')); L.appendChild(b);
+  if(moved && !small) L.appendChild(h('div','mms-mv', '+'+moved+' moved this week'));
+  if(st.length){ const tot=st.reduce((a,z)=>a+z.v,0)||1; const bar=h('div','mms-bar'); st.forEach(z=>{ if(!z.v) return; const i=h('i'); i.style.flex=String(z.v); i.style.background=MMS_STAGE[z.n]||'#9fb3c8'; i.title=z.v+' '+z.n; bar.appendChild(i); }); L.appendChild(bar);
+    const lg=h('div','mms-lg'); st.forEach(z=>{ const r=h('span'); const dt=h('i'); dt.style.background=MMS_STAGE[z.n]||'#9fb3c8'; r.appendChild(dt); r.appendChild(h('b',null,String(z.v))); r.append(' '+z.n.replace(/^In /,'')); lg.appendChild(r); }); L.appendChild(lg); }
+  /* what needs a hand, worst first */
+  const A=[]; if(late) A.push({v:late, t:small?'late':'past target', k:'bad', p:'All Work'}); if(soon) A.push({v:soon, t:small?'due soon':'closing in 7 days', k:'warn', p:'All Work'});
+  if(gov && !small) A.push({v:gov, t:'with Governance', k:'', p:'Governance'}); if(pub!=null && tall) A.push({v:pub, t:'published', k:'ok', p:'All Work'});
+  if(A.length){ const R=h('div','mms-a'); (small||SZ==='w' ? A.slice(0,2) : A).forEach(a=>{ const r=h('div','mms-ar'+(a.k?' '+a.k:'')); r.appendChild(h('b',null,String(a.v))); r.appendChild(h('span',null,a.t)); r.addEventListener('click', go(a.p)); R.appendChild(r); }); (Rc || L).appendChild(R); }
+  /* the one on your plate */
+  const pl=C('On Your Plate'); if(pl && pl.text && (tall || SZ==='w')){ const t=String(pl.text).trim(); const id=/^(WR\d{4}_\d+)\s+/.exec(t); let rest=id ? t.slice(id[0].length) : t;
+    const am=/\s+((?:Approve|Review|Sign|Confirm|Assign|Respond|Publish|Vote|Decide|Set|Pick|Schedule|Send|Submit|Close|Check|Finish|Start|Answer|Name|Choose)\b.*)$/.exec(rest); const act=am ? am[1] : ''; if(am) rest=rest.slice(0, am.index);
+    const P=h('div','mms-pl'); P.appendChild(h('em',null,'On your plate')); const tt=h('b',null,rest); P.appendChild(tt); if(act) P.appendChild(h('small',null,(id?id[1]+' · ':'')+act)); else if(id) P.appendChild(h('small',null,id[1]));
+    P.addEventListener('click', go('My Queue')); if(SZ==='w') Rc.insertBefore(P, Rc.firstChild); else el.appendChild(P); }
+  const nt=h('div','st-next'); nt.append('MMS'+(d.at ? ' · '+X().ago(d.at) : '')); nt.appendChild(h('b','opn', opnTxt(cfg))); el.appendChild(nt);
+  return true; }
 function drawCard(el, top, c, SZ, lvl, s, cfg, d){ const x=X(), det=lvl==='det', small=SZ==='s', tall=SZ==='t'||SZ==='b';
   if(c.k && /^(#|rgb|hsl|var)/.test(c.k)) el.style.setProperty('--k', c.k);
   /* a page's day strip ("Today · Sunday, November 1 · No workgroup meetings today…") keeps the system's name on top */
@@ -5524,6 +5553,7 @@ function sysMeta(cfg){ const x=X(); const s=x && x.SYS.find(z=>z.k===cfg.s); if(
     const lvl=lvlOf(cfg), det=lvl==='det';
     if(x.wantData) x.wantData(s.k, cfg.go||'');
     const d=x.sysData ? x.sysData(s.k, cfg.go||'') : null;
+    if(mmsHome(el, top, SZ, s, cfg, d)) return;
     const card=pickCard(cfg, d);
     if(card && !cfg.sec){ drawCard(el, top, card, SZ, lvl, s, cfg, d); return; }
     if(cfg.go) top.appendChild(h('span','st-pill', cfg.sec || cfg.go));
@@ -6136,6 +6166,17 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .mtd-r.now .st::before{content:"";width:6px;height:6px;border-radius:50%;background:#14203a;animation:mtdPulse 1.8s ease-in-out infinite}
 .mtd-r.done{opacity:.45}.mtd-r.x{opacity:.45}.mtd-r.x .nm{text-decoration:line-through}
 .mtd-more{font-size:11.5px;font-weight:700;color:rgba(255,255,255,.6);padding-left:9px}
+.mms{display:flex;gap:14px;min-height:0;flex:1 1 auto}.mms-l{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:7px}.mms-r{flex:1.15 1 0;min-width:0;display:flex;flex-direction:column;gap:8px}
+.mms .st-big small{color:var(--k);font-size:14px;font-weight:700;letter-spacing:0}
+.mms-mv{font-size:11.5px;font-weight:700;color:#5fd3a0;margin-top:-3px}
+.mms-bar{display:flex;gap:2px;height:8px;border-radius:4px;overflow:hidden;flex:0 0 auto}.mms-bar i{display:block;min-width:4px}
+.mms-lg{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;font-size:11.5px;color:rgba(255,255,255,.72)}.mms-lg span{display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.mms-lg i{width:7px;height:7px;border-radius:2px;flex:0 0 auto}.mms-lg b{color:#fff;font-weight:800}
+.mms-a{display:flex;flex-direction:column;gap:4px}.mms-ar{display:flex;align-items:baseline;gap:7px;padding:4px 9px;border-radius:6px;background:rgba(255,255,255,.07);cursor:pointer;font-size:12px;color:rgba(255,255,255,.8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.mms-ar:hover{background:rgba(255,255,255,.13)}.mms-ar b{font-size:13.5px;font-weight:800;color:#fff;min-width:14px}.mms-ar.bad b{color:#ff8a7a}.mms-ar.warn b{color:#f5b85a}.mms-ar.ok b{color:#5fd3a0}
+.mms.sm .mms-lg{display:none}.mms.sm .mms-a{flex-direction:row;gap:5px}.mms.sm .mms-ar{padding:3px 7px;font-size:11px;gap:4px;flex:0 1 auto}.mms.sm .mms-ar b{min-width:0;font-size:12.5px}
+.mms-pl{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:8px;background:rgba(167,139,250,.12);border-left:3px solid var(--k);cursor:pointer;min-width:0;flex:0 0 auto}.st-tile > .mms-pl{margin-top:10px}.mms-pl:hover{background:rgba(167,139,250,.2)}
+.mms-pl em{font-style:normal;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--k)}.mms-pl b{font-size:12.5px;font-weight:700;color:#fff;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.mms-pl small{font-size:11px;color:rgba(255,255,255,.65);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-tile.sz-w .mms-pl b{-webkit-line-clamp:1}.mms.tl:not(.wd){flex-direction:column}.mms.tl .mms-l{flex:0 0 auto}
+.st-pill.mms-you{background:var(--k);color:#1b1440;cursor:pointer}
 .mtd-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px;min-width:0}
 .mtd-chip{display:inline-flex;align-items:center;gap:7px;max-width:100%;min-width:0;padding:2px 11px 2px 2px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);font-size:12.5px;color:#fff}
 .mtd-chip>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
