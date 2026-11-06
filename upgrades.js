@@ -197,6 +197,10 @@
 
 
 
+
+
+
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -3948,7 +3952,9 @@ const css=h('style'); css.id='mob-css'; css.textContent=`
   .hqtop-r{gap:6px}
   .hqtop-r .mastbtn{width:34px;height:34px}
   .whoami{padding:3px!important}
-  main{padding:14px 12px 24px!important}
+  /* room under the page for the bar fixed at the bottom, so the last thing on the page can be scrolled into view (November 6, 2026) */
+  main{padding:14px 12px calc(90px + env(safe-area-inset-bottom,0px))!important}
+  html.app-exp main{padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))!important}
   .mob-bar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:95;background:var(--surface);border-top:1px solid var(--border);box-shadow:0 -6px 20px rgba(6,32,47,.10);padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px))}
   .mob-b{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:54px;border:0;background:transparent;color:var(--ink-3);font:inherit;font-size:10.5px;font-weight:700;cursor:pointer;border-radius:8px;-webkit-tap-highlight-color:transparent}
   .mob-b svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -5200,11 +5206,15 @@ function dashWeek(){
     const kd=keyDatesOn(d), L=!wk && x && x.dayLoad ? x.dayLoad(me(), d) : null;
     const b=btn('nx-swd'+(i===0?' now':'')+(wk?' wkd':''), null, ()=>open('cal'));
     b.appendChild(h('span',null, i===0?'Today':WD[d.getDay()])); b.appendChild(h('b',null,String(d.getDate())));
-    const pills=h('div','nx-pills'); const pil=(k,n)=>{ for(let j=0;j<Math.min(n,4);j++){ const z=h('i'); z.style.setProperty('--k',k); pills.appendChild(z); } };
-    pil('#FF8A7A', late.length); pil('#74BFEB', due.length); pil('#3CCB7F', kd.length); if(L && L.n) pil('#5A7A94', Math.ceil(L.n/2)); b.appendChild(pills);
-    const sm = hol ? hol : kd.length ? kd[0].t : due.length ? due.length+(due.length===1?' task due':' tasks due') : L ? L.n+(L.n===1?' meeting':' meetings') : wk ? 'Weekend' : 'Clear';
-    b.appendChild(h('small',null,sm)); b.title=[due.length?due.length+' due':'', L?L.n+' meetings':'', kd.map(z=>z.t).join(', ')].filter(Boolean).join(' · ');
+    /* the dashes: red late tasks (today only), blue tasks due, green key dates, gray meetings (one dash for every two) — each one says what it is when you point at it */
+    const pills=h('div','nx-pills'); const pil=(k,n,what)=>{ for(let j=0;j<Math.min(n,4);j++){ const z=h('i'); z.style.setProperty('--k',k); z.title=what; pills.appendChild(z); } };
+    const pl=(n,one,many)=>n+' '+(n===1?one:many);
+    pil('#FF8A7A', late.length, pl(late.length,'late task','late tasks')); pil('#74BFEB', due.length, pl(due.length,'task due','tasks due')); pil('#3CCB7F', kd.length, kd.map(z=>z.t).join(', ')||'Key date'); if(L && L.n) pil('#5A7A94', Math.ceil(L.n/2), pl(L.n,'meeting','meetings')); b.appendChild(pills);
+    const sm = hol ? hol : kd.length ? kd[0].t : late.length ? pl(late.length,'task late','tasks late') : due.length ? pl(due.length,'task due','tasks due') : L ? pl(L.n,'meeting','meetings') : wk ? 'Weekend' : 'Clear';
+    b.appendChild(h('small',null,sm)); b.title=[late.length?pl(late.length,'task late','tasks late'):'', due.length?pl(due.length,'task due','tasks due'):'', L?pl(L.n,'meeting','meetings'):'', kd.map(z=>z.t).join(', ')].filter(Boolean).join(' · ');
     wrap.appendChild(b); }
+  /* what the colors mean, small, under the days */
+  const key=h('div','nx-swkey'); [['#FF8A7A','Late'],['#74BFEB','Due'],['#3CCB7F','Key date'],['#5A7A94','Meetings']].forEach(([k,t])=>{ const sp=h('span'); const z=h('i'); z.style.setProperty('--k',k); sp.appendChild(z); sp.append(t); key.appendChild(sp); }); wrap.appendChild(key);
   return wrap;
 }
 /* one tile */
@@ -6122,6 +6132,7 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-all{align-self:flex-start;margin-top:4px;border:0;background:none;padding:2px 0;color:var(--sky);font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
 .nx-all:hover{text-decoration:underline}
 .nx-sw{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin-bottom:22px}
+.nx-swkey{grid-column:1 / -1;display:flex;justify-content:flex-end;flex-wrap:wrap;gap:4px 14px;margin-top:-2px;font-size:11px;font-weight:600;color:var(--ink-3)}.nx-swkey span{display:inline-flex;align-items:center;gap:5px}.nx-swkey i{display:inline-block;width:12px;height:4px;border-radius:2px;background:var(--k)}
 .nx-swd{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font:inherit;text-align:left;color:var(--ink);cursor:pointer;transition:transform .15s,box-shadow .15s}
 .nx-swd:hover{transform:translateY(-2px);box-shadow:0 10px 20px -12px rgba(6,32,47,.35)}
 .nx-swd span{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--ink-3)}
@@ -7150,12 +7161,13 @@ function paint(){
     let L=Object.entries(docs).map(([id,d])=>Object.assign({id}, d)).filter(d=>atOf(d)>=cut || (!d.done && !d.skip));
     L=L.map(d=>Object.assign(d, {who:d.so ? null : (d.who||whoFrom(d.from, d.fromName, d))}));
     L.forEach(d=>{ if(!d.who && !d.so){ const c=contractorFor(d); if(c) d.soc=c; } });
-    if(!all) L=L.filter(d=>d.who===S.me);
+    /* only the ones waiting on a decision: a receipt from someone Team HQ couldn't match */
+    L=all ? L.filter(d=>!d.done && !d.skip && !d.so && !d.soc && !d.who) : [];
+    if(!L.length) return;
     L.sort((a,b)=>atOf(b)-atOf(a));
     const box=h('div','expin');
-    const hd=h('div','expin-h'); hd.appendChild(h('b', null, all ? 'Emailed In' : 'Your Emailed Receipts'));
-    hd.appendChild(h('small', null, L.length ? (all ? L.length+' in the last three weeks' : L.length+' — review and submit them below') : 'Forward or email a receipt to '+ADDR+' from your work email and it shows up in your expenses'));
-    if(L.length) hd.appendChild(h('span','x', 'Send to '+ADDR));
+    const hd=h('div','expin-h'); hd.appendChild(h('b', null, L.length===1 ? 'An Emailed Receipt Needs a Person' : L.length+' Emailed Receipts Need a Person'));
+    hd.appendChild(h('small', null, 'Pick whose it is and it goes into their expenses'));
     box.appendChild(hd);
     if(L.length){ const ul=h('ul');
       L.slice(0, 8).forEach(d=>{ const li=h('li');
