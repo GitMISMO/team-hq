@@ -12895,6 +12895,14 @@ function vExpenses(root){
       h.appendChild(el('span','amt money', money(sum)));
       h.addEventListener('click', ()=>{ S.openTrips[key]=!open; vExpenses(root); });
       box.appendChild(h);
+      /* a group with no trip name yet: name the trip once for all of them (Amy, on her iPhone — November 6, 2026) */
+      if(n==='No Trip Name Yet'){ const mine=rows.filter(x=>!x.submitted && (x.who===S.me || expSeesAll()));
+        if(mine.length){ const nt=el('div','tripname'); const ti=el('input'); ti.type='text'; ti.placeholder='Trip name, e.g. Executive Women’s Summit 2026'; ti.setAttribute('list','triplist2'); ti.setAttribute('aria-label','Trip name');
+          const dl=el('datalist'); dl.id='triplist2'; Array.from(new Set(S.expenses.map(x=>x.trip).filter(Boolean))).forEach(v=>{ const o=el('option'); o.value=v; dl.appendChild(o); });
+          const go=el('button','btn sm','Name This Trip'); go.type='button';
+          go.addEventListener('click', async ()=>{ const v=ti.value.trim(); if(!v){ ti.focus(); return; } go.disabled=true; go.textContent='Saving…'; try{ for(const x of mine) await put('expenses', Object.assign({}, x, {trip:v})); }catch(err){ go.disabled=false; go.textContent='Name This Trip'; return; } S.openTrips[pre+v]=true; vExpenses(root); });
+          ti.addEventListener('keydown', ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); go.click(); } });
+          nt.appendChild(ti); nt.appendChild(dl); nt.appendChild(go); nt.appendChild(el('small',null, mine.length===1 ? 'Names this expense' : 'Names all '+mine.length+' of these at once')); box.appendChild(nt); } }
       if(open) rows.forEach(x=> box.appendChild(expRow(x)));
       root.appendChild(box);
     });
@@ -17961,5 +17969,5 @@ boot().then(()=>{ paintWho(); renderAll();
 })();
 </script>
 
-<script src="upgrades.js?v=20261106b" defer></script>
+<script src="upgrades.js?v=20261106c" defer></script>
 </body></html>
