@@ -201,6 +201,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -4221,7 +4222,8 @@ const put=(c,o,b)=>window.__put ? window.__put(c,o,b) : Promise.resolve();
 const cal=id=>{ const by=(window.__cal && window.__cal.CAL && window.__cal.CAL.by)||{}; return Array.isArray(by[id]) ? by[id] : null; };
 function etAt(day, hour){ let t=Date.UTC(day.getFullYear(), day.getMonth(), day.getDate(), hour+5, 0); const e=+new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York', hour:'numeric', hourCycle:'h23'}).format(t); return t+(hour-e)*3600e3; }
 function holiday(d){ try{ const r=window.__t && window.__t.holidayOn(d); return r ? (typeof r==='string'?r:(r.n||r.t||r.name||'Holiday')) : ''; }catch(e){ return ''; } }
-function keyDatesOn(d){ try{ return (window.__dOn ? window.__dOn(d) : []); }catch(e){ return []; } }
+/* a date that stands in for a repeating one on its day ("Team Meeting — In Person in DC" lists nodupe:['teammtg']) shows instead of it, not beside it */
+function keyDatesOn(d){ try{ const L=(window.__dOn ? window.__dOn(d) : []) || []; const skip=new Set(); L.forEach(z=>(z.nodupe||[]).forEach(id=>skip.add(id))); return L.filter(z=>!skip.has(z.id) && !skip.has(z._base)); }catch(e){ return []; } }
 const workday=d=>d.getDay()%6!==0 && !holiday(d);
 function nextWorkday(d){ let x=new Date(d); for(let i=0;i<10 && !workday(x);i++) x=addD(x,1); return x; }
 const phone=()=>window.matchMedia('(max-width:640px)').matches;
