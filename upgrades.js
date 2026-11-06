@@ -188,6 +188,8 @@
 
 
 
+
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -5659,6 +5661,23 @@ function refreshSysTiles(){ if(!ui.on || viewKind()!=='day' || tdrag || !shell |
     /* fit it to its size straight away, so it never shows a frame of too much */
     try{ grid._fit && grid._fit(nu); }catch(e){} countUps(nu); }); }
 
+/* ---------- every tile Team HQ offers, in every size, on one screen (for checking them all at once:
+   window.__hqGallery() — each built-in tile, then each MISMO system's home page, including ones found later) ---------- */
+window.__hqGallery=function(opt){ opt=opt||{}; const x=X(); const colW=opt.w||200, ROWH=84, GAP=10;
+  const old=document.getElementById('hq-gallery'); if(old) old.remove();
+  const ov=h('div'); ov.id='hq-gallery'; ov.style.cssText='position:fixed;inset:0;z-index:99999;overflow:auto;background:var(--bg,#eef3f8);padding:16px';
+  const bar=h('div'); bar.style.cssText='display:flex;gap:8px;align-items:center;margin-bottom:12px;font-weight:700'; bar.append('Every tile · '+colW+'px columns'); bar.appendChild(btn('nx-mini','Close', ()=>ov.remove())); ov.appendChild(bar);
+  const sizes=opt.sizes||['s','t','w'];
+  const L=[]; Object.keys(TILES).forEach(k=>sizes.forEach(sz=>L.push({t:k, sz})));
+  ((x && x.SYS)||[]).filter(z=>x.canOpen(z.k)).forEach(z=>sizes.forEach(sz=>L.push({t:'sys', s:z.k, sz})));
+  if(opt.only) for(let i=L.length-1;i>=0;i--){ const c=L[i]; if(!(new RegExp(opt.only,'i')).test(c.t+':'+(c.s||''))) L.splice(i,1); }
+  const grid=h('div','nx-tiles fixed'); grid.style.cssText='display:grid;grid-template-columns:repeat(auto-fill,'+colW+'px);grid-auto-rows:'+ROWH+'px;gap:'+GAP+'px;grid-auto-flow:dense';
+  ov.appendChild(grid); document.body.appendChild(ov);
+  L.forEach((cfg,i)=>{ let el=null; try{ el=tile(cfg, i, L); }catch(e){ el=h('div','st-tile', 'ERROR '+cfg.t+' '+(cfg.s||'')+': '+e.message); } if(!el) return;
+    const tall=cfg.sz==='t'||cfg.sz==='b', wide=cfg.sz==='w'||cfg.sz==='b', n=tall?4:2; el.style.gridRow='span '+n; el.style.gridColumn='span '+(wide?2:1);
+    el.dataset.gal=cfg.t+(cfg.s?':'+cfg.s:'')+':'+cfg.sz; el.title=el.dataset.gal; grid.appendChild(el);
+    const maxH=n*ROWH+(n-1)*GAP; el.style.alignSelf='start'; requestAnimationFrame(()=>{ if(el.getBoundingClientRect().height>maxH+1) trimTile(el, maxH); el.style.alignSelf=''; }); });
+  return L.length; };
 /* ---------- email and people, shared by My Day, Inbox and People ---------- */
 const X=()=>window.__hqx;
 function mailRow(m){ const x=X(); const r=h('div','nx-mrow'+(m.unread?' unread':''));
@@ -6881,7 +6900,6 @@ async function importOne(id, d, who){
   await setDoc(id, fin);
 }
 
-
 /* ---------- contractors (5 Nov 2026) ----------
    A receipt from a contractor who claims expenses (anyone with Can Claim Expenses on in the Service Orders portal)
    is not a Team HQ expense. It goes to that person's own My Expenses in the Service Orders portal: the receipt is
@@ -7054,7 +7072,7 @@ async function tick(force){
         if(c && !(d.claim && Date.now()-(d.claim.at||0)<120e3 && d.claim.by!==S.me)){
           try{ await routeToContractor(id, d, c); }catch(e){ console.warn('expense inbox (contractor)', e); }
         }
-        continue;                                                                     /* not someone on the team: Vanessa sees it below */
+        continue;                     /* not someone on the team: Vanessa sees it below */
       }
       if(who!==S.me && !mineOrAll) continue;
       if(d.claim && Date.now()-(d.claim.at||0)<120e3 && d.claim.by!==S.me) continue;
