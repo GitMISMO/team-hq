@@ -15478,6 +15478,8 @@ function calOn(){ return !!(window.__hqRelay && window.__hqRelay.readOther); }
 function calLoad(force){
   if(!calOn() || CAL.busy) return;
   if(!force && CAL.at && Date.now()-CAL.at < 10*60000) return;
+  /* the team list isn't in yet: wait for it, rather than saving an empty calendar for ten minutes (November 5, 2026) */
+  if(!(S.people||[]).length){ setTimeout(()=>calLoad(true), 2000); return; }
   CAL.busy=true;
   const proj=(window.__hqRelay.config && window.__hqRelay.config.PROJECT) || 'team-hq';
   Promise.all(S.people.map(p=> window.__hqRelay.readOther(proj, 'cal-'+p.id)
@@ -15491,7 +15493,7 @@ function calLoad(force){
       /* a read that failed (not an empty calendar) keeps what was there before, and is never shown as not connected */
         list.forEach(([id,d])=>{ if(d===undefined){ if(CAL.by && CAL.by[id]) by[id]=CAL.by[id]; return; } if(d && Array.isArray(d.ev) && d.ev.length) by[id]=d.ev.map(calEv).filter(Boolean); });
         const failed=list.length>0 && list.every(([id,d])=>d===undefined);
-      CAL.by=by; CAL.busy=false; if(failed){ setTimeout(()=>calLoad(true), 15000); return; } CAL.at=Date.now(); CAL.tried=true;
+      CAL.by=by; CAL.busy=false; if(failed || !Object.keys(by).length){ setTimeout(()=>calLoad(true), 15000); return; } CAL.at=Date.now(); CAL.tried=true;
       if(S.tab==='today') render('today');
     }, ()=>{ CAL.busy=false; CAL.tried=true; });
 }
@@ -17956,5 +17958,5 @@ boot().then(()=>{ paintWho(); renderAll();
 })();
 </script>
 
-<script src="upgrades.js?v=20261105mms4" defer></script>
+<script src="upgrades.js?v=20261105t1" defer></script>
 </body></html>
