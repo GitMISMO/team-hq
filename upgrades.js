@@ -187,6 +187,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -5606,6 +5607,12 @@ function sysMeta(cfg){ const x=X(); const s=x && x.SYS.find(z=>z.k===cfg.s); if(
           if(c.meter!=null && isFinite(c.meter)){ const m=h('div','st-meter'); const f=h('i'); f.style.width=Math.max(0,Math.min(100,c.meter))+'%'; m.appendChild(f); r.appendChild(m); }
           const ln=c.sub || c.text; if(ln) r.appendChild(h('small',null,ln));
           r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) openSystem(s.k, cfg.go||'', '', cfg); }); ls.appendChild(r); }); el.appendChild(ls); } }
+      /* a tall tile with room left: the page's own list, from today on ("The Weekly Run · Fri, Nov 6 · S2 Ep 1") */
+      if(tall && d && Array.isArray(d.cards)){ const real=r=>r && r.length>1 && r[1] && r[1]!=='·';
+        const tb=d.cards.find(c=>c.tbl && Array.isArray(c.rows) && c.rows.filter(real).length>=2);
+        if(tb){ const t00=new Date(); t00.setHours(0,0,0,0); const yr=t00.getFullYear();
+          let rows=tb.rows.filter(real).filter(r=>{ const p=Date.parse(String(r[0]).replace(/^\w{3},\s*/,'')+' '+yr); return isNaN(p) || /\d{4}/.test(r[0]) || p>=+t00 || (+t00-p)>200*864e5; });
+          if(rows.length){ const ls=h('div','nx-kl2 nx-tbl'); ls.appendChild(h('small','nx-ftml', tb.t)); rows.slice(0, SZ==='b'?6:4).forEach(r=>{ const kr=h('div','kr'); kr.appendChild(h('b',null,String(r[0]))); kr.appendChild(h('span',null,r.slice(1).filter(z=>z && z!=='·').join(' · '))); kr.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) openSystem(s.k, cfg.go||'', '', cfg); }); ls.appendChild(kr); }); el.appendChild(ls); } } }
       if(det && d && d.secs){ const sl=Object.keys(d.secs).filter(n=>n!==cfg.sec && d.secs[n].n>0).slice(0, SZ==='b'?6:4); if(sl.length){ const ls=h('div','nx-kl2'); sl.forEach(n=>{ const r=h('div','kr'); r.appendChild(h('b',null,String(d.secs[n].n))); r.appendChild(h('span',null,n)); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) openSystem(s.k, cfg.go, n, cfg); }); ls.appendChild(r); }); el.appendChild(ls); } } }
     const nt=h('div','st-next'); nt.append((x.SHORT[s.k]||s.n)+(cfg.go && wide?' · '+cfg.go:'')+(d ? ' · '+x.ago(d.at) : c ? ' · checked '+x.ago(c.at) : '')); nt.appendChild(h('b','opn', opnTxt(cfg))); el.appendChild(nt);
   };
