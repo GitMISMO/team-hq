@@ -193,6 +193,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -5039,6 +5040,10 @@ function settleBoxes(list, first){ const done=[]; const hit=(a,b)=>a.x<b.x+b.w &
   return done; }
 /* every tile of a size is the same height; a tile with more than fits loses list rows (then footer hints) until it fits */
 const NOCUT='.st-top,.nx-tgear,.st-next,.nx-bars,.nx-pills,.nx-avrow,.nx-sysh,svg,.ring,.nx-env';
+function calmTile(t){ if(!t.isConnected) return; t.classList.remove('nx-calm-auto'); const nx=[...t.children].find(k=>k.classList.contains('st-next') && !k.hidden && k.getClientRects().length);
+  const kids=[...t.children].filter(k=>k!==nx && !k.hidden && k.getClientRects().length && !k.classList.contains('nx-tgear') && !k.classList.contains('st-top') && getComputedStyle(k).position!=='absolute'); if(!kids.length) return;
+  const bottom=Math.max(...kids.map(k=>k.getBoundingClientRect().bottom)), r=t.getBoundingClientRect(); const end=nx ? nx.getBoundingClientRect().top : r.bottom-16;
+  if(end-bottom>90) t.classList.add('nx-calm-auto'); }
 function trimTile(t, maxH){ for(let g=0; g<14 && t.getBoundingClientRect().height>maxH+1; g++){
       let best=null, bb=-1;
       /* only rows of a list (three or more alike, side by side in the same box) are dropped, the last one first,
@@ -5074,6 +5079,7 @@ function packTiles(grid, L){
     const fixed=cols()>=2; const maxH=min*ROW+(min-1)*GAP; grid.classList.toggle('fixed', fixed);
     /* on the grid nothing may run past the tile's edge, not even a few pixels */
     if(fixed && hgt>maxH+1) trim(t, maxH);
+    if(fixed) requestAnimationFrame(()=>calmTile(t));
     t.style.alignSelf='';
     /* on the grid every tile is exactly its size; stacked on a phone it takes what its contents need */
     const n=fixed ? min : Math.max(min, Math.ceil((hgt+GAP-SLACK)/(ROW+GAP))); t.dataset.n=n; const pin=pinOf(t);
@@ -5602,7 +5608,7 @@ function sysMeta(cfg){ const x=X(); const s=x && x.SYS.find(z=>z.k===cfg.s); if(
     else if(F.length){ lead.appendChild(figEl(F[0], true)); F=F.slice(1); }
     else if(G.length && small){ lead.appendChild(gaugeEl(G[0], false)); }
     else if(!d){ el.classList.add('nx-filling'); const sk=h('div','nx-skel'); sk.appendChild(h('i','a')); sk.appendChild(h('i','b')); sk.appendChild(h('i','c')); lead.appendChild(sk); }
-    else if(d.empty){ const b0=h('div','st-big'); b0.append('0'); b0.appendChild(h('small',null,'waiting')); lead.appendChild(b0); lead.appendChild(h('div','st-sub', 'Nothing on '+(cfg.go || (x.SHORT[s.k]||s.n))+' right now.')); }
+    else if(d.empty){ lead.appendChild(h('div','nx-chd', s.d || (x.SHORT[s.k]||s.n))); lead.appendChild(h('div','st-sub', 'Open it to see what’s new.')); }
     else { const cs0=d.cards||[], intro=cs0[0] && cs0[0].head ? cs0[0] : null;
       dirL=cs0.filter(c=>c!==intro && !c.mt && !c.big && !c.tbl && !c.fig && c.t && c.t.length<=40 && !/^(today|this week|at a glance)$/i.test(c.t));
       if(dirL.length>=2){ const b=h('div','st-big'); b.append(String(dirL.length)); b.appendChild(h('small',null, intro ? intro.t : 'on '+(cfg.go||'the page'))); lead.appendChild(b); }
@@ -5697,7 +5703,7 @@ window.__hqGallery=function(opt){ opt=opt||{}; const x=X(); const colW=opt.w||20
   L.forEach((cfg,i)=>{ let el=null; try{ el=tile(cfg, i, L); }catch(e){ el=h('div','st-tile', 'ERROR '+cfg.t+' '+(cfg.s||'')+': '+e.message); } if(!el) return;
     const tall=cfg.sz==='t'||cfg.sz==='b', wide=cfg.sz==='w'||cfg.sz==='b', n=tall?4:2; el.style.gridRow='span '+n; el.style.gridColumn='span '+(wide?2:1);
     el.dataset.gal=cfg.t+(cfg.s?':'+cfg.s:'')+':'+cfg.sz; el.title=el.dataset.gal; grid.appendChild(el);
-    const maxH=n*ROWH+(n-1)*GAP; el.style.alignSelf='start'; requestAnimationFrame(()=>{ if(el.getBoundingClientRect().height>maxH+1) trimTile(el, maxH); el.style.alignSelf=''; }); });
+    const maxH=n*ROWH+(n-1)*GAP; el.style.alignSelf='start'; requestAnimationFrame(()=>{ if(el.getBoundingClientRect().height>maxH+1) trimTile(el, maxH); el.style.alignSelf=''; requestAnimationFrame(()=>calmTile(el)); }); });
   return L.length; };
 /* ---------- email and people, shared by My Day, Inbox and People ---------- */
 const X=()=>window.__hqx;
@@ -6173,6 +6179,7 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .st-tile.sz-t .mtd{flex-direction:column;gap:10px}.st-tile.sz-t .mtd-cal{flex:0 0 auto;width:64px}.st-tile.sz-t .mtd-m{width:100%}
 .st-tile.t-findtime.sz-s .nx-ftv b{font-size:15px}.st-tile.t-findtime.sz-w .nx-ftv{display:grid;grid-template-columns:1fr auto;column-gap:10px;align-items:center}.st-tile.t-findtime.sz-w .nx-ftv > *:not(.nx-ftb){grid-column:1}.st-tile.t-findtime.sz-w .nx-ftv .nx-ftb{grid-column:2;grid-row:1 / span 3}
 .nx-hlg .t em{max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-tile.nx-calm-auto{justify-content:center}.st-tile.nx-calm-auto > .st-top{position:absolute;top:16px;left:18px;right:18px}.st-tile.nx-calm-auto > .st-next{position:absolute;bottom:16px;left:18px;right:18px;margin-top:0}
 .st-tile .mic-locw{font-size:12.5px;line-height:1.35;margin-top:-4px}
 /* Small and Tall tiles: the countdown stays beside the date, and the place line takes at most two lines */
 .st-tile:not(.sz-w):not(.sz-b) .mic-row{flex-wrap:nowrap;gap:10px;align-items:center}.st-tile:not(.sz-w):not(.sz-b) .mic-ep{flex:1 1 0}.st-tile:not(.sz-w):not(.sz-b) .mic-loc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
