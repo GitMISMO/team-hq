@@ -185,6 +185,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -5039,7 +5040,11 @@ function trimTile(t, maxH){ for(let g=0; g<14 && t.getBoundingClientRect().heigh
         const last=vis[vis.length-1]; const alike=vis.filter(k=>k.tagName===last.tagName && k.className===last.className); if(alike.length<2 || alike.length<Math.min(3, vis.length)) return;
         const b=last.getBoundingClientRect(); if(b.height>=12 && b.bottom>bb){ bb=b.bottom; best=last; } });
       /* no list left to shorten: drop the tile's extra footer lines (a hint like "Raise something…") rather than cut text off */
-      if(!best){ const opt=[...t.querySelectorAll('.mic-steps,.st-next')].filter(k=>!k.hidden && k.getClientRects().length).pop(); if(opt){ opt.hidden=true; continue; } }
+      /* no list left: first tighten the spacing, then (on an app's tile) drop a line of extra text — the footer that says
+         which app it's from goes last (November 5, 2026: Checks for Later lost "MISMO Money") */
+      if(!best && !t.classList.contains('tight')){ t.classList.add('tight'); continue; }
+      if(!best && t.classList.contains('t-sys')){ const ex=[...t.querySelectorAll('.nx-glance,.st-sub,.nx-ctx')].filter(k=>!k.hidden && k.getClientRects().length).pop(); if(ex){ ex.hidden=true; continue; } }
+      if(!best){ const vis=k=>k && !k.hidden && k.getClientRects().length; const ms=t.querySelector('.mic-steps'), nx=[...t.querySelectorAll('.st-next')].filter(vis).pop(); const opt=vis(ms) ? ms : nx; if(opt){ opt.hidden=true; continue; } }
       if(!best) return false; if(best.matches('.mtd-r')) best.hidden=true; else best.remove(); }
     return t.getBoundingClientRect().height<=maxH+1; };
 function packTiles(grid, L){
@@ -5342,33 +5347,35 @@ function tile(cfg, i, L){
     meta.go=()=>open('mine'); }
   else if(cfg.t==='day'){ let day=nextWorkday(t0); const now=Date.now(); if(+day===+t0 && now>etAt(day,17)) day=nextWorkday(addD(day,1));
     top.firstChild.textContent=+day===+t0?'Your Day':'Your '+WDL[day.getDay()];
-    const ev=(cal(me())||[]).filter(e=>e.e>+day && e.s<+day+864e5 && e.show!=='free' && !e.all).sort((a,b)=>a.s-b.s);
+    const calIn=!!cal(me()); const ev=(cal(me())||[]).filter(e=>e.e>+day && e.s<+day+864e5 && e.show!=='free' && !e.all).sort((a,b)=>a.s-b.s);
     const nx=ev.find(e=>e.e>now), cur=ev.find(e=>e.s<=now && e.e>now);
-    const row=h('div','mic-row'); const ep=h('div','mic-ep');
-    ep.appendChild(h('b',null, cur ? 'In: '+(cur.t||'Busy') : nx ? 'Next: '+(nx.t||'Busy') : ev.length ? 'Meetings done' : 'No meetings'));
-    ep.appendChild(h('small',null, cur ? 'until '+tmL(cur.e) : nx ? tmL(nx.s)+(+day!==+t0?' '+WD[day.getDay()]:'') : 'the day is yours'));
+    const row=h('div','mic-row'+(wide?'':' stack')); const ep=h('div','mic-ep');
+    ep.appendChild(h('b',null, !calIn ? 'Getting your calendar…' : cur ? 'In: '+(cur.t||'Busy') : nx ? 'Next: '+(nx.t||'Busy') : ev.length ? 'Meetings done' : 'No meetings'));
+    ep.appendChild(h('small',null, !calIn ? 'from Outlook' : cur ? 'until '+tmL(cur.e) : nx ? tmL(nx.s)+(+day!==+t0?' '+WD[day.getDay()]:'') : 'the day is yours'));
     row.appendChild(ep);
     if(nx && !cur){ const ms=Math.max(0,nx.s-now), dd=Math.floor(ms/864e5), hh=Math.floor(ms%864e5/36e5), mm=Math.floor(ms%36e5/6e4); const cd=h('div','mic-cd'); (dd?[[dd,'Days'],[hh,'Hrs']]:[[hh,'Hrs'],[mm,'Min']]).forEach(([v,l])=>{ const sp=h('span'); sp.appendChild(h('b',null,String(v).padStart(2,'0'))); sp.appendChild(h('small',null,l)); cd.appendChild(sp); }); row.appendChild(cd); }
     el.appendChild(row);
     const cap=SZ==='b'?10:tall?6:wide?4:2; const ag=h('div','nx-ag'+(wide?'':' one')); ev.slice(0,cap).forEach(e=>{ const r=h('div','ae'+(e.e<now?' past':'')+(e.s<=now&&e.e>now?' on':'')); r.appendChild(h('span','t',tm(e.s))); r.appendChild(h('span','n',e.t||'Busy')); ag.appendChild(r); }); if(ev.length>cap) ag.appendChild(h('div','ae more','+'+(ev.length-cap)+' more')); el.appendChild(ag);
     if(SZ==='b'){ const w9=etAt(day,9), w5=etAt(day,17); const gaps=[]; let c2=Math.max(w9, +day===+t0?now:0); ev.filter(e=>e.show!=='oof').map(e=>[Math.max(e.s,w9),Math.min(e.e,w5)]).filter(z=>z[1]>z[0]).sort((a,b)=>a[0]-b[0]).concat([[w5,w5]]).forEach(([a,b2])=>{ if(a-c2>=30*6e4) gaps.push([c2,a]); c2=Math.max(c2,b2); });
       if(gaps.length){ const gl=h('div','nx-gaps'); gl.appendChild(h('small',null,'Open Time to Get Things Done')); const gw=h('div','gw'); gaps.slice(0,6).forEach(([a,b2])=>{ const m=Math.round((b2-a)/6e4); const g=h('span'); g.appendChild(h('b',null,tm(a)+'–'+tm(b2))); g.append(' '+(m>=60?(Math.round(m/30)/2)+'h':m+'m')); gw.appendChild(g); }); gl.appendChild(gw); el.appendChild(gl); } }
-    const Ld=x && x.dayLoad ? x.dayLoad(me(), day) : null; if(Ld){ const n=h('div','st-next'); n.appendChild(h('b',null,(Math.round(Ld.free/30)/2)+'h open')); n.append(' between 9 and 5 · '+ev.length+(ev.length===1?' meeting':' meetings')); el.appendChild(n); }
+    const Ld=x && x.dayLoad ? x.dayLoad(me(), day) : null; if(Ld){ const n=h('div','st-next'); n.appendChild(h('b',null,(Math.round(Ld.free/30)/2)+'h open')); n.append(' 9–5 · '+ev.length+(ev.length===1?' meeting':' meetings')); el.appendChild(n); }
     meta.go=()=>open('cal'); }
   else if(cfg.t==='email'){ const ok=x && x.MAIL.state==='ok'; const items=ok ? x.mailItems().filter(m=>m.flagged||m.important||m.unread) : [];
     const art=h('div','nx-env'); art.innerHTML='<svg viewBox="0 0 64 44"><rect x="2" y="2" width="60" height="40" rx="4"/><path d="M4 5l28 21L60 5"/></svg>'; if(ok && items.length) art.appendChild(h('b',null,String(items.length))); el.appendChild(art);
     if(!ok){ el.appendChild(h('div','st-sub','Connect your Outlook email and what you’ve flagged or need to read shows up here.')); }
-    else { const fl=items.filter(m=>m.flagged).length; const im=items.filter(m=>m.important && !m.flagged).length, un=items.filter(m=>m.unread).length; el.appendChild(h('div','st-sub', items.length ? [fl?fl+' flagged':'', im?im+' important':'', un?un+' unread':''].filter(Boolean).join(' · ') : 'Nothing flagged or waiting')); const show=items.slice(0, SZ==='b'?6:tall?4:wide?2:1); if(show.length>1 || tall){ const ls=h('div','nx-ml2'); show.forEach(m=>{ const r=h('div','mr'); r.appendChild(h('b',null,m.from)); r.appendChild(h('span',null,m.subject)); if(m.link) r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) window.open(m.link,'_blank','noopener'); }); ls.appendChild(r); }); el.appendChild(ls); } else if(items[0]){ const n=h('div','st-next'); n.appendChild(h('b',null,items[0].from)); n.append(' · '+items[0].subject); el.appendChild(n); } }
+    else { const fl=items.filter(m=>m.flagged).length; const im=items.filter(m=>m.important && !m.flagged).length, un=items.filter(m=>m.unread).length; el.appendChild(h('div','st-sub', items.length ? [fl?fl+' flagged':'', im?im+' important':'', un?un+' unread':''].filter(Boolean).join(' · ') : 'All caught up — nothing flagged, important or unread')); const show=items.slice(0, SZ==='b'?6:tall?4:wide?2:1); if(show.length>1 || tall){ const ls=h('div','nx-ml2'); show.forEach(m=>{ const r=h('div','mr'); r.appendChild(h('b',null,m.from)); r.appendChild(h('span',null,m.subject)); if(m.link) r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) window.open(m.link,'_blank','noopener'); }); ls.appendChild(r); }); el.appendChild(ls); } else if(items[0]){ const n=h('div','st-next'); n.appendChild(h('b',null,items[0].from)); n.append(' · '+items[0].subject); el.appendChild(n); } }
     meta.go=()=>open('inbox'); }
   else if(cfg.t==='asks'){ const A=myAsks(), nw=A.filter(a=>(a.state||'New')==='New');
     if(nw.length) top.appendChild(h('span','st-pill hot', nw.length+' new'));
     const b=h('div','st-big'); b.append(String(A.length)); b.appendChild(h('small',null, me()==='jonna'?'asks for you':'open asks')); el.appendChild(b);
     if(A[0]){ const n=h('div','st-next'); n.append('Newest: '); n.appendChild(h('b',null,A.slice().sort((a,c)=>(c.at||0)-(a.at||0))[0].t)); el.appendChild(n); } else el.appendChild(h('div','st-sub','Nothing waiting. Ask for something any time.'));
     meta.go=()=>open('mine'); }
-  else if(cfg.t==='load'){ let mon=addD(t0, -((t0.getDay()+6)%7)); if(t0.getDay()%6===0) mon=addD(mon,7); const D=[0,1,2,3,4].map(k=>addD(mon,k));
+  else if(cfg.t==='load'){ let d0=nextWorkday(t0); if(+d0===+t0 && Date.now()>etAt(d0,17)) d0=nextWorkday(addD(d0,1)); const D=[d0]; while(D.length<5) D.push(nextWorkday(addD(D[D.length-1],1)));
+    if(!cal(me())){ el.appendChild(h('div','st-sub','Getting your calendar from Outlook…')); meta.go=()=>open('cal'); }
+    else {
     const bars=h('div','nx-bars'); let free=0; const LD=D.map(d=>x && x.dayLoad ? x.dayLoad(me(), d) : null); const top=Math.max(2, ...LD.map(z=>z?z.busy/60:0)); D.forEach((d,di)=>{ const Ld=LD[di]; const hrs=Ld?Ld.busy/60:0; if(Ld) free+=Ld.free; const c=h('div','bc'+(+d===+t0?' on':'')); const bb=h('i'); bb.style.height=Math.max(4, Math.min(82, hrs/top*82))+'%'; const bw=h('div','bw'); bw.appendChild(h('b',null,(Math.round(hrs*2)/2)+'h')); bw.appendChild(bb); c.appendChild(bw); c.appendChild(h('span',null,WD[d.getDay()])); bars.appendChild(c); }); el.appendChild(bars);
-    el.appendChild(h('div','st-next', (Math.round(free/30)/2)+' hours open this week between meetings'));
-    meta.go=()=>open('cal'); }
+    const busiest=LD.reduce((bi,z,k)=>z && (!LD[bi] || z.busy>LD[bi].busy) ? k : bi, 0); const bs=h('div','st-next'); bs.appendChild(h('b',null,(Math.round(free/30)/2)+'h open')); bs.append(LD[busiest] && LD[busiest].busy>=120 ? ' · '+WDL[D[busiest].getDay()]+' is busiest' : ' over the next 5 days'); el.appendChild(bs);
+    meta.go=()=>open('cal'); } }
   else if(cfg.t==='people' || cfg.t==='team'){ const ids=cfg.t==='team' ? people().filter(p=>p.id!==me()).map(p=>p.id) : (x ? x.myPeople() : []);
     if(!ids.length){ el.appendChild(h('div','st-sub','Choose your direct reports, or anyone you keep an eye on.')); const c=btn('st-act','Choose My People', e=>{ e.stopPropagation(); x && x.pickPeople(); }); el.appendChild(c); meta.go=()=>x && x.pickPeople(); }
     else { const row=h('div','nx-avrow'); const tally={free:0,busy:0,away:0,off:0,unk:0}; ids.forEach(id=>{ const pp=person(id); if(!pp) return; const s2=statusOf(pp); tally[s2.k]=(tally[s2.k]||0)+1; const w=h('span','nx-avw'); w.appendChild(av(id,34)); w.appendChild(h('i','nx-dot '+s2.k)); w.title=pp.name+' · '+s2.t+(s2.s?' '+s2.s:''); row.appendChild(w); }); el.appendChild(row);
@@ -5390,7 +5397,7 @@ function tile(cfg, i, L){
       if(tall || wide){ const more=(S.dates||[]).filter(d=>d!==kd && d.d && days(d.d)>=0).sort((a,b)=>a.d<b.d?-1:1).slice(0, SZ==='b'?5:3); if(more.length){ const ls=h('div','nx-kl2'); more.forEach(d=>{ const r=h('div','kr'); r.appendChild(h('b',null,days(d.d)+'d')); r.appendChild(h('span',null,d.t)); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit && window.__editDate) window.__editDate(d); }); ls.appendChild(r); }); el.appendChild(ls); } }
       meta.go=()=>openClassic('dates'); } }
   else if(cfg.t==='meeting'){ let md=''; try{ const nm=window.__mtg && window.__mtg.next && window.__mtg.next(); md=typeof nm==='string'?nm:''; }catch(e){}
-    if(md){ const n=Math.max(0,days(md)); const cd=h('div','mic-cd'); [[n,n===1?'Day':'Days']].forEach(([v,l])=>{ const sp=h('span'); sp.appendChild(h('b',null,String(v).padStart(2,'0'))); sp.appendChild(h('small',null,l)); cd.appendChild(sp); }); const row=h('div','mic-row'); const ep=h('div','mic-ep'); ep.appendChild(h('b',null,WDL[pd(md).getDay()]+', '+fmt(md))); const items=(S.agenda||[]).filter(a=>a.mtg===md && !a.done); ep.appendChild(h('small',null, items.length+(items.length===1?' item':' items')+' on the agenda')); { const ip=(S.dates||[]).find(d=>d.d===md && /meeting/i.test(d.k||'') && d.loc); if(ip){ const miss=people().map(p=>p.id).filter(id=>(ip.who||[]).indexOf(id)<0).map(first); ep.appendChild(h('small','mic-loc','In person · '+ip.loc+(miss.length ? ' · '+miss.join(', ')+' out' : ''))); } } row.appendChild(ep); row.appendChild(cd); el.appendChild(row);
+    if(md){ const n=Math.max(0,days(md)); const cd=h('div','mic-cd'); [[n,n===1?'Day':'Days']].forEach(([v,l])=>{ const sp=h('span'); sp.appendChild(h('b',null,String(v).padStart(2,'0'))); sp.appendChild(h('small',null,l)); cd.appendChild(sp); }); const row=h('div','mic-row'); const ep=h('div','mic-ep'); ep.appendChild(h('b',null,(wide?WDL:WD)[pd(md).getDay()]+', '+fmt(md))); const items=(S.agenda||[]).filter(a=>a.mtg===md && !a.done); ep.appendChild(h('small',null, items.length+(items.length===1?' item':' items')+' on the agenda')); { const ip=(S.dates||[]).find(d=>d.d===md && /meeting/i.test(d.k||'') && d.loc); if(ip){ const miss=people().map(p=>p.id).filter(id=>(ip.who||[]).indexOf(id)<0).map(first); var locEl=h('div','mic-loc mic-locw','In person · '+ip.loc+(miss.length ? ' · '+miss.join(', ')+' out' : '')); } } row.appendChild(ep); row.appendChild(cd); el.appendChild(row); if(typeof locEl!=='undefined' && locEl) el.appendChild(locEl);
       if(tall){ const ai=(S.agenda||[]).filter(a=>a.mtg===md && !a.done).slice(0,5); if(ai.length){ const ls=h('div','nx-kl2'); ai.forEach(a=>{ const r=h('div','kr'); r.appendChild(h('b',null,a.kind||'Item')); r.appendChild(h('span',null,a.t)); ls.appendChild(r); }); el.appendChild(ls); } }
       const st2=h('div','mic-steps'); ['Before Business','Team Projects','Around the Room','Good of the Order'].forEach(z=>st2.appendChild(h('span',null,z))); el.appendChild(st2); }
     else el.appendChild(h('div','st-sub','No team meeting on the calendar.'));
@@ -5541,7 +5548,7 @@ function drawCard(el, top, c, SZ, lvl, s, cfg, d){ const x=X(), det=lvl==='det',
   const dayStrip=/^(today|this week|the week ahead)$/i.test(c.t);
   if(dayStrip && mtDay(el, top, c, SZ, s, cfg, d)) return;
   if(dayStrip){ top.appendChild(h('span','st-pill', c.t)); if(c.head) el.appendChild(h('div','nx-chd', c.head)); if(c.text) el.appendChild(h('div','nx-ctx nx-day', c.text)); const nt=h('div','st-next'); nt.append((x.SHORT[s.k]||s.n)+(cfg.go?' · '+cfg.go:'')+(d && d.at ? ' · '+x.ago(d.at) : '')); nt.appendChild(h('b','opn', opnTxt(cfg))); el.appendChild(nt); return; }
-  top.firstChild.textContent=c.t;
+  top.firstChild.textContent=c.t; { const ti=h('span','nx-tsym'); ti.innerHTML=x.symbol(s.k); top.appendChild(ti); }
   if(c.pill) top.appendChild(h('span','st-pill'+(c.hot?' hot':''), c.pill));
   if(c.big){ const b=h('div','st-big'); b.append(c.big); if(c.unit) b.appendChild(h('small',null,c.unit)); el.appendChild(b); }
   else if(c.head){ el.appendChild(h('div','nx-chd', c.head)); }
@@ -5561,24 +5568,31 @@ function sysMeta(cfg){ const x=X(); const s=x && x.SYS.find(z=>z.k===cfg.s); if(
     if(mmsHome(el, top, SZ, s, cfg, d)) return;
     const card=pickCard(cfg, d);
     if(card && !cfg.sec){ drawCard(el, top, card, SZ, lvl, s, cfg, d); return; }
-    if(cfg.go) top.appendChild(h('span','st-pill', cfg.sec || cfg.go));
     const cs=cfg.go && cfg.sec ? x.countFor(s.k, cfg.go, cfg.sec) : null; const c0=cs || (cfg.go && x.countFor(s.k, cfg.go)); const c=cs ? cs : (c0 && c0.n>0 ? c0 : null);
     let F=d ? d.figs.slice() : [], G=d ? d.gauges.slice() : [];
     if(Array.isArray(cfg.pick) && cfg.pick.length){ F=F.filter(f=>cfg.pick.indexOf('f:'+f.n)>=0); G=G.filter(g=>cfg.pick.indexOf('g:'+g.n)>=0); }
     if(d && !F.length && !G.length && !(Array.isArray(cfg.pick) && cfg.pick.length)){ /* a page with no headline numbers: use the counts on the system's own menu instead */
       F=x.navOf(s.k).map(n=>({n, c:x.countFor(s.k,n)})).filter(z=>z.c && z.c.n>0 && z.n!==cfg.go).map(z=>({n:z.n, v:String(z.c.n), s:'', tone:''})); }
     const small=SZ==='s', wide=SZ==='w'||SZ==='b', tall=SZ==='t'||SZ==='b';
+    const isZero=f=>/^[−\-]?[$€£]?0+(\.0+)?%?$/.test(String(f.v||'').trim());
+    if(F.length>1 && isZero(F[0])){ const k=F.findIndex(f=>!isZero(f)); if(k>0) F.unshift(F.splice(k,1)[0]); }
     const nF=small ? 1 : det ? (SZ==='b'?6:wide?4:tall?4:2) : (wide?3:tall?2:1), nG=small ? 0 : det ? (SZ==='b'?6:wide?4:tall?4:2) : (SZ==='b'?3:wide?3:tall?2:0);
-    const head=h('div','nx-sysh'); const sym=h('div','nx-sym sm'); sym.innerHTML=x.symbol(s.k); head.appendChild(sym);
+    /* the app's mark sits small beside its name, so the numbers get the room (November 5, 2026) */
+    { const ti=h('span','nx-tsym'); ti.innerHTML=x.symbol(s.k); top.appendChild(ti); }
+    const head=h('div','nx-sysh');
     const lead=h('div','nx-syl');
-    if(c){ const b=h('div','st-big'); b.append(String(c.n)); b.appendChild(h('small',null, cfg.sec ? (c.n===1?'item':'items') : cfg.go)); lead.appendChild(b); if(cfg.sec && c.x) lead.appendChild(h('div','st-sub', c.x)); }
+    if(c && !(cfg.go && !cfg.sec && F.length)){ const b=h('div','st-big'); b.append(String(c.n)); b.appendChild(h('small',null, cfg.sec ? (c.n===1?'item':'items') : cfg.go)); lead.appendChild(b); if(cfg.sec && c.x) lead.appendChild(h('div','st-sub', c.x)); }
     else if(F.length){ lead.appendChild(figEl(F[0], true)); F=F.slice(1); }
     else if(G.length && small){ lead.appendChild(gaugeEl(G[0], false)); }
     else if(!d){ el.classList.add('nx-filling'); const sk=h('div','nx-skel'); sk.appendChild(h('i','a')); sk.appendChild(h('i','b')); sk.appendChild(h('i','c')); lead.appendChild(sk); }
     else if(d.empty){ const b0=h('div','st-big'); b0.append('0'); b0.appendChild(h('small',null,'waiting')); lead.appendChild(b0); lead.appendChild(h('div','st-sub', 'Nothing on '+(cfg.go || (x.SHORT[s.k]||s.n))+' right now.')); }
     else lead.appendChild(h('div','st-sub', s.d));
     head.appendChild(lead); el.appendChild(head);
+    if(cfg.go && lead.textContent.toLowerCase().indexOf(String(cfg.sec || cfg.go).toLowerCase())<0) top.appendChild(h('span','st-pill', cfg.sec || cfg.go));
+    /* the page's own one-line summary ("10 things need you, 2 overdue; start with …") says what the number means */
+    { const gl=d && (d.cards||[]).find(c=>/^at a glance$/i.test(c.t||'') && c.text); if(gl && !(Array.isArray(cfg.pick) && cfg.pick.length)){ const g=h('div','nx-glance'+(small?' sm':''), String(gl.text).replace(/\s+([;,.])/g,'$1').replace(/\s+/g,' ').trim()); el.appendChild(g); } }
     if(!small){
+      F=F.filter(f=>!isZero(f));
       const fr=F.slice(0, Math.max(0, nF-1)); if(fr.length){ const row=h('div','nx-fgr'); fr.forEach(f=>row.appendChild(figEl(f, det))); el.appendChild(row); }
       const gr=G.slice(0, nG); if(gr.length){ const row=h('div','nx-ggr'); gr.forEach(g=>row.appendChild(gaugeEl(g, det && gr.length<=3))); el.appendChild(row); }
       /* the page's own highlight tiles under the numbers ("MISMO Matters · November · 0 of 13 approved") */
@@ -5590,7 +5604,7 @@ function sysMeta(cfg){ const x=X(); const s=x && x.SYS.find(z=>z.k===cfg.s); if(
           const ln=c.sub || c.text; if(ln) r.appendChild(h('small',null,ln));
           r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) openSystem(s.k, cfg.go||'', '', cfg); }); ls.appendChild(r); }); el.appendChild(ls); } }
       if(det && d && d.secs){ const sl=Object.keys(d.secs).filter(n=>n!==cfg.sec && d.secs[n].n>0).slice(0, SZ==='b'?6:4); if(sl.length){ const ls=h('div','nx-kl2'); sl.forEach(n=>{ const r=h('div','kr'); r.appendChild(h('b',null,String(d.secs[n].n))); r.appendChild(h('span',null,n)); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) openSystem(s.k, cfg.go, n, cfg); }); ls.appendChild(r); }); el.appendChild(ls); } } }
-    const nt=h('div','st-next'); nt.append(d ? 'From '+(cfg.go||(x.SHORT[s.k]||s.n))+' · '+x.ago(d.at) : c ? 'Checked '+x.ago(c.at) : 'Opens right here'); nt.appendChild(h('b','opn', opnTxt(cfg))); el.appendChild(nt);
+    const nt=h('div','st-next'); nt.append((x.SHORT[s.k]||s.n)+(cfg.go?' · '+cfg.go:'')+(d ? ' · '+x.ago(d.at) : c ? ' · checked '+x.ago(c.at) : '')); nt.appendChild(h('b','opn', opnTxt(cfg))); el.appendChild(nt);
   };
   meta.go=()=>openSystem(s.k, cfg.go||'', cfg.sec||'', cfg);
   return meta; }
@@ -6092,6 +6106,13 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .st-tile .mic-row{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
 .st-tile .mic-ep{flex:1 1 180px;min-width:0;display:flex;flex-direction:column;gap:2px}.st-tile .mic-ep b{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.st-tile .mic-ep small{font-size:12.5px;color:rgba(255,255,255,.7)}
 .st-tile .mic-cd{display:flex;gap:6px}
+.st-tile:not(.sz-w):not(.sz-b) .mic-row.stack{flex-direction:column;align-items:stretch;gap:9px}.st-tile .mic-row.stack .mic-ep{flex:0 0 auto}.st-tile .mic-row.stack .mic-ep b{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.25}.st-tile .mic-row.stack .mic-cd span{flex:1}
+.st-tile.tight{row-gap:6px}.st-tile.tight .st-big{font-size:32px}.st-tile.tight .st-next{padding-top:6px}.st-tile.tight .nx-fgr{gap:5px}.st-tile.tight .nx-fgr .nx-fg{padding-top:5px;padding-bottom:5px}.st-tile.tight .nx-glance{-webkit-line-clamp:2}
+.st-top .nx-tsym{order:-1;flex:0 0 auto;width:17px;height:17px;color:var(--k);opacity:.9}.st-top .nx-tsym svg{width:100%;height:100%;display:block}
+.nx-syl .nx-fg.big span{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.25}
+.nx-glance{font-size:12.5px;line-height:1.4;color:rgba(255,255,255,.78);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;flex:0 0 auto}.nx-glance.sm{-webkit-line-clamp:2;font-size:12px}
+.st-tile.sz-t .nx-fgr .nx-fg span{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.25}
+.st-tile .mic-locw{font-size:12.5px;line-height:1.35;margin-top:-4px}
 /* Small and Tall tiles: the countdown stays beside the date, and the place line takes at most two lines */
 .st-tile:not(.sz-w):not(.sz-b) .mic-row{flex-wrap:nowrap;gap:10px;align-items:center}.st-tile:not(.sz-w):not(.sz-b) .mic-ep{flex:1 1 0}.st-tile:not(.sz-w):not(.sz-b) .mic-loc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .st-tile .mic-cd span{background:rgba(0,0,0,.25);border:1px solid var(--st-line);border-radius:8px;padding:5px 8px;text-align:center;min-width:50px}
@@ -6290,7 +6311,7 @@ html.nx-tdragging .nx-tiles .st-tile{animation:none!important}
 .nx-tl2 .tr:hover{background:rgba(255,255,255,.12)}.nx-tl2 .tr.done{opacity:0;transform:translateX(20px)}
 .nx-tl2 .ck{flex:0 0 auto;width:18px;height:18px;padding:0;border:1.5px solid rgba(255,255,255,.45);border-radius:50%;background:transparent;color:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
 .nx-tl2 .ck svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:3}.nx-tl2 .ck:hover{border-color:#3ccb7f;color:#3ccb7f}
-.nx-tl2 .tt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nx-tl2 .dd{flex:0 0 auto;font-size:11px;color:rgba(255,255,255,.6);font-weight:700}.nx-tl2 .tr.late .dd{color:#ff8a7a}
+.nx-tl2 .tt{flex:1;min-width:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.3;word-break:break-word}.nx-tl2 .dd{flex:0 0 auto;font-size:11px;color:rgba(255,255,255,.6);font-weight:700}.nx-tl2 .tr.late .dd{color:#ff8a7a}
 .nx-ml2,.nx-pl2,.nx-kl2{display:flex;flex-direction:column;gap:4px}
 .nx-ml2 .mr,.nx-pl2 .pr,.nx-kl2 .kr{display:flex;align-items:baseline;gap:8px;padding:6px 8px;border-radius:6px;background:rgba(255,255,255,.06);font-size:12.5px;min-width:0;cursor:pointer}
 .nx-ml2 .mr:hover,.nx-pl2 .pr:hover,.nx-kl2 .kr:hover{background:rgba(255,255,255,.12)}
