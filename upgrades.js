@@ -3498,7 +3498,7 @@ const st=t=>/^waiting/i.test(t.s||'') ? 'Waiting on Someone' : (t.s||'Not Starte
 const isOpen=t=>st(t)!=='Done';
 const doers=t=>(t.d && t.d.length) ? t.d.slice() : (t.o ? [t.o] : []);
 const txt=v=>String(v||'').replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/\s+/g,' ').trim();
-const put=(c,o)=>window.__put ? window.__put(c,o) : Promise.resolve();
+const put=(c,o,b)=>window.__put ? window.__put(c,o,b) : Promise.resolve();
 
 /* ---------- the meeting ---------- */
 function sel(){ try{ return S.mtgPick || window.__mtg.next(); }catch(e){ return ''; } }
@@ -3636,7 +3636,7 @@ function slideItem(body, s, m){
   card.appendChild(g);
   const acts=h('div','mt-acts');
   const cov=h('label','mt-cov'); const cb=h('input'); cb.type='checkbox'; cb.checked=!!x.done; cov.appendChild(cb); cov.append('Covered'); acts.appendChild(cov);
-  const sv=btn('btn','Save', async()=>{ sv.disabled=true; await put('agenda', Object.assign({}, x, {outcome:i1.value.trim(), notes:i2.value.trim(), done:cb.checked?1:0})); sv.textContent='Saved'; setTimeout(()=>{ sv.textContent='Save'; sv.disabled=false; }, 1400); });
+  const sv=btn('btn','Save', async()=>{ sv.disabled=true; await put('agenda', Object.assign({}, x, {outcome:i1.value.trim(), notes:i2.value.trim(), done:cb.checked?1:0}), x); sv.textContent='Saved'; setTimeout(()=>{ sv.textContent='Save'; sv.disabled=false; }, 1400); });
   acts.appendChild(sv);
   acts.appendChild(btn('btn ghost','Make It a Task', ()=>{ window.__edit && window.__edit({t:x.t, o:x.who||S.me||'', d:[], r:'', w:'', s:'Not Started', p:'Normal', due:'', notes:'', rail:0, ord:(S.tasks.length+1)*10, at:Date.now()}); }));
   card.appendChild(acts);
@@ -3676,7 +3676,7 @@ function slidePerson(body, s, m){
   const up=h('div','mt-up'); up.appendChild(h('h4',null,'Their Update'));
   const ta=h('textarea'); ta.rows=3; ta.placeholder='What '+p.name.split(' ')[0]+' shared — wins, what’s next, where they need help'; ta.value=u ? txt(u.notes) : ''; up.appendChild(ta);
   const sv=btn('btn','Save Update', async()=>{ sv.disabled=true; const rec=u ? Object.assign({}, u, {notes:ta.value.trim()}) : {t:'Around the Room: '+p.name, kind:'Update', who:p.id, mtg:m, mins:0, notes:ta.value.trim(), outcome:'', info:'', done:1, ord:900+people().indexOf(p), at:Date.now()};
-    await put('agenda', rec); sv.textContent='Saved'; setTimeout(()=>{ sv.textContent='Save Update'; sv.disabled=false; }, 1400); });
+    await put('agenda', rec, u); sv.textContent='Saved'; setTimeout(()=>{ sv.textContent='Save Update'; sv.disabled=false; }, 1400); });
   up.appendChild(sv); right.appendChild(up);
   w.appendChild(right);
   slideHead(body, 3, p.name, (s.i+1)+' of '+people().length+' around the room');
@@ -3688,7 +3688,7 @@ function slideGood(body, s, m){
   const ta=h('textarea'); ta.rows=6; ta.placeholder='Notes from the open floor'; ta.value=g ? txt(g.notes) : ''; card.appendChild(ta);
   const acts=h('div','mt-acts');
   const sv=btn('btn','Save', async()=>{ sv.disabled=true; const rec=g ? Object.assign({}, g, {notes:ta.value.trim()}) : {t:'For the Good of the Order', kind:'Good of the Order', who:S.me||'', mtg:m, mins:0, notes:ta.value.trim(), outcome:'', info:'', done:1, ord:999, at:Date.now()};
-    await put('agenda', rec); sv.textContent='Saved'; setTimeout(()=>{ sv.textContent='Save'; sv.disabled=false; }, 1400); });
+    await put('agenda', rec, g); sv.textContent='Saved'; setTimeout(()=>{ sv.textContent='Save'; sv.disabled=false; }, 1400); });
   acts.appendChild(sv);
   acts.appendChild(btn('btn ghost','Add a Task', ()=>{ const b=document.getElementById('newtask'); b && b.click(); }));
   card.appendChild(acts); body.appendChild(card);
@@ -4195,7 +4195,7 @@ function av(id, size){ const p=person(id), a=h('span','av'); if(!p) return a; a.
 const byDue=(a,b)=>{ const x=a.due||'9999', y=b.due||'9999'; return x<y?-1:x>y?1:(a.ord||0)-(b.ord||0); };
 const editTask=t=>window.__edit && window.__edit(t);
 const newTask=o=>editTask(Object.assign({t:'', o:me()||'', d:[], r:'', w:'', s:'Not Started', p:'Normal', due:'', notes:'', rail:0, ord:(S.tasks.length+1)*10, at:Date.now()}, o||{}));
-const put=(c,o)=>window.__put ? window.__put(c,o) : Promise.resolve();
+const put=(c,o,b)=>window.__put ? window.__put(c,o,b) : Promise.resolve();
 const cal=id=>{ const by=(window.__cal && window.__cal.CAL && window.__cal.CAL.by)||{}; return Array.isArray(by[id]) ? by[id] : null; };
 function etAt(day, hour){ let t=Date.UTC(day.getFullYear(), day.getMonth(), day.getDate(), hour+5, 0); const e=+new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York', hour:'numeric', hourCycle:'h23'}).format(t); return t+(hour-e)*3600e3; }
 function holiday(d){ try{ const r=window.__t && window.__t.holidayOn(d); return r ? (typeof r==='string'?r:(r.n||r.t||r.name||'Holiday')) : ''; }catch(e){ return ''; } }
@@ -4213,9 +4213,11 @@ function toast(msg, undo){ if(toastEl) toastEl.remove(); clearTimeout(toastTimer
 function burst(x, y){ const n=14, w=h('div','nx-burst'); w.style.left=x+'px'; w.style.top=y+'px';
   for(let i=0;i<n;i++){ const p=h('i'); const a=i/n*Math.PI*2, r=30+Math.random()*20; p.style.setProperty('--x', Math.cos(a)*r+'px'); p.style.setProperty('--y', Math.sin(a)*r+'px'); p.style.background='var(--c'+((i%7)+1)+')'; w.appendChild(p); }
   document.body.appendChild(w); setTimeout(()=>w.remove(), 700); }
-function change(t, patch, msg){ const before=Object.assign({}, t); put('tasks', Object.assign({}, t, patch)); toast(msg, ()=>put('tasks', before)); }
+/* each change, and its Undo, writes only the fields it touched, so a teammate's change in between stays (November 5, 2026) */
+function undoOf(before, after, patch){ const back=Object.assign({}, after); Object.keys(patch).forEach(k=>{ if(before[k]===undefined) delete back[k]; else back[k]=before[k]; }); return put('tasks', back, after); }
+function change(t, patch, msg){ const before=Object.assign({}, t), after=Object.assign({}, t, patch); put('tasks', after, t); toast(msg, ()=>undoOf(before, after, patch)); }
 function complete(t, el, ev){ if(ev && ev.clientX) burst(ev.clientX, ev.clientY); if(el) el.classList.add('done');
-  const before=Object.assign({}, t); setTimeout(()=>put('tasks', Object.assign({}, t, {s:'Done'})), el ? 320 : 0); toast('Done: '+t.t, ()=>put('tasks', before)); }
+  const before=Object.assign({}, t), after=Object.assign({}, t, {s:'Done'}); setTimeout(()=>put('tasks', after, t), el ? 320 : 0); toast('Done: '+t.t, ()=>undoOf(before, after, {s:'Done'})); }
 
 /* ---------- quick add: "Call Amy about sponsors fri @amy #summit !" ---------- */
 function parseQuick(text){
@@ -4848,7 +4850,7 @@ function inboxBand(mode){
   const asks=myAsks(), nudges=myNudges();
   if(asks.length || nudges.length) top.push(part('asks', me()==='jonna' ? 'Asks for You' : 'Your Open Asks', asks.length+nudges.length, it=>{
     asks.slice().sort((a,b)=>(b.at||0)-(a.at||0)).forEach(a=>{ const r=btn('nx-row nx-ask'+(board?' nx-card':''), null, ()=>window.__editAsk && window.__editAsk(a)); if(a.by) r.appendChild(av(a.by,22)); r.appendChild(h('span','nx-tt', a.t)); r.appendChild(h('span','nx-sp')); r.appendChild(h('span','nx-state '+String(a.state||'New').toLowerCase().replace(/\s+/g,'-'), a.state||'New')); it.appendChild(r); });
-    nudges.forEach(n=>{ const r=h('div','nx-row nx-ask'+(board?' nx-card':'')); if(n.by) r.appendChild(av(n.by,22)); r.appendChild(h('span','nx-tt', n.m||n.k)); r.appendChild(h('span','nx-sp')); r.appendChild(btn('nx-mini','Done', ()=>put('nudges', Object.assign({}, n, {done:1})))); it.appendChild(r); }); }, asks.length?'warn':''));
+    nudges.forEach(n=>{ const r=h('div','nx-row nx-ask'+(board?' nx-card':'')); if(n.by) r.appendChild(av(n.by,22)); r.appendChild(h('span','nx-tt', n.m||n.k)); r.appendChild(h('span','nx-sp')); r.appendChild(btn('nx-mini','Done', ()=>put('nudges', Object.assign({}, n, {done:1}), n))); it.appendChild(r); }); }, asks.length?'warn':''));
   const watch=S.tasks.filter(t=>isOpen(t) && t.o===me() && doers(t).indexOf(me())<0).sort(byDue);
   if(watch.length) end.push(part('handed', 'Handed Off — Others Are Doing', watch.length, it=>watch.forEach(t=>it.appendChild(row(t)))));
   const soon=S.tasks.filter(t=>isOpen(t) && t.due && days(t.due)<=7 && doers(t).indexOf(me())<0 && t.o!==me() && S.rocks.some(r=>r.id===t.r && r.lead===me())).sort(byDue);
