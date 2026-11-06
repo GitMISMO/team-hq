@@ -194,6 +194,9 @@
 
 
 
+
+
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -5460,7 +5463,7 @@ function gaugeEl(g, big){ const p=Math.max(0, +g.p||0), C=2*Math.PI*40, f=Math.m
   w.innerHTML='<svg viewBox="0 0 100 100" aria-hidden="true"><circle class="tr" cx="50" cy="50" r="40"/><circle class="pg" cx="50" cy="50" r="40" stroke-dasharray="'+(C*f).toFixed(1)+' '+C.toFixed(1)+'" transform="rotate(-90 50 50)"/></svg>';
   const c=h('div','c'); c.appendChild(h('b',null,(Math.round(p*10)/10)+'%')); w.appendChild(c);
   const l=h('div','l'); l.appendChild(h('span',null,g.n)); if(g.v) l.appendChild(h('small',null, big && g.b ? g.v+' of '+g.b : g.v)); w.appendChild(l); w.title=g.n+': '+p+'%'+(g.v?' — '+g.v:'')+(g.b?' of '+g.b+' budget':''); return w; }
-function figEl(f, big){ const w=h('div','nx-fg'+(big?' big':'')+(f.tone?' '+f.tone:'')); w.appendChild(h('b',null,f.v)); w.appendChild(h('span',null,f.n)); if(f.s && big) w.appendChild(h('small',null,f.s)); return w; }
+function figEl(f, big){ const w=h('div','nx-fg'+(big?' big':'')+(f.tone?' '+f.tone:'')+(String(f.v||'').length>6?' long':'')); w.appendChild(h('b',null,f.v)); w.appendChild(h('span',null,f.n)); if(f.s && big) w.appendChild(h('small',null,f.s)); return w; }
 /* the page's own tiles, drawn the Team HQ way: one per Team HQ tile, picked in Settings */
 const goodCard=c=>c && !/^(\d+\s+to\s+\w+|up to date|all caught up|caught up|nothing today)$/i.test(c.t||'') && (c.big || (c.rows && c.rows.length) || c.text);
 function pickCard(cfg, d){ if(!d || !Array.isArray(d.cards) || !d.cards.length) return null;
@@ -5601,7 +5604,7 @@ function sysMeta(cfg){ const x=X(); const s=x && x.SYS.find(z=>z.k===cfg.s); if(
     if(F.length>1 && isZero(F[0])){ const k=F.findIndex(f=>!isZero(f)); if(k>0) F.unshift(F.splice(k,1)[0]); }
     const nF=small ? 1 : det ? (SZ==='b'?6:wide?4:tall?5:2) : (SZ==='b'?4:wide?3:tall?4:1), nG=small ? 0 : det ? (SZ==='b'?6:wide?4:tall?4:2) : (SZ==='b'?3:wide?3:tall?2:0);
     /* the app's mark sits small beside its name, so the numbers get the room (November 5, 2026) */
-    { const ti=h('span','nx-tsym'); ti.innerHTML=x.symbol(s.k); top.appendChild(ti); }
+    if(wide || String(x.SHORT[s.k]||s.n).length<=14){ const ti=h('span','nx-tsym'); ti.innerHTML=x.symbol(s.k); top.appendChild(ti); }
     const head=h('div','nx-sysh');
     const lead=h('div','nx-syl'); let dirL=null;
     if(c && !(cfg.go && !cfg.sec && F.length)){ const b=h('div','st-big'); b.append(String(c.n)); b.appendChild(h('small',null, cfg.sec ? (c.n===1?'item':'items') : cfg.go)); lead.appendChild(b); if(cfg.sec && c.x) lead.appendChild(h('div','st-sub', c.x)); }
@@ -5621,6 +5624,8 @@ function sysMeta(cfg){ const x=X(); const s=x && x.SYS.find(z=>z.k===cfg.s); if(
     else if(pg && lead.textContent.toLowerCase().indexOf(pg.toLowerCase())<0) top.appendChild(h('span','st-pill', pg));
     /* the page's own one-line summary ("10 things need you, 2 overdue; start with …") says what the number means */
     { const gl=d && (d.cards||[]).find(c=>/^at a glance$/i.test(c.t||'') && c.text); if(gl && !(Array.isArray(cfg.pick) && cfg.pick.length)){ const g=h('div','nx-glance'+(small?' sm':''), String(gl.text).replace(/\s+([;,.])/g,'$1').replace(/\s+/g,' ').trim()); el.appendChild(g); } }
+    const leadT=lead.textContent.toLowerCase(); const said=t=>!!t && leadT.indexOf(String(t).toLowerCase())>=0;
+    { const seen=new Set(); F=F.filter(f=>{ const k=String(f.n||'').toLowerCase(); if(seen.has(k) || said(f.n)) return false; seen.add(k); return true; }); }
     if(!small){
       F=F.filter(f=>!isZero(f));
       const fr=F.slice(0, Math.max(0, SZ==='w' ? Math.min(nF-1, 2) : nF-1)); if(fr.length){ const row=h('div','nx-fgr'); fr.forEach(f=>row.appendChild(figEl(f, det))); if(SZ==='w'){ row.classList.add('side'); head.appendChild(row); } else el.appendChild(row); }
@@ -5628,7 +5633,7 @@ function sysMeta(cfg){ const x=X(); const s=x && x.SYS.find(z=>z.k===cfg.s); if(
       /* the page's own highlight tiles under the numbers ("MISMO Matters · November · 0 of 13 approved") */
       if(d && !(Array.isArray(cfg.pick) && cfg.pick.length)){ const nH=det ? (SZ==='b'?4:wide||tall?2:1) : (SZ==='b'?2:wide||tall?1:0);
         const shownN=new Set(d.figs.map(f=>f.n).concat(d.gauges.map(g=>g.n)));
-        const HL=(d.cards||[]).filter(c=>goodCard(c) && !shownN.has(c.t) && !c.fig && !c.tbl && c.t!=='Today' && !/^(at a glance|today|this week)$/i.test(c.t) && (c.meter!=null || c.pill || c.big || c.head) && (c.sub || c.text || c.big)).slice(0, nH);
+        const HL=(d.cards||[]).filter(c=>goodCard(c) && !shownN.has(c.t) && !said(c.t) && !said(c.pill) && !said(c.head) && !c.fig && !c.tbl && c.t!=='Today' && !/^(at a glance|today|this week)$/i.test(c.t) && (c.meter!=null || c.pill || c.big || c.head) && (c.sub || c.text || c.big)).slice(0, nH);
         if(HL.length){ const ls=h('div','nx-hlg'); HL.forEach(c=>{ const r=h('div','hl'); if(c.k && /^(#|rgb|hsl)/.test(c.k)) r.style.setProperty('--hk', c.k);
           const t1=h('div','t'); t1.appendChild(h('b',null,c.t)); const tag=c.big ? c.big+(c.unit?' '+c.unit:'') : (c.pill || c.head || ''); if(tag) t1.appendChild(h('em',null,tag)); r.appendChild(t1);
           if(c.meter!=null && isFinite(c.meter)){ const m=h('div','st-meter'); const f=h('i'); f.style.width=Math.max(0,Math.min(100,c.meter))+'%'; m.appendChild(f); r.appendChild(m); }
@@ -5640,7 +5645,7 @@ function sysMeta(cfg){ const x=X(); const s=x && x.SYS.find(z=>z.k===cfg.s); if(
         if(tb){ const t00=new Date(); t00.setHours(0,0,0,0); const yr=t00.getFullYear();
           let rows=tb.rows.filter(real).filter(r=>{ const p=Date.parse(String(r[0]).replace(/^\w{3},\s*/,'')+' '+yr); return isNaN(p) || /\d{4}/.test(r[0]) || p>=+t00 || (+t00-p)>200*864e5; });
           if(rows.length){ const ls=h('div','nx-kl2 nx-tbl'); ls.appendChild(h('small','nx-ftml', tb.t)); rows.slice(0, SZ==='b'?6:4).forEach(r=>{ const kr=h('div','kr'); kr.appendChild(h('b',null,String(r[0]))); kr.appendChild(h('span',null,r.slice(1).filter(z=>z && z!=='·').join(' · '))); kr.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) openSystem(s.k, cfg.go||'', '', cfg); }); ls.appendChild(kr); }); el.appendChild(ls); } } }
-      if(tall && !det && !(Array.isArray(cfg.pick) && cfg.pick.length)){ const usedN=new Set(F.map(f=>f.n)); const nv=x.navOf(s.k).map(n=>({n, c:x.countFor(s.k,n)})).filter(z=>z.c && z.c.n>0 && z.n!==cfg.go && !usedN.has(z.n)).slice(0, SZ==='b'?6:4);
+      if(tall && !det && !(Array.isArray(cfg.pick) && cfg.pick.length)){ const usedN=new Set(F.map(f=>f.n)); const nv=x.navOf(s.k).map(n=>({n, c:x.countFor(s.k,n)})).filter(z=>z.c && z.c.n>0 && z.n!==cfg.go && !usedN.has(z.n) && !said(z.n) && !F.some(f=>String(f.v)===String(z.c.n) && said(f.n))).slice(0, SZ==='b'?6:4);
         if(nv.length){ const ls=h('div','nx-kl2 nx-navc'); ls.appendChild(h('small','nx-ftml','In '+(x.SHORT[s.k]||s.n))); nv.forEach(z=>{ const r=h('div','kr'); r.appendChild(h('b',null,String(z.c.n))); r.appendChild(h('span',null,z.n)); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) openSystem(s.k, z.n, '', cfg); }); ls.appendChild(r); }); el.appendChild(ls); } }
       if(det && d && d.secs){ const sl=Object.keys(d.secs).filter(n=>n!==cfg.sec && d.secs[n].n>0).slice(0, SZ==='b'?6:4); if(sl.length){ const ls=h('div','nx-kl2'); sl.forEach(n=>{ const r=h('div','kr'); r.appendChild(h('b',null,String(d.secs[n].n))); r.appendChild(h('span',null,n)); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) openSystem(s.k, cfg.go, n, cfg); }); ls.appendChild(r); }); el.appendChild(ls); } } }
     const nt=h('div','st-next'); nt.append((x.SHORT[s.k]||s.n)+(cfg.go && wide?' · '+cfg.go:'')+(d ? ' · '+x.ago(d.at) : c ? ' · checked '+x.ago(c.at) : '')); nt.appendChild(h('b','opn', opnTxt(cfg))); el.appendChild(nt);
@@ -6180,6 +6185,9 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .st-tile.t-findtime.sz-s .nx-ftv b{font-size:15px}.st-tile.t-findtime.sz-w .nx-ftv{display:grid;grid-template-columns:1fr auto;column-gap:10px;align-items:center}.st-tile.t-findtime.sz-w .nx-ftv > *:not(.nx-ftb){grid-column:1}.st-tile.t-findtime.sz-w .nx-ftv .nx-ftb{grid-column:2;grid-row:1 / span 3}
 .nx-hlg .t em{max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .st-tile.nx-calm-auto{justify-content:center}.st-tile.nx-calm-auto > .st-top{position:absolute;top:16px;left:18px;right:18px}.st-tile.nx-calm-auto > .st-next{position:absolute;bottom:16px;left:18px;right:18px;margin-top:0}
+.st-tile.sz-t .nx-fgr .nx-fg.long{display:flex;flex-direction:column;align-items:flex-start;gap:1px}.st-tile.sz-t .nx-fgr .nx-fg.long b{font-size:20px}
+.st-tile.sz-t .mtd-r{flex-wrap:wrap;row-gap:0}.st-tile.sz-t .mtd-r .nm{flex:1 0 100%;order:3}.st-tile.sz-t .mtd-r .st{margin-left:auto}
+.nx-hlg{min-width:0;max-width:100%;grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr))}.nx-hlg .hl{min-width:0;max-width:100%;overflow:hidden}
 .st-tile .mic-locw{font-size:12.5px;line-height:1.35;margin-top:-4px}
 /* Small and Tall tiles: the countdown stays beside the date, and the place line takes at most two lines */
 .st-tile:not(.sz-w):not(.sz-b) .mic-row{flex-wrap:nowrap;gap:10px;align-items:center}.st-tile:not(.sz-w):not(.sz-b) .mic-ep{flex:1 1 0}.st-tile:not(.sz-w):not(.sz-b) .mic-loc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
