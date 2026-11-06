@@ -183,6 +183,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -5511,7 +5512,7 @@ function mmsHome(el, top, SZ, s, cfg, d){
   const wc=d.cards.find(c=>/^Where the \d+/i.test(c.t||'')); const live=N('Live Work') ?? (wc ? +(/\d+/.exec(wc.t)||[0])[0] : null);
   if(live==null) return false;
   const st=[]; if(wc && wc.text){ const re=/([A-Za-z][A-Za-z ]*?)\s+(\d+)(?=\s|$)/g; let m; while((m=re.exec(wc.text))) st.push({n:m[1].trim(), v:+m[2]}); }
-  const small=SZ==='s', wide=SZ==='w'||SZ==='b', tall=SZ==='t'||SZ==='b';
+  const small=SZ==='s'||SZ==='w', wide=SZ==='w'||SZ==='b', tall=SZ==='t'||SZ==='b';   /* a wide tile is a small one with what's on your plate beside it */
   const go=(page)=>e=>{ e.stopPropagation(); if(!dashEdit) openSystem(s.k, page, '', cfg); };
   const mine=N('Your Move')||0, late=N('Past Target')||0, soon=N('Closing in 7 Days')||0, moved=N('Moved This Week')||0, gov=N('With Governance')||0, pub=N('Published');
   top.firstChild.textContent='MMS';
@@ -5525,7 +5526,7 @@ function mmsHome(el, top, SZ, s, cfg, d){
   /* what needs a hand, worst first */
   const A=[]; if(late) A.push({v:late, t:small?'late':'past target', k:'bad', p:'All Work'}); if(soon) A.push({v:soon, t:small?'due soon':'closing in 7 days', k:'warn', p:'All Work'});
   if(gov && !small) A.push({v:gov, t:'with Governance', k:'', p:'Governance'}); if(pub!=null && tall) A.push({v:pub, t:'published', k:'ok', p:'All Work'});
-  if(A.length){ const R=h('div','mms-a'); (small||SZ==='w' ? A.slice(0,2) : A).forEach(a=>{ const r=h('div','mms-ar'+(a.k?' '+a.k:'')); r.appendChild(h('b',null,String(a.v))); r.appendChild(h('span',null,a.t)); r.addEventListener('click', go(a.p)); R.appendChild(r); }); (Rc || L).appendChild(R); }
+  if(A.length){ const R=h('div','mms-a'); (small ? A.slice(0,2) : A).forEach(a=>{ const r=h('div','mms-ar'+(a.k?' '+a.k:'')); r.appendChild(h('b',null,String(a.v))); r.appendChild(h('span',null,a.t)); r.addEventListener('click', go(a.p)); R.appendChild(r); }); (small || !Rc ? L : Rc).appendChild(R); }
   /* the one on your plate */
   const pl=C('On Your Plate'); if(pl && pl.text && (tall || SZ==='w')){ const t=String(pl.text).trim(); const id=/^(WR\d{4}_\d+)\s+/.exec(t); let rest=id ? t.slice(id[0].length) : t;
     const am=/\s+((?:Approve|Review|Sign|Confirm|Assign|Respond|Publish|Vote|Decide|Set|Pick|Schedule|Send|Submit|Close|Check|Finish|Start|Answer|Name|Choose)\b.*)$/.exec(rest); const act=am ? am[1] : ''; if(am) rest=rest.slice(0, am.index);
@@ -6169,7 +6170,7 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .mtd-r.now .st::before{content:"";width:6px;height:6px;border-radius:50%;background:#14203a;animation:mtdPulse 1.8s ease-in-out infinite}
 .mtd-r.done{opacity:.45}.mtd-r.x{opacity:.45}.mtd-r.x .nm{text-decoration:line-through}
 .mtd-more{font-size:11.5px;font-weight:700;color:rgba(255,255,255,.6);padding-left:9px}
-.mms{display:flex;gap:14px;min-height:0;flex:1 1 auto}.mms-l{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:7px}.mms-r{flex:1.15 1 0;min-width:0;display:flex;flex-direction:column;gap:8px}
+.mms{display:flex;gap:14px;min-height:0;flex:0 0 auto}.mms-l{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:7px}.mms-r{flex:1.15 1 0;min-width:0;display:flex;flex-direction:column;gap:8px}
 .mms .st-big small{color:var(--k);font-size:14px;font-weight:700;letter-spacing:0}
 .mms-mv{font-size:11.5px;font-weight:700;color:#5fd3a0;margin-top:-3px}
 .mms-bar{display:flex;gap:2px;height:8px;border-radius:4px;overflow:hidden;flex:0 0 auto}.mms-bar i{display:block;min-width:4px}
@@ -6178,7 +6179,7 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .mms.sm .mms-lg{display:none}.mms.sm .mms-a{flex-direction:row;gap:5px}.mms.sm .mms-ar{padding:3px 7px;font-size:11px;gap:4px;flex:0 1 auto}.mms.sm .mms-ar b{min-width:0;font-size:12.5px}
 .mms-pl{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:8px;background:rgba(167,139,250,.12);border-left:3px solid var(--k);cursor:pointer;min-width:0;flex:0 0 auto}.st-tile > .mms-pl{margin-top:10px}.mms-pl:hover{background:rgba(167,139,250,.2)}
 .mms-pl em{font-style:normal;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--k)}.mms-pl b{font-size:12.5px;font-weight:700;color:#fff;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.mms-pl small{font-size:11px;color:rgba(255,255,255,.65);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.st-tile.sz-w .mms-pl b{-webkit-line-clamp:1}.mms.tl:not(.wd){flex-direction:column}.mms.tl .mms-l{flex:0 0 auto}
+.mms.tl:not(.wd){flex-direction:column}.mms.tl .mms-l{flex:0 0 auto}
 .st-pill.mms-you{background:var(--k);color:#1b1440;cursor:pointer}
 .mtd-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px;min-width:0}
 .mtd-chip{display:inline-flex;align-items:center;gap:7px;max-width:100%;min-width:0;padding:2px 11px 2px 2px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);font-size:12.5px;color:#fff}
