@@ -12814,9 +12814,12 @@ function vExpenses(root){
     snapReceipts(ev.dataTransfer && ev.dataTransfer.files); });
   root.appendChild(snap);
 
-  if(!S.expScope || S.expScopeFor!==S.me){ S.expScope=expSeesAll() ? 'all' : 'mine'; S.expScopeFor=S.me; }   /* Jonna and Vanessa open on everyone's */
+  /* the phone app is everyone's own expenses, Jonna and Vanessa too; the full list of the team's stays on the computer (November 6, 2026) */
+  const phoneApp=document.documentElement.classList.contains('app-exp');
+  if(phoneApp) S.expScope='mine';
+  else if(!S.expScope || S.expScopeFor!==S.me){ S.expScope=expSeesAll() ? 'all' : 'mine'; S.expScopeFor=S.me; }   /* Jonna and Vanessa open on everyone's */
   const canP=canProcess();
-  if(canP){
+  if(canP && !phoneApp){
     const bar=el('div','filterbar');
     [['mine','Mine'],['all','Everyone'],['todo','To Process'],['needs','Needs Details']].forEach(([v,n])=>{
       const b=el('button','pill'); b.type='button';
@@ -17958,5 +17961,5 @@ boot().then(()=>{ paintWho(); renderAll();
 })();
 </script>
 
-<script src="upgrades.js?v=20261105t9" defer></script>
+<script src="upgrades.js?v=20261106a" defer></script>
 </body></html>
