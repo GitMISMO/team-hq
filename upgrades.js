@@ -192,6 +192,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -5418,7 +5419,7 @@ function tile(cfg, i, L){
     else el.appendChild(h('div','st-sub','No team meeting on the calendar.'));
     const n2=h('div','st-next'); n2.append('Raise something: '); n2.appendChild(h('b',null,'add it to the agenda')); el.appendChild(n2);
     meta.go=()=>openClassic('agenda'); }
-  else if(cfg.t==='wins'){ const W=S.tasks.filter(t=>!isOpen(t)).sort((a,b)=>(b.at||0)-(a.at||0)).slice(0, SZ==='b'?8:tall?6:3);
+  else if(cfg.t==='wins'){ const W=S.tasks.filter(t=>!isOpen(t)).sort((a,b)=>(b.at||0)-(a.at||0)).slice(0, SZ==='b'?10:tall?9:wide?3:3);
     W.forEach(t=>{ const r=h('div','nx-wn'); const d=doers(t)[0]; if(d) r.appendChild(av(d,22)); const tx=h('span',null,t.t); r.appendChild(tx); el.appendChild(r); }); if(!W.length) el.appendChild(h('div','st-sub','Nothing finished yet.'));
     meta.go=()=>{ ui.showDone=true; save(); open('mine'); }; }
   else if(cfg.t==='board'){ let names=[]; try{ const Lb=(S.nb&&S.nb.pages&&S.nb.pages[0]&&S.nb.pages[0].tabs&&S.nb.pages[0].tabs[0]&&S.nb.pages[0].tabs[0].L)||S.layout||[]; Lb.forEach(r=>(r.r||[]).forEach(c=>names.push(c.t))); }catch(e){}
@@ -5633,6 +5634,8 @@ function sysMeta(cfg){ const x=X(); const s=x && x.SYS.find(z=>z.k===cfg.s); if(
         if(tb){ const t00=new Date(); t00.setHours(0,0,0,0); const yr=t00.getFullYear();
           let rows=tb.rows.filter(real).filter(r=>{ const p=Date.parse(String(r[0]).replace(/^\w{3},\s*/,'')+' '+yr); return isNaN(p) || /\d{4}/.test(r[0]) || p>=+t00 || (+t00-p)>200*864e5; });
           if(rows.length){ const ls=h('div','nx-kl2 nx-tbl'); ls.appendChild(h('small','nx-ftml', tb.t)); rows.slice(0, SZ==='b'?6:4).forEach(r=>{ const kr=h('div','kr'); kr.appendChild(h('b',null,String(r[0]))); kr.appendChild(h('span',null,r.slice(1).filter(z=>z && z!=='·').join(' · '))); kr.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) openSystem(s.k, cfg.go||'', '', cfg); }); ls.appendChild(kr); }); el.appendChild(ls); } } }
+      if(tall && !det && !(Array.isArray(cfg.pick) && cfg.pick.length)){ const usedN=new Set(F.map(f=>f.n)); const nv=x.navOf(s.k).map(n=>({n, c:x.countFor(s.k,n)})).filter(z=>z.c && z.c.n>0 && z.n!==cfg.go && !usedN.has(z.n)).slice(0, SZ==='b'?6:4);
+        if(nv.length){ const ls=h('div','nx-kl2 nx-navc'); ls.appendChild(h('small','nx-ftml','In '+(x.SHORT[s.k]||s.n))); nv.forEach(z=>{ const r=h('div','kr'); r.appendChild(h('b',null,String(z.c.n))); r.appendChild(h('span',null,z.n)); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) openSystem(s.k, z.n, '', cfg); }); ls.appendChild(r); }); el.appendChild(ls); } }
       if(det && d && d.secs){ const sl=Object.keys(d.secs).filter(n=>n!==cfg.sec && d.secs[n].n>0).slice(0, SZ==='b'?6:4); if(sl.length){ const ls=h('div','nx-kl2'); sl.forEach(n=>{ const r=h('div','kr'); r.appendChild(h('b',null,String(d.secs[n].n))); r.appendChild(h('span',null,n)); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) openSystem(s.k, cfg.go, n, cfg); }); ls.appendChild(r); }); el.appendChild(ls); } } }
     const nt=h('div','st-next'); nt.append((x.SHORT[s.k]||s.n)+(cfg.go && wide?' · '+cfg.go:'')+(d ? ' · '+x.ago(d.at) : c ? ' · checked '+x.ago(c.at) : '')); nt.appendChild(h('b','opn', opnTxt(cfg))); el.appendChild(nt);
   };
@@ -6166,6 +6169,10 @@ html.nx-dragging .nx-grp.shut .nx-items{display:block}
 .nx-dir .kr{flex-direction:column;align-items:stretch;gap:1px}.nx-dir .kr b{font-size:12.5px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nx-dir .kr span{font-size:11.5px;color:rgba(255,255,255,.62);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .nx-sysh .nx-fgr.side{flex:1.3 1 0;min-width:0;grid-template-columns:repeat(auto-fit,minmax(110px,1fr))}.nx-sysh .nx-fgr.side .nx-fg span{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .nx-pl2.two{display:grid;grid-template-columns:1fr 1fr;gap:4px 8px}.nx-kl2 .kr.late b{color:#ff8a7a}
+.nx-sysh .nx-fgr.side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.nx-sysh .nx-fgr.side .nx-fg{padding:7px 9px}.nx-sysh .nx-fgr.side .nx-fg b{font-size:19px}
+.st-tile.sz-t .mtd{flex-direction:column;gap:10px}.st-tile.sz-t .mtd-cal{flex:0 0 auto;width:64px}.st-tile.sz-t .mtd-m{width:100%}
+.st-tile.t-findtime.sz-s .nx-ftv b{font-size:15px}.st-tile.t-findtime.sz-w .nx-ftv{display:grid;grid-template-columns:1fr auto;column-gap:10px;align-items:center}.st-tile.t-findtime.sz-w .nx-ftv > *:not(.nx-ftb){grid-column:1}.st-tile.t-findtime.sz-w .nx-ftv .nx-ftb{grid-column:2;grid-row:1 / span 3}
+.nx-hlg .t em{max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .st-tile .mic-locw{font-size:12.5px;line-height:1.35;margin-top:-4px}
 /* Small and Tall tiles: the countdown stays beside the date, and the place line takes at most two lines */
 .st-tile:not(.sz-w):not(.sz-b) .mic-row{flex-wrap:nowrap;gap:10px;align-items:center}.st-tile:not(.sz-w):not(.sz-b) .mic-ep{flex:1 1 0}.st-tile:not(.sz-w):not(.sz-b) .mic-loc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
