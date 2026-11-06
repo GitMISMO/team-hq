@@ -202,6 +202,7 @@
 
 
 
+
 var MODS=[];
 /* ===== hqx.js ===== */
 MODS.push(function(){
@@ -1094,6 +1095,9 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed color-mix(in srgb,va
   #app-expenses .filterbar .pill{min-height:38px;font-size:14px}
 }
 /* Expenses: everyone's, one heading per person with their trips under it */
+.tripname{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;border-top:1px solid var(--border)}
+.tripname input{flex:1 1 220px;min-width:0;min-height:40px;font:inherit;font-size:16px;padding:6px 10px;border:1px solid var(--border-strong,var(--border));border-radius:6px;background:var(--surface);color:var(--ink)}
+.tripname .btn{min-height:40px;white-space:nowrap}.tripname small{flex-basis:100%;font-size:12px;color:var(--ink-3)}
 .exppers{display:flex;align-items:baseline;gap:10px;margin:20px 0 8px;padding:0 2px 6px;border-bottom:2px solid var(--navy,#0d314c)}
 .exppers b{font-size:16px;color:var(--ink)}.exppers small{font-size:12.5px;color:var(--ink-3)}.exppers .amt{margin-left:auto;font-weight:700;color:var(--ink)}
 :root[data-theme="dark"] .exppers{border-bottom-color:var(--sky)}
