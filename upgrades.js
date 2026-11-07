@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261107l';
+var BUILD='20261107n';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -1664,6 +1664,7 @@ function draw(){
     wrap.appendChild(e);
   } else if(ui.view==='timeline') wrap.appendChild(timeline(L));
   else if(ui.view==='people') wrap.appendChild(matrix(L));
+  else if(ui.view==='workload'){ const wl=window.__workload && window.__workload(); if(wl) wrap.appendChild(wl); else wrap.appendChild(h('p',null,'Workload is still loading.')); }
   else wrap.appendChild(board(L));
   return wrap;
 }
@@ -1720,7 +1721,7 @@ function toolbar(){
   const wrap=h('div','pv2-tools');
   const row=h('div','pv2-bar');
   const vs=h('div','filterbar pv2-views');
-  [['board','Board'],['timeline','Timeline'],['people','Who’s on What']].forEach(([k,l])=>{
+  [['board','Board'],['timeline','Timeline'],['people','Who’s on What'],['workload','Workload']].forEach(([k,l])=>{
     const b=btn('pill', l, ()=>{ ui.view=k; saveUi(); redraw(); }); b.setAttribute('aria-pressed', String(ui.view===k)); vs.appendChild(b); });
   row.appendChild(vs);
   const sf=h('div','filterbar pv2-status');
@@ -4826,6 +4827,88 @@ setTimeout(()=>{ try{ startTR(); }catch(e){} }, 4000);
   '.nx-ru-list{display:flex;flex-direction:column;gap:6px}.nx-ru{display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px}.nx-ru span{flex:1}'+
   '.nx-ru-add{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border);padding-top:12px;margin-top:4px}.nx-ru-add .nx-mini{align-self:flex-start}';
   document.head.appendChild(cs); }
+/* ---------- the month calendar view of tasks, and team workload (November 7, 2026) ----------
+   Any task list (My Tasks, a Team Project, a person) can show as a month: tasks sit on their due
+   date and can be dragged to another day; tasks with no date wait in a tray underneath. Workload on
+   the People page counts each person's open hands-on tasks by week for the next four weeks. */
+const MONL=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function monthView(L, ctx){ if(!ui.mo) ui.mo={}; const key=String(ctx||ui.view), off=ui.mo[key]||0, t0=today();
+  const m0=new Date(t0.getFullYear(), t0.getMonth()+off, 1), m1=new Date(m0.getFullYear(), m0.getMonth()+1, 0);
+  const wrap=h('div','nx-month'); const bar=h('div','nx-mo-bar2');
+  const go=n=>{ ui.mo[key]=n; save(); paint(); };
+  const pv=btn('nx-sg', null, ()=>go(off-1)); pv.innerHTML=ic('left'); pv.setAttribute('aria-label','Previous month');
+  const nx=btn('nx-sg', null, ()=>go(off+1)); nx.innerHTML=ic('right'); nx.setAttribute('aria-label','Next month');
+  const sg=h('div','nx-seg'); sg.appendChild(pv); sg.appendChild(btn('nx-sg'+(off?'':' on'),'This Month', ()=>go(0))); sg.appendChild(nx);
+  bar.appendChild(h('b',null, MONL[m0.getMonth()]+' '+m0.getFullYear())); bar.appendChild(sg); wrap.appendChild(bar);
+  const grid=h('div','nx-mg'); ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach((d,i)=>grid.appendChild(h('div','nx-mh'+(i>4?' we':''), d)));
+  let d=addD(m0, -((m0.getDay()+6)%7)); const end=addD(m1, (7-((m1.getDay()+6)%7)-1));
+  const byDay={}; L.forEach(t=>{ if(t.due) (byDay[t.due]=byDay[t.due]||[]).push(t); });
+  while(d<=end){ const k=iso(d), dow=(d.getDay()+6)%7, cell=h('div','nx-md'+(dow>4?' we':'')+(d.getMonth()!==m0.getMonth()?' out':'')+(+d===+t0?' today':'')+(d<t0?' past':''));
+    const num=h('span','n', String(d.getDate())); cell.appendChild(num);
+    const day=new Date(d);
+    (byDay[k]||[]).sort((a,b)=>(a.ord||0)-(b.ord||0)).forEach(t=>cell.appendChild(monthChip(t)));
+    const a=btn('nx-md-add', null, ()=>{ const o=ctxDefaults(); o.due=iso(day); newTask(o); }); a.innerHTML=ic('plus'); a.title='Add a task due '+WD[day.getDay()]+' '+fmt(iso(day)); a.setAttribute('aria-label', a.title); cell.appendChild(a);
+    cell.addEventListener('dragover', e=>{ if(!drag) return; e.preventDefault(); cell.classList.add('nx-over'); });
+    cell.addEventListener('dragleave', e=>{ if(!cell.contains(e.relatedTarget)) cell.classList.remove('nx-over'); });
+    cell.addEventListener('drop', e=>{ e.preventDefault(); cell.classList.remove('nx-over'); if(!drag) return; const t=drag; drag=null; if(t.due!==iso(day)) change(t, {due:iso(day)}, 'Due '+WD[day.getDay()]+' '+fmt(iso(day))+': '+t.t); });
+    grid.appendChild(cell); d=addD(d,1); }
+  wrap.appendChild(grid);
+  const nd=L.filter(t=>!t.due && isOpen(t)), gs=addD(m0, -((m0.getDay()+6)%7)), od=L.filter(t=>isOpen(t) && t.due && pd(t.due)<gs && pd(t.due)<t0);
+  const tray=h('div','nx-mo-tray');
+  if(od.length){ tray.appendChild(h('b','bad', 'Past Due From Earlier · drag onto a day to reschedule')); const ol=h('div','nx-mo-tl'); od.sort(byDue).slice(0,40).forEach(t=>ol.appendChild(monthChip(t))); tray.appendChild(ol); }
+  tray.appendChild(h('b',null, nd.length ? 'No Due Date · drag onto a day' : 'Every open task here has a date.'));
+  const tl=h('div','nx-mo-tl'); nd.slice(0,40).forEach(t=>tl.appendChild(monthChip(t))); tray.appendChild(tl);
+  tray.addEventListener('dragover', e=>{ if(!drag) return; e.preventDefault(); tray.classList.add('nx-over'); });
+  tray.addEventListener('dragleave', e=>{ if(!tray.contains(e.relatedTarget)) tray.classList.remove('nx-over'); });
+  tray.addEventListener('drop', e=>{ e.preventDefault(); tray.classList.remove('nx-over'); if(!drag) return; const t=drag; drag=null; if(t.due) change(t, {due:''}, 'Cleared the date: '+t.t); });
+  wrap.appendChild(tray);
+  return wrap; }
+function monthChip(t){ const late=isOpen(t) && t.due && days(t.due)<0;
+  const c=btn('nx-mc'+(isOpen(t)?'':' isdone')+(late?' late':'')+(t.p==='High'?' hi':''), null, ()=>editTask(t)); c.draggable=!phone();
+  const i=h('span','si'); i.innerHTML=sIcon(st(t)); c.appendChild(i); c.appendChild(h('span','tt', t.t)); const a=doers(t)[0]; if(a && a!==me()) c.appendChild(av(a,16));
+  c.title=t.t+' — '+st(t)+(t.due?' · due '+fmt(t.due):'')+(doers(t).length?' · '+doers(t).map(first).join(', '):'');
+  c.addEventListener('dragstart', e=>{ drag=t; c.classList.add('dragging'); try{ e.dataTransfer.setData('text/plain', t.id); e.dataTransfer.effectAllowed='move'; }catch(x){} });
+  c.addEventListener('dragend', ()=>{ c.classList.remove('dragging'); drag=null; document.querySelectorAll('.nx-over').forEach(x=>x.classList.remove('nx-over')); });
+  return c; }
+window.__workload=()=>workloadBlock(people().map(p=>p.id));
+function workloadBlock(order){ const t0=today(); let mon=addD(t0, -((t0.getDay()+6)%7)); if(t0.getDay()===6 || t0.getDay()===0) mon=addD(mon,7);
+  const W=[0,1,2,3].map(i=>addD(mon, 7*i)), box=h('div','nx-wl');
+  const hd=h('div','nx-wl-r hd'); hd.appendChild(h('span','nm'));
+  W.forEach((w,i)=>hd.appendChild(h('span','wk', i===0 ? 'This Week' : i===1 ? 'Next Week' : 'Week of '+fmt(iso(w)))));
+  hd.appendChild(h('span','wk','Past Due')); hd.appendChild(h('span','wk','No Date')); box.appendChild(hd);
+  order.forEach(id=>{ const p=person(id); if(!p) return; const T=S.tasks.filter(t=>isOpen(t) && doers(t).indexOf(id)>=0);
+    const r=h('div','nx-wl-r'); const nm=btn('nm', null, ()=>open('u:'+id)); nm.appendChild(av(id,22)); nm.appendChild(h('span',null, first(id))); r.appendChild(nm);
+    W.forEach(w=>{ const e=addD(w,7), n=T.filter(t=>t.due && pd(t.due)>=w && pd(t.due)<e).length; const c=h('span','c'+(n>=8?' heavy':n>=5?' busy':n?' some':''));
+      c.textContent=n||'–'; c.title=p.name+': '+n+' task'+(n===1?'':'s')+' due the week of '+fmt(iso(w)); r.appendChild(c); });
+    const late=T.filter(t=>t.due && days(t.due)<0).length, nd=T.filter(t=>!t.due).length;
+    const lc=h('span','c'+(late?' late':'')); lc.textContent=late||'–'; lc.title=late+' past due'; r.appendChild(lc);
+    const dc=h('span','c nd'); dc.textContent=nd||'–'; dc.title=nd+' with no due date'; r.appendChild(dc);
+    box.appendChild(r); });
+  box.appendChild(h('p','nx-wl-note','Open tasks each person is doing (hands-on), by the week they’re due. Darker means a fuller week; 8 or more is marked heavy. Click a name to see their tasks.'));
+  return box; }
+{ const cs=document.createElement('style'); cs.textContent=
+  '.nx-month{display:flex;flex-direction:column;gap:10px}.nx-mo-bar2{display:flex;align-items:center;gap:12px}.nx-mo-bar2 b{font-size:16px}'+
+  '.nx-mg{display:grid;grid-template-columns:repeat(5,minmax(0,1fr)) repeat(2,minmax(0,.55fr));border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--border);gap:1px}'+
+  '.nx-mh{background:var(--surface-2);font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3);padding:6px 8px}'+
+  '.nx-md{background:var(--surface);min-height:84px;padding:4px 5px 22px;position:relative;display:flex;flex-direction:column;gap:3px;min-width:0}'+
+  '.nx-md.we{background:var(--surface-2)}.nx-md.out{opacity:.55}.nx-md .n{font-size:12px;font-weight:600;color:var(--ink-3);padding:1px 3px;align-self:flex-start;border-radius:10px}'+
+  '.nx-md.today .n{background:var(--navy);color:#fff;padding:1px 7px}.nx-md.nx-over,.nx-mo-tray.nx-over{outline:2px dashed var(--sky);outline-offset:-3px;background:var(--sky-wash)}'+
+  '.nx-md-add{position:absolute;right:4px;bottom:3px;border:0;background:none;color:var(--ink-3);opacity:0;cursor:pointer;padding:2px;border-radius:4px}.nx-md:hover .nx-md-add,.nx-md-add:focus-visible{opacity:1}.nx-md-add svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2}'+
+  '.nx-mc{display:flex;align-items:center;gap:4px;width:100%;min-width:0;border:1px solid var(--border);border-left:3px solid var(--sky);border-radius:5px;background:var(--surface);padding:2px 5px;font:inherit;font-size:12px;color:var(--ink);cursor:pointer;text-align:left}'+
+  '.nx-mc:hover,.nx-mc:focus-visible{border-color:var(--sky)}.nx-mc .si{display:inline-flex;flex:none}.nx-mc .si svg{width:12px;height:12px}.nx-mc .tt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.nx-mc .av{flex:none}'+
+  '.nx-mc.late{border-left-color:var(--bad);background:color-mix(in srgb, var(--bad) 7%, var(--surface))}.nx-mc.hi{font-weight:600}.nx-mc.isdone{opacity:.55}.nx-mc.isdone .tt{text-decoration:line-through}.nx-mc.dragging{opacity:.4}'+
+  '.nx-mo-tray{border:1px dashed var(--border);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:6px}.nx-mo-tray b{font-size:12px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em}.nx-mo-tray b.bad{color:var(--bad)}'+
+  '.nx-mo-tl{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:4px}'+
+  '@media (max-width:700px){.nx-mg{grid-template-columns:repeat(7,minmax(0,1fr))}.nx-md{min-height:64px}.nx-mc .tt{font-size:11px}.nx-mc .av,.nx-mc .si{display:none}}'+
+  '.nx-wl{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:8px}'+
+  '.nx-wl-r{display:grid;grid-template-columns:minmax(120px,1.4fr) repeat(6,minmax(0,1fr));align-items:center;border-top:1px solid var(--border)}.nx-wl-r.hd{border-top:0;background:var(--surface-2)}'+
+  '.nx-wl-r .wk{font-size:11.5px;font-weight:700;color:var(--ink-3);text-align:center;padding:7px 4px;text-transform:uppercase;letter-spacing:.03em}'+
+  '.nx-wl-r .nm{display:flex;align-items:center;gap:8px;border:0;background:none;font:inherit;font-size:13px;font-weight:600;color:var(--ink);padding:7px 10px;cursor:pointer;text-align:left}.nx-wl-r .nm:hover span{text-decoration:underline}'+
+  '.nx-wl-r .c{text-align:center;font-size:13px;font-weight:600;padding:9px 4px;color:var(--ink-3);border-left:1px solid var(--border)}'+
+  '.nx-wl-r .c.some{background:color-mix(in srgb, var(--sky) 18%, var(--surface));color:var(--ink)}.nx-wl-r .c.busy{background:color-mix(in srgb, var(--sky) 45%, var(--surface));color:var(--ink)}'+
+  '.nx-wl-r .c.heavy{background:color-mix(in srgb, var(--warn) 30%, var(--surface));color:var(--ink)}.nx-wl-r .c.late{color:var(--bad)}'+
+  '.nx-wl-note{font-size:12px;color:var(--ink-3);margin:0;padding:8px 10px;border-top:1px solid var(--border)}';
+  document.head.appendChild(cs); }
 /* the full task editor (used on smaller screens and from every other page) gets the same comment thread */
 (function hookEditor(n){ const oe=window.__edit; if(!oe){ if(n<60) setTimeout(()=>hookEditor(n+1), 1000); return; } if(oe.__cm) return;
   const w=function(t){ const r=oe.apply(this, arguments);
@@ -5137,6 +5220,7 @@ function dropZone(el, g, key){
 
 /* the list body: groups of rows, or a board of columns */
 function taskView(L, g, mode, ctx, opt){ opt=opt||{};
+  if(mode==='cal') return monthView(L, ctx);
   const wrap=h('div', mode==='board' ? 'nx-board' : 'nx-list');
   const G=groupsOf(L, g, ctx).filter(x=>x.items.length || (g==='status' && x.k!=='Done') || (mode==='board' && g!=='person' && g!=='project'));
   if(!L.length && !opt.keepEmpty){ wrap.appendChild(h('p','nx-empty', opt.empty || 'Nothing here.')); return wrap; }
@@ -5170,7 +5254,7 @@ function card(t, opt){
 /* ---------- the peek: click a task, work on it right here (Linear's split view) ---------- */
 let peekEl=null, peekList=[];
 function withPeek(view, L, mode){
-  if(mode==='board' || window.matchMedia('(max-width:1000px)').matches){ body.appendChild(view); return; }
+  if(mode==='board' || mode==='cal' || window.matchMedia('(max-width:1000px)').matches){ body.appendChild(view); return; }
   body.classList.add('has-split');
   const sp=h('div','nx-split'), left=h('div','nx-sl'); left.appendChild(view); sp.appendChild(left);
   peekEl=h('aside','nx-peek'); peekEl.setAttribute('aria-label','Task details'); sp.appendChild(peekEl); body.appendChild(sp);
@@ -5239,8 +5323,8 @@ function drawPeek(){
 }
 
 /* ---------- toolbar bits ---------- */
-function seg(items, cur, fn, cls){ const s=h('div','nx-seg'+(cls?' '+cls:'')); items.forEach(([k,l,icon])=>{ const b=btn('nx-sg'+(cur===k?' on':''), null, ()=>fn(k)); b.innerHTML=(icon?ic(icon):'')+(l?'<span>'+l+'</span>':''); if(!l) b.title=k; s.appendChild(b); }); return s; }
-function modeSeg(key, def){ const m=ui.modes[key]||def; return seg([['list','','list'],['board','','board']], m, k=>{ ui.modes[key]=k; save(); paint(); }, 'ico'); }
+function seg(items, cur, fn, cls){ const s=h('div','nx-seg'+(cls?' '+cls:'')); items.forEach(([k,l,icon])=>{ const b=btn('nx-sg'+(cur===k?' on':''), null, ()=>fn(k)); b.innerHTML=(icon?ic(icon):'')+(l?'<span>'+l+'</span>':''); if(!l){ b.title=({list:'List',board:'Board',cal:'Calendar'})[k]||k; b.setAttribute('aria-label', b.title); } s.appendChild(b); }); return s; }
+function modeSeg(key, def){ const m=ui.modes[key]||def; return seg([['list','','list'],['board','','board'],['cal','','cal']], m, k=>{ ui.modes[key]=k; save(); paint(); }, 'ico'); }
 function groupSel(key, def, opts){ const s=h('select','nx-sel'); s.setAttribute('aria-label','Group by'); opts.forEach(k=>s.appendChild(new Option('Group: '+GROUPS[k], k))); s.value=ui.groups[key]||def; s.addEventListener('change', ()=>{ ui.groups[key]=s.value; save(); paint(); }); return s; }
 function filterBox(){ const f=h('input','nx-find'); f.placeholder='Filter…'; f.value=ui.q||''; f.setAttribute('aria-label','Filter tasks'); f.addEventListener('input', ()=>{ ui.q=f.value; const k=viewKind(); clearTimeout(f._t); f._t=setTimeout(()=>{ paint(); const x=head.querySelector('.nx-find'); if(x){ x.focus(); x.setSelectionRange(x.value.length, x.value.length); } }, 160); }); return f; }
 function doneToggle(){ const b=btn('nx-sg'+(ui.showDone?' on':''), 'Done', ()=>{ ui.showDone=!ui.showDone; save(); paint(); }); b.title='Show finished tasks'; return b; }
@@ -6427,6 +6511,8 @@ function vPeople(){
     const due=S.tasks.filter(t=>isOpen(t) && doers(t).indexOf(id)>=0 && t.due && pd(t.due)>=D[0] && pd(t.due)<=D[4]).length; const late=S.tasks.filter(t=>isOpen(t) && doers(t).indexOf(id)>=0 && t.due && days(t.due)<0).length;
     const dc=h('span','hd'); dc.textContent=due+' due'+(late?' · '+late+' late':''); if(late) dc.classList.add('bad'); hm.appendChild(dc); });
   wrap.appendChild(hm);
+  wrap.appendChild(h('div','nx-sec','Workload · the next four weeks'));
+  wrap.appendChild(workloadBlock(order));
   body.appendChild(wrap);
 }
 
