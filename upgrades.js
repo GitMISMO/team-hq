@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261107v';
+var BUILD='20261107x';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4513,6 +4513,380 @@ window.__sySkin={paint, destroy(){ mo.disconnect(); css.remove(); const b=V.quer
 })();
 
 });
+/* ===== systems.js ===== */
+MODS.push(function(){
+/* Connected Systems (November 7, 2026)
+   A Team HQ page that shows how MISMO's systems fit together: the system map, how the data is
+   protected, what each system replaced and what runs on its own. Built to match the "MISMO Connected
+   Systems" page.
+   - Nothing about the systems is in this code. The content lives in Team HQ's private data
+     (collection "systemsmap", record "current") and arrives only after sign-in.
+   - The MISMO Connections Map (a Claude Doc) is the source of truth. When Jonna says "refresh
+     Connected Systems", Team HQ's Claude reads the map and saves a new "current" record.
+   - Jonna can change a system's status or details, add systems and add or change connections
+     in Edit mode. Every save stamps the "as of" date. Removing something sets it aside (archived)
+     so it can be brought back; nothing is deleted outright.
+   - Lines copied by a person are drawn dashed with no moving dot, and aren't counted as automatic.
+   - Items still to confirm are marked only in Edit mode. */
+(function(){
+'use strict';
+if(window.__hqSystems && window.__hqSystems.destroy) window.__hqSystems.destroy();
+const S=window.__S; if(!S) return;
+const EDITORS=['jonna'];
+const NS='http://www.w3.org/2000/svg', W=148, H=40;
+const ZONES={apps:'MISMO apps', mba:'MBA & Microsoft 365', out:'Outside MISMO', eng:'Engine room'};
+const ST=['Live','Launching','Building'];
+const AC={'--c1':'#2477b8','--c2':'#eb6834','--c3':'#1baf7a','--c4':'#c98500','--c5':'#d55181','--c6':'#008300'};
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const M={data:null, sub:false, listeners:[], err:null};
+function h(t,c,x){ const e=document.createElement(t); if(c) e.className=c; if(x!=null) e.textContent=x; return e; }
+function btn(c,x,f){ const b=h('button',c,x); b.type='button'; if(f) b.addEventListener('click', f); return b; }
+function sv(t,a,p){ const e=document.createElementNS(NS,t); for(const k in a) e.setAttribute(k,a[k]); if(p) p.appendChild(e); return e; }
+const me=()=>S.me||'';
+const canEdit=()=>EDITORS.indexOf(me())>=0;
+const todayISO=()=>{ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+function longDate(iso){ if(!iso) return ''; const p=String(iso).split('-'); const d=new Date(+p[0], +p[1]-1, +p[2]); return isNaN(d) ? iso : MON[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear(); }
+const clone=o=>JSON.parse(JSON.stringify(o));
+function toast(msg, undo){ const t=window.__nxToast; if(t) t(msg, undo); }
+
+/* ---------- the data: one private record, read after sign-in ---------- */
+function start(){ if(M.sub || !S.db || !S.db.collection) return; M.sub=true;
+  try{ S.db.collection('systemsmap').onSnapshot(snap=>{ const d=(snap && snap.docs ? snap.docs : []).find(x=>x.id==='current'); let b=null; try{ b=d ? JSON.parse(JSON.stringify(d.data()||{})) : null; }catch(e){ b=null; }
+      if(b && Array.isArray(b.systems)){ if(M.data && !M.data.empty && b.at && b.at===M.data.at) return; /* our own save coming back */ fix(b); M.data=b; } else if(!M.data) M.data={empty:true}; else return;
+      notify(false); }, e=>{ M.err=e; if(!M.data){ M.data={empty:true}; notify(false); } }); }catch(e){ M.err=e; } }
+function fix(d){ d.areas=d.areas||{}; d.connections=d.connections||[]; d.protection=d.protection||[]; d.replaced=d.replaced||[]; d.automations=d.automations||[]; d.archived=d.archived||{systems:[],connections:[]};
+  d.connections.forEach((c,i)=>{ if(!c.id) c.id='c'+Date.now().toString(36)+i; if(!c.how) c.how='auto'; }); }
+function save(next, msg){ const prev=M.data && !M.data.empty ? clone(M.data) : null;
+  next.asOf=todayISO(); next.by=me(); next.at=Date.now(); fix(next); M.data=next; M.mine=next.at; notify(true);
+  return Promise.resolve().then(()=>S.db.collection('systemsmap').doc('current').set(next)).then(()=>{ if(msg) toast(msg, prev ? ()=>save(prev, 'Put back the way it was.') : null); }, e=>{ console.error(e); toast('That didn’t save. Try again in a moment.'); if(prev){ M.data=prev; notify(true); } }); }
+/* own saves redraw right away; changes from elsewhere wait while you're typing in a form */
+function notify(force){ if(P.el && P.el.isConnected && (force || !document.querySelector('.cs .cs-f :focus'))) draw(); M.listeners.forEach(f=>{ try{ f(); }catch(e){ console.error(e); } }); }
+/* Team HQ's Claude uses this to load a refresh from the Connections Map (it keeps the layout of systems already placed). */
+function load(json, opt){ if(!canEdit()) return Promise.reject(new Error('Only an editor can load Connected Systems.'));
+  const d=typeof json==='string' ? JSON.parse(json) : clone(json); if(!d || !Array.isArray(d.systems) || !Array.isArray(d.connections)) return Promise.reject(new Error('That isn’t Connected Systems data.'));
+  const old=M.data && !M.data.empty ? M.data : null;
+  if(old && !(opt && opt.layout)){ const pos={}; old.systems.forEach(s=>pos[s.id]={x:s.x,y:s.y}); d.systems.forEach(s=>{ if(pos[s.id] && (s.x==null || s.y==null)){ s.x=pos[s.id].x; s.y=pos[s.id].y; } }); }
+  d.systems.forEach(s=>{ if(s.x==null || s.y==null){ const p=freeSpot(d, s.zone||'apps'); s.x=p.x; s.y=p.y; } });
+  d.refreshedAt=todayISO(); return save(d, 'Connected Systems refreshed from the Connections Map.'); }
+
+/* ---------- where a new box goes ---------- */
+function freeSpot(d, zone){ const taken=(x,y)=>d.systems.some(s=>Math.abs(s.x-x)<W && Math.abs(s.y-y)<H+12);
+  const cand=[];
+  if(zone==='apps'){ for(let y=95;y<=495;y+=75) [365,525,685,845].forEach(x=>cand.push([x,y])); }
+  else if(zone==='mba') for(let y=95;y<=495;y+=60) cand.push([110,y]);
+  else if(zone==='out') for(let y=95;y<=495;y+=60) cand.push([1090,y]);
+  else [120,240,360,480,600,720,840,960,1080].forEach(x=>cand.push([x,640]));
+  const c=cand.find(p=>!taken(p[0],p[1])) || cand[cand.length-1]; return {x:c[0], y:c[1]}; }
+
+/* ---------- the styles: the Connected Systems look, in Team HQ's colors (light and dark) ---------- */
+const css=h('style'); css.id='hq-systems';
+css.textContent=`
+.cs{--cs-zone:var(--surface-2);--cs-edge:var(--border-strong,#adc4d6);--cs-hot:var(--navy-mid,#14486e);font-size:15px;line-height:1.55;color:var(--ink);max-width:1240px;margin:0 auto}
+html[data-theme="dark"] .cs{--cs-hot:#74bfeb}
+@media (prefers-color-scheme: dark){ html:not([data-theme="light"]) .cs{--cs-hot:#74bfeb} }
+.cs h2,.cs h3{margin:0;letter-spacing:-.012em;text-wrap:balance}
+.cs-hero{background:var(--navy,#0d314c);border-radius:12px;padding:26px 26px 24px;color:#fff;position:relative}
+.cs-hero h2{font-size:clamp(24px,3.4vw,36px);font-weight:700;line-height:1.12;max-width:24ch;color:#fff}
+.cs-hero h2 span{color:#74bfeb}
+.cs-hero p{color:#a9d8f3;max-width:68ch;margin:10px 0 18px;font-size:15.5px}
+.cs-asof{position:absolute;top:16px;right:18px;font-size:12px;color:#a9d8f3;letter-spacing:.02em}
+.cs-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+@media(max-width:560px){.cs-asof{position:static;margin-bottom:8px}.cs-hero{padding:20px 18px}}
+.cs-stat{background:rgba(255,255,255,.06);border:1px solid rgba(116,191,235,.3);border-radius:8px;padding:14px 16px}
+.cs-stat b{display:block;font-variant-numeric:tabular-nums;font-size:28px;font-weight:600;color:#fff;line-height:1.1}
+.cs-stat span{display:block;font-size:12.5px;color:#a9d8f3;margin-top:4px}
+.cs-band{padding:28px 0 6px}
+.cs-sh{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:14px}
+.cs-sh h2{font-size:22px;font-weight:700}.cs-sh p{margin:6px 0 0;color:var(--ink-2);max-width:72ch;font-size:14px}
+.cs-k{font-size:11px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;color:var(--cs-hot)}
+.cs-chips{display:flex;flex-wrap:wrap;gap:8px}
+.cs-chip{border:1px solid var(--border-strong,var(--border));background:var(--surface);color:var(--ink);border-radius:4px;padding:6px 11px;font:500 13px inherit;font-family:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.cs-chip i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.cs-chip[aria-pressed="true"]{background:var(--navy,#0d314c);color:#fff;border-color:var(--navy,#0d314c)}
+.cs-grid{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:16px;align-items:start}
+@media(max-width:1100px){.cs-grid{grid-template-columns:minmax(0,1fr)}}
+.cs-mapbox{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow-x:auto}
+.cs-mapbox svg{display:block;width:100%;min-width:760px;height:auto;touch-action:pan-x pan-y}
+.cs-zl{font:600 11px sans-serif;font-family:inherit;letter-spacing:.12em;text-transform:uppercase;fill:var(--ink-3)}
+.cs-zone{fill:var(--cs-zone);stroke:var(--rule,var(--border))}
+.cs-e{fill:none;stroke:var(--cs-edge);stroke-width:1.4;transition:opacity .2s,stroke .2s}
+.cs-e.hand{stroke-dasharray:5 4}
+.cs-e.hot{stroke:var(--cs-hot);stroke-width:2.2}
+.cs-p{fill:#74bfeb}
+.cs-n{cursor:pointer;outline:none}
+.cs-n rect{fill:var(--surface);stroke:var(--border-strong,var(--border));stroke-width:1.2}
+.cs-n .bar{stroke:none}
+.cs-n text{font:600 12.5px sans-serif;font-family:inherit;fill:var(--ink)}
+.cs-n .sub{font:500 10px ui-monospace,Menlo,monospace;fill:var(--ink-3)}
+.cs-n.dim,.cs-e.dim,.cs-p.dim{opacity:.13}
+.cs-n.sel rect{stroke:var(--cs-hot);stroke-width:2.4}
+.cs-n:focus-visible rect{stroke:#74bfeb;stroke-width:3}
+.cs-n.eng rect{fill:var(--surface-3,var(--surface-2))}
+.cs-n .cf{fill:var(--warn,#a2701a)}
+.cs.editing .cs-n{cursor:grab}.cs.editing .cs-n.drag{cursor:grabbing}
+.cs-panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:18px;position:sticky;top:12px;min-width:0}
+.cs-panel h3{font-size:19px;margin-bottom:4px}
+.cs-tag{display:inline-block;font:600 11px inherit;font-family:inherit;letter-spacing:.06em;text-transform:uppercase;border-radius:4px;padding:3px 7px;margin:4px 6px 8px 0}
+.cs-live{background:color-mix(in srgb,var(--good,#0f7b5c) 16%,transparent);color:var(--good,#0f7b5c)}
+.cs-soon{background:color-mix(in srgb,var(--warn,#a2701a) 18%,transparent);color:var(--warn,#a2701a)}
+.cs-build{background:var(--surface-3,var(--surface-2));color:var(--ink-2)}
+.cs-panel dl{margin:8px 0 0;display:grid;gap:10px}
+.cs-panel dt{font:600 11px inherit;font-family:inherit;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.cs-panel dd{margin:2px 0 0;font-size:14px}
+.cs-panel ul{margin:4px 0 0;padding-left:18px;font-size:13.5px;color:var(--ink-2)}.cs-panel ul li{margin:3px 0}
+.cs-panel .hint{color:var(--ink-3);font-size:13px}
+.cs-hand{font-size:11px;font-weight:600;color:var(--ink-3);border:1px dashed var(--border-strong,var(--border));border-radius:3px;padding:0 4px;margin-left:4px;white-space:nowrap}
+.cs-cf{display:block;margin-top:6px;font-size:12.5px;color:var(--warn,#a2701a);background:color-mix(in srgb,var(--warn,#a2701a) 10%,transparent);border-radius:6px;padding:6px 8px}
+.cs-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--ink-2);margin-top:10px}.cs-legend span{display:inline-flex;align-items:center;gap:6px}
+.cs-layers{display:grid;gap:8px}
+.cs-layer{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:14px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px}
+.cs-layer .n{font-family:ui-monospace,Menlo,monospace;font-weight:600;color:var(--cs-hot);font-size:13px;text-align:center;border:1px solid var(--border-strong,var(--border));border-radius:4px;padding:6px 0}
+.cs-layer b{display:block;font-size:15px}.cs-layer p{margin:2px 0 0;color:var(--ink-2);font-size:13.5px}
+.cs-layer .st{font:600 11px inherit;font-family:inherit;letter-spacing:.06em;text-transform:uppercase;border-radius:4px;padding:4px 8px;white-space:nowrap}
+@media(max-width:560px){.cs-layer{grid-template-columns:36px minmax(0,1fr)}.cs-layer .st{grid-column:2;justify-self:start}}
+.cs-swaps{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:12px}
+.cs-swap{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;display:grid;gap:6px}
+.cs-swap .old{font-size:13px;color:var(--ink-3);text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--bad,#b3372c) 60%,transparent)}
+.cs-swap .new{font-weight:600;font-size:15.5px}.cs-swap .new::before{content:"→ ";color:#74bfeb}
+.cs-swap p{margin:0;font-size:13.5px;color:var(--ink-2)}
+.cs-cad{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.cs-cadcol{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px}
+.cs-cadcol h3{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px;font-weight:600}
+.cs-cadcol ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.cs-cadcol li{font-size:14px;line-height:1.4;padding-left:12px;border-left:3px solid #74bfeb}.cs-cadcol li small{display:block;color:var(--ink-3);font-size:12px}
+.cs-foot{color:var(--ink-3);font-size:12.5px;padding:14px 0 30px}
+.cs-empty{background:var(--surface);border:1px dashed var(--border);border-radius:10px;padding:28px;text-align:center;color:var(--ink-2)}
+.cs-ebar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:color-mix(in srgb,#74bfeb 14%,var(--surface));border:1px solid color-mix(in srgb,#74bfeb 45%,var(--border));border-radius:8px;padding:9px 12px;margin:14px 0 0;font-size:13px}
+.cs-ebar b{margin-right:auto}
+.cs-f{display:grid;gap:10px}.cs-f label{display:grid;gap:3px;font-size:12px;font-weight:600;color:var(--ink-3);letter-spacing:.02em}
+.cs-f input,.cs-f select,.cs-f textarea{font:inherit;font-size:13.5px;color:var(--ink);background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:7px 9px;width:100%;box-sizing:border-box;resize:vertical}
+.cs-f .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cs-f .acts{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;margin-top:4px}
+.cs-f .need{border-color:var(--bad,#b3372c)}
+.cs-cl{display:grid;gap:6px;margin:6px 0 0}
+.cs-ci{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:start;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12.5px}
+.cs-ci b{font-weight:600}.cs-ci small{display:block;color:var(--ink-3)}
+.cs-ci .x{display:flex;gap:4px}
+.cs-sbtn{font:inherit;font-size:12px;border:1px solid var(--border);background:var(--surface);color:var(--ink);border-radius:5px;padding:3px 8px;cursor:pointer}
+.cs-sbtn.pri,.cs-btn.pri{background:var(--navy,#0d314c);color:#fff;border-color:var(--navy,#0d314c)}
+.cs-btn{font:inherit;font-size:13px;font-weight:600;border:1px solid var(--border);background:var(--surface);color:var(--ink);border-radius:6px;padding:6px 12px;cursor:pointer}
+.cs-btn.danger{color:var(--bad,#b3372c)}
+@media (prefers-reduced-motion: reduce){ .cs-p{display:none} .cs *{transition:none!important} }
+/* the dashboard tile */
+.cs-tile .cs-tn{display:flex;gap:14px;flex-wrap:wrap;margin-top:4px}
+.cs-tile .cs-tn div b{display:block;font-size:24px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+.cs-tile .cs-tn div small{font-size:11.5px;color:var(--ink-3)}
+.cs-tile .cs-tl{display:grid;gap:4px;margin-top:8px;font-size:12.5px}
+.cs-tile .cs-tl span{display:flex;justify-content:space-between;gap:8px}.cs-tile .cs-tl em{font-style:normal;color:var(--ink-3);white-space:nowrap}
+.cs-tile svg.cs-mini{display:block;width:100%;height:auto;margin-top:6px}
+`;
+document.head.appendChild(css);
+
+/* ---------- the page ---------- */
+const P={el:null, filter:null, sel:null, hover:null, edit:false, form:null};
+function areaName(d,s){ return s.area && d.areas[s.area] ? d.areas[s.area].name : (ZONES[s.zone]||''); }
+function colorOf(d,s){ return s.area && d.areas[s.area] ? (AC[d.areas[s.area].c]||'#74bfeb') : (s.zone==='eng' ? 'var(--navy-mid,#14486e)' : 'var(--border-strong,#adc4d6)'); }
+function stTag(s){ const k=s.status==='Live'?'cs-live':s.status==='Launching'?'cs-soon':'cs-build'; return h('span','cs-tag '+k, s.status==='Live' ? 'Live' : (s.statusNote||s.status||'Building')); }
+function counts(d){ const apps=d.systems.filter(s=>s.zone==='apps').length; const auto=d.connections.filter(c=>c.how!=='hand').length;
+  const jobs=d.automations.reduce((n,g)=>n+(g.items||[]).length,0); return {apps, auto, hand:d.connections.length-auto, jobs, swaps:d.replaced.length,
+  live:d.systems.filter(s=>s.zone==='apps' && s.status==='Live').length, soon:d.systems.filter(s=>s.zone==='apps' && s.status!=='Live')}; }
+function confirms(d){ return d.systems.filter(s=>s.confirm).length + d.connections.filter(c=>c.confirm).length; }
+
+function page(){ start(); const root=h('div','cs'+(P.edit?' editing':'')); P.el=root; draw(); return root; }
+function draw(){ const root=P.el; if(!root) return; root.textContent=''; root.className='cs'+(P.edit?' editing':'');
+  const d=M.data;
+  if(!d){ root.appendChild(h('div','cs-empty','Getting Connected Systems…')); return; }
+  if(d.empty){ const e=h('div','cs-empty'); e.appendChild(h('b',null,'Connected Systems hasn’t been loaded yet.')); e.appendChild(h('p',null, canEdit() ? 'Ask Team HQ’s Claude to “refresh Connected Systems” and it will bring everything in from the MISMO Connections Map.' : 'Jonna will bring it in from the MISMO Connections Map.')); root.appendChild(e); return; }
+  const c=counts(d);
+  /* hero */
+  const hero=h('section','cs-hero'); hero.appendChild(h('div','cs-asof','As of '+longDate(d.asOf)));
+  const t=h('h2'); t.append('One connected operation, '); t.appendChild(h('span',null,'built in-house')); hero.appendChild(t);
+  if(d.lede) hero.appendChild(h('p',null,d.lede));
+  const st=h('div','cs-stats'); [[c.apps,'MISMO systems on resources.mismo.org'],[c.auto,'automatic hand-offs between systems'],[c.jobs,'jobs that run on their own'],[c.swaps,'manual processes replaced']].forEach(x=>{ const s=h('div','cs-stat'); s.appendChild(h('b',null,String(x[0]))); s.appendChild(h('span',null,x[1])); st.appendChild(s); }); hero.appendChild(st);
+  root.appendChild(hero);
+  if(P.edit) root.appendChild(editBar(d));
+  /* map */
+  const b1=h('section','cs-band'); const sh=h('div','cs-sh'); const sx=h('div'); sx.appendChild(h('div','cs-k','How it fits together')); sx.appendChild(h('h2',null,'The System Map'));
+  sx.appendChild(h('p',null, P.edit ? 'Edit mode: select a box to change it, drag a box to move it, or use Add a System and Add a Connection above.' : 'Left: MBA and Microsoft 365 systems MISMO draws on. Center: MISMO’s own apps at resources.mismo.org. Right: where work reaches members, sponsors and the public. Underneath: the engine room every app runs on. Select any box to see what it does.'));
+  sh.appendChild(sx); sh.appendChild(chips(d)); b1.appendChild(sh);
+  const g=h('div','cs-grid'); const left=h('div'); const mb=h('div','cs-mapbox'); mb.appendChild(map(d)); left.appendChild(mb);
+  const lg=h('div','cs-legend'); lg.innerHTML='<span><svg width="26" height="8" aria-hidden="true"><line x1="0" y1="4" x2="26" y2="4" stroke="var(--cs-hot)" stroke-width="2"/><circle cx="18" cy="4" r="3" fill="#74bfeb"/></svg>Work moving automatically</span><span><svg width="26" height="8" aria-hidden="true"><line x1="0" y1="4" x2="26" y2="4" stroke="var(--cs-edge)" stroke-width="1.6" stroke-dasharray="5 4"/></svg>Copied by a person</span><span><svg width="14" height="14" aria-hidden="true"><rect x="1" y="1" width="12" height="12" rx="2" fill="var(--surface-3,var(--surface-2))" stroke="var(--border-strong,#adc4d6)"/></svg>Shared engine every app uses</span>'+(P.edit?'<span><svg width="10" height="10" aria-hidden="true"><circle cx="5" cy="5" r="4" fill="var(--warn,#a2701a)"/></svg>To confirm</span>':'');
+  left.appendChild(lg); g.appendChild(left);
+  const panel=h('aside','cs-panel'); panel.setAttribute('aria-live','polite'); g.appendChild(panel); P.panel=panel; b1.appendChild(g); root.appendChild(b1);
+  /* protection */
+  const b2=band('Security','How the Data Is Protected','Each layer stands on its own, so a problem in one doesn’t expose the rest.'); const ly=h('div','cs-layers');
+  d.protection.forEach((l,i)=>{ const ok=/in place/i.test(l.status||''); const r=h('div','cs-layer'); r.appendChild(h('div','n',String(i+1).padStart(2,'0'))); const tx=h('div'); tx.appendChild(h('b',null,l.title)); tx.appendChild(h('p',null,l.detail)); r.appendChild(tx); r.appendChild(h('span','st '+(ok?'cs-live':'cs-soon'), l.status||'')); ly.appendChild(r); });
+  b2.appendChild(ly); root.appendChild(b2);
+  /* replaced */
+  const b3=band('What changed','What Each System Replaced','Each one took a manual process off a spreadsheet or out of an inbox.'); const sw=h('div','cs-swaps');
+  d.replaced.forEach(s=>{ const c0=h('div','cs-swap'); c0.appendChild(h('div','old',s.before)); c0.appendChild(h('div','new',s.after)); c0.appendChild(h('p',null,s.detail)); sw.appendChild(c0); }); b3.appendChild(sw); root.appendChild(b3);
+  /* automation */
+  const b4=band('Automation','What Runs on Its Own','Work that used to wait for someone to remember it now happens on a schedule or the moment something changes.'); const cd=h('div','cs-cad');
+  d.automations.forEach(gp=>{ const col=h('div','cs-cadcol'); col.appendChild(h('h3',null,gp.cadence)); const ul=h('ul'); (gp.items||[]).forEach(it=>{ const li=h('li',null,it.name); li.appendChild(h('small',null,it.detail)); ul.appendChild(li); }); col.appendChild(ul); cd.appendChild(col); }); b4.appendChild(cd); root.appendChild(b4);
+  const ft=h('p','cs-foot'); ft.textContent='As of '+longDate(d.asOf)+'. Brought in from the MISMO Connections Map'+(d.refreshedAt?' on '+longDate(d.refreshedAt):'')+(c.hand?'; '+c.hand+' connection'+(c.hand>1?'s are':' is')+' copied by a person and shown dashed':'')+'.'; root.appendChild(ft);
+  if(P.sel && !d.systems.some(s=>s.id===P.sel)) P.sel=null;
+  paintState(); side(); }
+function band(k,title,p){ const b=h('section','cs-band'); const sh=h('div','cs-sh'); const x=h('div'); x.appendChild(h('div','cs-k',k)); x.appendChild(h('h2',null,title)); if(p) x.appendChild(h('p',null,p)); sh.appendChild(x); b.appendChild(sh); return b; }
+function chips(d){ const box=h('div','cs-chips'); box.setAttribute('role','group'); box.setAttribute('aria-label','Filter by area');
+  const add=(k,label,col)=>{ const b=btn('cs-chip', null, ()=>{ P.filter=k; box.querySelectorAll('.cs-chip').forEach(x=>x.setAttribute('aria-pressed', String(x===b))); paintState(); }); if(col){ const i=h('i'); i.style.background=col; b.appendChild(i); } b.append(label); b.setAttribute('aria-pressed', String(P.filter===k)); box.appendChild(b); };
+  add(null,'All'); Object.keys(d.areas).forEach(k=>add(k, d.areas[k].name, AC[d.areas[k].c])); return box; }
+
+/* ---------- the map ---------- */
+let pulseOn=!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+function anchor(n,m){ const dx=m.x-n.x, dy=m.y-n.y; if(Math.abs(dx)*H>Math.abs(dy)*W) return {x:n.x+(dx>0?W/2:-W/2), y:n.y}; return {x:n.x, y:n.y+(dy>0?H/2:-H/2)}; }
+function edgePath(a,b,i){ const p=anchor(a,b), q=anchor(b,a); const mx=(p.x+q.x)/2, my=(p.y+q.y)/2, off=(i%2?1:-1)*Math.min(40,Math.hypot(q.x-p.x,q.y-p.y)/6);
+  const nx=-(q.y-p.y), ny=(q.x-p.x), L=Math.hypot(nx,ny)||1; return 'M'+p.x+' '+p.y+' Q'+(mx+nx/L*off)+' '+(my+ny/L*off)+' '+q.x+' '+q.y; }
+let uid=0;
+function map(d){ const svg=sv('svg',{viewBox:'0 0 1200 720', role:'img', 'aria-label':'Map of MISMO’s systems and the connections between them'}); P.svg=svg; const pre='cse'+(++uid)+'-';
+  [[12,22,196,500],[288,22,634,500],[992,22,196,500],[12,584,1176,112]].forEach(z=>sv('rect',{class:'cs-zone',x:z[0],y:z[1],width:z[2],height:z[3],rx:8},svg));
+  [['MBA & Microsoft 365',110,44],['MISMO apps · resources.mismo.org',605,44],['Outside MISMO',1090,44],['Engine room · every app runs on these',600,606]].forEach(z=>{ const t=sv('text',{class:'cs-zl',x:z[1],y:z[2],'text-anchor':'middle'},svg); t.textContent=z[0]; });
+  const gE=sv('g',{},svg), gP=sv('g',{},svg), gN=sv('g',{},svg); const by={}; d.systems.forEach(s=>by[s.id]=s);
+  P.edges=[]; P.nodes={}; const pairs={};
+  d.connections.forEach((c,i0)=>{ const a=by[c.from], b=by[c.to]; if(!a || !b) return;
+    const pk=[c.from,c.to].sort().join('|'), f0=pairs[pk]; if(!f0) pairs[pk]={i:i0, from:c.from}; const i=!f0 ? i0 : (f0.from===c.from ? f0.i+1 : f0.i); /* a second line between the same two boxes curves the other way */
+    const path=sv('path',{class:'cs-e'+(c.how==='hand'?' hand':''), d:edgePath(a,b,i), id:pre+i0},gE); const tt=sv('title',{},path); tt.textContent=a.name+' → '+b.name+': '+c.what+(c.how==='hand'?' (copied by a person)':'');
+    const e={c, el:path, i}; if(pulseOn && c.how!=='hand'){ const ci=sv('circle',{class:'cs-p',r:3},gP); const m=sv('animateMotion',{dur:(4+(i%5)*.8)+'s',repeatCount:'indefinite',begin:(i*0.37%4)+'s'},ci); const mp=sv('mpath',{},m); mp.setAttribute('href','#'+pre+i0); mp.setAttributeNS('http://www.w3.org/1999/xlink','href','#'+pre+i0); e.p=ci; }
+    P.edges.push(e); });
+  d.systems.forEach(s=>{ const g=sv('g',{class:'cs-n'+(s.zone==='eng'?' eng':''), tabindex:0, role:'button', 'aria-label':s.name+', '+(s.status||''), transform:'translate('+(s.x-W/2)+','+(s.y-H/2)+')'},gN);
+    sv('rect',{x:0,y:0,width:W,height:H,rx:6},g); sv('rect',{class:'bar',x:0,y:0,width:5,height:H,rx:2,fill:colorOf(d,s)},g);
+    const two=!!(s.statusNote || s.zone==='eng' || s.sub); const t=sv('text',{x:12,y:two?17:25},g); t.textContent=s.name.length>21 ? s.name.slice(0,20)+'…' : s.name;
+    if(two){ const t2=sv('text',{class:'sub',x:12,y:31},g); t2.textContent=s.statusNote || s.sub || (s.id==='robots'?'run on schedules':s.id==='flows'?'inside Microsoft 365':'used by every app'); }
+    if(P.edit && (s.confirm || d.connections.some(c=>c.confirm && (c.from===s.id || c.to===s.id)))){ sv('circle',{class:'cf',cx:W-8,cy:8,r:4},g); }
+    P.nodes[s.id]=g;
+    g.addEventListener('click', ()=>{ if(g._moved){ g._moved=false; return; } select(s.id); });
+    g.addEventListener('keydown', ev=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); select(s.id); } });
+    g.addEventListener('mouseenter', ()=>{ P.hover=s.id; paintState(); }); g.addEventListener('mouseleave', ()=>{ P.hover=null; paintState(); });
+    if(P.edit) dragable(g, s, d); });
+  return svg; }
+/* in Edit mode, drag a box to move it; the new spot saves when you let go */
+function dragable(g, s, d){ g.addEventListener('pointerdown', ev=>{ if(ev.button!==0) return; const svg=P.svg; const pt=svg.createSVGPoint();
+  const loc=e=>{ pt.x=e.clientX; pt.y=e.clientY; return pt.matrixTransform(svg.getScreenCTM().inverse()); };
+  const st=loc(ev), ox=s.x, oy=s.y; let moved=false; g.setPointerCapture(ev.pointerId);
+  const mv=e=>{ const p=loc(e); const nx=Math.round(Math.max(W/2+8, Math.min(1200-W/2-8, ox+p.x-st.x))), ny=Math.round(Math.max(H/2+8, Math.min(720-H/2-8, oy+p.y-st.y)));
+    if(!moved && Math.hypot(nx-ox, ny-oy)<4) return; moved=true; g.classList.add('drag'); s.x=nx; s.y=ny; g.setAttribute('transform','translate('+(nx-W/2)+','+(ny-H/2)+')');
+    const by={}; d.systems.forEach(z=>by[z.id]=z); P.edges.forEach(e2=>{ if(e2.c.from===s.id || e2.c.to===s.id){ const a=by[e2.c.from], b=by[e2.c.to]; e2.el.setAttribute('d', edgePath(a,b,e2.i)); } }); };
+  const up=()=>{ g.removeEventListener('pointermove', mv); g.removeEventListener('pointerup', up); g.removeEventListener('pointercancel', up); g.classList.remove('drag');
+    if(moved){ g._moved=true; const nd=clone(d); const t=nd.systems.find(z=>z.id===s.id); t.x=s.x; t.y=s.y; s.x=ox; s.y=oy; save(nd, 'Moved '+s.name+'.'); } };
+  g.addEventListener('pointermove', mv); g.addEventListener('pointerup', up); g.addEventListener('pointercancel', up); }); }
+function linked(id){ const s={}; s[id]=1; (M.data.connections||[]).forEach(c=>{ if(c.from===id) s[c.to]=1; if(c.to===id) s[c.from]=1; }); return s; }
+function paintState(){ const d=M.data; if(!d || d.empty || !P.nodes) return; const by={}; d.systems.forEach(s=>by[s.id]=s);
+  const focus=P.hover||P.sel, L=focus ? linked(focus) : null, f=P.filter;
+  d.systems.forEach(s=>{ const n=P.nodes[s.id]; if(!n) return;
+    const on= L ? !!L[s.id] : (!f || s.area===f || s.zone==='eng' || (!s.area && d.connections.some(c=>(c.from===s.id && by[c.to] && by[c.to].area===f) || (c.to===s.id && by[c.from] && by[c.from].area===f))));
+    n.classList.toggle('dim', !on); n.classList.toggle('sel', s.id===P.sel); });
+  P.edges.forEach(e=>{ const a=by[e.c.from], b=by[e.c.to]; const on= focus ? (e.c.from===focus || e.c.to===focus) : (!f || a.area===f || b.area===f);
+    e.el.classList.toggle('dim', !on); e.el.classList.toggle('hot', !!focus && on); if(e.p) e.p.classList.toggle('dim', !on); }); }
+function select(id){ P.sel=(P.sel===id && !P.edit) ? null : id; P.form=null; paintState(); side(); }
+
+/* ---------- the side panel: what a system does (or, in Edit mode, the form) ---------- */
+function side(){ const p=P.panel, d=M.data; if(!p || !d || d.empty) return; p.textContent='';
+  if(P.form){ P.form(p); return; }
+  if(!P.sel){ intro(p, d); return; }
+  const s=d.systems.find(x=>x.id===P.sel); if(!s){ intro(p,d); return; }
+  if(P.edit){ sysForm(p, d, s); return; }
+  const by={}; d.systems.forEach(x=>by[x.id]=x);
+  p.appendChild(h('div','cs-k',areaName(d,s))); p.appendChild(h('h3',null,s.name)); p.appendChild(stTag(s)); p.appendChild(h('p',null,s.what)).style.margin='0';
+  const dl=h('dl'); const row=(k,v)=>{ if(!v) return; const w=h('div'); w.appendChild(h('dt',null,k)); const dd=h('dd'); if(typeof v==='string') dd.textContent=v; else dd.appendChild(v); w.appendChild(dd); dl.appendChild(w); };
+  row('Where it lives', s.where); row('Replaced', s.replaced);
+  const list=(L, other)=>{ if(!L.length) return null; const ul=h('ul'); L.forEach(c=>{ const li=h('li'); li.appendChild(h('b',null,(by[c[other]]||{}).name+':')); li.append(' '+c.what); if(c.how==='hand') li.appendChild(h('span','cs-hand','by hand')); if(c.note) { const n=h('small'); n.style.display='block'; n.style.color='var(--ink-3)'; n.textContent=c.note; li.appendChild(n); } ul.appendChild(li); }); return ul; };
+  row('Receives', list(d.connections.filter(c=>c.to===s.id),'from')); row('Sends', list(d.connections.filter(c=>c.from===s.id),'to'));
+  p.appendChild(dl); }
+function intro(p, d){ p.appendChild(h('div','cs-k', P.edit ? 'Edit mode' : 'Select a box')); p.appendChild(h('h3',null, P.edit ? 'Change the Map' : 'What You’re Looking At'));
+  if(P.edit){ p.appendChild(h('p',null,'Select a system to change its status or details, or to add, change or set aside its connections. Drag a box to move it. Every save updates the “as of” date.')).style.margin='0 0 10px';
+    const n=confirms(d); if(n) p.appendChild(h('span','cs-cf', n+' item'+(n>1?'s':'')+' still to confirm, marked with an amber dot. They’re only marked here, not for everyone else.'));
+    return; }
+  p.appendChild(h('p',null,'Each line is work that moves between systems without anyone copying it by hand. The moving dots show the direction; a dashed line is copied by a person.')).style.margin='0 0 10px';
+  const ul=h('ul','hint'); ['Point at a box to light up everything it touches.','Select it for what it does, where it lives and what it replaced.','Use the area buttons to see one part of the operation.'].forEach(x=>ul.appendChild(h('li',null,x))); p.appendChild(ul);
+  const dl=h('dl'); dl.style.marginTop='14px'; const w=h('div'); w.appendChild(h('dt',null,'By area')); const dd=h('dd'); const u2=h('ul'); u2.style.listStyle='none'; u2.style.padding='0';
+  Object.keys(d.areas).forEach(k=>{ const ns=d.systems.filter(s=>s.area===k); const li=h('li'); li.style.cssText='display:flex;gap:8px;align-items:baseline;margin:6px 0'; const i=h('i'); i.style.cssText='flex:none;width:10px;height:10px;border-radius:2px;background:'+AC[d.areas[k].c]; li.appendChild(i); const sp=h('span'); const b=h('b',null,d.areas[k].name); b.style.color='var(--ink)'; sp.appendChild(b); sp.append(' · '+ns.map(s=>s.name).join(', ')); li.appendChild(sp); u2.appendChild(li); });
+  dd.appendChild(u2); w.appendChild(dd); dl.appendChild(w); p.appendChild(dl); }
+
+/* ---------- Edit mode ---------- */
+function editBar(d){ const b=h('div','cs-ebar'); b.appendChild(h('b',null,'Edit mode — changes save as you make them'));
+  b.appendChild(btn('cs-btn','Add a System', ()=>{ P.sel=null; P.form=p=>sysForm(p, d, null); paintState(); side(); P.panel.scrollIntoView({block:'nearest', behavior:'smooth'}); }));
+  b.appendChild(btn('cs-btn','Add a Connection', ()=>{ P.form=p=>conForm(p, d, null, P.sel); side(); P.panel.scrollIntoView({block:'nearest', behavior:'smooth'}); }));
+  const ar=(d.archived.systems||[]).length+(d.archived.connections||[]).length; if(ar) b.appendChild(btn('cs-btn','Set Aside ('+ar+')', ()=>{ P.form=p=>archForm(p, d); side(); }));
+  return b; }
+function field(f, label, el){ const l=h('label',null,label); l.appendChild(el); f.appendChild(l); return el; }
+function inp(v, ph, max){ const i=h('input'); i.value=v||''; if(ph) i.placeholder=ph; i.maxLength=max||160; return i; }
+function ta(v, rows){ const t=h('textarea'); t.value=v||''; t.rows=rows||3; t.maxLength=1200; return t; }
+function sel(opts, v){ const s=h('select'); opts.forEach(([k,l])=>{ const o=h('option',null,l); o.value=k; if(k===v) o.selected=true; s.appendChild(o); }); return s; }
+function sysForm(p, d, s){ const isNew=!s; const by={}; d.systems.forEach(x=>by[x.id]=x);
+  p.appendChild(h('div','cs-k', isNew ? 'New system' : areaName(d,s))); p.appendChild(h('h3',null, isNew ? 'Add a System' : s.name));
+  const f=h('div','cs-f'); p.appendChild(f);
+  const nm=field(f,'Name', inp(s&&s.name,'e.g., Speaker Portal',40));
+  const r1=h('div','row'); f.appendChild(r1);
+  const place=field(r1,'Where on the map', sel([['apps','MISMO apps (center)'],['mba','MBA & Microsoft 365 (left)'],['out','Outside MISMO (right)'],['eng','Engine room (bottom)']], s?s.zone:'apps'));
+  const area=field(r1,'Area (MISMO apps)', sel([['','—']].concat(Object.keys(d.areas).map(k=>[k,d.areas[k].name])), s?(s.area||''):'ops'));
+  const r2=h('div','row'); f.appendChild(r2);
+  const stt=field(r2,'Status', sel(ST.map(x=>[x,x]), s?s.status:'Building'));
+  const note=field(r2,'Status note (optional)', inp(s&&s.statusNote,'e.g., Goes live Nov 20',30));
+  const what=field(f,'What it does', ta(s&&s.what,4));
+  const where=field(f,'Where it lives', inp(s&&s.where,'e.g., resources.mismo.org, behind MISMO sign-in',200));
+  const rep=field(f,'What it replaced', inp(s&&s.replaced,'e.g., A spreadsheet and email',200));
+  const cf=field(f,'Still to confirm (only shows in Edit mode)', inp(s&&s.confirm,'Leave empty when it’s confirmed',300));
+  const acts=h('div','acts'); f.appendChild(acts);
+  if(!isNew) acts.appendChild(btn('cs-btn danger','Set Aside', ()=>{ const nd=clone(d); const i=nd.systems.findIndex(x=>x.id===s.id); const [gone]=nd.systems.splice(i,1); const cons=nd.connections.filter(c=>c.from===s.id||c.to===s.id); nd.connections=nd.connections.filter(c=>!(c.from===s.id||c.to===s.id)); gone.at=Date.now(); gone.by=me(); gone.cons=cons; nd.archived.systems.push(gone); P.sel=null; save(nd, s.name+' set aside, with its '+cons.length+' connection'+(cons.length===1?'':'s')+'. Bring it back from Set Aside.'); }));
+  acts.appendChild(btn('cs-btn', isNew?'Cancel':'Close', ()=>{ P.form=null; P.sel=null; paintState(); side(); }));
+  acts.appendChild(btn('cs-btn pri', isNew?'Add System':'Save', ()=>{ const name=nm.value.trim(); if(!name){ nm.classList.add('need'); nm.focus(); return; }
+    const nd=clone(d); let t; if(isNew){ let id=name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,24)||'sys'; while(nd.systems.some(x=>x.id===id)) id+='-2'; const pos=freeSpot(nd, place.value); t={id, x:pos.x, y:pos.y}; nd.systems.push(t); } else t=nd.systems.find(x=>x.id===s.id);
+    if(!isNew && t.zone!==place.value){ const pos=freeSpot(nd, place.value); t.x=pos.x; t.y=pos.y; }
+    Object.assign(t,{name, zone:place.value, area:place.value==='apps' ? (area.value||null) : null, status:stt.value, statusNote:note.value.trim()||null, what:what.value.trim(), where:where.value.trim(), replaced:rep.value.trim()||null, confirm:cf.value.trim()||null});
+    P.form=null; P.sel=t.id; save(nd, isNew ? name+' added to the map.' : 'Saved '+name+'.'); }));
+  if(!isNew){ const cs=d.connections.filter(c=>c.from===s.id||c.to===s.id); const hd=h('div','cs-k','Connections ('+cs.length+')'); hd.style.marginTop='16px'; p.appendChild(hd);
+    const cl=h('div','cs-cl'); cs.forEach(c=>{ const it=h('div','cs-ci'); const tx=h('div'); const out=c.from===s.id; tx.appendChild(h('b',null,(out?'Sends to ':'Receives from ')+((by[out?c.to:c.from]||{}).name||'?'))); tx.append(': '+c.what); if(c.how==='hand') tx.appendChild(h('span','cs-hand','by hand')); if(c.confirm) tx.appendChild(h('span','cs-cf','To confirm: '+c.confirm)); it.appendChild(tx);
+      const x=h('div','x'); x.appendChild(btn('cs-sbtn','Change', ()=>{ P.form=pp=>conForm(pp, d, c, s.id); side(); })); it.appendChild(x); cl.appendChild(it); });
+    p.appendChild(cl); const add=btn('cs-btn','Add a Connection', ()=>{ P.form=pp=>conForm(pp, d, null, s.id); side(); }); add.style.marginTop='8px'; p.appendChild(add); }
+  setTimeout(()=>nm.focus(), 0); }
+function conForm(p, d, c, ctx){ const isNew=!c; const opts=d.systems.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(s=>[s.id,s.name]);
+  p.appendChild(h('div','cs-k','Connection')); p.appendChild(h('h3',null, isNew ? 'Add a Connection' : 'Change a Connection'));
+  const f=h('div','cs-f'); p.appendChild(f);
+  const fr=field(f,'From', sel(opts, c?c.from:(ctx||opts[0][0]))); const to=field(f,'To', sel(opts, c?c.to:''));
+  if(isNew && ctx){ const o=h('option',null,'Pick a system'); o.value=''; o.selected=true; to.insertBefore(o, to.firstChild); }
+  const what=field(f,'What is sent', inp(c&&c.what,'e.g., Booked sponsors',120));
+  const how=field(f,'How it moves', sel([['auto','Automatically'],['hand','Copied by a person']], c?c.how:'auto'));
+  const note=field(f,'Note (optional, shown in the panel)', inp(c&&c.note,'e.g., Every weekday morning',200));
+  const cf=field(f,'Still to confirm (only shows in Edit mode)', inp(c&&c.confirm,'Leave empty when it’s confirmed',300));
+  const back=()=>{ P.form=null; side(); };
+  const acts=h('div','acts'); f.appendChild(acts);
+  if(!isNew) acts.appendChild(btn('cs-btn danger','Set Aside', ()=>{ const nd=clone(d); const i=nd.connections.findIndex(x=>x.id===c.id); const [gone]=nd.connections.splice(i,1); gone.at=Date.now(); gone.by=me(); nd.archived.connections.push(gone); P.form=null; save(nd, 'Connection set aside. Bring it back from Set Aside.'); }));
+  acts.appendChild(btn('cs-btn','Cancel', back));
+  acts.appendChild(btn('cs-btn pri', isNew?'Add Connection':'Save', ()=>{ const w=what.value.trim(); if(!to.value || to.value===fr.value){ to.classList.add('need'); to.focus(); return; } if(!w){ what.classList.add('need'); what.focus(); return; }
+    const nd=clone(d); let t; if(isNew){ t={id:'c'+Date.now().toString(36)}; nd.connections.push(t); } else t=nd.connections.find(x=>x.id===c.id);
+    Object.assign(t,{from:fr.value, to:to.value, what:w, how:how.value, note:note.value.trim()||null, confirm:cf.value.trim()||null}); P.form=null; save(nd, isNew?'Connection added.':'Connection saved.'); }));
+  setTimeout(()=>(isNew?to:what).focus(), 0); }
+function archForm(p, d){ p.appendChild(h('div','cs-k','Set aside')); p.appendChild(h('h3',null,'Bring Something Back'));
+  const by={}; d.systems.forEach(x=>by[x.id]=x); const cl=h('div','cs-cl');
+  d.archived.systems.forEach((s,i)=>{ const it=h('div','cs-ci'); const tx=h('div'); tx.appendChild(h('b',null,s.name)); tx.appendChild(h('small',null,'System'+((s.cons||[]).length?' with '+s.cons.length+' connection'+(s.cons.length>1?'s':''):''))); it.appendChild(tx);
+    it.appendChild(btn('cs-sbtn','Bring Back', ()=>{ const nd=clone(d); const [b]=nd.archived.systems.splice(i,1); const cons=b.cons||[]; delete b.cons; delete b.at; delete b.by; if(nd.systems.some(x=>Math.abs(x.x-b.x)<W && Math.abs(x.y-b.y)<H+12)){ const pos=freeSpot(nd,b.zone); b.x=pos.x; b.y=pos.y; } nd.systems.push(b); cons.forEach(c=>{ if(!nd.connections.some(x=>x.id===c.id)) nd.connections.push(c); }); P.form=null; save(nd, b.name+' is back on the map.'); })); cl.appendChild(it); });
+  d.archived.connections.forEach((c,i)=>{ const it=h('div','cs-ci'); const tx=h('div'); tx.appendChild(h('b',null,((by[c.from]||{}).name||c.from)+' → '+((by[c.to]||{}).name||c.to))); tx.appendChild(h('small',null,c.what)); it.appendChild(tx);
+    const ok=by[c.from] && by[c.to]; const b0=btn('cs-sbtn','Bring Back', ()=>{ const nd=clone(d); const [b]=nd.archived.connections.splice(i,1); delete b.at; delete b.by; nd.connections.push(b); P.form=null; save(nd, 'Connection is back.'); }); if(!ok){ b0.disabled=true; b0.title='Bring back the system first'; } it.appendChild(b0); cl.appendChild(it); });
+  if(!cl.children.length) cl.appendChild(h('p','hint','Nothing is set aside.')); p.appendChild(cl);
+  const c0=btn('cs-btn','Close', ()=>{ P.form=null; side(); }); c0.style.marginTop='10px'; p.appendChild(c0); }
+
+/* ---------- the dashboard tile ---------- */
+function tile(el, size){ start(); const d=M.data; const box=h('div','cs-tile'); el.appendChild(box); el.classList.add('cs-tilewrap');
+  if(!d){ box.appendChild(h('div','st-sub','Getting Connected Systems…')); return; }
+  if(d.empty){ box.appendChild(h('div','st-sub','Not loaded yet. Open it to see how.')); return; }
+  const c=counts(d); const nums=h('div','cs-tn'); [[c.apps,'systems'],[c.live,'live'],[c.auto,'automatic hand-offs']].forEach(x=>{ const w=h('div'); w.appendChild(h('b',null,String(x[0]))); w.appendChild(h('small',null,x[1])); nums.appendChild(w); }); box.appendChild(nums);
+  const tall=size==='t'||size==='b', wide=size==='w'||size==='b';
+  if(tall || wide){ const L=h('div','cs-tl'); c.soon.slice(0, size==='b'?6:tall?5:2).forEach(s=>{ const r=h('span'); r.appendChild(h('b',null,s.name)); r.appendChild(h('em',null,s.statusNote||s.status)); L.appendChild(r); }); if(c.soon.length) box.appendChild(L); }
+  if(wide && size==='b'){ const svg=sv('svg',{class:'cs-mini',viewBox:'0 0 1200 720','aria-hidden':'true'}); const by={}; d.systems.forEach(s=>by[s.id]=s);
+    d.connections.forEach((cn,i)=>{ const a=by[cn.from], b=by[cn.to]; if(a&&b) sv('path',{d:edgePath(a,b,i),fill:'none',stroke:'var(--border-strong,#adc4d6)','stroke-width':3,'stroke-dasharray':cn.how==='hand'?'10 8':''},svg); });
+    d.systems.forEach(s=>sv('rect',{x:s.x-W/2,y:s.y-H/2,width:W,height:H,rx:6,fill:colorOf(d,s)},svg)); box.appendChild(svg); }
+  box.appendChild(h('div','st-next','As of '+longDate(d.asOf)+' · open the map')); }
+
+window.__hqSystems={ version:'1.0', page, tile, load, start, canEdit,
+  get data(){ return M.data; },
+  setEdit(on){ P.edit=!!on && canEdit(); P.form=null; draw(); },
+  get editing(){ return P.edit; },
+  onChange(f){ M.listeners.push(f); return ()=>{ M.listeners=M.listeners.filter(x=>x!==f); }; },
+  redraw: draw,
+  destroy(){ css.remove(); M.listeners=[]; } };
+start();
+})();
+
+});
 /* ===== next.js ===== */
 MODS.push(function(){
 /* Team HQ, reimagined (take two) — modeled on Linear for the structure and Sunsama for the day.
@@ -4559,7 +4933,8 @@ const I={
   flag:'<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>', unflag:'<path d="M5 21V4M5 4h11l-2 4 2 4H5"/><path d="M3 3l18 18"/>',
   read:'<path d="M3 10l9-6 9 6v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3.5 10.5L12 16l8.5-5.5"/>', unread:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/><circle cx="19" cy="5" r="3" fill="currentColor"/>',
   folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11v5M9.5 13.5L12 16l2.5-2.5"/>',
-  trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>' };
+  trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
+  net:'<rect x="2.5" y="3.5" width="7" height="5" rx="1.2"/><rect x="14.5" y="3.5" width="7" height="5" rx="1.2"/><rect x="8.5" y="15.5" width="7" height="5" rx="1.2"/><path d="M9.5 6h5M6 8.5c0 4 6 3 6 7M18 8.5c0 4-6 3-6 7"/>' };
 const ic=(k,c)=>'<svg class="'+(c||'')+'" viewBox="0 0 24 24" aria-hidden="true">'+I[k]+'</svg>';
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], WDL=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -5076,7 +5451,7 @@ function statusOf(p){
 
 /* ---------- the views ---------- */
 const VIEWS={
-  day:{t:'My Dashboard', i:'home'}, inbox:{t:'Inbox', i:'inbox'}, mine:{t:'My Tasks', i:'mine'}, cal:{t:'Calendar', i:'cal'} };
+  day:{t:'My Dashboard', i:'home'}, inbox:{t:'Inbox', i:'inbox'}, mine:{t:'My Tasks', i:'mine'}, cal:{t:'Calendar', i:'cal'}, systems:{t:'Connected Systems', i:'net', team:true} };
 function viewKind(v){ v=v||ui.view; if(v.indexOf('p:')===0) return 'project'; if(v.indexOf('u:')===0) return 'person'; if(v.indexOf('c:')===0) return 'classic'; return v; }
 function myOpen(){ return S.tasks.filter(t=>isOpen(t) && doers(t).indexOf(me())>=0); }
 function myAsks(){ return (S.asks||[]).filter(a=>a.state!=='Built' && a.state!=='Not Doing' && (me()==='jonna' || a.by===me())); }
@@ -5118,6 +5493,7 @@ function drawRail(){
   const calB=add(railBtn('cal','Calendar', ic('cal')), firstClassic);
   placeBoardBtn(calB);
   add(railLbl('Team'), firstClassic);
+  if(window.__hqSystems) add(railBtn('systems','Connected Systems', ic('net')), firstClassic);
   markRail();
 }
 function markRail(){
@@ -5192,11 +5568,18 @@ function paint(){
     else if(k==='cal') vCal();
     else if(k==='week') vWeek();
     else if(k==='people') vPeople();
+    else if(k==='systems') vSystems();
     else vDash();
   }catch(e){ console.error(e); body.appendChild(h('p','nx-empty','Something went wrong drawing this view.')); }
   body.scrollTop=sy; const sl2=body.querySelector('.nx-sl, .nx-dl'); if(sl2) sl2.scrollTop=sly;
   drawTabbar();
 }
+window.__nxToast=toast;
+/* ---------- Connected Systems (systems.js draws the page; its content comes from Team HQ's private data) ---------- */
+function vSystems(){ const CS=window.__hqSystems; if(!CS){ header('Connected Systems', ic('net')); body.appendChild(h('p','nx-empty','Connected Systems didn’t load. Refresh the page.')); return; }
+  const ctl=[]; if(CS.canEdit()){ const eb=btn('nx-mini'+(CS.editing?' pri':''), CS.editing?'Done Editing':'Edit', ()=>{ CS.setEdit(!CS.editing); paint(); }); eb.innerHTML=ic('gear')+'<span>'+(CS.editing?'Done Editing':'Edit')+'</span>'; ctl.push(eb); }
+  header('Connected Systems', ic('net'), 'How MISMO’s systems fit together', ctl);
+  const pg=h('div','nx-cs'); pg.appendChild(CS.page()); body.appendChild(pg); }
 function header(title, icon, sub, controls){
   const l=h('div','nx-hl');
   if(icon){ const i=h('span','nx-hi'); i.innerHTML=icon; l.appendChild(i); }
@@ -5762,7 +6145,8 @@ const TILES={
   meeting:{n:'Team Meeting', g:'Team', k:'#E86F5A', d:'Countdown to the next one and what’s on the agenda'},
   wins:{n:'Team Wins', g:'Team', k:'#3CCB7F', d:'What the team finished lately'},
   findtime:{n:'Find a Time', g:'Team', k:'#5AA9E6', d:'Who’s free now, and the next time you’re all free'},
-  board:{n:'My Board', g:'Team', k:'#74BFEB', d:'Your own board — free-form, notebook or rows'}
+  board:{n:'My Board', g:'Team', k:'#74BFEB', d:'Your own board — free-form, notebook or rows'},
+  systems:{n:'Connected Systems', g:'Team', k:'#74BFEB', d:'How MISMO’s systems connect, what each one does, and what’s live'}
 };
 function dashDefault(){
   const L=[{t:'day'},{t:'tasks'},{t:'email'},{t:'findtime'},{t:'people'},{t:'projects'},{t:'keydate'},{t:'meeting'},{t:'load'}];
@@ -5780,7 +6164,7 @@ function saveDash(L){ if(!S.bset) S.bset={}; S.bset[DK]=L.map(z=>{ const o={t:z.
 let dashEdit=null; /* the layout being customized, or null */
 let dashMixEdit=null; /* mixed or uniform sizes, while customizing */
 const SIZES=['s','w','t','b'], SZN={s:'Small',w:'Wide',t:'Tall',b:'Large'};
-const MIXDEF={day:'b',tasks:'t',email:'w',asks:'s',load:'w',people:'w',team:'w',projects:'t',keydate:'t',meeting:'w',wins:'t',board:'s',findtime:'w'};
+const MIXDEF={day:'b',tasks:'t',email:'w',asks:'s',load:'w',people:'w',team:'w',projects:'t',keydate:'t',meeting:'w',wins:'t',board:'s',findtime:'w',systems:'w'};
 function dashMixed(){ if(dashMixEdit!=null) return dashMixEdit; const b=S.bset||{}; return b.hqDashMix===undefined ? true : !!b.hqDashMix; }
 function sizeOf(cfg, i, L){ if(cfg.sz) return cfg.sz; if(cfg.w===2) return 'w';
   if(!dashMixed()) return cfg.t==='day' ? 'w' : 's';
@@ -6252,6 +6636,7 @@ function tile(cfg, i, L){
       if(more.length){ const ls=h('div','nx-kl2 nx-ftmore'); ls.appendChild(h('small','nx-ftml','Also free')); more.forEach(z=>{ const d0=new Date(z.t); const r=h('div','kr'); r.appendChild(h('b',null, WD[d0.getDay()]+' '+MON[d0.getMonth()]+' '+d0.getDate())); r.appendChild(h('span',null, tmL(z.t)+' – '+tmL(z.e))); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) ftDialog(cfg, L); }); ls.appendChild(r); }); el.appendChild(ls); } }
     el.appendChild(h('div','st-next', free+' of '+ids.length+' free now · tap for more times'));
     meta.go=()=>ftDialog(cfg, L); }
+  else if(cfg.t==='systems'){ if(window.__hqSystems) window.__hqSystems.tile(el, SZ); else el.appendChild(h('div','st-sub','Open it to see the map.')); meta.go=()=>open('systems'); }
   else if(cfg.t==='sys'){ meta.draw(el, top, SZ); }
   if(cfg.t!=='sys' && lvlOf(cfg)==='hi' && !tall){ el.classList.add('lv-hi'); el.querySelectorAll('.nx-kl2:not(.nx-ftmore),.nx-tl2,.nx-gaps,.mic-steps').forEach(z=>z.remove()); }
   el.addEventListener('click', e=>{ if(dashEdit || e.target.closest('button:not(.st-tile)')) return; go(); });
@@ -6478,7 +6863,7 @@ function openCatalog(){
   const close=()=>ov.remove();
   const sec=(t)=>box.appendChild(h('div','nx-sec',t));
   const card=(name, desc, k, symHtml, fn, on)=>{ const b=btn('nx-cti'+(on?' on':'')); b.style.setProperty('--k',k); const i=h('span','ci'); i.innerHTML=symHtml; b.appendChild(i); const t=h('span','tx'); t.appendChild(h('b',null,name)); t.appendChild(h('small',null,desc)); b.appendChild(t); b.appendChild(h('em',null,on?'On':'Add')); b.addEventListener('click', ()=>{ fn(); b.classList.add('on'); b.querySelector('em').textContent='Added'; }); return b; };
-  ['Your Day','Team'].forEach(g=>{ sec(g); const gr=h('div','nx-ctg'); Object.keys(TILES).filter(k=>TILES[k].g===g).forEach(k=>{ const on=dashEdit.some(z=>z.t===k); gr.appendChild(card(TILES[k].n, TILES[k].d, TILES[k].k, ic(k==='email'?'mail':k==='people'||k==='team'?'ppl':k==='day'||k==='load'?'cal':k==='tasks'?'mine':k==='board'?'all':k==='asks'?'inbox':k==='findtime'?'search':'week'), ()=>{ if(!dashEdit.some(z=>z.t===k)) dashEdit.push({t:k}); paint(); }, on)); }); box.appendChild(gr); });
+  ['Your Day','Team'].forEach(g=>{ sec(g); const gr=h('div','nx-ctg'); Object.keys(TILES).filter(k=>TILES[k].g===g).forEach(k=>{ const on=dashEdit.some(z=>z.t===k); gr.appendChild(card(TILES[k].n, TILES[k].d, TILES[k].k, ic(k==='email'?'mail':k==='people'||k==='team'?'ppl':k==='day'||k==='load'?'cal':k==='tasks'?'mine':k==='board'?'all':k==='asks'?'inbox':k==='findtime'?'search':k==='systems'?'net':'week'), ()=>{ if(!dashEdit.some(z=>z.t===k)) dashEdit.push({t:k}); paint(); }, on)); }); box.appendChild(gr); });
   sec('MISMO Systems'); const gs=h('div','nx-ctg'); (x?x.SYS:[]).filter(z=>x.canOpen(z.k)).sort((a,b)=>a.n.localeCompare(b.n)).forEach(z=>{ let n=dashEdit.filter(q=>q.t==='sys' && q.s===z.k).length; const cb=card(z.n, (z.auto ? 'New · ' : '')+z.d, z.c, x.symbol(z.k), ()=>{ const nt={t:'sys', s:z.k}; dashEdit.push(nt); paint(); if(n>0){ close(); setTimeout(()=>tileEditor(nt, dashEdit.length-1, dashEdit, true), 60); } }, false); const ci=cb.querySelector('.ci'); const badge=h('i','cnt'); const setB=()=>{ badge.textContent=n?String(n):''; badge.title=n?n+' on your dashboard':''; badge.hidden=!n; }; setB(); ci.appendChild(badge); cb.addEventListener('click', ()=>{ n++; setB(); cb.classList.remove('on'); cb.querySelector('em').textContent='Add'; }); gs.appendChild(cb); }); box.appendChild(gs);
   const ft=h('div','hqx-ft'); const d=btn('btn','Done', close); ft.appendChild(d); box.appendChild(ft);
   ov.appendChild(box); ov.addEventListener('click', e=>{ if(e.target===ov) close(); }); document.body.appendChild(ov);
@@ -6692,8 +7077,8 @@ function openMenuSheet(){
   closeMenus(); menuEl=h('div','nx-menu sheet tall');
   const grp=(t)=>menuEl.appendChild(h('div','nx-ml',t));
   const item=(label, fn, iconHtml)=>{ const b=btn('nx-mi', null, ()=>{ closeMenus(); fn(); }); b.innerHTML=(iconHtml||'')+'<span>'+label+'</span>'; menuEl.appendChild(b); };
-  grp('You'); Object.keys(VIEWS).forEach(k=>item(VIEWS[k].t, ()=>open(k), ic(VIEWS[k].i)));
-  grp('Team Pages'); [...document.querySelectorAll('.hq.rail nav button[data-hq]')].forEach(b=>{ const s=b.querySelector('svg'); item(b.textContent.trim(), ()=>openClassic(b.dataset.hq), s?s.outerHTML:''); });
+  grp('You'); Object.keys(VIEWS).filter(k=>!VIEWS[k].team).forEach(k=>item(VIEWS[k].t, ()=>open(k), ic(VIEWS[k].i)));
+  grp('Team Pages'); Object.keys(VIEWS).filter(k=>VIEWS[k].team && (k!=='systems' || window.__hqSystems)).forEach(k=>item(VIEWS[k].t, ()=>open(k), ic(VIEWS[k].i))); [...document.querySelectorAll('.hq.rail nav button[data-hq]')].forEach(b=>{ const s=b.querySelector('svg'); item(b.textContent.trim(), ()=>openClassic(b.dataset.hq), s?s.outerHTML:''); });
   { const hb=document.getElementById('help-btn'); if(hb){ const s=hb.querySelector('svg'); item('Help', ()=>{ hideApp(); ui.view='c:help'; save(); pushView(ui.view); hb.click(); markRail(); }, s?s.outerHTML:''); } }
   document.body.appendChild(menuEl);
   { const mine=menuEl; setTimeout(()=>document.addEventListener('click', function off(e){ if(menuEl!==mine){ document.removeEventListener('click', off); return; } if(mine && !mine.contains(e.target) && !e.target.closest('.nx-tbm')){ closeMenus(); document.removeEventListener('click', off); } }), 0); }
@@ -8021,7 +8406,7 @@ function h(t,c,x){ const e=document.createElement(t); if(c) e.className=c; if(x!
 function btn(c,x,f){ const b=h('button',c,x); b.type='button'; if(f) b.addEventListener('click', f); return b; }
 
 /* ---------- help for the page you're on ---------- */
-const NX={day:'dash', inbox:'inbox', mine:'mytasks', cal:'calendar', people:'views'};
+const NX={day:'dash', inbox:'inbox', mine:'mytasks', cal:'calendar', people:'views', systems:'systems'};
 const HQ={today:'today', rocks:'rocks', plans:'plans', dates:'dates', findtime:'findtime', agenda:'agenda', syncs:'syncs', expenses:'expenses', mine:'board'};
 function helpFor(){ const on=document.querySelector('.hq.rail .on[data-nx], .hq.rail [data-nx][aria-current], .hq.rail .on[data-hq], .hq.rail [data-hq][aria-current]');
   if(on && on.dataset.nx) return NX[on.dataset.nx] || 'start';
@@ -8059,7 +8444,13 @@ const NEW=[
 <h4>Rules</h4>
 <p>On a Team Project, <b>Rules</b> adds a "when this, then that": <b>marked Done</b> → tell someone; <b>due in a few days and not started</b> → nudge the person doing it; <b>past due</b> → nudge the accountable person. Reminders land on My Tasks and in the bell, once each. Rules run whenever someone has Team HQ open.</p>`},
  {after:'trouble', id:'health', t:'System Health', d:'Whether saving, storage and the email and calendar flows are working.', h:`
-<p><b>System Health</b> at the foot of the left menu checks every 5 minutes: <b>Saving</b>, <b>Storage</b> (how full the biggest files are), the <b>Email</b> flows, the <b>Outlook calendar</b> flows, the <b>Do It in Outlook</b> flow, and <b>errors on this page</b>. Its dot is green, amber or red, and a red bar appears across the top if something stops. The <b>Team Error Log</b> lists errors from anyone's screen in the last 7 days; <b>Copy Report</b> copies everything to send to whoever is fixing it.</p>`}
+<p><b>System Health</b> at the foot of the left menu checks every 5 minutes: <b>Saving</b>, <b>Storage</b> (how full the biggest files are), the <b>Email</b> flows, the <b>Outlook calendar</b> flows, the <b>Do It in Outlook</b> flow, and <b>errors on this page</b>. Its dot is green, amber or red, and a red bar appears across the top if something stops. The <b>Team Error Log</b> lists errors from anyone's screen in the last 7 days; <b>Copy Report</b> copies everything to send to whoever is fixing it.</p>`},
+ {after:'health', id:'systems', t:'Connected Systems', d:'How MISMO’s systems fit together, what each one does, and what runs on its own.', h:`
+<p><b>Connected Systems</b> (under Team in the left menu, or add its tile with <b>+ Add a Tile</b>) is the map of every MISMO system and the work that moves between them. Point at a box to light up everything it touches; select it for what it does, where it lives, what it replaced, and what it sends and receives. The area buttons show one part of the operation. A moving dot means the work moves automatically; a <b>dashed line</b> means a person copies it.</p>
+<h4>Where It Comes From</h4>
+<p>The MISMO Connections Map is the source of truth. The page's content is kept in Team HQ's private data (not in its public code) and shows the date it's <b>as of</b>. To bring it up to date, ask Team HQ's Claude to <b>refresh Connected Systems</b>; it reads the Connections Map and saves the latest.</p>
+<h4>Edit Mode (Jonna)</h4>
+<p>Click <b>Edit</b> at the top. Select a system to change its status, status note or details; <b>Add a System</b> or <b>Add a Connection</b>; drag a box to move it. Anything still to confirm shows an amber dot, only in Edit mode. <b>Set Aside</b> takes something off the map without deleting it, and <b>Set Aside (n)</b> brings it back. Every save updates the as-of date, and Undo is on the message that appears.</p>`}
 ];
 function addHelp(){ const HELP_SECS=window.__helpSecs; try{ if(Array.isArray(HELP_SECS)){
   NEW.forEach(n=>{ if(HELP_SECS.some(s=>s.id===n.id)) return; const i=HELP_SECS.findIndex(s=>s.id===n.after); const sec={id:n.id, t:n.t, d:n.d, h:n.h};
