@@ -17759,6 +17759,8 @@ const HELP_SECS = [
 </ul>`}
 ];
 
+/* the help sections, so Team HQ upgrades can add theirs (November 7, 2026) */
+window.__helpSecs=HELP_SECS;
 function vHelp(root){
   root.textContent='';
   const hd=el('div','vhead hhead');
