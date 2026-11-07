@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261107e';
+var BUILD='20261107g';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -84,7 +84,7 @@ window.__HQ_BUILD=BUILD;
   };
   window.__hqProb={ version:'1.0', list:function(){ return order.map(function(k){ return seen[k]; }); }, rec:rec, flush:flush };
 
-  /* ---------- Problems (Jonna) ---------- */
+  /* ---------- shared bits for System Health and the Test Copy ---------- */
   function h(t,c,x){ var e=document.createElement(t); if(c) e.className=c; if(x!=null) e.textContent=x; return e; }
   var css=document.createElement('style'); css.textContent=
     '#hq-prob-btn .pdot{width:8px;height:8px;border-radius:50%;background:#d92d20;display:inline-block;margin-left:auto}'+
@@ -99,46 +99,132 @@ window.__HQ_BUILD=BUILD;
     '.hq-prob .pr .act{grid-row:1/3;grid-column:2;align-self:start}.hq-prob .none{padding:28px 18px;text-align:center;opacity:.8}'+
     '.hq-prob .kind{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:1px 6px;border-radius:4px;background:#fde7e5;color:#912018;margin-right:6px}';
   document.head.appendChild(css);
-  var SEENK='hq.probSeen', docs=null;
-  function lastSeen(){ try{ return +localStorage.getItem(SEENK)||0; }catch(e){ return 0; } }
-  function markSeen(){ try{ localStorage.setItem(SEENK, String(Date.now())); }catch(e){} }
-  function load(){ var R=window.__hqRelay; if(!R || !R.readOther) return Promise.resolve([]);
+  /* ---------- System Health (like Summit HQ's, November 7, 2026) ----------
+     Team HQ leans on things nobody sees: the save relay, and the Power Automate flows that fill
+     calendars and email and carry out Outlook actions. This watches what the page can see, every
+     5 minutes while Team HQ is open, and the Team Error Log gathers errors from everyone's screen. */
+  css.textContent+=
+    '#hh-btn{position:relative}#hh-btn .hh-dot{position:absolute;left:21px;top:6px;width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.35);box-shadow:0 0 0 2px var(--navy,#0d314c)}'+
+    '#hh-btn .hh-dot.ok{background:#72C08E}#hh-btn .hh-dot.warn{background:#E0A83C}#hh-btn .hh-dot.bad{background:#F08579}body.railmini #hh-btn .hh-dot{left:24px;top:7px}'+
+    '#hh-bar{position:fixed;top:calc(64px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:9980;display:flex;align-items:center;gap:12px;max-width:min(760px,calc(100vw - 32px));background:#FBE8E6;color:#7A1913;border:1px solid #A32219;border-radius:8px;padding:9px 10px 9px 14px;font:500 13px/1.4 "IBM Plex Sans",system-ui,sans-serif;box-shadow:0 6px 20px rgba(13,49,76,.16)}'+
+    '#hh-bar[hidden]{display:none}#hh-bar .hh-go{flex:none;background:#A32219;color:#fff;border:0;border-radius:5px;padding:6px 11px;font:inherit;font-weight:600;cursor:pointer}#hh-bar .hh-x{flex:none;background:none;border:0;color:inherit;font-size:20px;line-height:1;padding:0 4px;cursor:pointer}'+
+    '.hh-in{padding:14px 18px 18px}.hh-sum{display:flex;align-items:center;gap:10px;margin:0 0 12px;font-size:13.5px}.hh-big{width:12px;height:12px;border-radius:50%;flex:none}'+
+    '.hh-big.ok,.hh-row.ok::before{background:var(--good,#0F7B5C)}.hh-big.warn,.hh-row.warn::before{background:#A2701A}.hh-big.bad,.hh-row.bad::before{background:#A32219}.hh-big.off,.hh-row.off::before{background:var(--ink-3,#71777F)}'+
+    '.hh-grid{columns:3 230px;column-gap:8px}.hh-row{break-inside:avoid;margin:0 0 8px;position:relative;border:1px solid var(--border,#DFDCD5);border-radius:6px;padding:9px 11px 9px 22px;background:var(--surface,#fff)}'+
+    '.hh-row::before{content:"";position:absolute;left:9px;top:14px;width:7px;height:7px;border-radius:50%}.hh-row.bad{border-color:#A32219;background:#FBE8E6}.hh-row.warn{border-color:#A2701A;background:#FBF0DC}'+
+    '.hh-t{font-weight:700;font-size:13px}.hh-l{font-size:12.5px;color:var(--ink-2,#414750);margin-top:2px}.hh-row ul{margin:5px 0 0;padding-left:16px;font-size:12px;color:var(--ink-2,#414750)}'+
+    '.hh-bars{margin-top:5px;display:flex;flex-direction:column;gap:4px}.hh-bars div{display:grid;grid-template-columns:1fr 46px;gap:8px;align-items:center;font-size:11.5px;color:var(--ink-2,#414750)}'+
+    '.hh-bars i{display:block;height:5px;border-radius:3px;background:var(--border,#DFDCD5);overflow:hidden;grid-column:1/-1}.hh-bars i s{display:block;height:100%;background:var(--navy-mid,#14486E)}.hh-bars i s.warn{background:#A2701A}.hh-bars i s.bad{background:#A32219}'+
+    '.hh-quiet{color:var(--ink-3,#71777F);font-size:12.5px;margin:6px 0 0;line-height:1.5}.hh-in h4{margin:16px 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3,#71777F)}'+
+    '.hh-log{border:1px solid var(--border,#DFDCD5);border-radius:6px;overflow:hidden}.hh-lr{display:grid;grid-template-columns:auto 1fr auto;gap:2px 10px;padding:8px 10px;border-top:1px solid var(--border,#eef2f6);font-size:12.5px}.hh-lr:first-child{border-top:0}'+
+    '.hh-lr .w{white-space:nowrap;color:var(--ink-3,#71777F)}.hh-lr .m{font-weight:600;word-break:break-word}.hh-lr .d{grid-column:2;color:var(--ink-3,#71777F);font-size:12px}.hh-lr button{grid-row:1/3;grid-column:3;align-self:start}'+
+    '.hh-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.hh-in button{font:inherit;font-size:13px;border:1px solid var(--border,#c9d6e2);background:transparent;color:inherit;border-radius:6px;padding:5px 10px;cursor:pointer}.hh-in .pri{background:var(--navy,#0d314c);color:#fff;border-color:transparent}';
+  var MIN=60000, last=null, hbtn=null, hdot=null, hbar=null, hov=null, pendSince={}, running=null, logDocs=null;
+  var NAMES={tasks:'Tasks', planitems:'Plan Items', plans:'Plans', rocks:'Team Projects', dates:'Key Dates', expenses:'Expenses', profiles:'Board Layouts', people:'People', agenda:'Team Meeting Agenda',
+    notes:'Notes', asks:'Asks', nudges:'Nudges', figures:'Figures', blocks:'Time Aside', comments:'Comments', errors:'Error Log', syncs:'Sync Ups', syncitems:'Sync Up Cards', expinbox:'Emailed Receipts', outbox:'Outlook Requests', myitems:'My Items'};
+  function nice(n){ n=String(n).replace(/^[^:]*:/,''); return NAMES[n] || n.replace(/-/g,' ').replace(/\b\w/g,function(c){ return c.toUpperCase(); }); }
+  function esc(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function when(t){ var d=new Date(t); if(isNaN(d)) return ''; var tm=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    return new Date().toDateString()===d.toDateString() ? tm : d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' at '+tm; }
+  function ago(t){ var m=Math.round((Date.now()-t)/MIN); if(m<60) return m<=1?'just now':m+' min ago'; var hh=Math.round(m/60); if(hh<48) return hh+' hr ago'; return Math.round(hh/24)+' days ago'; }
+  function row(key,title,level,line,list,extra){ return {key:key,title:title,level:level,line:line,list:list||[],extra:extra||''}; }
+  function first(id){ var p=(S().people||[]).find(function(x){ return x.id===id; }); return p ? p.name.split(' ')[0] : id; }
+  function chkSaving(){ var R=window.__hqRelay; if(!R) return row('save','Saving','off','The save relay hasn’t started on this page.');
+    var st=R.status||{}, F=R.files||{}, n=0, now=Date.now(), oldest=0;
+    Object.keys(F).forEach(function(k){ var p=(F[k].pending||[]).length; if(p){ n+=p; if(!pendSince[k]) pendSince[k]=now; oldest=Math.max(oldest, now-pendSince[k]); } else delete pendSince[k]; });
+    var age=Math.round(oldest/MIN), refused=order.map(function(k){ return seen[k]; }).filter(function(e){ return e.kind==='Save refused'; });
+    if(refused.length) return row('save','Saving','bad', refused.length+' save'+(refused.length>1?'s were':' was')+' refused since this page was opened. Make the change again; if it keeps happening, tell Perry.', refused.slice(-3).map(function(e){ return when(e.last)+': '+e.msg; }));
+    if(n && age>=5) return row('save','Saving','bad', n+' change'+(n>1?'s have':' has')+' been waiting '+age+' minutes to save. Keep this tab open; if it doesn’t clear, the save relay may be down (tell Perry).');
+    if(st.offline) return row('save','Saving','warn','Can’t reach the save relay right now. Changes wait here, on this computer too, and save when it’s back.');
+    if(n && st.lastError) return row('save','Saving','warn', n+' change'+(n>1?'s are':' is')+' being tried again'+(R.why && R.why() ? ' ('+R.why()+')' : '')+'.');
+    return row('save','Saving','ok', n ? n+' change'+(n>1?'s':'')+' saving now.' : 'Every change is saved.'); }
+  function chkStorage(){ var R=window.__hqRelay; if(!R) return row('store','Storage','off','Not loaded yet.');
+    var cap=940000, F=R.files||{}, sizes=[];
+    Object.keys(F).forEach(function(k){ var f=F[k]; if(!f.loaded || !f.server || f.proj!=='team-hq') return; var n=0; try{ n=JSON.stringify(f.server).length; }catch(e){} sizes.push({name:f.name||k, n:n, pct:Math.round(n*100/cap)}); });
+    sizes.sort(function(a,b){ return b.n-a.n; }); var top=sizes.slice(0,4), w=top[0];
+    var lvl=!w ? 'ok' : w.pct>=90 ? 'bad' : w.pct>=70 ? 'warn' : 'ok';
+    var bars='<div class="hh-bars">'+top.map(function(s){ return '<div><span>'+esc(nice(s.name))+'</span><span>'+s.pct+'%</span><i><s class="'+(s.pct>=90?'bad':s.pct>=70?'warn':'')+'" style="width:'+Math.max(1,Math.min(100,s.pct))+'%"></s></i></div>'; }).join('')+'</div>';
+    var line=!w ? 'Nothing loaded yet.' : lvl==='bad' ? nice(w.name)+' is '+w.pct+'% full. Tell Perry before it reaches 100%: saves to it would stop.'
+      : lvl==='warn' ? nice(w.name)+' is '+w.pct+'% full. Plenty for now; the new database removes this limit.' : 'Every shared file has room. The fullest is '+w.pct+'% full.';
+    return row('store','Storage',lvl,line,[],bars); }
+  function chkEmail(){ var R=window.__hqRelay, me=S().me; if(!R || !R.readOther || !me) return Promise.resolve([]);
+    var ids=[me].concat(ADMINS.indexOf(me)>=0 ? ['jonna','vanessa'] : []).filter(function(x,i,a){ return a.indexOf(x)===i; });
+    return Promise.all(ids.map(function(id){ return R.readOther('team-hq','mail-'+id).then(function(d){
+        if(!d || !d.at) return null; var t=typeof d.at==='number' ? d.at : Date.parse(d.at), a=Math.round((Date.now()-t)/MIN), title='Email Flow – '+first(id);
+        if(a>60) return row('mail-'+id, title, 'bad', 'Last read the inbox '+ago(t)+'. It runs every 15 minutes, so the Team HQ Email – '+first(id)+' flow may be off or failing: open it in Power Automate and check its runs.');
+        if(a>30) return row('mail-'+id, title, 'warn', 'Last read the inbox '+ago(t)+' (it runs every 15 minutes).');
+        return row('mail-'+id, title, 'ok', 'Read the inbox '+ago(t)+'.'); }, function(){ return null; }); }))
+      .then(function(L){ return L.filter(Boolean); }); }
+  function chkOutlook(){ var C=window.__cal && window.__cal.CAL, P=S().people||[]; if(!C || !C.by || !Object.keys(C.by).length) return row('cal','Outlook Calendar Flows','off','Calendars haven’t loaded yet.');
+    var t0=new Date(); t0.setHours(0,0,0,0); var stale=[];
+    P.forEach(function(p){ var L=C.by[p.id]; if(!Array.isArray(L)) return; if(!L.some(function(e){ return (e.s||0)>=t0.getTime(); })) stale.push(p.name); });
+    var n=P.filter(function(p){ return Array.isArray(C.by[p.id]); }).length;
+    if(stale.length) return row('cal','Outlook Calendar Flows','warn', stale.length+' calendar'+(stale.length>1?'s have':' has')+' nothing from today on. That can be a quiet stretch or time off, or that person’s Team HQ Outlook flow may have stopped.', stale);
+    return row('cal','Outlook Calendar Flows','ok', 'All '+n+' calendars have meetings from today on.'+(C.at ? ' Read '+ago(C.at)+'.' : '')); }
+  function chkActions(){ var x=window.__hqx, A=x && x.ACT, s=S(); if(!A || !A.on) return null;
+    var L=(s.bset && Array.isArray(s.bset.hqActs)) ? s.bset.hqActs : [], now=Date.now();
+    var wait=L.filter(function(z){ return !z.fin && !z.err; }), late=wait.filter(function(z){ return now-(z.at||now)>10*MIN; }), errs=L.filter(function(z){ return z.err && now-(z.at||0)<24*60*MIN; });
+    if(late.length) return row('act','Do It in Outlook Flow','bad', late.length+' Outlook change'+(late.length>1?'s have':' has')+' waited more than 10 minutes. The Team HQ Actions flow may be off or failing: open it in Power Automate and check its runs.');
+    if(errs.length) return row('act','Do It in Outlook Flow','warn', errs.length+' Outlook change'+(errs.length>1?'s':'')+' didn’t go through today. Outlook may have refused '+(errs.length>1?'them':'it')+'; try again.');
+    return row('act','Do It in Outlook Flow','ok', wait.length ? wait.length+' change'+(wait.length>1?'s':'')+' on the way.' : 'Nothing waiting.'+(A.sent ? ' Last carried out a change '+when(A.sent)+'.' : '')); }
+  function chkErrors(){ var L=order.map(function(k){ return seen[k]; }).filter(function(e){ return e.kind!=='Save refused'; });
+    if(!L.length) return row('err','Errors on This Page','ok','None since this page was opened.');
+    var n=L.reduce(function(a,e){ return a+e.n; },0);
+    return row('err','Errors on This Page','warn', n+' error'+(n>1?'s':'')+' since this page was opened. Usually harmless; they’re in the Team Error Log below.', L.slice(-4).reverse().map(function(e){ return when(e.last)+': '+e.msg.slice(0,110); })); }
+  function worst(rows){ return rows.some(function(r){ return r.level==='bad'; }) ? 'bad' : rows.some(function(r){ return r.level==='warn'; }) ? 'warn' : 'ok'; }
+  function run(){ if(running) return running;
+    running=chkEmail().catch(function(){ return []; }).then(function(mail){ var out=[chkSaving(), chkStorage()].concat(mail);
+      try{ out.push(chkOutlook()); }catch(e){} try{ var a=chkActions(); if(a) out.push(a); }catch(e){} out.push(chkErrors());
+      last={at:Date.now(), rows:out}; running=null; paint(); return last; }, function(){ running=null; });
+    return running; }
+  function placeBtn(){ var box=document.querySelector('.hq.rail .mast-right'); if(!box) return false;
+    if(!hbtn){ hbtn=h('button','theme-btn'); hbtn.type='button'; hbtn.id='hh-btn'; hbtn.title='System Health';
+      hbtn.innerHTML='<svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l2.5-6 4 12 2.5-6H21"/></svg><i class="hh-dot" aria-hidden="true"></i><span>System Health</span>';
+      hbtn.addEventListener('click', openHealth); hdot=hbtn.querySelector('.hh-dot'); }
+    var before=document.getElementById('help-btn') || document.getElementById('theme-btn');
+    if(hbtn.parentNode!==box || (before && hbtn.nextSibling!==before)) box.insertBefore(hbtn, before||box.firstChild); return true; }
+  function paint(){ placeBtn(); if(!last) return; var w=worst(last.rows);
+    if(hdot) hdot.className='hh-dot '+w; if(hbtn) hbtn.setAttribute('aria-label','System Health: '+(w==='bad'?'needs attention':w==='warn'?'a warning':'all working'));
+    var bad=last.rows.filter(function(r){ return r.level==='bad'; }), sig=bad.map(function(r){ return r.key+':'+r.line; }).join('|'), gone='';
+    try{ gone=sessionStorage.getItem('hq:health-dismissed')||''; }catch(e){}
+    if(!hbar){ hbar=h('div'); hbar.id='hh-bar'; hbar.setAttribute('role','alert'); hbar.hidden=true; document.body.appendChild(hbar); }
+    if(!bad.length || sig===gone) hbar.hidden=true;
+    else { hbar.innerHTML='<span><b>'+esc(bad[0].title)+':</b> '+esc(bad[0].line)+(bad.length>1?' (and '+(bad.length-1)+' more)':'')+'</span><button type="button" class="hh-go">Details</button><button type="button" class="hh-x" aria-label="Hide until something else changes">&times;</button>';
+      hbar.querySelector('.hh-go').onclick=openHealth; hbar.querySelector('.hh-x').onclick=function(){ try{ sessionStorage.setItem('hq:health-dismissed', sig); }catch(e){} hbar.hidden=true; }; hbar.hidden=false; }
+    if(hov && hov.isConnected) drawHealth(); }
+  function loadLog(){ var R=window.__hqRelay; if(!R || !R.readOther) return Promise.resolve([]);
     return R.readOther('team-hq','errors').then(function(d){ var o=(d&&d.docs)||{};
-      docs=Object.keys(o).map(function(id){ var x=Object.assign({}, o[id]); x.id=id; return x; }).sort(function(a,b){ return (b.last||0)-(a.last||0); });
-      return docs; }, function(){ return docs||[]; }); }
-  function ago(t){ var m=Math.round((Date.now()-t)/60000); if(m<60) return m<=1?'just now':m+' min ago'; var hh=Math.round(m/60); if(hh<48) return hh+' hr ago'; return Math.round(hh/24)+' days ago'; }
-  function del(ids){ var d=door(); if(!d) return Promise.resolve();
-    return Promise.all(ids.map(function(id){ return Promise.resolve().then(function(){ return d.doc(id).delete(); }).catch(function(){}); })); }
-  function open(){ var ov=h('div','hq-prob'), pp=h('div','pp'), ph=h('div','ph'); ov.appendChild(pp); pp.appendChild(ph);
-    ph.appendChild(h('b',null,'Problems')); ph.appendChild(h('span','sp'));
-    var clr=h('button',null,'Clear All'), cls=h('button',null,'Close'); ph.appendChild(clr); ph.appendChild(cls);
-    var body=h('div'); pp.appendChild(body); body.appendChild(h('div','none','Loading…'));
-    function close(){ ov.remove(); document.removeEventListener('keydown', esc); } function esc(e){ if(e.key==='Escape') close(); }
-    cls.onclick=close; ov.addEventListener('click', function(e){ if(e.target===ov) close(); }); document.addEventListener('keydown', esc);
-    function paint(L){ body.textContent='';
-      if(!L.length){ body.appendChild(h('div','none','No problems reported. When something breaks for anyone on the team, it shows up here: who, which page, and what went wrong.')); clr.hidden=true; return; }
-      clr.hidden=false;
-      L.forEach(function(x){ var r=h('div','pr'), m=h('div','m'); m.appendChild(h('span','kind',x.kind||'Error')); m.appendChild(document.createTextNode(x.msg||'')); r.appendChild(m);
-        var act=h('div','act'), b=h('button',null,'Clear'); b.onclick=function(){ b.disabled=true; del([x.id]).then(function(){ docs=docs.filter(function(z){ return z.id!==x.id; }); paint(docs); refresh(); }); }; act.appendChild(b); r.appendChild(act);
-        var pe=(S().people||[]).find(function(p){ return p.id===x.who; });
-        r.appendChild(h('div','meta',[(pe&&pe.name)||x.who, x.page, x.device, (x.n>1?x.n+' times':'once')+', last '+ago(x.last||Date.now()), x.build?'version '+x.build:''].filter(Boolean).join(' · ')));
-        if(x.stack) r.appendChild(h('div','st',x.stack));
-        body.appendChild(r); }); }
-    clr.onclick=function(){ clr.disabled=true; del((docs||[]).map(function(x){ return x.id; })).then(function(){ docs=[]; paint(docs); refresh(); clr.disabled=false; }); };
-    document.body.appendChild(ov);
-    load().then(function(L){ var old=L.filter(function(x){ return (x.last||0) < Date.now()-30*864e5; });
-      if(old.length) del(old.map(function(x){ return x.id; }));
-      docs=L.filter(function(x){ return old.indexOf(x)<0; }); paint(docs); markSeen(); refresh(); }); }
-  function refresh(){ var b=document.getElementById('hq-prob-btn'); if(!b) return; var t=lastSeen();
-    b.classList.toggle('has', !!(docs||[]).some(function(x){ return (x.last||0)>t; })); }
-  function addBtn(){ if(ADMINS.indexOf(S().me)<0 || TEST) return false; var box=document.querySelector('.hq.rail .mast-right'); if(!box) return false;
-    if(document.getElementById('hq-prob-btn')) return true;
-    var help=document.getElementById('help-btn'), b=h('button','theme-btn'); b.id='hq-prob-btn'; b.type='button'; b.title='Problems anyone on the team has hit';
-    b.innerHTML='<svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 2.8 19.5h18.4z"></path><path d="M12 10v4.2M12 16.8v.1"></path></svg><span>Problems</span><i class="pdot" aria-hidden="true"></i>';
-    b.onclick=open; box.insertBefore(b, help||box.firstChild); load().then(refresh); return true; }
-  (function wait(n){ if(addBtn() || n>120) return; setTimeout(function(){ wait(n+1); }, 1000); })(0);
-  setInterval(function(){ if(!document.hidden && ADMINS.indexOf(S().me)>=0 && !TEST) load().then(refresh); }, 10*60e3);
-  window.__hqProb.open=open;
+      logDocs=Object.keys(o).map(function(id){ var x=Object.assign({}, o[id]); x.id=id; return x; }).sort(function(a,b){ return (b.last||0)-(a.last||0); }); return logDocs; }, function(){ return logDocs||[]; }); }
+  function delLog(ids){ var d=door(); if(!d) return Promise.resolve(); return Promise.all(ids.map(function(id){ return Promise.resolve().then(function(){ return d.doc(id).delete(); }).catch(function(){}); })); }
+  function report(){ if(!last) return ''; return ['Team HQ System Health, '+new Date(last.at).toLocaleString('en-US')+', version '+BUILD,'']
+      .concat(last.rows.map(function(r){ return (r.level==='ok'?'OK':r.level==='warn'?'WARNING':r.level==='bad'?'PROBLEM':'NOT CHECKED')+' | '+r.title+': '+r.line+(r.list.length?'\n   - '+r.list.join('\n   - '):''); }))
+      .concat(['','Team Error Log (last 7 days):']).concat((logDocs||[]).filter(function(x){ return (x.last||0)>Date.now()-7*864e5; }).map(function(x){ return '  '+new Date(x.last).toLocaleString('en-US')+' '+first(x.who)+' | '+x.page+' | '+x.kind+' x'+x.n+' | '+x.msg; })).join('\n'); }
+  function drawHealth(){ if(!hov || !last) return; var body=hov.querySelector('.hh-in'), w=worst(last.rows), adm=ADMINS.indexOf(S().me)>=0;
+    body.innerHTML='<div class="hh-sum"><i class="hh-big '+w+'"></i><span><b>'+(w==='bad'?'Something Needs Attention':w==='warn'?'Working, With a Warning':'Everything Is Working')+'</b>. Checked '+when(last.at)+'; it checks again every 5 minutes while Team HQ is open.</span></div>'
+      +'<div class="hh-grid">'+last.rows.map(function(r){ return '<div class="hh-row '+r.level+'"><div class="hh-t">'+esc(r.title)+'</div><div class="hh-l">'+esc(r.line)+'</div>'+(r.list.length?'<ul>'+r.list.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join('')+'</ul>':'')+r.extra+'</div>'; }).join('')+'</div>'
+      +'<p class="hh-quiet">Not watched from here (their work never shows in Team HQ’s data until it lands, so a stop can’t be seen): the Team HQ Expense Inbox flow for receipts emailed to expense@. Power Automate emails a flow’s owner when it keeps failing.</p>'
+      +'<h4>Team Error Log (Last 7 Days)</h4><div class="hh-log"><p class="hh-quiet" style="padding:8px 10px;margin:0">Loading…</p></div>'
+      +'<div class="hh-acts"><button type="button" class="pri" data-hh="again">Check Again</button><button type="button" data-hh="copy">Copy Report</button>'+(adm?'<button type="button" data-hh="clear">Clear the Log</button>':'')+'</div>';
+    body.querySelector('[data-hh="again"]').onclick=function(e){ e.target.disabled=true; e.target.textContent='Checking…'; run(); };
+    body.querySelector('[data-hh="copy"]').onclick=function(e){ loadLog().then(function(){ return navigator.clipboard.writeText(report()); }).then(function(){ e.target.textContent='Copied'; }, function(){ e.target.textContent='Couldn’t Copy'; }); };
+    var cb=body.querySelector('[data-hh="clear"]'); if(cb) cb.onclick=function(){ cb.disabled=true; delLog((logDocs||[]).map(function(x){ return x.id; })).then(function(){ logDocs=[]; paintLog(); cb.disabled=false; }); };
+    function paintLog(){ var box=body.querySelector('.hh-log'); box.textContent=''; var L=(logDocs||[]).filter(function(x){ return (x.last||0)>Date.now()-7*864e5; });
+      if(!L.length){ box.appendChild(h('p','hh-quiet','Nothing in the last 7 days. When something breaks on anyone’s screen, it shows up here: who, which page, and what went wrong.')).style.cssText='padding:8px 10px;margin:0'; return; }
+      L.slice(0,40).forEach(function(x){ var r=h('div','hh-lr'); r.appendChild(h('span','w', when(x.last))); r.appendChild(h('span','m', (x.kind||'Error')+': '+(x.msg||'')));
+        if(adm){ var b=h('button',null,'Clear'); b.onclick=function(){ b.disabled=true; delLog([x.id]).then(function(){ logDocs=logDocs.filter(function(z){ return z.id!==x.id; }); paintLog(); }); }; r.appendChild(b); }
+        r.appendChild(h('span','d', [first(x.who), x.page, x.device, x.n>1?x.n+' times':'once', x.build?'version '+x.build:''].filter(Boolean).join(' · '))); box.appendChild(r); }); }
+    loadLog().then(function(L){ var old=L.filter(function(x){ return (x.last||0)<Date.now()-30*864e5; }); if(old.length && adm) delLog(old.map(function(x){ return x.id; })); paintLog(); }); }
+  function openHealth(){ if(hov && hov.isConnected){ return; } hov=h('div','hq-prob'); var pp=h('div','pp'), ph=h('div','ph'); hov.appendChild(pp); pp.appendChild(ph);
+    pp.setAttribute('role','dialog'); pp.setAttribute('aria-modal','true'); pp.setAttribute('aria-label','System Health');
+    ph.appendChild(h('b',null,'System Health')); ph.appendChild(h('span','sp')); var cls=h('button',null,'Close'); ph.appendChild(cls);
+    var body=h('div','hh-in'); pp.appendChild(body); body.appendChild(h('p','hh-quiet','Checking…'));
+    function close(){ if(hov){ hov.remove(); hov=null; } document.removeEventListener('keydown', escK); } function escK(e){ if(e.key==='Escape') close(); }
+    cls.onclick=close; hov.addEventListener('click', function(e){ if(e.target===hov) close(); }); document.addEventListener('keydown', escK);
+    document.body.appendChild(hov); setTimeout(function(){ cls.focus(); }, 0);
+    if(last) drawHealth(); run(); }
+  (function wait(n){ if(placeBtn()){ var s=S(); if(s.ready) setTimeout(run, 6000); else if(n<120) setTimeout(function(){ wait(n+1); }, 1000); return; } if(n<120) setTimeout(function(){ wait(n+1); }, 1000); })(0);
+  setInterval(function(){ if(!document.hidden) run(); }, 5*MIN);
+  window.__hqProb.open=openHealth; window.__hqHealth={run:run, open:openHealth, last:function(){ return last; }};
 
   /* ---------- the Test Copy: banner, and the check that opens every page and tile ---------- */
   if(!TEST) return;
