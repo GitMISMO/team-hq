@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261107zc';
+var BUILD='20261107zd';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4645,6 +4645,11 @@ html[data-theme="dark"] .cs{--cs-hot:#74bfeb}
 .cs-e.hand{stroke-dasharray:4 5;stroke:color-mix(in srgb,var(--warn,#a2701a) 55%,var(--cs-edge))}
 .cs-e.hot{stroke:var(--cs-hot);stroke-width:2.6;stroke-dasharray:8 6;animation:csFlow 1s linear infinite}
 .cs-e.hot.hand{stroke:var(--warn,#a2701a);stroke-dasharray:3 6;animation:none}
+.cs-e.soon{stroke-dasharray:1 6;stroke-linecap:round;stroke-width:2;stroke:color-mix(in srgb,#9fb3c4 80%,transparent)}
+.cs-e.hot.soon{stroke:#7f98ad;stroke-dasharray:1 6;stroke-width:3;animation:none}
+.cs-lb.soon rect{stroke:#9fb3c4;stroke-dasharray:2 3}
+.cs-fi.soon{border-style:dotted;opacity:.85}
+.cs-soonb{font-size:10.5px;font-weight:700;color:#7f98ad;border:1px dotted currentColor;border-radius:4px;padding:0 5px;white-space:nowrap}
 @keyframes csFlow{to{stroke-dashoffset:-14}}
 .cs-p{fill:#74bfeb;filter:url(#csGlow)}
 .cs-n{cursor:pointer;outline:none;transition:opacity .25s}
@@ -4663,7 +4668,7 @@ html[data-theme="dark"] .cs{--cs-hot:#74bfeb}
 .cs-n.eng .box{fill:var(--surface-3,var(--surface-2))}
 .cs-n .cf{fill:var(--warn,#a2701a)}
 .cs-lb{pointer-events:none;opacity:0;transition:opacity .25s}
-.cs-lb.on{opacity:1}.cs-lb.short{display:none}
+.cs-lb.on{opacity:1}.cs-lb.clash{opacity:0!important}.cs-lb.short{display:none}
 .cs-lb rect{fill:var(--surface);stroke:var(--cs-hot);stroke-width:1}
 .cs-lb.hand rect{stroke:var(--warn,#a2701a);stroke-dasharray:3 3}
 .cs-lb text{font:600 10.5px sans-serif;font-family:inherit;fill:var(--ink)}
@@ -4817,6 +4822,43 @@ html[data-theme="dark"] .cs .cs-ph .cs-build{color:#456179}
 .cs-btn{font:inherit;font-size:13px;font-weight:600;border:1px solid var(--border);background:var(--surface);color:var(--ink);border-radius:8px;padding:6px 12px;cursor:pointer}
 .cs-btn.danger{color:var(--bad,#b3372c)}
 @media (prefers-reduced-motion: reduce){ .cs-p,.cs-n .ring{display:none} .cs *{transition:none!important;animation:none!important} .cs-rv{opacity:1;transform:none} }
+
+/* road to rock solid */
+.cs-rs{display:grid;gap:12px}
+.cs-rsum{padding:16px 18px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:18px;align-items:center}
+.cs-rsum .big{font-size:40px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.cs-rsum .big small{display:block;font-size:12px;font-weight:600;color:var(--ink-3);margin-top:4px}
+.cs-rsum .bar{height:10px;border-radius:999px;background:var(--surface-3,var(--border));overflow:hidden}.cs-rsum .bar i{display:block;height:100%;background:linear-gradient(90deg,#74bfeb,#2fbf71);border-radius:999px;transition:width 1s}
+.cs-rsum .meta{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:12.5px;color:var(--ink-2)}
+.cs-who{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.cs-sys{overflow:hidden}
+.cs-sysh{display:grid;grid-template-columns:10px minmax(0,1fr) 150px 64px 18px;gap:12px;align-items:center;width:100%;text-align:left;font:inherit;color:inherit;background:none;border:0;padding:12px 16px;cursor:pointer}
+.cs-sysh:hover{background:var(--surface-2)}
+.cs-sysh>i{width:10px;height:10px;border-radius:50%}
+.cs-sysh b{font-size:15px}.cs-sysh .nm{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}.cs-sysh .nm small{font-size:12px;color:var(--ink-3)}
+.cs-sysh .pg{height:7px;border-radius:999px;background:var(--surface-3,var(--border));overflow:hidden}.cs-sysh .pg s{display:block;height:100%;background:linear-gradient(90deg,#74bfeb,#2fbf71)}
+.cs-sysh .lf{font-size:12.5px;font-weight:700;color:var(--cs-hot);text-align:right;font-variant-numeric:tabular-nums}
+.cs-sysh .lf.done{color:#2fbf71}
+.cs-sysh .cv{width:14px;height:14px;transition:transform .2s;stroke:var(--ink-3);fill:none;stroke-width:2}
+.cs-sys.open .cs-sysh .cv{transform:rotate(180deg)}
+@media(max-width:640px){.cs-sysh{grid-template-columns:10px minmax(0,1fr) 54px 16px}.cs-sysh .pg{display:none}}
+.cs-tl2{display:grid;gap:6px;padding:0 16px 14px 38px}
+.cs-ti{border:1px solid var(--border);border-radius:10px;background:var(--surface-2);overflow:hidden}
+.cs-tih{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px}
+.cs-ck{width:22px;height:22px;border-radius:6px;border:1.5px solid var(--border-strong,var(--border));background:var(--surface);display:grid;place-items:center;cursor:pointer;padding:0}
+.cs-ck svg{width:14px;height:14px;stroke:#fff;fill:none;stroke-width:3;opacity:0}
+.cs-ck.on{background:#2fbf71;border-color:#2fbf71}.cs-ck.on svg{opacity:1}
+.cs-ck[disabled]{cursor:default}
+.cs-tt{font:inherit;font-size:13.5px;font-weight:600;color:inherit;background:none;border:0;padding:0;text-align:left;cursor:pointer}
+.cs-ti.done .cs-tt{color:var(--ink-3);text-decoration:line-through}
+.cs-tg{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.cs-wb{font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px;white-space:nowrap;background:color-mix(in srgb,#74bfeb 16%,transparent);color:var(--cs-hot)}
+.cs-wb.you{background:var(--navy,#0d314c);color:#fff}
+.cs-wb.ext{background:color-mix(in srgb,#e0a83c 20%,transparent);color:#9a6510}
+.cs-kb{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.cs-tid{padding:0 12px 12px 42px;font-size:13px;color:var(--ink-2);display:grid;gap:6px}
+.cs-tid small{color:var(--ink-3)}
+.cs-sysf{display:flex;justify-content:flex-end;padding:0 16px 14px}
 /* the dashboard tile */
 .cs-tile .cs-tn{display:flex;gap:14px;flex-wrap:wrap;margin-top:4px}
 .cs-tile .cs-tn div b{display:block;font-size:24px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
@@ -4841,11 +4883,13 @@ const ICO={
   clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   day:'<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/>',
   week:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  rocket:'<path d="M12 3c3 2 5 5.5 5 9.5L15 17H9l-2-4.5C7 8.5 9 5 12 3z"/><circle cx="12" cy="10" r="1.8"/><path d="M9 17l-2 4 3-1.5M15 17l2 4-3-1.5"/>',
+  check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
   play:'<path d="M6 4l14 8-14 8z"/>', search:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>'
 };
 const svgI=(k)=>'<svg viewBox="0 0 24 24" aria-hidden="true">'+(ICO[k]||'')+'</svg>';
 function layerIcon(t){ t=(t||'').toLowerCase(); return /sign-in|role/.test(t)?'users':/key|password/.test(t)?'key':/email/.test(t)?'mail':/history|private/.test(t)?'db':/record/.test(t)?'lock':/source of truth|aptify/.test(t)?'doc':'shield'; }
-function cadIcon(t){ t=(t||'').toLowerCase(); return /moment/.test(t)?'bolt':/minute/.test(t)?'fast':/hour/.test(t)?'clock':/daily|day/.test(t)?'day':/week/.test(t)?'week':'clock'; }
+function cadIcon(t){ t=(t||'').toLowerCase(); return /launch|website/.test(t)?'rocket':/moment/.test(t)?'bolt':/minute/.test(t)?'fast':/hour/.test(t)?'clock':/daily|day/.test(t)?'day':/week/.test(t)?'week':'clock'; }
 const reduce=()=>!!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
 /* ---------- the page ---------- */
@@ -4854,9 +4898,9 @@ function areaName(d,s){ return s.area && d.areas[s.area] ? d.areas[s.area].name 
 function colorOf(d,s){ return s.area && d.areas[s.area] ? (AC[d.areas[s.area].c]||'#74bfeb') : (s.zone==='eng' ? '#14486e' : '#7f98ad'); }
 function stKey(s){ return s.status==='Live'?'live':s.status==='Launching'?'soon':'build'; }
 function stTag(s){ return h('span','cs-tag cs-'+stKey(s), s.status==='Live' ? 'Live' : (s.statusNote||s.status||'Building')); }
-function counts(d){ const apps=d.systems.filter(s=>s.zone==='apps').length; const auto=d.connections.filter(c=>c.how!=='hand').length;
+function counts(d){ const apps=d.systems.filter(s=>s.zone==='apps').length; const auto=d.connections.filter(c=>c.how!=='hand' && c.how!=='soon').length, soonN=d.connections.filter(c=>c.how==='soon').length;
   const jobs=d.automations.reduce((n,g)=>n+(g.items||[]).length,0); const A=d.systems.filter(s=>s.zone==='apps');
-  return {apps, auto, hand:d.connections.length-auto, jobs, swaps:d.replaced.length,
+  return {apps, auto, hand:d.connections.filter(c=>c.how==='hand').length, soonN, jobs, swaps:d.replaced.length,
   live:A.filter(s=>s.status==='Live').length, launching:A.filter(s=>s.status==='Launching').length, building:A.filter(s=>s.status!=='Live' && s.status!=='Launching').length, soon:A.filter(s=>s.status!=='Live')}; }
 function confirms(d){ return d.systems.filter(s=>s.confirm).length + d.connections.filter(c=>c.confirm).length; }
 function journeys(d){ return (Array.isArray(d.journeys)?d.journeys:[]).map(j=>Object.assign({}, j, {steps:(j.steps||[]).filter(st=>d.systems.some(s=>s.id===st.sys))})).filter(j=>j.steps.length>1); }
@@ -4877,7 +4921,7 @@ function draw(){ const root=P.el; if(!root) return; root.textContent=''; root.cl
   const tl=h('div','cs-tools'); chips(d, tl); tl.appendChild(finder(d)); b1.appendChild(tl);
   const g=h('div','cs-grid'); g.style.marginTop='12px';
   const left=h('div','cs-card cs-mapwrap'); const mb=h('div','cs-mapbox'); mb.appendChild(map(d)); left.appendChild(mb);
-  const lg=h('div','cs-legend'); lg.innerHTML='<span><svg width="30" height="8" aria-hidden="true"><line x1="0" y1="4" x2="30" y2="4" stroke="var(--cs-hot)" stroke-width="2.4" stroke-dasharray="8 6"/><circle cx="20" cy="4" r="3" fill="#74bfeb"/></svg>Work moving automatically</span><span><svg width="30" height="8" aria-hidden="true"><line x1="0" y1="4" x2="30" y2="4" stroke="#a2701a" stroke-width="1.8" stroke-dasharray="3 5"/></svg>Copied by a person</span><span><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4" fill="#2fbf71"/></svg>Live</span><span><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4" fill="#e0a83c"/></svg>Launching</span><span><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4" fill="#9fb3c4"/></svg>Building</span>'+(P.edit?'<span><svg width="10" height="10" aria-hidden="true"><circle cx="5" cy="5" r="4" fill="#a2701a"/></svg>To confirm</span>':'');
+  const lg=h('div','cs-legend'); lg.innerHTML='<span><svg width="30" height="8" aria-hidden="true"><line x1="0" y1="4" x2="30" y2="4" stroke="var(--cs-hot)" stroke-width="2.4" stroke-dasharray="8 6"/><circle cx="20" cy="4" r="3" fill="#74bfeb"/></svg>Work moving automatically</span><span><svg width="30" height="8" aria-hidden="true"><line x1="0" y1="4" x2="30" y2="4" stroke="#a2701a" stroke-width="1.8" stroke-dasharray="3 5"/></svg>Copied by a person</span><span><svg width="30" height="8" aria-hidden="true"><line x1="1" y1="4" x2="29" y2="4" stroke="#9fb3c4" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="1 6"/></svg>Not live yet</span><span><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4" fill="#2fbf71"/></svg>Live</span><span><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4" fill="#e0a83c"/></svg>Launching</span><span><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4" fill="#9fb3c4"/></svg>Building</span>'+(P.edit?'<span><svg width="10" height="10" aria-hidden="true"><circle cx="5" cy="5" r="4" fill="#a2701a"/></svg>To confirm</span>':'');
   left.appendChild(lg); P.tourHost=left; g.appendChild(left);
   const panel=h('aside','cs-card cs-panel'); panel.setAttribute('aria-live','polite'); g.appendChild(panel); P.panel=panel; b1.appendChild(g); root.appendChild(b1); addSec('System Map', b1);
   /* journeys */
@@ -4887,6 +4931,8 @@ function draw(){ const root=P.el; if(!root) return; root.textContent=''; root.cl
       const go=h('span','go'); go.innerHTML=svgI('play').replace('<svg','<svg width="12" height="12" style="fill:currentColor"')+'Play it on the map'; cd.appendChild(go);
       cd.addEventListener('click', ()=>startJourney(j.id)); jg.appendChild(cd); });
     bj.appendChild(jg); root.appendChild(bj); addSec('Follow the Work', bj); }
+  /* the road to rock solid */
+  if(Array.isArray(d.todos) && d.todos.length){ const br=todoBand(d); root.appendChild(br); addSec('To Rock Solid', br); }
   /* protection */
   const inPlace=d.protection.filter(l=>/in place/i.test(l.status||'')).length;
   const b2=band('Security','How the Data Is Protected','Each layer stands on its own, so a problem in one doesn’t expose the rest. Select a layer to see where it lives on the map.');
@@ -4904,12 +4950,57 @@ function draw(){ const root=P.el; if(!root) return; root.textContent=''; root.cl
   const b4=band('Automation','What Runs on Its Own','Work that used to wait for someone to remember it now happens on a schedule or the moment something changes. Select any job to see where it runs.'); const cd=h('div','cs-cad');
   d.automations.forEach(gp=>{ const col=h('div','cs-card cs-cadcol cs-rv'); const hd=h('div','cs-cadh'); const ic=h('span','ic'); ic.innerHTML=svgI(cadIcon(gp.cadence)); hd.appendChild(ic); hd.appendChild(h('h3',null,gp.cadence)); hd.appendChild(h('em',null,String((gp.items||[]).length))); col.appendChild(hd);
     const ul=h('ul'); (gp.items||[]).forEach(it=>{ const li=h('li',null,it.name); li.appendChild(h('small',null,it.detail)); goTo(li, it.sys, d, null); ul.appendChild(li); }); col.appendChild(ul); cd.appendChild(col); }); b4.appendChild(cd); root.appendChild(b4); addSec('On Its Own', b4);
-  const ft=h('p','cs-foot'); ft.textContent='As of '+longDate(d.asOf)+'. Brought in from the MISMO Connections Map'+(d.refreshedAt?' on '+longDate(d.refreshedAt):'')+(c.hand?'; '+c.hand+' connection'+(c.hand>1?'s are':' is')+' copied by a person and shown dashed':'')+'.'; root.appendChild(ft);
+  const ft=h('p','cs-foot'); ft.textContent='As of '+longDate(d.asOf)+'. Brought in from the MISMO Connections Map'+(d.refreshedAt?' on '+longDate(d.refreshedAt):'')+(c.hand?'; '+c.hand+' connection'+(c.hand>1?'s are':' is')+' copied by a person and shown dashed':'')+(c.soonN?'; '+c.soonN+' '+(c.soonN>1?'aren’t':'isn’t')+' live yet and '+(c.soonN>1?'are':'is')+' dotted':'')+'.'; root.appendChild(ft);
   /* nav buttons */
   secs.forEach(([label, el], i)=>{ const b=btn(i===0?'on':'', label, ()=>el.scrollIntoView({block:'start', behavior:reduce()?'auto':'smooth'})); nav.appendChild(b); });
   watchSections(root, nav, secs.map(x=>x[1]));
   if(P.sel && !d.systems.some(s=>s.id===P.sel)) P.sel=null;
   paintState(); side(); reveal(root); if(P.jr) tourCard(); }
+/* ---------- the road to rock solid: what's left on each system ---------- */
+const FIRST=['m360','team','orders','cms'];
+function whoLabel(w, sy){ return w==='claude' ? (sy ? sy.name+'’s Claude' : 'Its Claude') : w; }
+function whoCls(w){ return w==='You' ? 'you' : (w==='claude' || /claude/i.test(w)) ? '' : 'ext'; }
+function todoBand(d){ const b=band('Road to rock solid','What’s Left to Make Each System Rock Solid','Everything still open on each system, from the Systems Readiness Scorecard, the Connections Map and each system’s open items. Select a system for its list, and an item for the details.');
+  const wrap=h('div','cs-rs'); b.appendChild(wrap); P.rsWrap=wrap; paintTodos(d); return b; }
+function paintTodos(d){ const wrap=P.rsWrap; if(!wrap) return; wrap.textContent=''; const by={}; d.systems.forEach(s=>by[s.id]=s);
+  const T=d.todos.filter(g=>by[g.sys] && (g.items||[]).length); const all=[].concat(...T.map(g=>g.items)); const done=all.filter(x=>x.done).length, left=all.length-done;
+  const W=P.rsWho||'';
+  /* summary */
+  const sm=h('div','cs-card cs-rsum'); const bg=h('div','big'); bg.append(String(left)); bg.appendChild(h('small',null,'items left')); sm.appendChild(bg);
+  const r=h('div'); const bar=h('div','bar'); const bi=h('i'); bi.style.width=(all.length?Math.round(done/all.length*100):0)+'%'; bar.appendChild(bi); r.appendChild(bar);
+  const meta=h('div','meta'); meta.appendChild(h('span',null, done+' of '+all.length+' done')); meta.appendChild(h('span',null, T.filter(g=>g.items.every(x=>x.done)).length+' of '+T.length+' systems complete'));
+  const mine=all.filter(x=>!x.done && x.who==='You').length; if(mine) meta.appendChild(h('span',null, mine+' waiting on you')); r.appendChild(meta);
+  const wh=h('div','cs-who'); const whos=['','You','claude'].concat([...new Set(all.map(x=>x.who).filter(w=>w!=='You' && w!=='claude'))].sort());
+  whos.forEach(w=>{ const n=all.filter(x=>!x.done && (!w || x.who===w)).length; const c=btn('cs-chip', (w==='' ? 'Everyone' : w==='claude' ? 'Each system’s Claude' : w)+' · '+n, ()=>{ P.rsWho=w; paintTodos(M.data); }); c.setAttribute('aria-pressed', String(W===w)); wh.appendChild(c); }); r.appendChild(wh);
+  sm.appendChild(r); wrap.appendChild(sm);
+  /* one card per system */
+  const order=T.slice().sort((a,b)=>{ const fa=FIRST.indexOf(a.sys), fb=FIRST.indexOf(b.sys); const la=a.items.filter(x=>!x.done).length, lb=b.items.filter(x=>!x.done).length;
+    if((la===0)!==(lb===0)) return la===0 ? 1 : -1; if(fa>=0 || fb>=0) return (fa<0?99:fa)-(fb<0?99:fb); return lb-la || by[a.sys].name.localeCompare(by[b.sys].name); });
+  P.rsOpen=P.rsOpen||{};
+  order.forEach(g=>{ const sy=by[g.sys]; const items=g.items.filter(x=>!W || x.who===W); if(W && !items.length) return;
+    const gl=g.items.filter(x=>!x.done).length; const card=h('div','cs-card cs-sys'+(P.rsOpen[g.sys]?' open':''));
+    const hd=btn('cs-sysh'); hd.setAttribute('aria-expanded', String(!!P.rsOpen[g.sys])); const dot=h('i'); dot.style.background=colorOf(d,sy); hd.appendChild(dot);
+    const nm=h('span','nm'); nm.appendChild(h('b',null,sy.name)); nm.appendChild(stTag(sy)); if(FIRST.indexOf(g.sys)>=0) nm.appendChild(h('small',null,'daily use')); hd.appendChild(nm);
+    const pg=h('span','pg'); const ps=h('s'); ps.style.width=(g.items.length?Math.round((g.items.length-gl)/g.items.length*100):0)+'%'; pg.appendChild(ps); hd.appendChild(pg);
+    hd.appendChild(h('span','lf'+(gl?'':' done'), gl ? gl+' left' : 'Done ✓'));
+    const cv=document.createElementNS(NS,'svg'); cv.setAttribute('viewBox','0 0 24 24'); cv.setAttribute('class','cv'); cv.innerHTML='<path d="M6 9l6 6 6-6"/>'; hd.appendChild(cv);
+    hd.addEventListener('click', ()=>{ P.rsOpen[g.sys]=!P.rsOpen[g.sys]; paintTodos(M.data); });
+    card.appendChild(hd);
+    if(P.rsOpen[g.sys]){ const L=h('div','cs-tl2');
+      items.slice().sort((a,b)=>(a.done?1:0)-(b.done?1:0)).forEach(it=>{ const row=h('div','cs-ti'+(it.done?' done':'')); const top=h('div','cs-tih');
+        const ck=btn('cs-ck'+(it.done?' on':'')); ck.innerHTML='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'; ck.setAttribute('aria-label',(it.done?'Mark not done: ':'Mark done: ')+it.t); ck.setAttribute('aria-pressed', String(!!it.done));
+        if(canEdit()) ck.addEventListener('click', ()=>toggleTodo(g.sys, it.id)); else { ck.disabled=true; ck.title='Jonna checks these off'; }
+        top.appendChild(ck);
+        const tt=btn('cs-tt', it.t); tt.setAttribute('aria-expanded', String(P.rsItem===it.id)); tt.addEventListener('click', ()=>{ P.rsItem=P.rsItem===it.id?null:it.id; paintTodos(M.data); }); top.appendChild(tt);
+        const tg=h('span','cs-tg'); if(it.kind) tg.appendChild(h('span','cs-kb',it.kind)); tg.appendChild(h('span','cs-wb '+whoCls(it.who), whoLabel(it.who, sy))); top.appendChild(tg); row.appendChild(top);
+        if(P.rsItem===it.id){ const dd=h('div','cs-tid'); if(it.d) dd.appendChild(h('div',null,it.d)); if(it.src) dd.appendChild(h('small',null,'From: '+it.src)); if(it.done && it.at) dd.appendChild(h('small',null,'Done '+new Date(it.at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+(it.by?' by '+it.by.replace(/^./,c=>c.toUpperCase()):''))); row.appendChild(dd); }
+        L.appendChild(row); });
+      card.appendChild(L); const f=h('div','cs-sysf'); const go=btn('cs-ib','Show '+sy.name+' on the map →', ()=>select(g.sys, true)); f.appendChild(go); card.appendChild(f); }
+    wrap.appendChild(card); });
+}
+function toggleTodo(sys, id){ const d=M.data; const nd=clone(d); const g=nd.todos.find(x=>x.sys===sys); const it=g && g.items.find(x=>x.id===id); if(!it) return;
+  it.done=!it.done; if(it.done){ it.at=Date.now(); it.by=me(); } else { delete it.at; delete it.by; }
+  P.rsItem=null; save(nd, (it.done?'Checked off: ':'Back on the list: ')+it.t); }
 function band(k,title,p){ const b=h('section','cs-band'); const sh=h('div','cs-sh'); const x=h('div'); x.appendChild(h('div','cs-k',k)); x.appendChild(h('h2',null,title)); if(p) x.appendChild(h('p',null,p)); sh.appendChild(x); b.appendChild(sh); return b; }
 
 /* the hero: a living network behind the headline numbers */
@@ -4942,7 +5033,7 @@ function finder(d){ const w=h('label','cs-find'); w.innerHTML=svgI('search'); co
   return w; }
 /* the section buttons follow you down the page */
 function watchSections(root, nav, els){ if(!('IntersectionObserver' in window)) return; const io=new IntersectionObserver(es=>{ es.forEach(e=>{ if(e.isIntersecting){ const k=els.indexOf(e.target); [...nav.children].forEach((b,i)=>b.classList.toggle('on', i===k)); } }); }, {rootMargin:'-30% 0px -60% 0px'}); els.forEach(el=>io.observe(el)); }
-function reveal(root){ const L=[...root.querySelectorAll('.cs-rv')]; if(reduce() || !('IntersectionObserver' in window)){ L.forEach(e=>e.classList.add('in')); return; }
+function reveal(root){ const L=[...root.querySelectorAll('.cs-rv')]; if(P.revealed || reduce() || !('IntersectionObserver' in window)){ L.forEach(e=>e.classList.add('in')); return; } P.revealed=true;
   const io=new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting){ const el=e.target; const sib=[...el.parentNode.children].indexOf(el); setTimeout(()=>el.classList.add('in'), Math.min(sib,8)*60); io.unobserve(el); } }), {rootMargin:'0px 0px -8% 0px'}); L.forEach(e=>io.observe(e));
   setTimeout(()=>L.forEach(e=>e.classList.add('in')), 2500); /* never leave anything hidden */ }
 
@@ -4962,11 +5053,11 @@ function map(d){ const svg=sv('svg',{viewBox:'0 0 1200 720', role:'img', 'aria-l
   P.edges=[]; P.nodes={}; const pairs={};
   d.connections.forEach((c,i0)=>{ const a=by[c.from], b=by[c.to]; if(!a || !b) return;
     const pk=[c.from,c.to].sort().join('|'), f0=pairs[pk]; if(!f0) pairs[pk]={i:i0, from:c.from}; const i=!f0 ? i0 : (f0.from===c.from ? f0.i+1 : f0.i); /* a second line between the same two boxes curves the other way */
-    const geo=edgeGeo(a,b,i); const path=sv('path',{class:'cs-e'+(c.how==='hand'?' hand':''), d:geo.d, id:pre+i0},gE); const tt=sv('title',{},path); tt.textContent=a.name+' → '+b.name+': '+c.what+(c.how==='hand'?' (copied by a person)':'');
-    const e={c, el:path, i}; if(pulseOn && c.how!=='hand'){ const ci=sv('circle',{class:'cs-p',r:3.2},gP); const m=sv('animateMotion',{dur:(3.6+(i%5)*.7)+'s',repeatCount:'indefinite',begin:(i*0.37%4)+'s'},ci); const mp=sv('mpath',{},m); mp.setAttribute('href','#'+pre+i0); mp.setAttributeNS('http://www.w3.org/1999/xlink','href','#'+pre+i0); e.p=ci; }
+    const geo=edgeGeo(a,b,i); const path=sv('path',{class:'cs-e'+(c.how==='hand'?' hand':c.how==='soon'?' soon':''), d:geo.d, id:pre+i0},gE); const tt=sv('title',{},path); tt.textContent=a.name+' → '+b.name+': '+c.what+(c.how==='hand'?' (copied by a person)':c.how==='soon'?' (not live yet)':'');
+    const e={c, el:path, i}; if(pulseOn && c.how!=='hand' && c.how!=='soon'){ const ci=sv('circle',{class:'cs-p',r:3.2},gP); const m=sv('animateMotion',{dur:(3.6+(i%5)*.7)+'s',repeatCount:'indefinite',begin:(i*0.37%4)+'s'},ci); const mp=sv('mpath',{},m); mp.setAttribute('href','#'+pre+i0); mp.setAttributeNS('http://www.w3.org/1999/xlink','href','#'+pre+i0); e.p=ci; }
     /* the label that appears on the line when its system is selected */
     const lbTxt=(c.what.length>30 ? c.what.slice(0,29)+'…' : c.what); const lw=Math.round(lbTxt.length*5.9+14);
-    const lb=sv('g',{class:'cs-lb'+(c.how==='hand'?' hand':'')+(geo.len<lw+40?' short':''), transform:'translate('+Math.round(geo.mx-lw/2)+','+Math.round(geo.my-10)+')'},gL); sv('rect',{x:0,y:0,width:lw,height:20,rx:10},lb); const lt=sv('text',{x:lw/2,y:13.5,'text-anchor':'middle'},lb); lt.textContent=lbTxt; e.lb=lb;
+    const lb=sv('g',{class:'cs-lb'+(c.how==='hand'?' hand':c.how==='soon'?' soon':'')+(geo.len<lw+40?' short':''), transform:'translate('+Math.round(geo.mx-lw/2)+','+Math.round(geo.my-10)+')'},gL); sv('rect',{x:0,y:0,width:lw,height:20,rx:10},lb); const lt=sv('text',{x:lw/2,y:13.5,'text-anchor':'middle'},lb); lt.textContent=lbTxt; e.lb=lb; e.box={x:Math.round(geo.mx-lw/2), y:Math.round(geo.my-10), w:lw, h:20};
     P.edges.push(e); });
   d.systems.forEach(s=>{ const g=sv('g',{class:'cs-n'+(s.zone==='eng'?' eng':''), tabindex:0, role:'button', 'aria-label':s.name+', '+(s.status||''), transform:'translate('+(s.x-W/2)+','+(s.y-H/2)+')'},gN);
     sv('rect',{class:'box',x:0,y:0,width:W,height:H,rx:9},g); sv('rect',{class:'bar',x:0,y:0,width:5,height:H,rx:2.5,fill:colorOf(d,s)},g);
@@ -4991,7 +5082,9 @@ function dragable(g, s, d){ g.addEventListener('pointerdown', ev=>{ if(ev.button
     if(moved){ g._moved=true; const nd=clone(d); const t=nd.systems.find(z=>z.id===s.id); t.x=s.x; t.y=s.y; s.x=ox; s.y=oy; save(nd, 'Moved '+s.name+'.'); } };
   g.addEventListener('pointermove', mv); g.addEventListener('pointerup', up); g.addEventListener('pointercancel', up); }); }
 function linked(id){ const s={}; s[id]=1; (M.data.connections||[]).forEach(c=>{ if(c.from===id) s[c.to]=1; if(c.to===id) s[c.from]=1; }); return s; }
-function paintState(){ const d=M.data; if(!d || d.empty || !P.nodes) return; const by={}; d.systems.forEach(s=>by[s.id]=s);
+function declutter(){ const shown=[]; (P.edges||[]).forEach(e=>{ e.lb.classList.remove('clash'); if(!e.lb.classList.contains('on') || e.lb.classList.contains('short')) return; const b=e.box; if(shown.some(o=>b.x<o.x+o.w+4 && o.x<b.x+b.w+4 && b.y<o.y+o.h+2 && o.y<b.y+b.h+2)) e.lb.classList.add('clash'); else shown.push(b); }); }
+function paintState(){ paintState0(); declutter(); }
+function paintState0(){ const d=M.data; if(!d || d.empty || !P.nodes) return; const by={}; d.systems.forEach(s=>by[s.id]=s);
   /* a journey being played lights up its path */
   if(P.jr){ const j=journeys(d).find(x=>x.id===P.jr.id); if(j){ const upto=j.steps.slice(0, P.jr.i+1).map(z=>z.sys), cur=j.steps[P.jr.i].sys, on={}; upto.forEach(x=>on[x]=1);
       const hotE=new Set(); for(let k=1;k<=P.jr.i;k++){ const a=j.steps[k].from || j.steps[k-1].sys, b=j.steps[k].sys; P.edges.forEach(e=>{ if((e.c.from===a && e.c.to===b) || (e.c.from===b && e.c.to===a)) hotE.add(e); }); }
@@ -5049,7 +5142,7 @@ function side(){ const p=P.panel, d=M.data; if(!p || !d || d.empty) return; p.te
   const IN=d.connections.filter(c=>c.to===s.id && by[c.from]), OUT=d.connections.filter(c=>c.from===s.id && by[c.to]);
   const fl=h('div','cs-flow');
   const list=(L, other, title)=>{ const hd=h('div','cs-fl'); hd.append(title); hd.appendChild(h('small',null,'· '+L.length)); fl.appendChild(hd); const box=h('div','cs-fc');
-    L.forEach(c=>{ const o=by[c[other]]; const b=btn('cs-fi'+(c.how==='hand'?' hand':'')); const i=h('i'); i.style.background=colorOf(d,o); b.appendChild(i); const tx=h('span'); tx.appendChild(h('b',null,o.name)); tx.appendChild(h('small',null,c.what)); if(c.note) tx.appendChild(h('small','cs-note',c.note)); b.appendChild(tx); b.appendChild(c.how==='hand' ? h('span','cs-hand','by hand') : h('em',null,'→')); b.title='Go to '+o.name; b.addEventListener('click', ()=>select(o.id)); box.appendChild(b); });
+    L.forEach(c=>{ const o=by[c[other]]; const b=btn('cs-fi'+(c.how==='hand'?' hand':c.how==='soon'?' soon':'')); const i=h('i'); i.style.background=colorOf(d,o); b.appendChild(i); const tx=h('span'); tx.appendChild(h('b',null,o.name)); tx.appendChild(h('small',null,c.what)); if(c.note) tx.appendChild(h('small','cs-note',c.note)); b.appendChild(tx); b.appendChild(c.how==='hand' ? h('span','cs-hand','by hand') : c.how==='soon' ? h('span','cs-soonb','not live yet') : h('em',null,'→')); b.title='Go to '+o.name; b.addEventListener('click', ()=>select(o.id)); box.appendChild(b); });
     fl.appendChild(box); };
   if(IN.length) list(IN,'from','Comes in from');
   const meE=h('div','cs-me'); const sp=h('span'); sp.textContent=s.name; meE.appendChild(sp); fl.appendChild(meE);
@@ -5113,7 +5206,7 @@ function conForm(p, d, c, ctx){ const isNew=!c; const opts=d.systems.slice().sor
   const fr=field(f,'From', sel(opts, c?c.from:(ctx||opts[0][0]))); const to=field(f,'To', sel(opts, c?c.to:''));
   if(isNew && ctx){ const o=h('option',null,'Pick a system'); o.value=''; o.selected=true; to.insertBefore(o, to.firstChild); }
   const what=field(f,'What is sent', inp(c&&c.what,'e.g., Booked sponsors',120));
-  const how=field(f,'How it moves', sel([['auto','Automatically'],['hand','Copied by a person']], c?c.how:'auto'));
+  const how=field(f,'How it moves', sel([['auto','Automatically'],['hand','Copied by a person'],['soon','Not live yet']], c?c.how:'auto'));
   const note=field(f,'Note (optional, shown in the panel)', inp(c&&c.note,'e.g., Every weekday morning',200));
   const cf=field(f,'Still to confirm (only shows in Edit mode)', inp(c&&c.confirm,'Leave empty when it’s confirmed',300));
   const back=()=>{ P.form=null; side(); };
