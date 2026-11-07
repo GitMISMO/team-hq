@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261107c';
+var BUILD='20261107e';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4494,7 +4494,7 @@ const BK='hq.bell', bell={btn:null, panel:null};
 function bellState(){ let s; try{ s=JSON.parse(localStorage.getItem(BK)||'{}'); }catch(e){ s={}; } s.who=s.who||''; if(s.who!==me()) s={who:me(), seen:0, known:{}, seeded:false, day:''}; s.known=s.known||{}; return s; }
 function bellSave(s){ try{ localStorage.setItem(BK, JSON.stringify(s)); }catch(e){} }
 function bellItems(){ const m=me(); if(!m || !S.tasks) return []; const s=bellState(), out=[], L=CM.list||[], cut=Date.now()-14*864e5;
-  const on=t=>doers(t).indexOf(m)>=0 || t.o===m;
+  const on=t=>doers(t).indexOf(m)>=0 || t.o===m || (t.fol||[]).indexOf(m)>=0;
   /* tasks handed to you: anything you're newly doing that someone else set up */
   let changed=false; const mineNow=S.tasks.filter(t=>isOpen(t) && doers(t).indexOf(m)>=0);
   mineNow.forEach(t=>{ if(!s.known[t.id]){ s.known[t.id]= s.seeded ? Date.now() : 1; changed=true; } });
@@ -4506,6 +4506,8 @@ function bellItems(){ const m=me(); if(!m || !S.tasks) return []; const s=bellSt
     if(ment || follows) out.push({k:ment?'mention':'comment', at:c.at||0, who:c.by, t, text:c.text}); });
   const t0=today().getTime();
   mineNow.forEach(t=>{ if(!t.due) return; const n=days(t.due); if(n===0 || n===1) out.push({k:n===0?'today':'tomorrow', at:t0+(n===0?2:1), t}); });
+  S.tasks.forEach(t=>{ if(!isOpen(t) || !(t.wait||[]).length || !on(t)) return; const B=blockers(t); if(!B.length || B.some(isOpen)) return;
+    const at=Math.max.apply(null, B.map(b=>b.at||0)); if(at>cut) out.push({k:'ready', at, t, text:B.map(b=>b.t).join(', ')+(B.length>1?' are':' is')+' done'}); });
   return out.sort((a,b)=>b.at-a.at).slice(0,40); }
 function bellNew(L){ const s=bellState(), d=iso(today()); return L.some(x=>(x.k==='today'||x.k==='tomorrow') ? s.day!==d : x.at>(s.seen||0)); }
 function paintBell(){ if(!bell.btn) return; let L=[]; try{ L=bellItems(); }catch(e){} bell.btn.classList.toggle('has', bellNew(L)); if(bell.panel && bell.panel.isConnected) drawBellPanel(L); }
@@ -4517,7 +4519,7 @@ function drawBellPanel(L){ const p=bell.panel; p.textContent=''; const hd=h('div
   L.forEach(x=>{ const r=btn('nx-bl-row'+((x.k==='today'||x.k==='tomorrow') ? (s.day!==iso(today())?' new':'') : (x.at>(s.seen||0)?' new':'')), null, ()=>goTask(x.t));
     if(x.who) r.appendChild(av(x.who,26)); else { const i=h('span','nx-bl-ic'); i.innerHTML=ic('cal'); r.appendChild(i); }
     const b=h('span','nx-bl-b'), line=h('span','nx-bl-l'); const nm=x.who ? first(x.who) : '';
-    const what={mention:nm+' mentioned you on ', comment:nm+' commented on ', assigned:nm+' handed you ', today:'Due today: ', tomorrow:'Due tomorrow: '}[x.k];
+    const what={mention:nm+' mentioned you on ', comment:nm+' commented on ', assigned:nm+' handed you ', today:'Due today: ', tomorrow:'Due tomorrow: ', ready:'Ready to start: '}[x.k];
     line.appendChild(document.createTextNode(what)); line.appendChild(h('b',null,x.t.t)); b.appendChild(line);
     if(x.text){ const q=h('span','nx-bl-q'); q.textContent=String(x.text).replace(/\s+/g,' ').slice(0,140); b.appendChild(q); }
     if(x.k!=='today' && x.k!=='tomorrow') b.appendChild(h('span','nx-bl-ago', cmAgo(x.at)));
@@ -4533,12 +4535,113 @@ function addBell(){ if(bell.btn && bell.btn.isConnected) return true; const box=
   const b=document.createElement('button'); b.type='button'; b.className='mastbtn nx-bell'; b.id='hq-bell'; b.title='Notifications'; b.setAttribute('aria-label','Notifications');
   b.innerHTML=ic('bell')+'<i class="dot" aria-hidden="true"></i>'; b.addEventListener('click', e=>{ e.stopPropagation(); openBell(); });
   box.insertBefore(b, document.getElementById('newtask') || box.firstChild); bell.btn=b; startComments(); paintBell(); return true; }
+/* ---------- subtasks, waiting on, repeating and followers (November 7, 2026) ----------
+   Kept on the task itself: sub [{id,t,done}], wait [task ids it can't start without], rep (week, 2weeks,
+   month, quarter, year) and fol [people following it]. A repeating task, once done, adds the next one. */
+I.rep='<path d="M4 12a8 8 0 0 1 13.7-5.6L20 9"/><path d="M20 4v5h-5"/><path d="M20 12a8 8 0 0 1-13.7 5.6L4 15"/><path d="M4 20v-5h5"/>';
+I.wait='<path d="M7 3h10M7 21h10M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9"/>';
+I.sub='<path d="M5 5h3v3H5zM5 11h3v3H5zM11 6.5h8M11 12.5h8M5 17h3v3H5zM11 18.5h8"/>';
+const fmtY=s=>fmt(s)+(pd(s) && pd(s).getFullYear()!==today().getFullYear() ? ', '+pd(s).getFullYear() : '');
+const REPS=[['','Doesn’t repeat'],['week','Every week'],['2weeks','Every 2 weeks'],['month','Every month'],['quarter','Every 3 months'],['year','Every year']];
+function repNextDue(t){ const x=pd(t.due)||today(); const r=t.rep;
+  if(r==='week') x.setDate(x.getDate()+7); else if(r==='2weeks') x.setDate(x.getDate()+14); else if(r==='month') x.setMonth(x.getMonth()+1);
+  else if(r==='quarter') x.setMonth(x.getMonth()+3); else if(r==='year') x.setFullYear(x.getFullYear()+1); else x.setDate(x.getDate()+7);
+  return iso(x); }
+function repSweep(){ if(!S.tasks || !me()) return;
+  S.tasks.slice().forEach(t=>{ if(!t.rep || isOpen(t) || t.repNext) return; if(!(t.o===me() || doers(t)[0]===me())) return;
+    const due=repNextDue(t), id=(t.repRoot||t.id)+'-'+due.replace(/-/g,'');
+    if(!S.tasks.some(x=>x.id===id)){ const nx={id, due, s:'Not Started', by:t.by||me(), repRoot:t.repRoot||t.id, at:Date.now(), ord:t.ord||0};
+      ['t','o','d','p','r','w','notes','rep','fol','wait'].forEach(k=>{ if(t[k]!==undefined && t[k]!=='') nx[k]=Array.isArray(t[k]) ? t[k].slice() : t[k]; });
+      if(t.sub && t.sub.length) nx.sub=t.sub.map(s=>({id:s.id, t:s.t}));
+      put('tasks', nx); toast('Repeats '+(REPS.find(r=>r[0]===t.rep)||['',''])[1].toLowerCase()+' — the next one is due '+fmtY(due)+': '+t.t); }
+    put('tasks', Object.assign({}, t, {repNext:id}), t); }); }
+setInterval(()=>{ if(!document.hidden) try{ repSweep(); }catch(e){} }, 10000);
+setTimeout(()=>{ try{ repSweep(); }catch(e){} }, 6000);
+const blockers=t=>(t.wait||[]).map(id=>S.tasks.find(x=>x.id===id)).filter(Boolean);
+const openBlockers=t=>blockers(t).filter(isOpen);
+const holding=t=>S.tasks.filter(x=>(x.wait||[]).indexOf(t.id)>=0 && isOpen(x));
+function rowMore(t, r){ const sp=r.querySelector('.nx-sp'); if(!sp) return;
+  const tag=(k, txt, title)=>{ const s=h('span','nx-tm'); s.innerHTML=ic(k)+(txt?'<span>'+txt+'</span>':''); s.title=title; sp.before(s); };
+  if(t.sub && t.sub.length){ const n=t.sub.filter(s=>s.done).length; tag('sub', n+'/'+t.sub.length, n+' of '+t.sub.length+' subtasks done'); }
+  if(isOpen(t) && openBlockers(t).length) tag('wait', '', 'Waiting on '+openBlockers(t).map(x=>x.t).join(', '));
+  if(t.rep) tag('rep', '', (REPS.find(x=>x[0]===t.rep)||['','Repeats'])[1]); }
+function pickTask(anchor, t, cb){ const wrap=h('div','nx-pt'), inp=h('input','nx-pt-in'), list=h('div','nx-pt-list');
+  inp.placeholder='Find a task…'; inp.setAttribute('aria-label','Find a task'); wrap.appendChild(inp); wrap.appendChild(list);
+  popMenu(anchor, [{node:wrap}], 'Can’t start until');
+  const draw=()=>{ list.textContent=''; const q=inp.value.toLowerCase().trim();
+    const L=S.tasks.filter(x=>x.id!==t.id && isOpen(x) && (t.wait||[]).indexOf(x.id)<0 && (x.wait||[]).indexOf(t.id)<0 && (!q || x.t.toLowerCase().indexOf(q)>=0))
+      .sort((a,b)=>((b.r===t.r && !!t.r)-(a.r===t.r && !!t.r)) || byDue(a,b)).slice(0,10);
+    if(!L.length) list.appendChild(h('div','nx-ml','No matching open tasks'));
+    L.forEach(x=>{ const b=btn('nx-mi', null, ()=>{ closeMenus(); cb(x); }); const i=h('span'); i.innerHTML=sIcon(st(x)); b.appendChild(i.firstChild||i);
+      b.appendChild(h('span',null,x.t)); b.appendChild(h('small',null, doers(x).map(first).join(', '))); list.appendChild(b); }); };
+  inp.addEventListener('input', draw); inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); const b=list.querySelector('.nx-mi'); b && b.click(); } }); draw(); setTimeout(()=>inp.focus(), 0); }
+function moreBlock(t0){ const box=h('div','nx-more');
+  const live=()=>S.tasks.find(x=>x.id===t0.id) || t0;
+  const set=(patch, msg)=>{ const t=live(); change(t, patch, msg); setTimeout(paintMore, 30); };
+  function paintMore(){ const t=live(); box.textContent='';
+    const sec=(title, extra)=>{ const s=h('section','nx-mo-s'); const hd=h('div','nx-mo-h'); hd.appendChild(h('b',null,title)); if(extra) hd.appendChild(extra); s.appendChild(hd); box.appendChild(s); return s; };
+    /* subtasks */
+    const subs=(t.sub||[]).slice(), nd=subs.filter(s=>s.done).length;
+    const ss=sec('Subtasks', subs.length ? h('span','nx-mo-n', nd+' of '+subs.length+' done') : null);
+    if(subs.length){ const bar=h('div','nx-mo-bar'); const f=h('i'); f.style.width=Math.round(nd/subs.length*100)+'%'; bar.appendChild(f); ss.appendChild(bar); }
+    subs.forEach(s=>{ const r=h('div','nx-mo-sub'+(s.done?' done':''));
+      const cb=h('input'); cb.type='checkbox'; cb.checked=!!s.done; cb.setAttribute('aria-label', s.t);
+      cb.addEventListener('change', ()=>set({sub:(live().sub||[]).map(x=>x.id===s.id ? Object.assign({}, x, {done:cb.checked}) : x)}, (cb.checked?'Subtask done: ':'Subtask reopened: ')+s.t));
+      const tx=h('input','nx-mo-st'); tx.value=s.t; tx.setAttribute('aria-label','Subtask');
+      tx.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); tx.blur(); } if(e.key==='Escape'){ tx.value=s.t; tx.blur(); } });
+      tx.addEventListener('blur', ()=>{ const v=tx.value.trim(); if(v && v!==s.t) set({sub:(live().sub||[]).map(x=>x.id===s.id ? Object.assign({}, x, {t:v}) : x)}, 'Subtask renamed: '+v); });
+      const x=btn('nx-mo-x','×', ()=>set({sub:(live().sub||[]).filter(z=>z.id!==s.id)}, 'Subtask removed: '+s.t)); x.setAttribute('aria-label','Remove subtask '+s.t);
+      r.appendChild(cb); r.appendChild(tx); r.appendChild(x); ss.appendChild(r); });
+    const add=h('input','nx-mo-add'); add.placeholder='+ Add a subtask, then press Enter'; add.setAttribute('aria-label','Add a subtask');
+    add.addEventListener('keydown', e=>{ if(e.key!=='Enter') return; e.preventDefault(); const v=add.value.trim(); if(!v) return;
+      const id='s'+Date.now().toString(36)+Math.random().toString(36).slice(2,5); set({sub:(live().sub||[]).concat([{id, t:v}])}, 'Subtask added: '+v);
+      setTimeout(()=>{ const n=box.querySelector('.nx-mo-add'); n && n.focus(); }, 80); });
+    ss.appendChild(add);
+    /* waiting on */
+    const ws=sec('Can’t Start Until');
+    blockers(t).forEach(x=>{ const c=h('div','nx-mo-dep'+(isOpen(x)?'':' ok')); const i=h('span','nx-mo-di'); i.innerHTML=sIcon(st(x)); c.appendChild(i);
+      const l=btn('nx-mo-dl', x.t, ()=>goTask(x)); c.appendChild(l); c.appendChild(h('span','nx-mo-dw', isOpen(x) ? (doers(x).map(first).join(', ')||'')+(x.due?' · '+fmt(x.due):'') : 'Done'));
+      const rm=btn('nx-mo-x','×', ()=>set({wait:(live().wait||[]).filter(z=>z!==x.id)}, 'No longer waiting on: '+x.t)); rm.setAttribute('aria-label','Stop waiting on '+x.t); c.appendChild(rm); ws.appendChild(c); });
+    const pk=btn('nx-chip','+ Add a task it’s waiting on', ()=>pickTask(pk, live(), x=>set({wait:(live().wait||[]).concat([x.id])}, 'Waiting on: '+x.t))); ws.appendChild(pk);
+    const hold=holding(t); if(hold.length){ const hl=h('div','nx-mo-hold'); hl.appendChild(h('span',null,'Holding up: ')); hold.forEach((x,i)=>{ if(i) hl.appendChild(document.createTextNode(', ')); hl.appendChild(btn('nx-mo-dl', x.t, ()=>goTask(x))); }); ws.appendChild(hl); }
+    /* repeats */
+    const rs=sec('Repeats'); const sel=h('select','nx-sel'); sel.setAttribute('aria-label','Repeats'); REPS.forEach(([k,l])=>sel.appendChild(new Option(l,k))); sel.value=t.rep||'';
+    sel.addEventListener('change', ()=>set({rep:sel.value}, sel.value ? (REPS.find(r=>r[0]===sel.value)[1])+': '+t.t : 'Stopped repeating: '+t.t)); rs.appendChild(sel);
+    if(t.rep) rs.appendChild(h('span','nx-mo-note', 'When it’s marked done, the next one is added'+(t.due?', due '+fmtY(repNextDue(t)):'')+'.'));
+    /* followers */
+    const fol=(t.fol||[]).filter(id=>person(id)), mine=fol.indexOf(me())>=0;
+    const tg=btn('nx-chip'+(mine?' on':''), mine?'Following':'Follow', ()=>set({fol: mine ? fol.filter(x=>x!==me()) : fol.concat([me()])}, mine?'Stopped following: '+t.t:'Following: '+t.t));
+    tg.title='Followers see comments and updates in their bell';
+    const fs=sec('Followers', tg); const fl=h('div','nx-mo-fl');
+    fol.forEach(id=>{ const c=h('span','nx-pk-p'); c.appendChild(av(id,22)); c.appendChild(h('span',null,first(id))); const x=btn('x','×', ()=>set({fol:(live().fol||[]).filter(z=>z!==id)}, first(id)+' stopped following '+t.t)); x.title='Remove '+first(id); c.appendChild(x); fl.appendChild(c); });
+    const ad=btn('nx-chip','+ Add', ()=>popMenu(ad, people().filter(p=>fol.indexOf(p.id)<0).map(p=>({label:p.name, icon:av(p.id,20).outerHTML, fn:()=>set({fol:(live().fol||[]).concat([p.id])}, first(p.id)+' is following '+t.t)})), 'Add a follower'));
+    fl.appendChild(ad); fs.appendChild(fl);
+    if(!fol.length) fs.appendChild(h('span','nx-mo-note','Doers and the accountable person already get updates. Add anyone else who should.'));
+  }
+  paintMore(); return box; }
+{ const cs=document.createElement('style'); cs.textContent=
+  '.nx-more{margin-top:14px;border-top:1px solid var(--border);padding-top:10px;display:flex;flex-direction:column;gap:12px}'+
+  '.nx-mo-h{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3)}.nx-mo-h b{font-weight:700}.nx-mo-h .nx-chip{margin-left:auto;text-transform:none;letter-spacing:0}'+
+  '.nx-mo-n{margin-left:auto;text-transform:none;letter-spacing:0;font-size:12px}'+
+  '.nx-mo-bar{height:4px;border-radius:2px;background:var(--surface-3);overflow:hidden;margin-bottom:6px}.nx-mo-bar i{display:block;height:100%;background:var(--good,#12a150)}'+
+  '.nx-mo-sub{display:flex;align-items:center;gap:8px;padding:2px 0}.nx-mo-sub input[type=checkbox]{width:16px;height:16px;flex:none;accent-color:var(--navy)}'+
+  '.nx-mo-st{flex:1;min-width:0;border:1px solid transparent;border-radius:4px;background:none;font:inherit;font-size:13px;color:var(--ink);padding:3px 5px}.nx-mo-st:hover{border-color:var(--border)}.nx-mo-st:focus-visible{border-color:var(--sky);outline:none;background:var(--surface-2)}'+
+  '.nx-mo-sub.done .nx-mo-st{text-decoration:line-through;color:var(--ink-3)}'+
+  '.nx-mo-x{border:0;background:none;color:var(--ink-3);font-size:16px;line-height:1;cursor:pointer;padding:2px 6px;border-radius:4px}.nx-mo-x:hover,.nx-mo-x:focus-visible{color:var(--bad);background:var(--surface-2)}'+
+  '.nx-mo-add{width:100%;border:1px dashed var(--border);border-radius:6px;background:none;font:inherit;font-size:13px;color:var(--ink);padding:6px 8px;margin-top:4px}.nx-mo-add:focus-visible{outline:2px solid var(--sky);border-style:solid}'+
+  '.nx-mo-dep{display:flex;align-items:center;gap:8px;font-size:13px;padding:3px 0}.nx-mo-di svg{width:15px;height:15px}.nx-mo-dep.ok .nx-mo-dl{text-decoration:line-through;color:var(--ink-3)}'+
+  '.nx-mo-dl{border:0;background:none;padding:0;font:inherit;color:var(--navy);cursor:pointer;text-align:left;font-weight:600}.nx-mo-dl:hover{text-decoration:underline}'+
+  '.nx-mo-dw{margin-left:auto;color:var(--ink-3);font-size:12px;white-space:nowrap}.nx-mo-hold{font-size:12.5px;color:var(--ink-2);margin-top:6px}'+
+  '.nx-mo-note{display:block;font-size:12px;color:var(--ink-3);margin-top:5px}.nx-mo-fl{display:flex;flex-wrap:wrap;gap:6px;align-items:center}'+
+  '.nx-tm{display:inline-flex;align-items:center;gap:3px;font-size:11.5px;color:var(--ink-3);margin-left:6px;flex:none}.nx-tm svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8}'+
+  '.nx-pt{display:flex;flex-direction:column;gap:4px;min-width:280px}.nx-pt-in{border:1px solid var(--border);border-radius:6px;padding:6px 8px;font:inherit;font-size:13px;margin:2px 4px 4px;background:var(--surface-2);color:var(--ink)}.nx-pt-list{max-height:260px;overflow:auto}';
+  document.head.appendChild(cs); }
 /* the full task editor (used on smaller screens and from every other page) gets the same comment thread */
 (function hookEditor(n){ const oe=window.__edit; if(!oe){ if(n<60) setTimeout(()=>hookEditor(n+1), 1000); return; } if(oe.__cm) return;
   const w=function(t){ const r=oe.apply(this, arguments);
-    if(t && t.id) setTimeout(()=>{ const b=document.getElementById('panel-b'); if(!b) return; b.querySelectorAll(':scope > .nx-cm').forEach(x=>x.remove());
+    if(t && t.id) setTimeout(()=>{ const b=document.getElementById('panel-b'); if(!b) return; b.querySelectorAll(':scope > .nx-cm, :scope > .nx-more').forEach(x=>x.remove());
       const live=S.tasks.find(x=>x.id===t.id); if(!live) return; const box=commentsBlock(live); box.classList.add('in-ed');
-      const acts=b.querySelector(':scope > .rowacts'); b.insertBefore(box, acts||null); }, 60);
+      const acts=b.querySelector(':scope > .rowacts'); const mb=moreBlock(live); mb.classList.add('in-ed'); b.insertBefore(mb, acts||null); b.insertBefore(box, acts||null); }, 60);
     return r; };
   w.__cm=true; window.__edit=w; })(0);
 (function bellWait(n){ if(addBell() || n>90) return; setTimeout(()=>bellWait(n+1), 1000); })(0);
@@ -4785,6 +4888,7 @@ function row(t, opt){ opt=opt||{};
   r.addEventListener('dblclick', ()=>editTask(t));
   r.addEventListener('dragstart', e=>{ drag=t; r.classList.add('dragging'); try{ e.dataTransfer.setData('text/plain', t.id); e.dataTransfer.effectAllowed='move'; }catch(x){} document.documentElement.classList.add('nx-dragging'); });
   r.addEventListener('dragend', ()=>{ r.classList.remove('dragging'); drag=null; document.documentElement.classList.remove('nx-dragging'); document.querySelectorAll('.nx-over').forEach(x=>x.classList.remove('nx-over')); });
+  rowMore(t, r);
   return r;
 }
 let drag=null;
@@ -4935,6 +5039,7 @@ function drawPeek(){
   const no=h('textarea','nx-pk-notes'); no.value=shown; no.placeholder='Add notes, links, next steps…'; no.setAttribute('aria-label','Notes');
   no.addEventListener('blur', ()=>{ if(no.value!==shown) change(t, {notes: usesBr ? no.value.replace(/\n/g,'<br>') : no.value}, 'Saved the notes'); });
   fld('Notes', no);
+  peekEl.appendChild(moreBlock(t));
   peekEl.appendChild(commentsBlock(t));
   const ft=h('div','nx-pk-ft');
   if(isOpen(t)){ const d=btn('nx-mini pri', null, e=>complete(t, null, e)); d.innerHTML=ic('check')+'<span>Mark Done</span>'; ft.appendChild(d); }
@@ -6245,7 +6350,7 @@ function setOn(v){ ui.on=v; save(); paintSwitch();
 /* ---------- keep it live ---------- */
 let lastSig='';
 function hsh(str){ let x=0; for(let i=0;i<str.length;i++){ x=((x<<5)-x+str.charCodeAt(i))|0; } return x; }
-const sig=()=>[S.tasks.length, hsh(S.tasks.map(t=>[t.id,t.at,t.s,t.due,t.w,t.r,t.o,(t.d||[]).join(','),t.p,t.t,(t.notes||'').length].join('|')).join('~')), (S.asks||[]).length, (S.asks||[]).map(a=>a.state).join(''), (S.nudges||[]).filter(n=>!n.done).length, S.rocks.length, (window.__hqx&&window.__hqx.sig?window.__hqx.sig():''), (ui.view==='mine'?syncSig():''), Object.keys((window.__cal&&window.__cal.CAL&&window.__cal.CAL.by)||{}).length, (window.__cal&&window.__cal.CAL&&window.__cal.CAL.at)||0].join(':');
+const sig=()=>[S.tasks.length, hsh(S.tasks.map(t=>[t.id,t.at,t.s,t.due,t.w,t.r,t.o,(t.d||[]).join(','),t.p,t.t,(t.notes||'').length,(t.sub||[]).map(z=>z.done?1:0).join(''),(t.wait||[]).join(','),t.rep||'',(t.fol||[]).join(','),t.repNext||''].join('|')).join('~')), (S.asks||[]).length, (S.asks||[]).map(a=>a.state).join(''), (S.nudges||[]).filter(n=>!n.done).length, S.rocks.length, (window.__hqx&&window.__hqx.sig?window.__hqx.sig():''), (ui.view==='mine'?syncSig():''), Object.keys((window.__cal&&window.__cal.CAL&&window.__cal.CAL.by)||{}).length, (window.__cal&&window.__cal.CAL&&window.__cal.CAL.at)||0].join(':');
 function busy(){ if(drag || tdrag!=null || menuEl || document.documentElement.classList.contains('nx-boxing') || document.querySelector('.hqx-ov')) return true; const a=document.activeElement; return !!(a && (a.tagName==='INPUT' || a.tagName==='SELECT' || a.tagName==='TEXTAREA') && (shell && shell.contains(a))); }
 const live=setInterval(()=>{ if(!ui.on || document.hidden) return; const s=sig(); if(s===lastSig) return; if(busy()) return; lastSig=s; drawRail(); paint(); }, 1200);
 const clock=setInterval(()=>{ if(!ui.on || document.hidden || busy()) return; drawRail(); if(shell && !shell.hidden && (viewKind()==='day' || viewKind()==='person')) paint(); }, 60e3);
