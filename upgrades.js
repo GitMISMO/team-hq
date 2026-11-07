@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261107u';
+var BUILD='20261107v';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -8125,6 +8125,32 @@ function maybeAuto(n){ const H=document.documentElement;
 maybeAuto(0);
 window.__hqTour={ start:startTour, help:openHelp, version:'1.0',
   destroy(){ if(tour) endTour(false); if(hb) hb.removeEventListener('click', onHelp, true); document.removeEventListener('keydown', onKey); document.removeEventListener('click', onTourBtn); added.forEach(x=>x.remove()); } };
+})();
+
+});
+/* ===== design.js ===== */
+MODS.push(function(){
+/* Team HQ design system layer (November 7, 2026)
+   Rules every page shares, applied last so they win:
+   - muted text (dates, labels, workstreams) dark enough to read: 4.5 to 1 or better on every light surface
+   - initials on colored avatars readable (a soft shade over the color, under the letters)
+   - one visible focus ring for anyone using the keyboard
+   - motion turned down for people who ask their device for less motion */
+(function(){
+'use strict';
+if(window.__hqDesign && window.__hqDesign.destroy) window.__hqDesign.destroy();
+const css=document.createElement('style'); css.id='hq-design';
+css.textContent=`
+@media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){ --ink-3:#56708a } }
+:root[data-theme="light"]{ --ink-3:#56708a }
+.av{ box-shadow: inset 0 0 0 40px rgba(0,0,0,.3) }
+.av+.av{ box-shadow: inset 0 0 0 40px rgba(0,0,0,.3), 0 0 0 2px var(--surface) }
+:where(button, a, [role="button"], input, select, textarea, summary, [tabindex]):focus-visible{ outline:2px solid #74bfeb !important; outline-offset:2px !important }
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{ animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important }
+}`;
+document.head.appendChild(css);
+window.__hqDesign={ version:'1.0', destroy(){ css.remove(); } };
 })();
 
 });
