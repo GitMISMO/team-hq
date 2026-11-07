@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261107ze';
+var BUILD='20261107zf';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -5157,7 +5157,8 @@ function intro(p, d){ const w=h('div','cs-start'); p.appendChild(w);
     return; }
   w.appendChild(h('div','cs-k','Start here')); w.appendChild(h('h3',null,'Pick a System, or Follow the Work'));
   w.appendChild(h('p',null,'Every line is a hand-off between two systems. Moving dots show work flowing automatically; dashed lines are copied by a person.'));
-  const J=journeys(d); J.forEach(j=>{ const b=btn('cs-jbtn'); const pl=h('span','pl'); pl.innerHTML=svgI('play'); b.appendChild(pl); const tx=h('span'); tx.appendChild(h('b',null,j.title)); tx.appendChild(h('small',null,j.steps.length+' steps across the map')); b.appendChild(tx); b.addEventListener('click', ()=>startJourney(j.id)); w.appendChild(b); });
+  const J=journeys(d); J.slice(0,4).forEach(j=>{ const b=btn('cs-jbtn'); const pl=h('span','pl'); pl.innerHTML=svgI('play'); b.appendChild(pl); const tx=h('span'); tx.appendChild(h('b',null,j.title)); tx.appendChild(h('small',null,j.steps.length+' steps across the map')); b.appendChild(tx); b.addEventListener('click', ()=>startJourney(j.id)); w.appendChild(b); });
+  if(J.length>4){ const more=btn('cs-ib','See all '+J.length+' stories →', ()=>{ const t=P.el && [...P.el.querySelectorAll('.cs-band')].find(x=>x.querySelector('.cs-jgrid')); if(t) t.scrollIntoView({block:'start', behavior:reduce()?'auto':'smooth'}); }); more.style.justifySelf='start'; w.appendChild(more); }
   const ah=h('div','cs-k','By area'); ah.style.marginTop='4px'; w.appendChild(ah); const ar=h('div','cs-areas'); const max=Math.max(1,...Object.keys(d.areas).map(k=>d.systems.filter(s=>s.area===k).length));
   Object.keys(d.areas).forEach(k=>{ const n=d.systems.filter(s=>s.area===k).length; const b=btn('cs-ar'); const t=h('span','t'); const i=h('i'); i.style.background=AC[d.areas[k].c]; t.appendChild(i); t.appendChild(h('span',null,d.areas[k].name)); b.appendChild(t); const m=h('span','m'); const sb=h('s'); sb.style.width=(n/max*100)+'%'; sb.style.background=AC[d.areas[k].c]; m.appendChild(sb); b.appendChild(m); b.appendChild(h('b',null,String(n)));
     b.title='Show '+d.areas[k].name+' on the map'; b.addEventListener('click', ()=>{ P.filter=k; if(P.el) P.el.querySelectorAll('.cs-chip').forEach(c=>c.setAttribute('aria-pressed', String(c.textContent===d.areas[k].name))); paintState(); }); ar.appendChild(b); });
