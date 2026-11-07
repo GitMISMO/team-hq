@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261107zf';
+var BUILD='20261107zh';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4581,7 +4581,7 @@ function freeSpot(d, zone){ const taken=(x,y)=>d.systems.some(s=>Math.abs(s.x-x)
 /* ---------- the styles: the Connected Systems look, in Team HQ's colors (light and dark) ---------- */
 const css=h('style'); css.id='hq-systems';
 css.textContent=`
-.cs{--cs-zone:var(--surface-2);--cs-edge:color-mix(in srgb,var(--border-strong,#adc4d6) 85%,transparent);--cs-hot:var(--navy-mid,#14486e);--cs-sky:#74bfeb;--cs-card:var(--surface);font-size:15px;line-height:1.55;color:var(--ink);max-width:1280px;margin:0 auto}
+.cs{--cs-zone:var(--surface-2);--cs-edge:color-mix(in srgb,var(--border-strong,#adc4d6) 85%,transparent);--cs-hot:var(--navy-mid,#14486e);--cs-sky:#74bfeb;--cs-card:var(--surface);font-size:15px;line-height:1.55;color:var(--ink);max-width:1680px;margin:0 auto}
 html[data-theme="dark"] .cs{--cs-hot:#74bfeb}
 @media (prefers-color-scheme: dark){ html:not([data-theme="light"]) .cs{--cs-hot:#74bfeb} }
 .cs h2,.cs h3{margin:0;letter-spacing:-.015em;text-wrap:balance}
@@ -4624,17 +4624,17 @@ html[data-theme="dark"] .cs{--cs-hot:#74bfeb}
 .cs-card{background:var(--cs-card);border:1px solid var(--border);border-radius:14px;box-shadow:0 1px 0 rgba(13,49,76,.03),0 10px 30px -18px rgba(13,49,76,.25)}
 /* map toolbar */
 .cs-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.cs-chip{border:1px solid var(--border);background:var(--surface);color:var(--ink);border-radius:4px;padding:6px 12px;font:500 13px inherit;font-family:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:all .15s}
+.cs-chip{border:1px solid var(--border);background:var(--surface);color:var(--ink);border-radius:4px;padding:6px 12px;font-family:inherit;font-weight:500;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:all .15s}
 .cs-chip i{width:9px;height:9px;border-radius:50%;display:inline-block}
 .cs-chip:hover{border-color:var(--cs-sky)}
 .cs-chip[aria-pressed="true"]{background:var(--navy,#0d314c);color:#fff;border-color:var(--navy,#0d314c)}
-.cs-find{position:relative;margin-left:auto}
-.cs-find input{font:inherit;font-size:13px;color:var(--ink);background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:7px 12px 7px 32px;width:210px}
+.cs-find{position:relative;margin-left:auto;display:block}
+.cs .cs-find input{font:inherit;font-size:13px;color:var(--ink);background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:7px 12px 7px 34px !important;width:220px;height:34px;box-sizing:border-box;margin:0}
 .cs-find input:focus{outline:none;border-color:var(--cs-sky);box-shadow:0 0 0 3px color-mix(in srgb,#74bfeb 30%,transparent)}
-.cs-find svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;stroke:var(--ink-3);fill:none;stroke-width:2}
+.cs .cs-find svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:14px;height:14px;stroke:var(--ink-3);fill:none;stroke-width:2;pointer-events:none;z-index:1}
 @media(max-width:700px){.cs-find{margin-left:0;width:100%}.cs-find input{width:100%}}
 /* map */
-.cs-grid{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:16px;align-items:start}
+.cs-grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;align-items:start}
 @media(max-width:1100px){.cs-grid{grid-template-columns:minmax(0,1fr)}}
 .cs-mapwrap{position:relative;scroll-margin-top:62px}.cs-panel{scroll-margin-top:62px}
 .cs-mapbox{overflow-x:auto;border-radius:14px}
@@ -4686,15 +4686,16 @@ html[data-theme="dark"] .cs{--cs-hot:#74bfeb}
 .cs-ib{font:inherit;font-size:12.5px;font-weight:600;border:1px solid var(--border);background:var(--surface);color:var(--ink);border-radius:8px;padding:5px 10px;cursor:pointer}
 .cs-ib.pri{background:var(--navy,#0d314c);color:#fff;border-color:var(--navy,#0d314c)}
 /* side panel */
-.cs-panel{min-width:0;overflow:hidden}
+.cs-panel{min-width:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}
+@media(max-width:1100px){.cs-panel{height:auto!important}}
 .cs-ph{padding:16px 18px 14px;color:#fff;background:linear-gradient(135deg,var(--pc,#14486e),color-mix(in srgb,var(--pc,#14486e) 55%,#06202f));position:relative}
 .cs-ph .cs-k{color:rgba(255,255,255,.85)}
 .cs-ph h3{font-size:21px;font-weight:800;margin:4px 0 8px;color:#fff;padding-right:28px}
 .cs-ph .x{position:absolute;top:10px;right:10px;width:28px;height:28px;border-radius:8px;border:0;background:rgba(255,255,255,.16);color:#fff;font-size:16px;cursor:pointer;line-height:1}
 .cs-pb{padding:14px 18px 18px;display:grid;gap:12px}
 .cs-pb>p{margin:0;font-size:14px}
-.cs-tag{display:inline-flex;align-items:center;gap:6px;font:700 11px inherit;font-family:inherit;letter-spacing:.06em;text-transform:uppercase;border-radius:4px;padding:3px 8px}
-.cs-tag:before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.cs-tag{display:inline-flex;align-items:center;gap:5px;font-family:inherit;font-weight:700;font-size:10.5px;line-height:1.3;letter-spacing:.05em;text-transform:uppercase;border-radius:3px;padding:2px 6px;white-space:nowrap;vertical-align:middle}
+.cs-tag:before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
 .cs-ph .cs-tag{background:rgba(255,255,255,.95)}
 .cs-live{color:#0f7b5c;background:color-mix(in srgb,#0f7b5c 14%,transparent)}
 .cs-soon{color:#9a6510;background:color-mix(in srgb,#e0a83c 22%,transparent)}
@@ -4859,6 +4860,27 @@ html[data-theme="dark"] .cs .cs-ph .cs-build{color:#456179}
 .cs-tid{padding:0 12px 12px 42px;font-size:13px;color:var(--ink-2);display:grid;gap:6px}
 .cs-tid small{color:var(--ink-3)}
 .cs-sysf{display:flex;justify-content:flex-end;padding:0 16px 14px}
+
+/* what depends on one person */
+.cs-kp-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0;margin-bottom:12px;overflow:hidden}
+.cs-kp-sum .k{padding:14px 18px;border-left:4px solid #74bfeb}
+.cs-kp-sum .k+.k{border-top:0}
+.cs-kp-sum .k.risk{border-left-color:#d9534f}.cs-kp-sum .k.wait{border-left-color:#e0a83c}.cs-kp-sum .k.backup{border-left-color:#2fbf71}
+.cs-kp-sum b{display:block;font-size:30px;font-weight:800;line-height:1}.cs-kp-sum span{font-size:12.5px;color:var(--ink-2)}
+.cs-kp{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;align-items:start}
+.cs-kpc{padding:14px}
+.cs-kph{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px}
+.cs-kph .ic{flex:none;width:34px;height:34px;border-radius:8px;display:grid;place-items:center}
+.cs-kph .ic svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9}
+.cs-kpc.risk .ic{background:color-mix(in srgb,#d9534f 14%,transparent);color:#b3372c}
+.cs-kpc.wait .ic{background:color-mix(in srgb,#e0a83c 20%,transparent);color:#9a6510}
+.cs-kpc.backup .ic{background:color-mix(in srgb,#2fbf71 16%,transparent);color:#0f7b5c}
+.cs-kph h3{font-size:15px;font-weight:800}.cs-kph p{margin:2px 0 0;font-size:12.5px;color:var(--ink-3)}
+.cs-kpc ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.cs-kpc li{font-size:13.5px;line-height:1.35;padding:7px 10px;border-radius:0 6px 6px 0;background:var(--surface-2);border-left:3px solid #74bfeb}
+.cs-kpc.risk li{border-left-color:#d9534f}.cs-kpc.wait li{border-left-color:#e0a83c}.cs-kpc.backup li{border-left-color:#2fbf71}
+.cs-kpc li b{display:block;font-weight:600}.cs-kpc li small{display:block;color:var(--ink-3);font-size:12px;margin-top:1px}
+.cs-kpc li.cs-go:hover,.cs-kpc li.cs-go:focus-visible{box-shadow:none;background:color-mix(in srgb,#74bfeb 14%,var(--surface-2));transform:translateX(2px)}
 /* the dashboard tile */
 .cs-tile .cs-tn{display:flex;gap:14px;flex-wrap:wrap;margin-top:4px}
 .cs-tile .cs-tn div b{display:block;font-size:24px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
@@ -4923,7 +4945,7 @@ function draw(){ const root=P.el; if(!root) return; root.textContent=''; root.cl
   const left=h('div','cs-card cs-mapwrap'); const mb=h('div','cs-mapbox'); mb.appendChild(map(d)); left.appendChild(mb);
   const lg=h('div','cs-legend'); lg.innerHTML='<span><svg width="30" height="8" aria-hidden="true"><line x1="0" y1="4" x2="30" y2="4" stroke="var(--cs-hot)" stroke-width="2.4" stroke-dasharray="8 6"/><circle cx="20" cy="4" r="3" fill="#74bfeb"/></svg>Work moving automatically</span><span><svg width="30" height="8" aria-hidden="true"><line x1="0" y1="4" x2="30" y2="4" stroke="#a2701a" stroke-width="1.8" stroke-dasharray="3 5"/></svg>Copied by a person</span><span><svg width="30" height="8" aria-hidden="true"><line x1="1" y1="4" x2="29" y2="4" stroke="#9fb3c4" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="1 6"/></svg>Not live yet</span><span><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4" fill="#2fbf71"/></svg>Live</span><span><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4" fill="#e0a83c"/></svg>Launching</span><span><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4" fill="#9fb3c4"/></svg>Building</span>'+(P.edit?'<span><svg width="10" height="10" aria-hidden="true"><circle cx="5" cy="5" r="4" fill="#a2701a"/></svg>To confirm</span>':'');
   left.appendChild(lg); P.tourHost=left; g.appendChild(left);
-  const panel=h('aside','cs-card cs-panel'); panel.setAttribute('aria-live','polite'); g.appendChild(panel); P.panel=panel; b1.appendChild(g); root.appendChild(b1); addSec('System Map', b1);
+  const panel=h('aside','cs-card cs-panel'); panel.setAttribute('aria-live','polite'); g.appendChild(panel); P.panel=panel; balance(left, panel); b1.appendChild(g); root.appendChild(b1); addSec('System Map', b1);
   /* journeys */
   if(J.length && !P.edit){ const bj=band('Follow the work','How Work Moves, Step by Step','Pick a story and watch it travel across the map, one hand-off at a time.'); const jg=h('div','cs-jgrid');
     J.forEach(j=>{ const cd=btn('cs-card cs-jc cs-rv'); cd.appendChild(h('div','cs-k', j.steps.length+' steps')); cd.appendChild(h('h3',null,j.title)); if(j.blurb) cd.appendChild(h('p',null,j.blurb));
@@ -4933,6 +4955,7 @@ function draw(){ const root=P.el; if(!root) return; root.textContent=''; root.cl
     bj.appendChild(jg); root.appendChild(bj); addSec('Follow the Work', bj); }
   /* the road to rock solid */
   if(Array.isArray(d.todos) && d.todos.length){ const br=todoBand(d); root.appendChild(br); addSec('To Rock Solid', br); }
+  if(d.keyperson && Array.isArray(d.keyperson.groups) && d.keyperson.groups.length){ const bk=keyBand(d); root.appendChild(bk); addSec('Depends on Jonna', bk); }
   /* protection */
   const inPlace=d.protection.filter(l=>/in place/i.test(l.status||'')).length;
   const b2=band('Security','How the Data Is Protected','Each layer stands on its own, so a problem in one doesn’t expose the rest. Select a layer to see where it lives on the map.');
@@ -5001,6 +5024,15 @@ function paintTodos(d){ const wrap=P.rsWrap; if(!wrap) return; wrap.textContent=
 function toggleTodo(sys, id){ const d=M.data; const nd=clone(d); const g=nd.todos.find(x=>x.sys===sys); const it=g && g.items.find(x=>x.id===id); if(!it) return;
   it.done=!it.done; if(it.done){ it.at=Date.now(); it.by=me(); } else { delete it.at; delete it.by; }
   P.rsItem=null; save(nd, (it.done?'Checked off: ':'Back on the list: ')+it.t); }
+function balance(left, panel){ const fit=()=>{ if(!left.isConnected) return; panel.style.height=Math.max(320, left.offsetHeight)+'px'; };
+  if('ResizeObserver' in window){ const ro=new ResizeObserver(fit); ro.observe(left); } requestAnimationFrame(fit); }
+/* ---------- what depends on one person ---------- */
+function keyBand(d){ const K=d.keyperson; const b=band('Key-person risk', K.title||'What Depends on One Person', K.lede||''); const by={}; d.systems.forEach(s=>by[s.id]=s);
+  const all=[].concat(...K.groups.map(g=>g.items)); const sum=h('div','cs-card cs-kp-sum'); 
+  K.groups.forEach(g=>{ const x=h('div','k '+(g.tone||'')); x.appendChild(h('b',null,String(g.items.length))); x.appendChild(h('span',null,g.short||g.title)); sum.appendChild(x); }); b.appendChild(sum);
+  const grid=h('div','cs-kp'); K.groups.forEach(g=>{ const col=h('div','cs-card cs-kpc cs-rv '+(g.tone||'')); const hd=h('div','cs-kph'); const ic=h('span','ic'); ic.innerHTML=svgI(g.tone==='backup'?'shield':g.tone==='wait'?'clock':'key'); hd.appendChild(ic); const tx=h('div'); tx.appendChild(h('h3',null,g.title)); if(g.sub) tx.appendChild(h('p',null,g.sub)); hd.appendChild(tx); col.appendChild(hd);
+    const ul=h('ul'); g.items.forEach(it=>{ const li=h('li'); li.appendChild(h('b',null,it.t)); if(it.d) li.appendChild(h('small',null,it.d)); if(it.sys && by[it.sys]){ goTo(li, it.sys, d, null); } ul.appendChild(li); }); col.appendChild(ul); grid.appendChild(col); });
+  b.appendChild(grid); return b; }
 function band(k,title,p){ const b=h('section','cs-band'); const sh=h('div','cs-sh'); const x=h('div'); x.appendChild(h('div','cs-k',k)); x.appendChild(h('h2',null,title)); if(p) x.appendChild(h('p',null,p)); sh.appendChild(x); b.appendChild(sh); return b; }
 
 /* the hero: a living network behind the headline numbers */
