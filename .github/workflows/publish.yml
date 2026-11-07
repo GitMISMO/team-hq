@@ -1,0 +1,43 @@
+# Publish a Version: makes a saved Team HQ version live, or rolls back to an earlier one.
+# Every build is saved as releases/upgrades-<version>.js. Try it first in the Test Copy:
+#   https://resources.mismo.org/team-hq/?try=<version>&check=1
+# Then run this (Actions > Publish a Version > Run workflow) with the same version to make it live.
+# To roll back, run it again with the earlier version.
+name: Publish a Version
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to make live (for example 20261107a). To roll back, enter an earlier version."
+        required: true
+permissions:
+  contents: write
+  pages: write
+concurrency:
+  group: publish
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Make the version live
+        env:
+          V: ${{ inputs.version }}
+        run: |
+          if ! printf '%s' "$V" | grep -Eq '^[0-9a-z]+$'; then echo "::error::Version names are letters and numbers only."; exit 1; fi
+          if [ ! -f "releases/upgrades-$V.js" ]; then echo "::error::No saved version $V. Saved versions:"; ls releases; exit 1; fi
+          grep -q "var BUILD='$V';" "releases/upgrades-$V.js" || { echo "::error::releases/upgrades-$V.js is not version $V inside."; exit 1; }
+          cp "releases/upgrades-$V.js" upgrades.js
+          sed -i -E "s/upgrades\.js\?v=[0-9a-z]+/upgrades.js?v=$V/" index.html
+          grep -q "upgrades.js?v=$V\"" index.html || { echo "::error::Could not set the version in index.html."; exit 1; }
+          git config user.name "Team HQ Publisher"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add upgrades.js index.html
+          if git diff --cached --quiet; then echo "Version $V is already live."; exit 0; fi
+          git commit -m "Publish version $V"
+          git push
+      - name: Ask GitHub Pages to rebuild
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X POST "repos/${{ github.repository }}/pages/builds" || echo "Pages will rebuild on its own."
