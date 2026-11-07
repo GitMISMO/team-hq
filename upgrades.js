@@ -11,6 +11,192 @@
  * Each part runs on its own; if one fails, the rest of Team HQ is untouched. */
 (function(){
 'use strict';
+/*GUARD>*/
+/* ---------- version, Test Copy, Problems ----------
+   BUILD is this file's version. Team HQ opened with ?try=<version> is the Test Copy: it loads that saved
+   version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
+   does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
+   sees them under Problems at the foot of the left menu. */
+var BUILD='20261107a';
+if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
+  if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
+    var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
+    ts.onerror=function(){ var m=document.createElement('div');
+      m.style.cssText='position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:100000;background:#b42318;color:#fff;padding:10px 16px;border-radius:8px;font:600 14px/1.4 system-ui,sans-serif;max-width:90vw';
+      m.textContent='Version '+window.__HQ_TRY+' isn’t saved in Team HQ’s releases folder, so nothing loaded. Check the version name.';
+      (document.body||document.documentElement).appendChild(m); };
+    document.head.appendChild(ts); }
+  return;
+}
+window.__HQ_BUILD=BUILD;
+(function(){
+  if(window.__hqProb) return;
+  var ADMINS=['jonna'], TEST=!!window.__HQ_TEST, MAX=25, seen={}, order=[], dirty={}, timer=null, saving=false;
+  var NOISE=/ResizeObserver loop|^Script error\.?$|AbortError|aborted|Load failed|NetworkError|Failed to fetch|chrome-extension:|moz-extension:|safari-(web-)?extension:|Could not reach the relay/i;
+  function S(){ return window.__S||{}; }
+  function who(){ return S().me||'(signed out)'; }
+  function page(){ var s=S(), on=document.querySelector('.hq.rail .on[data-nx], .hq.rail .on[data-hq], .hq.rail [aria-current="page"]');
+    return (on && on.textContent.trim()) || [s.tab, s.view].filter(Boolean).join(' / ') || location.pathname; }
+  function ua(){ var u=navigator.userAgent, d=/iPhone/.test(u)?'iPhone':/iPad/.test(u)?'iPad':/Android/.test(u)?'Android':/Mac/.test(u)?'Mac':/Windows/.test(u)?'Windows':'Other';
+    var b=/Edg\//.test(u)?'Edge':/Chrome\//.test(u)?'Chrome':/Firefox\//.test(u)?'Firefox':/Safari\//.test(u)?'Safari':'Other';
+    var app=(window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone ? ' app' : '';
+    return d+' · '+b+app; }
+  function hash(s){ var h=5381; for(var i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))|0; return (h>>>0).toString(36); }
+  function rec(kind, msg, stack){
+    msg=String(msg==null?'':msg).replace(/\s+/g,' ').trim().slice(0,300); stack=String(stack||'');
+    if(!msg || NOISE.test(msg) || NOISE.test(stack)) return;
+    var me=who(), day=new Date().toISOString().slice(0,10), k=me+'|'+kind+'|'+msg, now=Date.now();
+    var e=seen[k];
+    if(e){ e.n++; e.last=now; }
+    else { if(order.length>=MAX) return;
+      e=seen[k]={ id:'e'+hash(day+'|'+k), kind:kind, msg:msg, stack:stack.split('\n').slice(0,4).join('\n').slice(0,600), who:me,
+        page:page(), build:window.__HQ_BUILD||'', device:ua(), day:day, first:now, last:now, n:1 };
+      order.push(k); }
+    dirty[k]=1;
+    if(TEST){ if(window.__hqCheckLive) window.__hqCheckLive(e); return; }
+    if(!timer) timer=setTimeout(flush, 8000);
+  }
+  function door(){ var s=S(); return s.db && s.db.collection ? s.db.collection('errors') : null; }
+  function flush(){ timer=null; if(saving) { timer=setTimeout(flush, 8000); return; }
+    var d=door(); if(!d){ timer=setTimeout(flush, 15000); return; }
+    var ks=Object.keys(dirty); dirty={}; if(!ks.length) return; saving=true;
+    Promise.all(ks.map(function(k){ var e=seen[k], body={}; Object.keys(e).forEach(function(f){ if(f!=='id') body[f]=e[f]; });
+      return Promise.resolve().then(function(){ return d.doc(e.id).set(body); }).catch(function(){}); }))
+      .then(function(){ saving=false; }, function(){ saving=false; });
+  }
+  window.addEventListener('error', function(ev){
+    if(ev.filename && ev.filename.indexOf(location.origin)!==0 && !/lambda-url|cdnjs|jsdelivr/.test(ev.filename)) return;
+    rec('Page error', ev.message, (ev.error && ev.error.stack) || ((ev.filename||'').split('/').pop()+':'+ev.lineno)); }, true);
+  window.addEventListener('unhandledrejection', function(ev){ var r=ev.reason||{};
+    if(r && (r.code==='OFFLINE' || r.code==='SIGNED_OUT' || r.status===401)) return;
+    rec('Page error', r.message||String(r), r.stack||''); });
+  var ce=console.error; console.error=function(){ try{ var a=[].slice.call(arguments);
+      var m=a.map(function(x){ return x && x.message ? x.message : (typeof x==='string' ? x : ''); }).filter(Boolean).join(' — ');
+      var st=(a.find(function(x){ return x && x.stack; })||{}).stack;
+      if(m) rec('Logged error', m, st); }catch(x){} return ce.apply(console, arguments); };
+  var of=window.fetch.bind(window);
+  window.fetch=function(u,o){ var url=String(u&&u.url||u), m=((o&&o.method)||(u&&u.method)||'GET').toUpperCase();
+    var p=of(u,o);
+    if(m==='GET' || !/\.lambda-url\.[^\/]+\.on\.aws\//.test(url) || /\/data\/errors(\?|$)/.test(url) || /\/ask(\?|$)/.test(url)) return p;
+    return p.then(function(r){ if(!r.ok && r.status!==409 && r.status!==401){ var path=url.replace(/^https:\/\/[^\/]+/,'');
+        r.clone().json().catch(function(){ return {}; }).then(function(b){ rec('Save refused', 'Saving '+path.replace(/^\/[^\/]+\/(data|file)\//,'')+' was refused ('+r.status+(b&&b.error?' '+b.error:'')+(b&&b.message?': '+b.message:'')+')'); }); }
+      return r; });
+  };
+  window.__hqProb={ version:'1.0', list:function(){ return order.map(function(k){ return seen[k]; }); }, rec:rec, flush:flush };
+
+  /* ---------- Problems (Jonna) ---------- */
+  function h(t,c,x){ var e=document.createElement(t); if(c) e.className=c; if(x!=null) e.textContent=x; return e; }
+  var css=document.createElement('style'); css.textContent=
+    '#hq-prob-btn .pdot{width:8px;height:8px;border-radius:50%;background:#d92d20;display:inline-block;margin-left:auto}'+
+    '#hq-prob-btn:not(.has) .pdot{display:none}'+
+    '.hq-prob{position:fixed;inset:0;z-index:99990;background:rgba(6,32,47,.45);display:flex;align-items:flex-start;justify-content:center;padding:6vh 16px}'+
+    '.hq-prob .pp{background:var(--surface,#fff);color:var(--ink,#0d314c);border-radius:12px;width:min(860px,100%);max-height:84vh;overflow:auto;box-shadow:0 20px 50px rgba(0,0,0,.25)}'+
+    '.hq-prob .ph{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line,#dde6ee);position:sticky;top:0;background:inherit}'+
+    '.hq-prob .ph b{font-size:17px}.hq-prob .ph .sp{flex:1}.hq-prob .ph button,.hq-prob .pr button{font:inherit;font-size:13px;border:1px solid var(--line,#c9d6e2);background:transparent;color:inherit;border-radius:6px;padding:5px 10px;cursor:pointer}'+
+    '.hq-prob .pr{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:12px 18px;border-bottom:1px solid var(--line,#eef2f6)}'+
+    '.hq-prob .pr .m{font-weight:600;word-break:break-word}.hq-prob .pr .meta{grid-column:1;font-size:12.5px;opacity:.75}'+
+    '.hq-prob .pr .st{grid-column:1/-1;font:11.5px/1.4 ui-monospace,Menlo,monospace;white-space:pre-wrap;opacity:.65;max-height:5.6em;overflow:hidden}'+
+    '.hq-prob .pr .act{grid-row:1/3;grid-column:2;align-self:start}.hq-prob .none{padding:28px 18px;text-align:center;opacity:.8}'+
+    '.hq-prob .kind{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:1px 6px;border-radius:4px;background:#fde7e5;color:#912018;margin-right:6px}';
+  document.head.appendChild(css);
+  var SEENK='hq.probSeen', docs=null;
+  function lastSeen(){ try{ return +localStorage.getItem(SEENK)||0; }catch(e){ return 0; } }
+  function markSeen(){ try{ localStorage.setItem(SEENK, String(Date.now())); }catch(e){} }
+  function load(){ var R=window.__hqRelay; if(!R || !R.readOther) return Promise.resolve([]);
+    return R.readOther('team-hq','errors').then(function(d){ var o=(d&&d.docs)||{};
+      docs=Object.keys(o).map(function(id){ var x=Object.assign({}, o[id]); x.id=id; return x; }).sort(function(a,b){ return (b.last||0)-(a.last||0); });
+      return docs; }, function(){ return docs||[]; }); }
+  function ago(t){ var m=Math.round((Date.now()-t)/60000); if(m<60) return m<=1?'just now':m+' min ago'; var hh=Math.round(m/60); if(hh<48) return hh+' hr ago'; return Math.round(hh/24)+' days ago'; }
+  function del(ids){ var d=door(); if(!d) return Promise.resolve();
+    return Promise.all(ids.map(function(id){ return Promise.resolve().then(function(){ return d.doc(id).delete(); }).catch(function(){}); })); }
+  function open(){ var ov=h('div','hq-prob'), pp=h('div','pp'), ph=h('div','ph'); ov.appendChild(pp); pp.appendChild(ph);
+    ph.appendChild(h('b',null,'Problems')); ph.appendChild(h('span','sp'));
+    var clr=h('button',null,'Clear All'), cls=h('button',null,'Close'); ph.appendChild(clr); ph.appendChild(cls);
+    var body=h('div'); pp.appendChild(body); body.appendChild(h('div','none','Loading…'));
+    function close(){ ov.remove(); document.removeEventListener('keydown', esc); } function esc(e){ if(e.key==='Escape') close(); }
+    cls.onclick=close; ov.addEventListener('click', function(e){ if(e.target===ov) close(); }); document.addEventListener('keydown', esc);
+    function paint(L){ body.textContent='';
+      if(!L.length){ body.appendChild(h('div','none','No problems reported. When something breaks for anyone on the team, it shows up here: who, which page, and what went wrong.')); clr.hidden=true; return; }
+      clr.hidden=false;
+      L.forEach(function(x){ var r=h('div','pr'), m=h('div','m'); m.appendChild(h('span','kind',x.kind||'Error')); m.appendChild(document.createTextNode(x.msg||'')); r.appendChild(m);
+        var act=h('div','act'), b=h('button',null,'Clear'); b.onclick=function(){ b.disabled=true; del([x.id]).then(function(){ docs=docs.filter(function(z){ return z.id!==x.id; }); paint(docs); refresh(); }); }; act.appendChild(b); r.appendChild(act);
+        var pe=(S().people||[]).find(function(p){ return p.id===x.who; });
+        r.appendChild(h('div','meta',[(pe&&pe.name)||x.who, x.page, x.device, (x.n>1?x.n+' times':'once')+', last '+ago(x.last||Date.now()), x.build?'version '+x.build:''].filter(Boolean).join(' · ')));
+        if(x.stack) r.appendChild(h('div','st',x.stack));
+        body.appendChild(r); }); }
+    clr.onclick=function(){ clr.disabled=true; del((docs||[]).map(function(x){ return x.id; })).then(function(){ docs=[]; paint(docs); refresh(); clr.disabled=false; }); };
+    document.body.appendChild(ov);
+    load().then(function(L){ var old=L.filter(function(x){ return (x.last||0) < Date.now()-30*864e5; });
+      if(old.length) del(old.map(function(x){ return x.id; }));
+      docs=L.filter(function(x){ return old.indexOf(x)<0; }); paint(docs); markSeen(); refresh(); }); }
+  function refresh(){ var b=document.getElementById('hq-prob-btn'); if(!b) return; var t=lastSeen();
+    b.classList.toggle('has', !!(docs||[]).some(function(x){ return (x.last||0)>t; })); }
+  function addBtn(){ if(ADMINS.indexOf(S().me)<0 || TEST) return false; var box=document.querySelector('.hq.rail .mast-right'); if(!box) return false;
+    if(document.getElementById('hq-prob-btn')) return true;
+    var help=document.getElementById('help-btn'), b=h('button','theme-btn'); b.id='hq-prob-btn'; b.type='button'; b.title='Problems anyone on the team has hit';
+    b.innerHTML='<svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 2.8 19.5h18.4z"></path><path d="M12 10v4.2M12 16.8v.1"></path></svg><span>Problems</span><i class="pdot" aria-hidden="true"></i>';
+    b.onclick=open; box.insertBefore(b, help||box.firstChild); load().then(refresh); return true; }
+  (function wait(n){ if(addBtn() || n>120) return; setTimeout(function(){ wait(n+1); }, 1000); })(0);
+  setInterval(function(){ if(!document.hidden && ADMINS.indexOf(S().me)>=0 && !TEST) load().then(refresh); }, 10*60e3);
+  window.__hqProb.open=open;
+
+  /* ---------- the Test Copy: banner, and the check that opens every page and tile ---------- */
+  if(!TEST) return;
+  var live=[]; window.__hqCheckLive=function(e){ live.push(e); };
+  css.textContent+=
+    '.hq-test{position:fixed;left:12px;bottom:12px;z-index:99980;display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#fef0c7;color:#7a2e0e;border:1px solid #f5c66b;border-radius:10px;padding:8px 10px;font:600 13px/1.3 system-ui,sans-serif;box-shadow:0 6px 18px rgba(0,0,0,.15);max-width:calc(100vw - 24px)}'+
+    '.hq-test button{font:inherit;border:1px solid #d9a441;background:#fff8e6;color:inherit;border-radius:6px;padding:4px 10px;cursor:pointer}'+
+    '.hq-check .ok{color:#067647;font-weight:700}.hq-check .bad{color:#b42318;font-weight:700}.hq-check .pr{grid-template-columns:1fr}';
+  var bar=h('div','hq-test'); bar.appendChild(h('span',null,'Test Copy · version '+BUILD+' · nothing you do here is saved'));
+  var rb=h('button',null,'Run Check'), lb=h('button',null,'Leave Test Copy'); bar.appendChild(rb); bar.appendChild(lb);
+  lb.onclick=function(){ location.href=location.pathname; };
+  rb.onclick=function(){ runCheck(); };
+  (function put(){ if(document.body) document.body.appendChild(bar); else setTimeout(put, 200); })();
+  function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+  function txt(el){ return (el && el.innerText) || ''; }
+  async function runCheck(){
+    rb.disabled=true; rb.textContent='Checking…';
+    var res=[], nav=[].slice.call(document.querySelectorAll('.hq.rail [data-nx], .hq.rail [data-hq]')).filter(function(b){ return b.textContent.trim(); });
+    for(var i=0;i<nav.length;i++){ var b=nav[i], name=b.textContent.trim(), before=live.length;
+      rb.textContent='Checking '+name+'…';
+      try{ b.click(); }catch(e){ rec('Page error', e.message, e.stack); }
+      await sleep(2500);
+      var main=b.hasAttribute('data-nx') ? document.querySelector('.nx .nx-body') : document.getElementById('main'), t=txt(main), issues=[];
+      live.slice(before).forEach(function(e){ issues.push(e.kind+': '+e.msg); });
+      if(t.replace(/\s+/g,'').length<30) issues.push('The page came up empty');
+      var bad=(t.match(/\bundefined\b|\bNaN\b|\[object Object\]|Invalid Date/g)||[]); if(bad.length) issues.push('Shows “'+bad[0]+'” on the page');
+      var se=document.scrollingElement; if(se && se.scrollWidth>se.clientWidth+4) issues.push('The page is wider than the screen');
+      res.push({name:name, issues:issues}); }
+    var first=document.querySelector('.hq.rail [data-nx="day"]'); if(first) first.click();
+    rb.textContent='Checking tiles…';
+    var tiles={name:'Every tile, every size', issues:[]};
+    try{ if(window.__hqGallery){ var before2=live.length; window.__hqGallery(); await sleep(6000);
+        [].slice.call(document.querySelectorAll('#hq-gallery [data-gal]')).forEach(function(el){ var nm=el.dataset.gal, r=el.getBoundingClientRect();
+          if(/^ERROR /.test(txt(el))) tiles.issues.push(nm+': '+txt(el).slice(0,140));
+          else if([].slice.call(el.children).some(function(c){ var q=c.getBoundingClientRect(); return q.height>0 && q.bottom>r.top+el.clientHeight+2; })) tiles.issues.push(nm+': content runs past the tile');
+          else if(/\bundefined\b|\bNaN\b|\[object Object\]/.test(txt(el))) tiles.issues.push(nm+': shows a broken value');
+          if(r.height<20) tiles.issues.push(nm+': came up blank'); });
+        live.slice(before2).forEach(function(e){ tiles.issues.push(e.kind+': '+e.msg); });
+        var g=document.getElementById('hq-gallery'); if(g) g.remove(); }
+      else tiles.issues.push('The tile gallery isn’t in this version'); }catch(e){ tiles.issues.push('The tile check itself failed: '+e.message); }
+    res.push(tiles);
+    rb.disabled=false; rb.textContent='Run Check Again';
+    show(res); return res; }
+  function show(res){ var fails=res.filter(function(r){ return r.issues.length; }).length;
+    var ov=h('div','hq-prob hq-check'), pp=h('div','pp'), ph=h('div','ph'); ov.appendChild(pp); pp.appendChild(ph);
+    ph.appendChild(h('b',null, fails ? 'Check Found '+fails+' Problem'+(fails>1?'s':'') : 'Check Passed'));
+    ph.appendChild(h('span','sp')); var c=h('button',null,'Close'); ph.appendChild(c); c.onclick=function(){ ov.remove(); };
+    pp.appendChild(h('div','pr',null)).appendChild(h('div','meta','Version '+BUILD+' · '+res.length+' checks · '+(window.__HQ_BLOCKED||[]).length+' saves held back (the Test Copy never saves)'));
+    res.forEach(function(r){ var row=h('div','pr'); var m=h('div','m'); m.appendChild(h('span', r.issues.length?'bad':'ok', r.issues.length?'✕ ':'✓ ')); m.appendChild(document.createTextNode(r.name)); row.appendChild(m);
+      r.issues.slice(0,12).forEach(function(s){ row.appendChild(h('div','meta',s)); }); if(r.issues.length>12) row.appendChild(h('div','meta','…and '+(r.issues.length-12)+' more'));
+      pp.appendChild(row); });
+    document.body.appendChild(ov);
+    window.__hqCheckResult={version:BUILD, fails:fails, results:res}; }
+  window.__hqCheck=runCheck;
+  if(/[?&]check=1(&|$)/.test(location.search)) (function go(n){ var s=S(); if(s.ready && document.querySelector('.hq.rail [data-nx]')) setTimeout(runCheck, 5000); else if(n<120) setTimeout(function(){ go(n+1); }, 1000); })(0);
+})();
+
+/*<GUARD*/
 /*BOOT>*/
 /* ---------- one read per file ----------
    On opening, several parts of Team HQ ask for the same files (tasks, people, agenda …) within seconds of
