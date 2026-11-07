@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261107j';
+var BUILD='20261107l';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4236,6 +4236,12 @@ const css=h('style'); css.id='mob-css'; css.textContent=`
   /* room under the page for the bar fixed at the bottom, so the last thing on the page can be scrolled into view (November 6, 2026) */
   main{padding:14px 12px calc(90px + env(safe-area-inset-bottom,0px))!important}
   html.app-exp main{padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))!important}
+  /* the top bar fits on a phone: no bell in the Expenses app, tighter buttons on Team HQ (November 7, 2026) */
+  html.app-exp #hq-bell{display:none!important}
+  header.hqtop .hqtop-r{gap:4px!important}
+  header.hqtop .hqtop-r .mastbtn{width:30px!important;height:30px!important;min-width:30px!important;padding:0!important}
+  html.app-exp header.hqtop .exp-hq{padding-left:8px!important;padding-right:8px!important}
+  @media (max-width:380px){header.hqtop .logoplate{padding:4px 6px!important}header.hqtop .mastrule{margin:0 5px!important}}
   .mob-bar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:95;background:var(--surface);border-top:1px solid var(--border);box-shadow:0 -6px 20px rgba(6,32,47,.10);padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px))}
   .mob-b{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:54px;border:0;background:transparent;color:var(--ink-3);font:inherit;font-size:10.5px;font-weight:700;cursor:pointer;border-radius:8px;-webkit-tap-highlight-color:transparent}
   .mob-b svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
