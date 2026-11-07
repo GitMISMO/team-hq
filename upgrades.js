@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261107g';
+var BUILD='20261107h';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -3825,6 +3825,9 @@ function rockHealth(r){
     k: late.length ? 'bad' : open.some(t=>t.due && days(t.due)<=7) ? 'warn' : open.length ? 'good' : '',
     t: late.length ? late.length+' Past Due' : open.some(t=>t.due && days(t.due)<=7) ? 'Due This Week' : open.length ? 'On Track' : (ts.length ? 'All Done' : 'No Tasks Yet')}; }
 
+/* minutes read as hours once a meeting runs past 59 (Jonna, November 7, 2026) */
+const hrs=n=>n>59 ? Math.floor(n/60)+' hr'+(n%60?' '+n%60+' min':'') : n+' min';
+
 /* ---------- the planning page ---------- */
 function runOfShow(){
   const m=sel(), I=items(m), mins=I.reduce((n,x)=>n+(+x.mins||0),0);
@@ -3834,7 +3837,7 @@ function runOfShow(){
   box.appendChild(hd);
   const g=h('div','mt-steps');
   const room=people().length;
-  const counts={bnb: I.length ? I.length+(I.length===1?' item':' items')+(mins?' · '+mins+' min':'') : 'nothing yet — put something on',
+  const counts={bnb: I.length ? I.length+(I.length===1?' item':' items')+(mins?' · '+hrs(mins):'') : 'nothing yet — put something on',
     proj: S.rocks.filter(r=>(r.status||'Active')==='Active').length+' active · '+S.rocks.filter(r=>(r.status||'Active')==='Active' && rockHealth(r).late.length).length+' with late work',
     room: room+' people · '+people().filter(p=>updateOf(m,p.id)).length+' updates in',
     good: goodOf(m) ? 'notes taken' : 'open floor'};
@@ -3923,7 +3926,7 @@ function slideItem(body, s, m){
   if(!s.x){ slideHead(body, 1, 'Nothing on the agenda', 'Nobody put anything on before the meeting. Move on to Team Projects, or add something now.');
     const a=btn('btn','Put Something On', ()=>{ closePres(); const b=[...root.querySelectorAll('.vhead button')].find(x=>/Put Something On/.test(x.textContent)); b && b.click(); }); body.appendChild(a); return; }
   const x=s.x;
-  slideHead(body, 1, x.t, (s.i+1)+' of '+s.n+' · '+(x.kind||'Discuss')+(x.mins ? ' · '+x.mins+' min' : ''));
+  slideHead(body, 1, x.t, (s.i+1)+' of '+s.n+' · '+(x.kind||'Discuss')+(x.mins ? ' · '+hrs(+x.mins) : ''));
   const card=h('div','mt-item');
   const who=h('div','mt-by'); if(x.who){ who.appendChild(av(x.who,36)); who.appendChild(h('span',null,'Raised by '+(person(x.who)||{}).name)); } card.appendChild(who);
   if(x.info) card.appendChild(h('div','mt-info', txt(x.info)));
