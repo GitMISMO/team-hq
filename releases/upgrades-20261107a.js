@@ -161,7 +161,7 @@ window.__HQ_BUILD=BUILD;
       rb.textContent='Checking '+name+'…';
       try{ b.click(); }catch(e){ rec('Page error', e.message, e.stack); }
       await sleep(2500);
-      var main=document.getElementById('main'), t=txt(main), issues=[];
+      var main=b.hasAttribute('data-nx') ? document.querySelector('.nx .nx-body') : document.getElementById('main'), t=txt(main), issues=[];
       live.slice(before).forEach(function(e){ issues.push(e.kind+': '+e.msg); });
       if(t.replace(/\s+/g,'').length<30) issues.push('The page came up empty');
       var bad=(t.match(/\bundefined\b|\bNaN\b|\[object Object\]|Invalid Date/g)||[]); if(bad.length) issues.push('Shows “'+bad[0]+'” on the page');
@@ -173,7 +173,7 @@ window.__HQ_BUILD=BUILD;
     try{ if(window.__hqGallery){ var before2=live.length; window.__hqGallery(); await sleep(6000);
         [].slice.call(document.querySelectorAll('#hq-gallery [data-gal]')).forEach(function(el){ var nm=el.dataset.gal, r=el.getBoundingClientRect();
           if(/^ERROR /.test(txt(el))) tiles.issues.push(nm+': '+txt(el).slice(0,140));
-          else if(el.scrollHeight>el.clientHeight+3 && getComputedStyle(el).overflow!=='visible') tiles.issues.push(nm+': content runs past the tile');
+          else if([].slice.call(el.children).some(function(c){ var q=c.getBoundingClientRect(); return q.height>0 && q.bottom>r.top+el.clientHeight+2; })) tiles.issues.push(nm+': content runs past the tile');
           else if(/\bundefined\b|\bNaN\b|\[object Object\]/.test(txt(el))) tiles.issues.push(nm+': shows a broken value');
           if(r.height<20) tiles.issues.push(nm+': came up blank'); });
         live.slice(before2).forEach(function(e){ tiles.issues.push(e.kind+': '+e.msg); });
