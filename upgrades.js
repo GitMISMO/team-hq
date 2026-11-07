@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261107n';
+var BUILD='20261107r';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -1448,7 +1448,7 @@ function watchExp(){
      Team HQ icon. Opening Expenses on a phone therefore loads the Expenses page itself, ready for Add to Home Screen. */
   const phone=isiOS || (window.matchMedia && matchMedia('(max-width:820px)').matches);
   const check=()=>{ const on=!exp.hidden && !H.classList.contains('nx-show') && exp.offsetParent!==null;
-    if(on && phone){ try{ location.replace('/team-hq/?app=expenses'); }catch(e){} return; }
+    if(on && phone){ try{ const t=new URLSearchParams(location.search).get('try'); location.replace('/team-hq/?app=expenses'+(t ? '&try='+encodeURIComponent(t) : '')); }catch(e){} return; }
     setApp(on); };
   const o=new MutationObserver(check); o.observe(exp, {attributes:true, attributeFilter:['hidden','style','class']}); o.observe(H, {attributes:true, attributeFilter:['class']});
   window.addEventListener('pagehide', ()=>setApp(false)); check(); }
@@ -1599,6 +1599,7 @@ function nextTask(s){ return s.open.slice().sort(byDue)[0] || null; }
 function health(r, s){
   const status=r.status||'Active';
   if(status!=='Active') return {k:'', t:status};
+  { const u=lastUpd(r); if(updFresh(u) && STK[u.k]) return {k:STK[u.k].k, t:STK[u.k].t, man:true}; }
   if(!s.ts.length) return {k:'faint', t:'No Tasks Yet'};
   if(!s.open.length) return {k:'good', t:'All Done'};
   if(s.late.length) return {k:'bad', t:s.late.length+' Past Due'};
@@ -1664,6 +1665,7 @@ function draw(){
     wrap.appendChild(e);
   } else if(ui.view==='timeline') wrap.appendChild(timeline(L));
   else if(ui.view==='people') wrap.appendChild(matrix(L));
+  else if(ui.view==='status') wrap.appendChild(statusView(L));
   else if(ui.view==='workload'){ const wl=window.__workload && window.__workload(); if(wl) wrap.appendChild(wl); else wrap.appendChild(h('p',null,'Workload is still loading.')); }
   else wrap.appendChild(board(L));
   return wrap;
@@ -1721,7 +1723,7 @@ function toolbar(){
   const wrap=h('div','pv2-tools');
   const row=h('div','pv2-bar');
   const vs=h('div','filterbar pv2-views');
-  [['board','Board'],['timeline','Timeline'],['people','Who’s on What'],['workload','Workload']].forEach(([k,l])=>{
+  [['board','Board'],['status','Status'],['timeline','Timeline'],['people','Who’s on What'],['workload','Workload']].forEach(([k,l])=>{
     const b=btn('pill', l, ()=>{ ui.view=k; saveUi(); redraw(); }); b.setAttribute('aria-pressed', String(ui.view===k)); vs.appendChild(b); });
   row.appendChild(vs);
   const sf=h('div','filterbar pv2-status');
@@ -1744,6 +1746,48 @@ function toolbar(){
   return wrap;
 }
 
+/* ---------- project status set by hand, and the weekly note (November 7, 2026) ----------
+   Anyone can update a Team Project's status: On Track, At Risk or Off Track, with a one-line reason
+   and an optional note. The latest update (within 21 days) sets the project's health everywhere;
+   after that it falls back to the automatic health. Updates are kept on the project (upd, newest
+   first, last 26). The Status tab is the roll-up everyone can see. */
+const STK={good:{t:'On Track', k:'good'}, risk:{t:'At Risk', k:'warn'}, off:{t:'Off Track', k:'bad'}};
+const lastUpd=r=>(Array.isArray(r.upd) && r.upd[0]) || null;
+const updFresh=u=>!!u && (Date.now()-(u.at||0)) < 21*864e5;
+function whenTxt(t){ const d=new Date(t); return MON[d.getMonth()]+' '+d.getDate()+(d.getFullYear()!==today().getFullYear()?', '+d.getFullYear():''); }
+function daysSince(t){ return Math.floor((Date.now()-t)/864e5); }
+function statusDialog(r){
+  const ov=h('div','pv2-sov'), bx=h('div','pv2-sdlg'); bx.setAttribute('role','dialog'); bx.setAttribute('aria-modal','true'); bx.setAttribute('aria-label','Update Status');
+  bx.appendChild(h('h2',null,'Update Status')); bx.appendChild(h('p','pv2-snote', r.name));
+  const cur=lastUpd(r); let pick=(cur && cur.k) || 'good';
+  const seg=h('div','pv2-sseg'); Object.keys(STK).forEach(k=>{ const b=btn('pv2-sbtn '+STK[k].k+(pick===k?' on':''), STK[k].t, ()=>{ pick=k; seg.querySelectorAll('.pv2-sbtn').forEach(x=>x.classList.toggle('on', x===b)); }); b.setAttribute('aria-pressed', String(pick===k)); seg.appendChild(b); }); bx.appendChild(seg);
+  const why=h('input','pv2-sin'); why.placeholder='One line: why (e.g., "Sponsor contracts are back; venue is the open item")'; why.setAttribute('aria-label','Reason'); why.maxLength=160; bx.appendChild(why);
+  const note=h('textarea','pv2-sin'); note.rows=4; note.placeholder='Weekly note (optional): what moved, what’s next, what you need'; note.setAttribute('aria-label','Weekly note'); bx.appendChild(note);
+  const ft=h('div','pv2-sft'); const close=()=>{ ov.remove(); document.removeEventListener('keydown', esc); }; const esc=e=>{ if(e.key==='Escape') close(); };
+  ft.appendChild(btn('btn ghost','Cancel', close));
+  ft.appendChild(btn('btn','Post Update', ()=>{ const w=why.value.trim(); if(!w){ why.focus(); why.classList.add('need'); return; }
+    const u={at:Date.now(), by:S.me||'', k:pick, why:w}; if(note.value.trim()) u.note=note.value.trim().slice(0,4000);
+    const nx=Object.assign({}, r, {upd:[u].concat(Array.isArray(r.upd)?r.upd:[]).slice(0,26)});
+    if(window.__put) window.__put('rocks', nx, r); close(); setTimeout(redraw, 60); }));
+  bx.appendChild(ft); ov.appendChild(bx); ov.addEventListener('click', e=>{ if(e.target===ov) close(); }); document.addEventListener('keydown', esc); document.body.appendChild(ov); setTimeout(()=>why.focus(), 0); }
+function updBlock(r, max){ const box=h('div','pv2-upds'); const L=(Array.isArray(r.upd)?r.upd:[]).slice(0, max||3);
+  if(!L.length){ box.appendChild(h('p','pv2-snote','No status updates yet. Post one so everyone can see where this stands.')); return box; }
+  L.forEach(u=>{ const it=h('div','pv2-upd'); const top=h('div','t'); top.appendChild(tag(STK[u.k]?STK[u.k].t:'Update', STK[u.k]?STK[u.k].k:'')); top.appendChild(h('b',null,u.why||'')); it.appendChild(top);
+    if(u.note) it.appendChild(h('p',null,u.note)); it.appendChild(h('small',null, (first(u.by)||'Someone')+' · '+whenTxt(u.at))); box.appendChild(it); });
+  return box; }
+function statusView(L){ const order={off:0, risk:1, good:2};
+  const R=L.slice().sort((a,b)=>{ const ua=lastUpd(a), ub=lastUpd(b); const ka=updFresh(ua)?order[ua.k]:3, kb=updFresh(ub)?order[ub.k]:3; return ka-kb || a.name.localeCompare(b.name); });
+  const t=h('div','pv2-st'); const hd=h('div','pv2-sr hd'); ['Team Project','Status','Why','Updated','Progress'].forEach(x=>hd.appendChild(h('span',null,x))); t.appendChild(hd);
+  R.forEach(r=>{ const s=stats(r), u=lastUpd(r), fresh=updFresh(u), hl=health(r,s); const row=clickable(h('div','pv2-sr'), ()=>openPanel(r.id)); row.style.setProperty('--rc', cvar(r.color));
+    const nm=h('span','nm'); nm.appendChild(h('i','sw')); nm.appendChild(h('b',null,r.name)); if(r.lead){ const l=av(r.lead,20); l.title='Led by '+((person(r.lead)||{}).name||''); nm.appendChild(l); } row.appendChild(nm);
+    const st=h('span'); st.appendChild(tag(hl.t, hl.k)); if(!fresh) st.appendChild(h('small','auto','automatic')); row.appendChild(st);
+    row.appendChild(h('span','why', fresh ? (u.why||'') : (u ? 'Last update was '+daysSince(u.at)+' days ago' : 'No update yet')));
+    const up=h('span','upd'+(!u || daysSince(u.at)>7 ? ' stale':'')); up.textContent=u ? first(u.by)+', '+whenTxt(u.at) : '—'; row.appendChild(up);
+    const pct=s.ts.length?Math.round(s.done/s.ts.length*100):0; const pg=h('span','pg'); const bar=h('i'); const f=h('s'); f.style.width=pct+'%'; bar.appendChild(f); pg.appendChild(bar); pg.appendChild(h('small',null, pct+'%'+(s.late.length?' · '+s.late.length+' late':''))); row.appendChild(pg);
+    const ub=btn('btn ghost pv2-sup','Update', e=>{ e.stopPropagation(); statusDialog(r); }); row.appendChild(ub);
+    t.appendChild(row); });
+  t.appendChild(h('p','pv2-snote','Status comes from the latest update in the last 3 weeks; otherwise it’s worked out from the tasks (marked "automatic"). Anyone can post an update.'));
+  return t; }
 /* ---------- Board ---------- */
 function board(L){ const g=h('div','pv2-grid'); L.forEach(r=>g.appendChild(card(r))); return g; }
 function card(r){
@@ -1752,6 +1796,7 @@ function card(r){
   c.style.setProperty('--rc', cvar(r.color));
   const top=h('div','pv2-ct'); top.appendChild(h('h3',null,r.name)); top.appendChild(tag(hl.t, hl.k)); c.appendChild(top);
   if(r.desc) c.appendChild(h('p','pv2-desc', r.desc));
+  { const u=lastUpd(r); if(updFresh(u)){ const p=h('p','pv2-cwhy'); p.append(u.why+' '); p.appendChild(h('small',null,'\u2014 '+first(u.by)+', '+whenTxt(u.at))); c.appendChild(p); } }
   const pr=h('div','pv2-prog'); pr.appendChild(segbar(s.ts));
   const pl=h('div','pv2-pl'); const pct=s.ts.length ? Math.round(s.done/s.ts.length*100) : 0;
   pl.appendChild(h('span',null, s.ts.length ? pct+'% Done' : 'No Tasks Yet'));
@@ -1897,10 +1942,12 @@ function drawPanel(){
   const acts=h('div','acts');
   const ad=btn('btn', null, ()=>newTask(r.id,'')); ad.innerHTML=PLUS+'<span>Add a Task</span>'; acts.appendChild(ad);
   acts.appendChild(btn('btn ghost','Edit Project', ()=>window.__editRock && window.__editRock(r)));
+  acts.appendChild(btn('btn ghost','Update Status', ()=>statusDialog(r)));
   const x=btn('x pv2-x', null, closePanel); x.setAttribute('aria-label','Close the panel'); x.innerHTML='<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>'; acts.appendChild(x);
   ph.appendChild(acts); pnl.appendChild(ph);
   const pb=h('div','pv2-pb'); pnl.appendChild(pb);
   if(r.desc) pb.appendChild(h('p','pv2-pdesc', r.desc));
+  pb.appendChild(h('h4','pv2-sh','Status Updates')); pb.appendChild(updBlock(r,3));
   const tl=h('div','tiles2 pv2-ptiles');
   const t2=(v,l,sm,cls)=>{ const t=h('div','tile2'+(cls?' '+cls:'')); t.appendChild(h('b',null,String(v))); t.appendChild(h('span',null,l)); if(sm) t.appendChild(h('small',null,sm)); tl.appendChild(t); };
   const nx=nextTask(s);
@@ -2155,7 +2202,28 @@ document.addEventListener('keydown', onKey);
 document.addEventListener('click', onNav, true);
 paint();
 
-window.__pv2={ redraw, openPanel, closePanel, version:'2.0',
+css.textContent+=
+  '.pv2-sov{position:fixed;inset:0;z-index:9995;background:rgba(6,32,47,.45);display:flex;align-items:flex-start;justify-content:center;padding:10vh 16px}'+
+  '.pv2-sdlg{background:var(--surface);color:var(--ink);border-radius:12px;width:min(540px,100%);padding:18px 20px;box-shadow:0 20px 50px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:10px}.pv2-sdlg h2{margin:0;font-size:18px}'+
+  '.pv2-snote{font-size:12.5px;color:var(--ink-3);margin:0;line-height:1.5}.pv2-sseg{display:flex;gap:6px;flex-wrap:wrap}'+
+  '.pv2-sbtn{border:1px solid var(--border);background:var(--surface);color:var(--ink);border-radius:6px;padding:7px 12px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}'+
+  '.pv2-sbtn.on.good{background:var(--good,#0F7B5C);border-color:transparent;color:#fff}.pv2-sbtn.on.warn{background:var(--warn,#A2701A);border-color:transparent;color:#fff}.pv2-sbtn.on.bad{background:var(--bad,#A32219);border-color:transparent;color:#fff}'+
+  '.pv2-sin{border:1px solid var(--border);border-radius:6px;padding:8px 10px;font:inherit;font-size:13.5px;background:var(--surface-2);color:var(--ink);resize:vertical}.pv2-sin.need{border-color:var(--bad)}.pv2-sft{display:flex;justify-content:flex-end;gap:8px}'+
+  '.pv2-upds{display:flex;flex-direction:column;gap:8px;margin:4px 0 14px}.pv2-upd{border:1px solid var(--border);border-radius:8px;padding:9px 11px}.pv2-upd .t{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.pv2-upd .t b{font-size:13.5px}'+
+  '.pv2-upd p{margin:6px 0 0;font-size:13px;line-height:1.5;white-space:pre-wrap}.pv2-upd small{display:block;margin-top:4px;font-size:12px;color:var(--ink-3)}'+
+  '.pv2-cwhy{font-size:12.5px;color:var(--ink-2);margin:2px 0 0;line-height:1.4}.pv2-cwhy small{color:var(--ink-3)}'+
+  '.pv2-st{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--surface)}'+
+  '.pv2-sr{min-width:0;display:grid;grid-template-columns:minmax(140px,1.3fr) 116px minmax(110px,2fr) 100px 96px auto;gap:10px;align-items:center;padding:10px 12px;border-top:1px solid var(--border);cursor:pointer}'+
+  '.pv2-sr.hd{border-top:0;background:var(--surface-2);cursor:default;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3)}.pv2-sr:not(.hd):hover{background:var(--surface-2)}'+
+  '.pv2-sr .nm{display:flex;align-items:center;gap:8px;min-width:0}.pv2-sr .nm b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pv2-sr .sw{width:10px;height:10px;border-radius:3px;background:var(--rc);flex:none}'+
+  '.pv2-sr .auto{display:block;font-size:11px;color:var(--ink-3);margin-top:2px}.pv2-sr .why{font-size:13px;color:var(--ink-2)}.pv2-sr .upd{font-size:12.5px}.pv2-sr .upd.stale{color:var(--warn,#A2701A)}'+
+  '.pv2-sr .pg i{display:block;height:6px;border-radius:3px;background:var(--border);overflow:hidden}.pv2-sr .pg s{display:block;height:100%;background:var(--rc)}.pv2-sr .pg small{font-size:11.5px;color:var(--ink-3)}'+
+  '.pv2-st>.pv2-snote{padding:10px 12px;border-top:1px solid var(--border)}'+
+  '@media (max-width:1100px){.pv2-sr{grid-template-columns:minmax(140px,1.3fr) 116px minmax(110px,2fr) 96px auto}.pv2-sr .pg,.pv2-sr.hd span:nth-child(5){display:none}}'+
+  '@media (max-width:800px){.pv2-sr{grid-template-columns:1fr auto;}.pv2-sr .why,.pv2-sr .upd,.pv2-sr .pg,.pv2-sr.hd span:nth-child(n+3){display:none}.pv2-sup{display:none}}';
+
+css.textContent+='.pv2-sh{margin:4px 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3)}';
+window.__pv2={ redraw, openPanel, closePanel, version:'2.1', updateStatus:id=>{ const r=S.rocks.find(x=>x.id===id); if(r) statusDialog(r); },
   destroy(){ if(mo) mo.disconnect(); mo=null; document.removeEventListener('keydown', onKey); document.removeEventListener('click', onNav, true);
     if(pnl) pnl.remove(); if(scrim) scrim.remove(); css.remove(); root.textContent=''; if(window.__show) window.__show('rocks'); } };
 })();
@@ -4818,6 +4886,7 @@ function ruleSweep(){ if(!TR.rules || !TR.rules.length || !S.tasks || !me()) ret
 setInterval(()=>{ if(!document.hidden) try{ startTR(); ruleSweep(); }catch(e){} }, 60000);
 setTimeout(()=>{ try{ startTR(); }catch(e){} }, 4000);
 { const cs=document.createElement('style'); cs.textContent=
+  '.nx-pstat{font-size:13px;margin:4px 0 6px;line-height:1.45}.nx-pstat b{margin-right:4px}.nx-pstat.good b{color:var(--good,#0F7B5C)}.nx-pstat.risk b{color:var(--warn,#A2701A)}.nx-pstat.off b{color:var(--bad)}'+
   '.nx-dlg-ov{position:fixed;inset:0;z-index:9995;background:rgba(6,32,47,.45);display:flex;align-items:flex-start;justify-content:center;padding:10vh 16px}'+
   '.nx-dlg{background:var(--surface);color:var(--ink);border-radius:12px;width:min(520px,100%);max-height:80vh;overflow:auto;box-shadow:0 20px 50px rgba(0,0,0,.25);padding:18px 20px}'+
   '.nx-dlg h2{margin:0 0 12px;font-size:18px}.nx-dlg-b{display:flex;flex-direction:column;gap:10px}.nx-dlg-fld{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--ink-2)}'+
@@ -5623,6 +5692,7 @@ function vProject(id){
   const pct=all.length?Math.round(done/all.length*100):0;
   const ring=h('div','nx-pring'); const C=2*Math.PI*16; ring.innerHTML='<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" class="tr"/><circle cx="20" cy="20" r="16" class="pg" stroke-dasharray="'+(C*pct/100).toFixed(1)+' '+C.toFixed(1)+'" transform="rotate(-90 20 20)"/></svg><b>'+pct+'%</b>'; band.appendChild(ring);
   const tx=h('div','tx'); if(r.desc) tx.appendChild(h('p',null,r.desc));
+  { const u=Array.isArray(r.upd) && r.upd[0]; if(u && Date.now()-(u.at||0)<21*864e5){ const p=h('p','nx-pstat '+(u.k||'')); p.appendChild(h('b',null,({good:'On Track',risk:'At Risk',off:'Off Track'})[u.k]||'Update')); p.append(' '+(u.why||'')+' \u2014 '+first(u.by)+', '+fmt(iso(new Date(u.at)))); tx.appendChild(p); } }
   const ppl=h('div','who'); const ids=[...new Set(open_.flatMap(doers))]; if(r.lead && ids.indexOf(r.lead)<0) ids.unshift(r.lead); ids.slice(0,8).forEach(i=>{ const a=av(i,22); a.style.cursor='pointer'; a.addEventListener('click', ()=>open('u:'+i)); ppl.appendChild(a); }); tx.appendChild(ppl);
   band.appendChild(tx);
   const chips=h('div','nx-wschips');
@@ -5632,6 +5702,7 @@ function vProject(id){
   wsn.forEach(w=>chip(w, w, open_.filter(t=>(t.w||'')===w).length));
   band.appendChild(chips);
   const more=btn('nx-mini', null, ()=>{ openClassic('rocks'); setTimeout(()=>window.__pv2 && window.__pv2.openPanel && window.__pv2.openPanel(id,{}), 120); }); more.innerHTML='<span>Timeline and More</span>'+ic('ext'); more.style.marginLeft='auto'; chips.appendChild(more);
+  chips.appendChild(btn('nx-mini','Update Status', ()=>window.__pv2 && window.__pv2.updateStatus && window.__pv2.updateStatus(r.id)));
   chips.appendChild(btn('nx-mini','Rules', ()=>rulesDialog(r))); chips.appendChild(btn('nx-mini','Save as Template', ()=>saveTemplate(r)));
   body.appendChild(band);
   withPeek(taskView(L, g, m, id, {noProj:true, noWs:g==='ws', empty: ui.ws ? 'Nothing open in '+ui.ws+'.' : 'Nothing open on this Team Project.'}), L, m);
@@ -6627,7 +6698,7 @@ function setOn(v){ ui.on=v; save(); paintSwitch();
 /* ---------- keep it live ---------- */
 let lastSig='';
 function hsh(str){ let x=0; for(let i=0;i<str.length;i++){ x=((x<<5)-x+str.charCodeAt(i))|0; } return x; }
-const sig=()=>[S.tasks.length, hsh(S.tasks.map(t=>[t.id,t.at,t.s,t.due,t.w,t.r,t.o,(t.d||[]).join(','),t.p,t.t,(t.notes||'').length,(t.sub||[]).map(z=>z.done?1:0).join(''),(t.wait||[]).join(','),t.rep||'',(t.fol||[]).join(','),t.repNext||''].join('|')).join('~')), (S.asks||[]).length, (S.asks||[]).map(a=>a.state).join(''), (S.nudges||[]).filter(n=>!n.done).length, S.rocks.length, (window.__hqx&&window.__hqx.sig?window.__hqx.sig():''), (ui.view==='mine'?syncSig():''), Object.keys((window.__cal&&window.__cal.CAL&&window.__cal.CAL.by)||{}).length, (window.__cal&&window.__cal.CAL&&window.__cal.CAL.at)||0].join(':');
+const sig=()=>[S.tasks.length, hsh(S.tasks.map(t=>[t.id,t.at,t.s,t.due,t.w,t.r,t.o,(t.d||[]).join(','),t.p,t.t,(t.notes||'').length,(t.sub||[]).map(z=>z.done?1:0).join(''),(t.wait||[]).join(','),t.rep||'',(t.fol||[]).join(','),t.repNext||''].join('|')).join('~')), (S.asks||[]).length, (S.asks||[]).map(a=>a.state).join(''), (S.nudges||[]).filter(n=>!n.done).length, S.rocks.length+'/'+S.rocks.map(r=>(Array.isArray(r.upd)&&r.upd[0]&&r.upd[0].at)||0).join(','), (window.__hqx&&window.__hqx.sig?window.__hqx.sig():''), (ui.view==='mine'?syncSig():''), Object.keys((window.__cal&&window.__cal.CAL&&window.__cal.CAL.by)||{}).length, (window.__cal&&window.__cal.CAL&&window.__cal.CAL.at)||0].join(':');
 function busy(){ if(drag || tdrag!=null || menuEl || document.documentElement.classList.contains('nx-boxing') || document.querySelector('.hqx-ov')) return true; const a=document.activeElement; return !!(a && (a.tagName==='INPUT' || a.tagName==='SELECT' || a.tagName==='TEXTAREA') && (shell && shell.contains(a))); }
 const live=setInterval(()=>{ if(!ui.on || document.hidden) return; const s=sig(); if(s===lastSig) return; if(busy()) return; lastSig=s; drawRail(); paint(); }, 1200);
 const clock=setInterval(()=>{ if(!ui.on || document.hidden || busy()) return; drawRail(); if(shell && !shell.hidden && (viewKind()==='day' || viewKind()==='person')) paint(); }, 60e3);
