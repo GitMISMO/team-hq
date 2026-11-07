@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261107t';
+var BUILD='20261107u';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -225,6 +225,19 @@ window.__HQ_BUILD=BUILD;
   (function wait(n){ if(placeBtn()){ var s=S(); if(s.ready) setTimeout(run, 6000); else if(n<120) setTimeout(function(){ wait(n+1); }, 1000); return; } if(n<120) setTimeout(function(){ wait(n+1); }, 1000); })(0);
   setInterval(function(){ if(!document.hidden) run(); }, 5*MIN);
   window.__hqProb.open=openHealth; window.__hqHealth={run:run, open:openHealth, last:function(){ return last; }};
+
+  /* ---------- works offline (November 7, 2026) ----------
+     sw.js keeps a copy of Team HQ on the device so it opens with no signal; changes made offline wait
+     on the device and save when the signal is back. A bar says so while offline. */
+  try{ if('serviceWorker' in navigator && location.protocol==='https:' && !TEST) navigator.serviceWorker.register('/team-hq/sw.js', {scope:'/team-hq/'}).catch(function(e){ rec('Logged error', 'Offline copy could not be set up: '+(e && e.message || e)); }); }catch(e){}
+  var offBar=null;
+  function paintOff(){ var R=window.__hqRelay, off=!navigator.onLine || !!(R && R.status && R.status.offline);
+    if(!offBar){ if(!off || !document.body) return; offBar=h('div','hq-off'); offBar.setAttribute('role','status'); document.body.appendChild(offBar); }
+    var n=0; try{ var F=(R && R.files)||{}; Object.keys(F).forEach(function(k){ n+=(F[k].pending||[]).length; }); }catch(e){}
+    offBar.hidden=!off;
+    offBar.textContent= off ? 'You\u2019re offline. '+(n ? n+' change'+(n>1?'s are':' is')+' kept on this device and will save' : 'Anything you change is kept on this device and saves')+' when you\u2019re back online.' : ''; }
+  css.textContent+='.hq-off{position:fixed;left:50%;transform:translateX(-50%);top:calc(64px + env(safe-area-inset-top,0px));z-index:9985;max-width:calc(100vw - 24px);background:#FBF0DC;color:#6b4a0f;border:1px solid #A2701A;border-radius:8px;padding:8px 12px;font:600 13px/1.4 system-ui,sans-serif;box-shadow:0 6px 18px rgba(13,49,76,.14)}.hq-off[hidden]{display:none}';
+  window.addEventListener('online', paintOff); window.addEventListener('offline', paintOff); setInterval(paintOff, 10000);
 
   /* ---------- the Test Copy: banner, and the check that opens every page and tile ---------- */
   if(!TEST) return;
