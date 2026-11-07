@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261107a';
+var BUILD='20261107c';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4429,6 +4429,142 @@ function burst(x, y){ const n=14, w=h('div','nx-burst'); w.style.left=x+'px'; w.
   document.body.appendChild(w); setTimeout(()=>w.remove(), 700); }
 /* each change, and its Undo, writes only the fields it touched, so a teammate's change in between stays (November 5, 2026) */
 function undoOf(before, after, patch){ const back=Object.assign({}, after); Object.keys(patch).forEach(k=>{ if(before[k]===undefined) delete back[k]; else back[k]=before[k]; }); return put('tasks', back, after); }
+/* ---------- comments, @mentions and the bell (November 7, 2026) ----------
+   Every task has a comment thread in its side panel. Typing @ and a name brings that person in. The bell at
+   the top shows what needs you: mentions, comments on tasks you're on, tasks someone handed you, and
+   what's due today or tomorrow. Comments live in their own file (comments), one record each. */
+I.chat='<path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-7l-4 3.5V16H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/>';
+I.bell='<path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>';
+const CM={list:null, sub:false, box:null};
+function startComments(){ if(CM.sub || !S.db || !S.db.collection) return; CM.sub=true;
+  try{ S.db.collection('comments').onSnapshot(snap=>{
+      CM.list=(snap && snap.docs ? snap.docs : []).map(d=>{ let b; try{ b=JSON.parse(JSON.stringify(d.data()||{})); }catch(e){ b={}; } b.id=d.id; return b; });
+      if(CM.box && CM.box.isConnected && CM.box._paint) CM.box._paint();
+      document.querySelectorAll('.nx-row[data-id]').forEach(r=>markRowCount(r.dataset.id));
+      paintBell(); }, ()=>{ if(CM.list===null) CM.list=[]; }); }catch(e){ CM.sub=false; } }
+function commentsOf(id){ return (CM.list||[]).filter(c=>c.task===id && !c.gone).sort((a,b)=>(a.at||0)-(b.at||0)); }
+function cmAgo(t){ const m=Math.round((Date.now()-t)/60000); if(m<1) return 'just now'; if(m<60) return m+' min ago'; const hh=Math.round(m/60); if(hh<24) return hh+' hr ago';
+  const d=new Date(t); return MON[d.getMonth()]+' '+d.getDate(); }
+function mentionOf(word){ const w=String(word||'').toLowerCase(); return people().find(p=>p.id===w || p.name.toLowerCase().split(/\s+/)[0]===w) || null; }
+function cmText(text){ const f=document.createDocumentFragment();
+  String(text||'').split(/(@[A-Za-z][\w-]*)/).forEach(part=>{ const p=/^@/.test(part) ? mentionOf(part.slice(1)) : null;
+    if(p){ const s=h('b','nx-cm-at', '@'+p.name.split(' ')[0]); s.title=p.name; f.appendChild(s); }
+    else part.split('\n').forEach((ln,i)=>{ if(i) f.appendChild(h('br')); f.appendChild(document.createTextNode(ln)); }); });
+  return f; }
+function cmRow(c){ const r=h('div','nx-cm-row'); r.appendChild(av(c.by,24));
+  const b=h('div','nx-cm-b'); const top=h('div','nx-cm-top'); top.appendChild(h('b',null, (person(c.by)||{}).name || c.by || 'Someone')); top.appendChild(h('span','nx-cm-ago', cmAgo(c.at||0)));
+  if(c.by===me()){ const x=btn('nx-cm-x', 'Delete', ()=>{ const was=Object.assign({}, c); c.gone=1; if(CM.box && CM.box._paint) CM.box._paint();
+      const body=Object.assign({}, was); delete body.id;
+      Promise.resolve().then(()=>S.db.collection('comments').doc(c.id).delete()).catch(()=>{});
+      toast('Comment deleted', ()=>{ delete c.gone; if(CM.box && CM.box._paint) CM.box._paint(); S.db.collection('comments').doc(c.id).set(body); }); });
+    x.setAttribute('aria-label','Delete this comment'); top.appendChild(x); }
+  b.appendChild(top); const tx=h('div','nx-cm-tx'); tx.appendChild(cmText(c.text)); b.appendChild(tx); r.appendChild(b); return r; }
+function commentsBlock(t){ startComments();
+  const box=h('div','nx-cm'), list=h('div','nx-cm-list'); box.setAttribute('aria-label','Comments');
+  const paintList=()=>{ list.textContent=''; if(CM.list===null){ list.appendChild(h('div','nx-cm-none','Loading comments…')); return; }
+    const L=commentsOf(t.id); if(!L.length) list.appendChild(h('div','nx-cm-none','No comments yet. Type @ and a name to bring someone in.'));
+    L.forEach(c=>list.appendChild(cmRow(c))); };
+  box._paint=paintList; CM.box=box; paintList(); box.appendChild(list);
+  const form=h('form','nx-cm-new'); const ta=h('textarea','nx-cm-in'); ta.rows=2; ta.placeholder='Add a comment — type @ to mention someone'; ta.setAttribute('aria-label','Add a comment');
+  const send=btn('nx-mini pri','Comment'); send.type='submit'; form.appendChild(ta); form.appendChild(send);
+  const atWord=()=>{ const v=ta.value.slice(0, ta.selectionStart); const m=/(^|\s)@([A-Za-z]*)$/.exec(v); return m ? m[2] : null; };
+  ta.addEventListener('input', ()=>{ const w=atWord(); if(w===null){ if(menuEl && menuEl._cm) closeMenus(); return; }
+    const L=people().filter(p=>p.id!==me() && (!w || p.name.toLowerCase().split(/\s+/).some(n=>n.startsWith(w.toLowerCase()))));
+    if(!L.length){ closeMenus(); return; }
+    popMenu(ta, L.slice(0,7).map(p=>({label:p.name, icon:av(p.id,20).outerHTML, fn:()=>{ const pos=ta.selectionStart, v=ta.value, start=v.slice(0,pos).lastIndexOf('@');
+      const ins='@'+p.name.split(' ')[0]+' '; ta.value=v.slice(0,start)+ins+v.slice(pos); ta.focus(); const c=start+ins.length; ta.setSelectionRange(c,c); }})), 'Mention');
+    if(menuEl) menuEl._cm=true; ta.focus(); });
+  ta.addEventListener('keydown', e=>{ if(e.key==='Enter' && (e.metaKey || e.ctrlKey)){ e.preventDefault(); form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event('submit')); }
+    if(e.key==='Escape' && menuEl && menuEl._cm){ e.stopPropagation(); closeMenus(); } });
+  form.addEventListener('submit', e=>{ e.preventDefault(); const text=ta.value.trim(); if(!text) return; closeMenus();
+    const mentions=[...new Set((text.match(/@[A-Za-z][\w-]*/g)||[]).map(w=>mentionOf(w.slice(1))).filter(Boolean).map(p=>p.id))].filter(id=>id!==me());
+    const id='cm'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), body={task:t.id, by:me(), at:Date.now(), text:text.slice(0,4000), mentions};
+    if(!CM.list) CM.list=[]; CM.list.push(Object.assign({id}, body)); ta.value=''; paintList(); markRowCount(t.id);
+    Promise.resolve().then(()=>S.db.collection('comments').doc(id).set(body)).then(()=>{ if(mentions.length) toast('Comment added — '+mentions.map(first).join(' and ')+' will see it in their bell.'); },
+      ()=>toast('That comment didn’t save. It’s still here — try again in a moment.')); });
+  box.appendChild(form);
+  box.appendChild(h('div','nx-cm-tip','Ctrl+Enter to post'));
+  return box; }
+function markRowCount(id){ document.querySelectorAll('.nx-row[data-id="'+id+'"]').forEach(r=>{ const n=commentsOf(id).length; let c=r.querySelector('.nx-cmc'); if(!n){ c && c.remove(); return; }
+  if(!c){ c=h('span','nx-cmc'); const tt=r.querySelector('.nx-tt'); tt && tt.after(c); } c.innerHTML=ic('chat')+'<span>'+n+'</span>'; c.title=n+' comment'+(n>1?'s':''); }); }
+function rowCount(t){ const n=commentsOf(t.id).length; if(!n) return null; const c=h('span','nx-cmc'); c.innerHTML=ic('chat')+'<span>'+n+'</span>'; c.title=n+' comment'+(n>1?'s':''); return c; }
+
+/* the bell */
+const BK='hq.bell', bell={btn:null, panel:null};
+function bellState(){ let s; try{ s=JSON.parse(localStorage.getItem(BK)||'{}'); }catch(e){ s={}; } s.who=s.who||''; if(s.who!==me()) s={who:me(), seen:0, known:{}, seeded:false, day:''}; s.known=s.known||{}; return s; }
+function bellSave(s){ try{ localStorage.setItem(BK, JSON.stringify(s)); }catch(e){} }
+function bellItems(){ const m=me(); if(!m || !S.tasks) return []; const s=bellState(), out=[], L=CM.list||[], cut=Date.now()-14*864e5;
+  const on=t=>doers(t).indexOf(m)>=0 || t.o===m;
+  /* tasks handed to you: anything you're newly doing that someone else set up */
+  let changed=false; const mineNow=S.tasks.filter(t=>isOpen(t) && doers(t).indexOf(m)>=0);
+  mineNow.forEach(t=>{ if(!s.known[t.id]){ s.known[t.id]= s.seeded ? Date.now() : 1; changed=true; } });
+  if(!s.seeded){ s.seeded=true; changed=true; }
+  if(changed) bellSave(s);
+  mineNow.forEach(t=>{ const at=s.known[t.id]; if(at>1 && at>cut && t.by && t.by!==m) out.push({k:'assigned', at, who:t.by, t}); });
+  L.forEach(c=>{ if(c.gone || c.by===m || (c.at||0)<cut) return; const t=S.tasks.find(x=>x.id===c.task); if(!t) return;
+    const ment=(c.mentions||[]).indexOf(m)>=0, follows=on(t) || L.some(z=>z.task===c.task && z.by===m && (z.at||0)<(c.at||0));
+    if(ment || follows) out.push({k:ment?'mention':'comment', at:c.at||0, who:c.by, t, text:c.text}); });
+  const t0=today().getTime();
+  mineNow.forEach(t=>{ if(!t.due) return; const n=days(t.due); if(n===0 || n===1) out.push({k:n===0?'today':'tomorrow', at:t0+(n===0?2:1), t}); });
+  return out.sort((a,b)=>b.at-a.at).slice(0,40); }
+function bellNew(L){ const s=bellState(), d=iso(today()); return L.some(x=>(x.k==='today'||x.k==='tomorrow') ? s.day!==d : x.at>(s.seen||0)); }
+function paintBell(){ if(!bell.btn) return; let L=[]; try{ L=bellItems(); }catch(e){} bell.btn.classList.toggle('has', bellNew(L)); if(bell.panel && bell.panel.isConnected) drawBellPanel(L); }
+function goTask(t){ closeBell(); ui.peek=t.id; if(doers(t).indexOf(me())>=0 || t.o===me()) open('mine'); else if(t.r && rock(t.r)) open('p:'+t.r); else { editTask(t); return; }
+  setTimeout(()=>{ try{ selectPeek(t.id); }catch(e){} const r=document.querySelector('.nx-row[data-id="'+t.id+'"]'); if(r) r.scrollIntoView({block:'center'}); }, 150); }
+function drawBellPanel(L){ const p=bell.panel; p.textContent=''; const hd=h('div','nx-bl-h'); hd.appendChild(h('b',null,'Notifications')); p.appendChild(hd);
+  if(!L.length){ p.appendChild(h('div','nx-bl-none','You’re all caught up. Mentions, comments on your tasks, tasks handed to you, and what’s due soon show up here.')); return; }
+  const s=bellState();
+  L.forEach(x=>{ const r=btn('nx-bl-row'+((x.k==='today'||x.k==='tomorrow') ? (s.day!==iso(today())?' new':'') : (x.at>(s.seen||0)?' new':'')), null, ()=>goTask(x.t));
+    if(x.who) r.appendChild(av(x.who,26)); else { const i=h('span','nx-bl-ic'); i.innerHTML=ic('cal'); r.appendChild(i); }
+    const b=h('span','nx-bl-b'), line=h('span','nx-bl-l'); const nm=x.who ? first(x.who) : '';
+    const what={mention:nm+' mentioned you on ', comment:nm+' commented on ', assigned:nm+' handed you ', today:'Due today: ', tomorrow:'Due tomorrow: '}[x.k];
+    line.appendChild(document.createTextNode(what)); line.appendChild(h('b',null,x.t.t)); b.appendChild(line);
+    if(x.text){ const q=h('span','nx-bl-q'); q.textContent=String(x.text).replace(/\s+/g,' ').slice(0,140); b.appendChild(q); }
+    if(x.k!=='today' && x.k!=='tomorrow') b.appendChild(h('span','nx-bl-ago', cmAgo(x.at)));
+    r.appendChild(b); p.appendChild(r); }); }
+function closeBell(){ if(bell.panel){ bell.panel.remove(); bell.panel=null; } document.removeEventListener('mousedown', bellOff, true); }
+function bellOff(e){ if(bell.panel && !bell.panel.contains(e.target) && !bell.btn.contains(e.target)) closeBell(); }
+function openBell(){ if(bell.panel){ closeBell(); return; } startComments(); const L=bellItems();
+  bell.panel=h('div','nx-bl'); bell.panel.setAttribute('role','dialog'); bell.panel.setAttribute('aria-label','Notifications'); document.body.appendChild(bell.panel); drawBellPanel(L);
+  const r=bell.btn.getBoundingClientRect(); bell.panel.style.top=(r.bottom+6)+'px'; bell.panel.style.right=Math.max(8, innerWidth-r.right)+'px';
+  const s=bellState(); s.seen=Date.now(); s.day=iso(today()); bellSave(s); bell.btn.classList.remove('has');
+  setTimeout(()=>document.addEventListener('mousedown', bellOff, true), 0); }
+function addBell(){ if(bell.btn && bell.btn.isConnected) return true; const box=document.querySelector('header.hqtop .hqtop-r'); if(!box || !me()) return false;
+  const b=document.createElement('button'); b.type='button'; b.className='mastbtn nx-bell'; b.id='hq-bell'; b.title='Notifications'; b.setAttribute('aria-label','Notifications');
+  b.innerHTML=ic('bell')+'<i class="dot" aria-hidden="true"></i>'; b.addEventListener('click', e=>{ e.stopPropagation(); openBell(); });
+  box.insertBefore(b, document.getElementById('newtask') || box.firstChild); bell.btn=b; startComments(); paintBell(); return true; }
+/* the full task editor (used on smaller screens and from every other page) gets the same comment thread */
+(function hookEditor(n){ const oe=window.__edit; if(!oe){ if(n<60) setTimeout(()=>hookEditor(n+1), 1000); return; } if(oe.__cm) return;
+  const w=function(t){ const r=oe.apply(this, arguments);
+    if(t && t.id) setTimeout(()=>{ const b=document.getElementById('panel-b'); if(!b) return; b.querySelectorAll(':scope > .nx-cm').forEach(x=>x.remove());
+      const live=S.tasks.find(x=>x.id===t.id); if(!live) return; const box=commentsBlock(live); box.classList.add('in-ed');
+      const acts=b.querySelector(':scope > .rowacts'); b.insertBefore(box, acts||null); }, 60);
+    return r; };
+  w.__cm=true; window.__edit=w; })(0);
+(function bellWait(n){ if(addBell() || n>90) return; setTimeout(()=>bellWait(n+1), 1000); })(0);
+setInterval(()=>{ if(!document.hidden){ addBell(); paintBell(); } }, 60e3);
+document.addEventListener('keydown', e=>{ if(e.key==='Escape' && bell.panel) closeBell(); });
+{ const cs=document.createElement('style'); cs.textContent=
+  '.nx-cm{margin-top:14px;border-top:1px solid var(--border);padding-top:12px}.nx-cm.in-ed{margin:16px 0 12px}'+
+  '.nx-cm-list{display:flex;flex-direction:column;gap:10px;margin-bottom:10px}'+
+  '.nx-cm-none{font-size:12.5px;color:var(--ink-3)}'+
+  '.nx-cm-row{display:flex;gap:8px;align-items:flex-start}.nx-cm-b{flex:1;min-width:0}'+
+  '.nx-cm-top{display:flex;gap:8px;align-items:baseline;font-size:12.5px}.nx-cm-top b{color:var(--ink)}.nx-cm-ago{color:var(--ink-3);font-size:11.5px}'+
+  '.nx-cm-x{margin-left:auto;border:0;background:none;color:var(--ink-3);font:inherit;font-size:11.5px;cursor:pointer;padding:0 2px}.nx-cm-x:hover,.nx-cm-x:focus-visible{color:var(--bad);text-decoration:underline}'+
+  '.nx-cm-tx{font-size:13px;line-height:1.5;color:var(--ink);word-wrap:break-word;margin-top:2px}.nx-cm-at{color:var(--navy);background:var(--sky-wash);border-radius:4px;padding:0 3px;font-weight:600}'+
+  '.nx-cm-new{display:flex;gap:8px;align-items:flex-end}.nx-cm-in{flex:1;resize:vertical;min-height:42px;border:1px solid var(--border);border-radius:6px;padding:8px 10px;background:var(--surface-2);font:inherit;font-size:13px;line-height:1.45;color:var(--ink)}'+
+  '.nx-cm-in:focus-visible{outline:2px solid var(--sky);outline-offset:1px}.nx-cm-tip{font-size:11px;color:var(--ink-3);margin-top:4px}'+
+  '.nx-cmc{display:inline-flex;align-items:center;gap:3px;font-size:11.5px;color:var(--ink-3);margin-left:6px;flex:none}.nx-cmc svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8}'+
+  '.nx-bell{position:relative}.nx-bell svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}'+
+  '.nx-bell .dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#e5484d;box-shadow:0 0 0 2px var(--navy,#0d314c);display:none}.nx-bell.has .dot{display:block}'+
+  '.nx-bl{position:fixed;z-index:9990;width:min(380px,calc(100vw - 16px));max-height:70vh;overflow:auto;background:var(--surface);color:var(--ink);border:1px solid var(--border);border-radius:10px;box-shadow:0 16px 40px rgba(6,32,47,.22)}'+
+  '.nx-bl-h{padding:12px 14px 8px;font-size:14px;border-bottom:1px solid var(--border);position:sticky;top:0;background:inherit}'+
+  '.nx-bl-none{padding:18px 14px;font-size:13px;color:var(--ink-3);line-height:1.5}'+
+  '.nx-bl-row{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;border:0;border-bottom:1px solid var(--border);background:none;padding:10px 14px;font:inherit;color:inherit;cursor:pointer}'+
+  '.nx-bl-row:hover,.nx-bl-row:focus-visible{background:var(--surface-2)}.nx-bl-row.new{background:var(--sky-wash)}.nx-bl-row.new:hover{filter:brightness(.98)}'+
+  '.nx-bl-ic{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--surface-3);flex:none}.nx-bl-ic svg{width:15px;height:15px;fill:none;stroke:var(--ink-2);stroke-width:1.8}'+
+  '.nx-bl-b{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:13px;line-height:1.4}.nx-bl-q{color:var(--ink-2);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.nx-bl-ago{color:var(--ink-3);font-size:11.5px}';
+  document.head.appendChild(cs); }
 function change(t, patch, msg){ const before=Object.assign({}, t), after=Object.assign({}, t, patch); put('tasks', after, t); toast(msg, ()=>undoOf(before, after, patch)); }
 function complete(t, el, ev){ if(ev && ev.clientX) burst(ev.clientX, ev.clientY); if(el) el.classList.add('done');
   const before=Object.assign({}, t), after=Object.assign({}, t, {s:'Done'}); setTimeout(()=>put('tasks', after, t), el ? 320 : 0); toast('Done: '+t.t, ()=>undoOf(before, after, {s:'Done'})); }
@@ -4635,6 +4771,7 @@ function row(t, opt){ opt=opt||{};
   const sb=btn('nx-sb', null, e=>{ e.stopPropagation(); statusMenu(t, sb, r); }); sb.innerHTML=sIcon(st(t)); sb.title=st(t)+' — click to change'; sb.setAttribute('aria-label','Status: '+st(t)); r.appendChild(sb);
   if(t.p==='High') r.appendChild(h('span','nx-hi-p','!'));
   const tt=h('span','nx-tt', t.t); r.appendChild(tt);
+  { const cc=rowCount(t); if(cc) r.appendChild(cc); }
   if(t.w && !opt.noWs) r.appendChild(h('span','nx-ws', t.w));
   r.appendChild(h('span','nx-sp'));
   if(opt.pull && isOpen(t)){ const p=btn('nx-pull', null, e=>{ e.stopPropagation(); change(t, {due:iso(today())}, 'Planned for today: '+t.t); }); p.innerHTML=ic('sun')+'<span>Today</span>'; p.title='Plan it for today'; r.appendChild(p); }
@@ -4798,6 +4935,7 @@ function drawPeek(){
   const no=h('textarea','nx-pk-notes'); no.value=shown; no.placeholder='Add notes, links, next steps…'; no.setAttribute('aria-label','Notes');
   no.addEventListener('blur', ()=>{ if(no.value!==shown) change(t, {notes: usesBr ? no.value.replace(/\n/g,'<br>') : no.value}, 'Saved the notes'); });
   fld('Notes', no);
+  peekEl.appendChild(commentsBlock(t));
   const ft=h('div','nx-pk-ft');
   if(isOpen(t)){ const d=btn('nx-mini pri', null, e=>complete(t, null, e)); d.innerHTML=ic('check')+'<span>Mark Done</span>'; ft.appendChild(d); }
   const o=btn('nx-mini', null, ()=>editTask(t)); o.innerHTML='<span>Full Editor</span>'+ic('ext'); ft.appendChild(o);
