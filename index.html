@@ -9181,7 +9181,7 @@ function vAgenda(root){
     : n===1? 'That is tomorrow.' : 'That is in '+n+' days.';
   if(!items.length) say.innerHTML = when+' <em>Nothing on the agenda yet.</em>';
   else if(!open.length) say.innerHTML = when+' <em>All '+items.length+' covered.</em>';
-  else say.innerHTML = when+' <em>'+open.length+(open.length===1?' thing':' things')+'</em> to get through, about '+mins+' minutes’ worth.';
+  else say.innerHTML = when+' <em>'+open.length+(open.length===1?' thing':' things')+'</em> to get through, about '+(mins>59 ? Math.floor(mins/60)+(mins>=120?' hours':' hour')+(mins%60?' '+(mins%60)+' minutes':'') : mins+' minutes')+'’ worth.';
   hl.appendChild(say);
 
   const clash=mtgClash(sel);
@@ -9266,7 +9266,7 @@ function agRow(x, mtg){
   const t=el('span','t'); t.appendChild(document.createTextNode(x.t));
   const bits=[];
   if(x.who) bits.push(pname(x.who));
-  bits.push((x.mins||5)+' min');
+  bits.push(((x.mins||5)>59 ? Math.floor((x.mins||5)/60)+' hr'+((x.mins||5)%60 ? ' '+((x.mins||5)%60)+' min' : '') : (x.mins||5)+' min'));
   if(x.from) bits.push('carried from '+fmtD(x.from));
   const nf=(x.files||[]).length;
   if(nf) bits.push(nf+(nf===1?' file to read':' files to read'));
