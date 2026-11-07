@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261107h';
+var BUILD='20261107j';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -1674,6 +1674,7 @@ function head(){
   const r=h('div','rowflex');
   const at=btn('btn ghost',null, ()=>newTask('','')); at.innerHTML=PLUS+'<span>Add a Task</span>'; r.appendChild(at);
   const np=btn('btn',null, ()=>window.__editRock && window.__editRock()); np.innerHTML=PLUS+'<span>New Team Project</span>'; r.appendChild(np);
+  const tpb=btn('btn ghost',null, ()=>window.__tpl && window.__tpl.pick(tpb)); tpb.innerHTML='<span>Start From a Template</span>'; r.appendChild(tpb);
   v.appendChild(r);
   return v;
 }
@@ -4597,6 +4598,7 @@ function bellItems(){ const m=me(); if(!m || !S.tasks) return []; const s=bellSt
   mineNow.forEach(t=>{ if(!t.due) return; const n=days(t.due); if(n===0 || n===1) out.push({k:n===0?'today':'tomorrow', at:t0+(n===0?2:1), t}); });
   S.tasks.forEach(t=>{ if(!isOpen(t) || !(t.wait||[]).length || !on(t)) return; const B=blockers(t); if(!B.length || B.some(isOpen)) return;
     const at=Math.max.apply(null, B.map(b=>b.at||0)); if(at>cut) out.push({k:'ready', at, t, text:B.map(b=>b.t).join(', ')+(B.length>1?' are':' is')+' done'}); });
+  (S.nudges||[]).forEach(n=>{ if(n.to!==m || n.done || (n.at||0)<cut) return; out.push({k:'nudge', at:n.at||0, who:n.k==='Rule'?null:n.by, t:S.tasks.find(x=>x.id===n.task)||null, label:n.m||n.k||'A reminder'}); });
   return out.sort((a,b)=>b.at-a.at).slice(0,40); }
 function bellNew(L){ const s=bellState(), d=iso(today()); return L.some(x=>(x.k==='today'||x.k==='tomorrow') ? s.day!==d : x.at>(s.seen||0)); }
 function paintBell(){ if(!bell.btn) return; let L=[]; try{ L=bellItems(); }catch(e){} bell.btn.classList.toggle('has', bellNew(L)); if(bell.panel && bell.panel.isConnected) drawBellPanel(L); }
@@ -4605,11 +4607,11 @@ function goTask(t){ closeBell(); ui.peek=t.id; if(doers(t).indexOf(me())>=0 || t
 function drawBellPanel(L){ const p=bell.panel; p.textContent=''; const hd=h('div','nx-bl-h'); hd.appendChild(h('b',null,'Notifications')); p.appendChild(hd);
   if(!L.length){ p.appendChild(h('div','nx-bl-none','You’re all caught up. Mentions, comments on your tasks, tasks handed to you, and what’s due soon show up here.')); return; }
   const s=bellState();
-  L.forEach(x=>{ const r=btn('nx-bl-row'+((x.k==='today'||x.k==='tomorrow') ? (s.day!==iso(today())?' new':'') : (x.at>(s.seen||0)?' new':'')), null, ()=>goTask(x.t));
+  L.forEach(x=>{ const r=btn('nx-bl-row'+((x.k==='today'||x.k==='tomorrow') ? (s.day!==iso(today())?' new':'') : (x.at>(s.seen||0)?' new':'')), null, ()=>{ if(x.t) goTask(x.t); else { closeBell(); open('mine'); } });
     if(x.who) r.appendChild(av(x.who,26)); else { const i=h('span','nx-bl-ic'); i.innerHTML=ic('cal'); r.appendChild(i); }
     const b=h('span','nx-bl-b'), line=h('span','nx-bl-l'); const nm=x.who ? first(x.who) : '';
-    const what={mention:nm+' mentioned you on ', comment:nm+' commented on ', assigned:nm+' handed you ', today:'Due today: ', tomorrow:'Due tomorrow: ', ready:'Ready to start: '}[x.k];
-    line.appendChild(document.createTextNode(what)); line.appendChild(h('b',null,x.t.t)); b.appendChild(line);
+    const what={mention:nm+' mentioned you on ', comment:nm+' commented on ', assigned:nm+' handed you ', today:'Due today: ', tomorrow:'Due tomorrow: ', ready:'Ready to start: ', nudge:(nm ? nm+' nudged you: ' : 'Reminder: ')}[x.k];
+    line.appendChild(document.createTextNode(what)); line.appendChild(h('b',null, x.label || (x.t && x.t.t) || '')); b.appendChild(line);
     if(x.text){ const q=h('span','nx-bl-q'); q.textContent=String(x.text).replace(/\s+/g,' ').slice(0,140); b.appendChild(q); }
     if(x.k!=='today' && x.k!=='tomorrow') b.appendChild(h('span','nx-bl-ago', cmAgo(x.at)));
     r.appendChild(b); p.appendChild(r); }); }
@@ -4724,6 +4726,99 @@ function moreBlock(t0){ const box=h('div','nx-more');
   '.nx-mo-note{display:block;font-size:12px;color:var(--ink-3);margin-top:5px}.nx-mo-fl{display:flex;flex-wrap:wrap;gap:6px;align-items:center}'+
   '.nx-tm{display:inline-flex;align-items:center;gap:3px;font-size:11.5px;color:var(--ink-3);margin-left:6px;flex:none}.nx-tm svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8}'+
   '.nx-pt{display:flex;flex-direction:column;gap:4px;min-width:280px}.nx-pt-in{border:1px solid var(--border);border-radius:6px;padding:6px 8px;font:inherit;font-size:13px;margin:2px 4px 4px;background:var(--surface-2);color:var(--ink)}.nx-pt-list{max-height:260px;overflow:auto}';
+  document.head.appendChild(cs); }
+/* ---------- templates and rules (November 7, 2026) ----------
+   Templates: a Team Project's tasks saved with their dates as days from the start, so the next
+   Summit, reconciliation or election starts with everything in place. Rules: "when this, then that"
+   on a Team Project (or any): marked Done → tell someone; due soon and not started → nudge the person
+   doing it; past due → nudge the accountable person. Nudges land on My Tasks and in the bell. Rules
+   run in whichever Team HQ is open; each nudge has a fixed id, so two open copies never send it twice. */
+const TR={tpl:null, rules:null, sub:false};
+function startTR(){ if(TR.sub || !S.db || !S.db.collection) return; TR.sub=true;
+  const take=k=>snap=>{ TR[k]=(snap && snap.docs ? snap.docs : []).map(d=>{ let b; try{ b=JSON.parse(JSON.stringify(d.data()||{})); }catch(e){ b={}; } b.id=d.id; return b; }); };
+  try{ S.db.collection('templates').onSnapshot(take('tpl'), ()=>{ if(!TR.tpl) TR.tpl=[]; }); }catch(e){}
+  try{ S.db.collection('rules').onSnapshot(take('rules'), ()=>{ if(!TR.rules) TR.rules=[]; }); }catch(e){} }
+const dayDiff=(a,b)=>Math.round((pd(a)-pd(b))/864e5);
+function dlg(title, build, okLabel, onOk){ const ov=h('div','nx-dlg-ov'), bx=h('div','nx-dlg'); bx.setAttribute('role','dialog'); bx.setAttribute('aria-modal','true'); bx.setAttribute('aria-label',title);
+  bx.appendChild(h('h2',null,title)); const body=h('div','nx-dlg-b'); bx.appendChild(body); build(body);
+  const ft=h('div','nx-dlg-f'); const close=()=>{ ov.remove(); document.removeEventListener('keydown', esc); }; const esc=e=>{ if(e.key==='Escape') close(); };
+  ft.appendChild(btn('nx-mini', okLabel ? 'Cancel' : 'Close', close)); if(okLabel){ const ok=btn('nx-mini pri', okLabel, ()=>{ if(onOk(body)!==false) close(); }); ft.appendChild(ok); }
+  bx.appendChild(ft); ov.appendChild(bx); ov.addEventListener('click', e=>{ if(e.target===ov) close(); }); document.addEventListener('keydown', esc); document.body.appendChild(ov);
+  setTimeout(()=>{ const f=bx.querySelector('input,select,textarea'); f && f.focus(); }, 0); return {close, body}; }
+function fieldIn(body, label, node){ const f=h('label','nx-dlg-fld'); f.appendChild(h('span',null,label)); f.appendChild(node); body.appendChild(f); return node; }
+function saveTemplate(r){ startTR(); const L=S.tasks.filter(t=>t.r===r.id); if(!L.length){ toast('This Team Project has no tasks to save yet.'); return; }
+  const dues=L.map(t=>t.due).filter(Boolean).sort(), anchor=dues[0]||iso(today());
+  dlg('Save as a Template', b=>{ const nm=fieldIn(b,'Template name', h('input','nx-dlg-in')); nm.value=r.name.replace(/\b(19|20)\d\d\b/g,'').replace(/\s{2,}/g,' ').trim()+' Template'; nm.id='tpl-nm';
+      b.appendChild(h('p','nx-dlg-note', L.length+' task'+(L.length>1?'s':'')+(r.ws&&r.ws.length?', '+r.ws.length+' workstream'+(r.ws.length>1?'s':''):'')+'. Due dates are kept as days from the first one ('+fmtY(anchor)+'), so they move with whatever start date you pick later. Owners, priorities, notes, subtasks and repeats come along.')); },
+    'Save Template', b=>{ const name=b.querySelector('#tpl-nm').value.trim(); if(!name) return false;
+      const tasks=L.slice().sort(byDue).map(t=>{ const o={t:t.t}; ['o','d','p','w','notes','rep'].forEach(k=>{ if(t[k]!==undefined && t[k]!=='' && !(Array.isArray(t[k]) && !t[k].length)) o[k]=Array.isArray(t[k])?t[k].slice():t[k]; });
+        if(t.sub && t.sub.length) o.sub=t.sub.map(s=>({id:s.id, t:s.t})); if(t.due) o.off=dayDiff(t.due, anchor); return o; });
+      const id='tp'+Date.now().toString(36), body={name, from:r.id, desc:r.desc||'', ws:(r.ws||[]).slice(), lead:r.lead||'', color:r.color||0, tasks, by:me(), at:Date.now()};
+      if(!TR.tpl) TR.tpl=[]; TR.tpl.push(Object.assign({id}, body));
+      Promise.resolve().then(()=>S.db.collection('templates').doc(id).set(body)).then(()=>toast('Saved the template “'+name+'”. Start it from Team Projects → Start From a Template.'), ()=>toast('That template didn’t save. Try again in a moment.')); }); }
+function startTemplate(tp){ const t0=iso(today());
+  dlg('Start From “'+tp.name+'”', b=>{ const nm=fieldIn(b,'New Team Project name', h('input','nx-dlg-in')); nm.value=tp.name.replace(/\s*Template$/i,''); nm.id='tps-nm';
+      const dt=fieldIn(b,'First due date (the rest follow from it)', h('input','nx-dlg-in')); dt.type='date'; dt.value=t0; dt.id='tps-dt';
+      const ld=fieldIn(b,'Led by', h('select','nx-dlg-in')); people().forEach(p=>ld.appendChild(new Option(p.name, p.id))); ld.value=tp.lead || me(); ld.id='tps-ld';
+      const n=(tp.tasks||[]).length, span=(tp.tasks||[]).reduce((m,x)=>Math.max(m, x.off||0), 0);
+      b.appendChild(h('p','nx-dlg-note', n+' task'+(n>1?'s':'')+((tp.tasks||[]).some(x=>x.off!==undefined) ? ' over '+(span+1)+' day'+(span?'s':'') : ', none with due dates')+'. Everyone keeps the tasks they had in the template; change anyone after.'));
+      if(tp.by===me() || me()==='jonna'){ const del=btn('nx-dlg-del','Delete this template', ()=>{ if(!del.dataset.sure){ del.dataset.sure='1'; del.textContent='Click again to delete it'; return; }
+          TR.tpl=(TR.tpl||[]).filter(x=>x.id!==tp.id); S.db.collection('templates').doc(tp.id).delete(); toast('Deleted the template “'+tp.name+'”.'); document.querySelector('.nx-dlg-ov')?.remove(); }); b.appendChild(del); } },
+    'Start It', b=>{ const name=b.querySelector('#tps-nm').value.trim(), start=b.querySelector('#tps-dt').value||t0, lead=b.querySelector('#tps-ld').value; if(!name) return false;
+      const rid='rk'+Date.now().toString(36); const rk={id:rid, name, desc:tp.desc||'', status:'Active', lead, color:(tp.color||S.rocks.length)%7, order:S.rocks.length+1, ws:(tp.ws||[]).slice(), tpl:tp.id};
+      put('rocks', rk);
+      (tp.tasks||[]).forEach((x,i)=>{ const o=Object.assign({}, x); delete o.off; o.id='ta-'+rid+'-'+i; o.r=rid; o.s='Not Started'; o.by=me(); o.at=Date.now(); o.ord=i;
+        if(x.off!==undefined && x.off!==null){ const d=pd(start); d.setDate(d.getDate()+x.off); o.due=iso(d); }
+        if(!o.o) o.o=lead; if(o.sub) o.sub=o.sub.map(s=>({id:s.id, t:s.t})); put('tasks', o); });
+      toast('Started “'+name+'” with '+(tp.tasks||[]).length+' tasks.'); setTimeout(()=>open('p:'+rid), 300); }); }
+function pickTemplate(anchor){ startTR(); const go=()=>{ const L=(TR.tpl||[]).slice().sort((a,b)=>a.name.localeCompare(b.name));
+    if(!L.length){ popMenu(anchor, [{node:h('div','nx-ml','No templates yet. Open a Team Project and choose Save as Template.')}], 'Templates'); return; }
+    popMenu(anchor, L.map(tp=>({label:tp.name, hint:(tp.tasks||[]).length+' tasks', fn:()=>startTemplate(tp)})), 'Start From a Template'); };
+  if(TR.tpl===null) setTimeout(go, 1200); else go(); }
+window.__tpl={pick:pickTemplate, save:id=>{ const r=rock(id); r && saveTemplate(r); }};
+
+/* rules */
+const WHEN={done:'A task is marked Done', due:'A task is due soon and hasn’t started', late:'A task is past due'};
+function ruleText(u){ const w=u.when==='done' ? 'When a task is marked Done' : u.when==='due' ? 'When a task is due in '+(u.days||2)+' day'+((u.days||2)>1?'s':'')+' and hasn’t started' : 'When a task is past due';
+  const t=u.when==='done' ? 'tell '+(first(u.to)||'someone') : u.when==='due' ? 'nudge the person doing it' : 'nudge the accountable person';
+  return w+', '+t+'.'; }
+function rulesDialog(r){ startTR();
+  dlg('Rules for '+r.name, b=>{ const list=h('div','nx-ru-list'); b.appendChild(list);
+    const paintL=()=>{ list.textContent=''; const L=(TR.rules||[]).filter(u=>u.proj===r.id);
+      if(!L.length) list.appendChild(h('p','nx-dlg-note','No rules yet. Add one below; it applies to every task on this Team Project.'));
+      L.forEach(u=>{ const rw=h('div','nx-ru'); rw.appendChild(h('span',null, ruleText(u))); const x=btn('nx-mo-x','×', ()=>{ TR.rules=TR.rules.filter(z=>z.id!==u.id); S.db.collection('rules').doc(u.id).delete(); paintL(); toast('Rule removed.'); }); x.setAttribute('aria-label','Remove this rule'); rw.appendChild(x); list.appendChild(rw); }); };
+    paintL();
+    const add=h('div','nx-ru-add'); add.appendChild(h('b',null,'Add a Rule'));
+    const w=h('select','nx-dlg-in'); Object.keys(WHEN).forEach(k=>w.appendChild(new Option(WHEN[k],k)));
+    const dd=h('select','nx-dlg-in'); [1,2,3,5,7].forEach(n=>dd.appendChild(new Option(n+' day'+(n>1?'s':'')+' before', n))); dd.value='2';
+    const to=h('select','nx-dlg-in'); people().forEach(p=>to.appendChild(new Option('Tell '+p.name, p.id))); to.value=me();
+    const then=h('span','nx-dlg-note');
+    const sync=()=>{ dd.hidden=w.value!=='due'; to.hidden=w.value!=='done'; then.textContent= w.value==='due' ? 'Then nudge the person doing it.' : w.value==='late' ? 'Then nudge the accountable person (once per due date).' : ''; };
+    w.addEventListener('change', sync); sync();
+    [w, dd, to, then].forEach(x=>add.appendChild(x));
+    add.appendChild(btn('nx-mini pri','Add Rule', ()=>{ const id='ru'+Date.now().toString(36), body={proj:r.id, when:w.value, days:+dd.value, to:w.value==='done'?to.value:'', by:me(), at:Date.now()};
+      if(!TR.rules) TR.rules=[]; TR.rules.push(Object.assign({id}, body)); S.db.collection('rules').doc(id).set(body).then(()=>{}, ()=>toast('That rule didn’t save. Try again.')); paintL(); toast('Rule added: '+ruleText(body)); }));
+    b.appendChild(add);
+    b.appendChild(h('p','nx-dlg-note','Rules run whenever anyone has Team HQ open, and each reminder is sent once. Reminders land on the person’s My Tasks and in their bell.')); }, null); }
+function ruleSweep(){ if(!TR.rules || !TR.rules.length || !S.tasks || !me()) return; const N=S.nudges||[], have=new Set(N.map(n=>n.id)); let sent=0;
+  TR.rules.forEach(u=>{ const L=S.tasks.filter(t=>!u.proj || t.r===u.proj); L.forEach(t=>{ if(sent>=20) return; let id='', to='', m='';
+      const rk=rock(t.r), on=rk ? ' ('+rk.name+')' : '';
+      if(u.when==='done'){ if(isOpen(t) || (t.at||0)<(u.at||0) || (t.at||0)<Date.now()-3*864e5) return; id='ru-'+u.id+'-'+t.id; to=u.to; m='Done: '+t.t+on; }
+      else if(u.when==='due'){ if(!isOpen(t) || st(t)!=='Not Started' || !t.due) return; const n=days(t.due); if(n<0 || n>(u.days||2)) return; id='ru-'+u.id+'-'+t.id+'-'+t.due; to=doers(t)[0]; m=t.t+' is due '+(n===0?'today':n===1?'tomorrow':fmt(t.due))+' and hasn’t started'+on+'.'; }
+      else if(u.when==='late'){ if(!isOpen(t) || !t.due || days(t.due)>=0) return; id='ru-'+u.id+'-'+t.id+'-'+t.due; to=t.o || doers(t)[0]; m=t.t+' is past due ('+fmt(t.due)+')'+on+'.'; }
+      if(!id || !to || have.has(id)) return; have.add(id); sent++;
+      put('nudges', {id, to, by:u.by||me(), m, k:'Rule', rule:u.id, task:t.id, at:Date.now()}); }); }); }
+setInterval(()=>{ if(!document.hidden) try{ startTR(); ruleSweep(); }catch(e){} }, 60000);
+setTimeout(()=>{ try{ startTR(); }catch(e){} }, 4000);
+{ const cs=document.createElement('style'); cs.textContent=
+  '.nx-dlg-ov{position:fixed;inset:0;z-index:9995;background:rgba(6,32,47,.45);display:flex;align-items:flex-start;justify-content:center;padding:10vh 16px}'+
+  '.nx-dlg{background:var(--surface);color:var(--ink);border-radius:12px;width:min(520px,100%);max-height:80vh;overflow:auto;box-shadow:0 20px 50px rgba(0,0,0,.25);padding:18px 20px}'+
+  '.nx-dlg h2{margin:0 0 12px;font-size:18px}.nx-dlg-b{display:flex;flex-direction:column;gap:10px}.nx-dlg-fld{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--ink-2)}'+
+  '.nx-dlg-in{border:1px solid var(--border);border-radius:6px;padding:7px 9px;font:inherit;font-size:13.5px;background:var(--surface-2);color:var(--ink)}.nx-dlg-in:focus-visible{outline:2px solid var(--sky);outline-offset:1px}'+
+  '.nx-dlg-note{font-size:12.5px;color:var(--ink-3);margin:0;line-height:1.5}.nx-dlg-f{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}'+
+  '.nx-dlg-del{align-self:flex-start;border:0;background:none;color:var(--bad);font:inherit;font-size:12.5px;cursor:pointer;padding:0;text-decoration:underline}'+
+  '.nx-ru-list{display:flex;flex-direction:column;gap:6px}.nx-ru{display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px}.nx-ru span{flex:1}'+
+  '.nx-ru-add{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border);padding-top:12px;margin-top:4px}.nx-ru-add .nx-mini{align-self:flex-start}';
   document.head.appendChild(cs); }
 /* the full task editor (used on smaller screens and from every other page) gets the same comment thread */
 (function hookEditor(n){ const oe=window.__edit; if(!oe){ if(n<60) setTimeout(()=>hookEditor(n+1), 1000); return; } if(oe.__cm) return;
@@ -5447,6 +5542,7 @@ function vProject(id){
   wsn.forEach(w=>chip(w, w, open_.filter(t=>(t.w||'')===w).length));
   band.appendChild(chips);
   const more=btn('nx-mini', null, ()=>{ openClassic('rocks'); setTimeout(()=>window.__pv2 && window.__pv2.openPanel && window.__pv2.openPanel(id,{}), 120); }); more.innerHTML='<span>Timeline and More</span>'+ic('ext'); more.style.marginLeft='auto'; chips.appendChild(more);
+  chips.appendChild(btn('nx-mini','Rules', ()=>rulesDialog(r))); chips.appendChild(btn('nx-mini','Save as Template', ()=>saveTemplate(r)));
   body.appendChild(band);
   withPeek(taskView(L, g, m, id, {noProj:true, noWs:g==='ws', empty: ui.ws ? 'Nothing open in '+ui.ws+'.' : 'Nothing open on this Team Project.'}), L, m);
 }
