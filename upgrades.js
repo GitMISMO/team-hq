@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261108n';
+var BUILD='20261108o';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -5025,7 +5025,7 @@ html[data-theme="dark"] .cs-cv-det .bk:not(.sys) small{color:#5fd29a}
 .cs-lh{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 9px;background:var(--surface-2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
 .cs-grp:first-child .cs-lh{border-top:0}.cs-lh b{font-size:13.5px}.cs-lh em{font-style:normal;font-size:12px;font-weight:800;min-width:24px;text-align:center;padding:2px 7px;border-radius:5px;background:var(--surface);color:var(--ink-2)}
 .cs-lh.you{background:var(--navy,#0d314c);border-color:var(--navy,#0d314c)}.cs-lh.you b{color:#fff}.cs-lh.you em{background:rgba(255,255,255,.16);color:#fff}
-.cs-ri.none{display:block;font-size:13px;color:var(--ink-3)}.cs-ri .asked{font-size:11.5px;color:var(--ink-3)}
+.cs-ri.none{display:block;font-size:13px;color:var(--ink-3)}.cs-ri .asked{font-size:11.5px;color:var(--ink-3)}.cs-ri .due{font-size:11px;font-weight:700;padding:1px 6px;border-radius:4px;background:color-mix(in srgb,#e0a83c 20%,transparent);color:#9a6510}
 .cs-rqf{display:grid;grid-template-columns:140px 200px minmax(0,1fr) minmax(0,1fr) auto;gap:10px;align-items:end;padding:12px 14px}
 .cs-rqf label{display:grid;gap:4px;font-size:11.5px;font-weight:700;color:var(--ink-3)}.cs-rqf input,.cs-rqf select{font:inherit;font-size:13.5px;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);min-width:0}
 @media(max-width:1100px){.cs-cols3{column-count:2}.cs-rqf{grid-template-columns:1fr 1fr}.cs-rqf label:nth-child(3),.cs-rqf label:nth-child(4){grid-column:1/-1}}
@@ -5287,13 +5287,13 @@ function reqSection(d, wrap, by, tag){ const Q=(M.req && Array.isArray(M.req.ite
     const lab=(l,el)=>{ const w=h('label'); w.appendChild(h('span',null,l)); w.appendChild(el); return w; }; f.appendChild(lab('For',ar)); f.appendChild(lab('System',sy)); f.appendChild(lab('Request',t)); f.appendChild(lab('Details',dd));
     f.appendChild(btn('cs-btn pri','Add', ()=>{ const tt=t.value.trim(); if(!tt){ t.focus(); return; } const nx=clone(M.req||{items:[]}); nx.items=nx.items||[]; nx.items.push({id:'rq'+Date.now().toString(36), area:ar.value, sys:sy.value, t:tt, d:dd.value.trim(), by:me(), on:todayISO()}); P.rqAdd=false; saveReq(nx,'Request added for Perry'); })); sec.appendChild(f); setTimeout(()=>t.focus(),0); }
   const box=h('div','cs-card cs-cols2'); const fmt=iso=>iso ? longDate(iso) : '';
-  Object.keys(RQA).forEach(k=>{ const L=Q.filter(x=>x.area===k && (showDone || !x.done)).sort((a,b)=>(a.done?1:0)-(b.done?1:0)); const lh=h('div','cs-lh'); lh.appendChild(h('b',null,RQA[k])); lh.appendChild(h('em',null,String(L.filter(x=>!x.done).length)));
+  Object.keys(RQA).forEach(k=>{ const L=Q.filter(x=>x.area===k && (showDone || !x.done)).sort((a,b)=>(a.done?1:0)-(b.done?1:0) || (a.later?1:0)-(b.later?1:0) || String(a.due||'9').localeCompare(String(b.due||'9'))); const lh=h('div','cs-lh'); lh.appendChild(h('b',null,RQA[k])); lh.appendChild(h('em',null,String(L.filter(x=>!x.done).length)));
     if(!L.length){ const g=h('div','cs-grp'); g.appendChild(lh); g.appendChild(h('div','cs-ri none','Nothing open.')); box.appendChild(g); return; }
     L.forEach((x,i)=>{ const sy=by[x.sys]; const row=h('div','cs-ri'+(x.done?' done':'')+(P.rsItem===x.id?' open':'')); row.style.setProperty('--pc', sy ? colorOf(d,sy) : '#7f98ad');
       const ck=btn('cs-ck'+(x.done?' on':'')); ck.innerHTML='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'; ck.setAttribute('aria-label',(x.done?'Mark not done: ':'Mark done: ')+x.t); ck.setAttribute('aria-pressed', String(!!x.done));
       if(can) ck.addEventListener('click', ()=>{ const nx=clone(M.req); const it=nx.items.find(z=>z.id===x.id); it.done=!it.done; if(it.done){ it.doneOn=todayISO(); it.doneBy=me(); } else { delete it.doneOn; delete it.doneBy; } saveReq(nx, (it.done?'Done: ':'Back on the list: ')+it.t); }); else { ck.disabled=true; ck.title='Perry or Jonna checks these off'; }
       row.appendChild(ck); const tx=h('div','tx'); const tt=btn('cs-tt', x.t); tt.addEventListener('click', ()=>{ P.rsItem=P.rsItem===x.id?null:x.id; paintTodos(M.data); }); tx.appendChild(tt);
-      const mt=h('div','mt'); if(sy) mt.appendChild(tag(sy)); if(x.on) mt.appendChild(h('span','asked','Asked '+fmt(x.on)+(x.from?' by '+x.from:''))); tx.appendChild(mt);
+      const mt=h('div','mt'); if(sy) mt.appendChild(tag(sy)); if(x.due && !x.done) mt.appendChild(h('span','due','Needed by '+fmt(x.due))); if(x.later && !x.done) mt.appendChild(h('span','asked','Later, no rush')); if(x.on) mt.appendChild(h('span','asked','Asked '+fmt(x.on)+(x.from?' by '+x.from:''))); tx.appendChild(mt);
       if(P.rsItem===x.id){ if(x.d) tx.appendChild(h('p',null,x.d)); if(x.done && x.doneOn) tx.appendChild(h('small',null,'Done '+fmt(x.doneOn)+(x.doneBy?' by '+x.doneBy.replace(/^./,c=>c.toUpperCase()):''))); }
       row.appendChild(tx); if(i===0){ const g=h('div','cs-grp'); g.appendChild(lh); g.appendChild(row); box.appendChild(g); } else box.appendChild(row); }); });
   sec.appendChild(box); wrap.appendChild(sec); }
