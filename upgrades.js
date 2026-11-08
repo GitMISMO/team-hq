@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261107zn';
+var BUILD='20261107zo';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4595,13 +4595,14 @@ html[data-theme="dark"] .cs{--cs-hot:#74bfeb}
 .cs-hero>*:not(canvas){position:relative}
 .cs-htop{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 .cs-pill{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:600;letter-spacing:.03em;color:#cfe9f8;background:rgba(255,255,255,.08);border:1px solid rgba(116,191,235,.35);border-radius:4px;padding:5px 12px}
-.cs-pill i{width:8px;height:8px;border-radius:50%;background:#3ddc97;box-shadow:0 0 0 0 rgba(61,220,151,.7);animation:csPing 2s infinite}
-@keyframes csPing{0%{box-shadow:0 0 0 0 rgba(61,220,151,.6)}70%{box-shadow:0 0 0 9px rgba(61,220,151,0)}100%{box-shadow:0 0 0 0 rgba(61,220,151,0)}}
+.cs-pill i{position:relative;width:8px;height:8px;border-radius:50%;background:#3ddc97}
+.cs-pill i::after{content:'';position:absolute;inset:0;border-radius:50%;background:rgba(61,220,151,.6);animation:csPing 2s ease-out infinite;will-change:transform,opacity}
+@keyframes csPing{0%{transform:scale(1);opacity:.8}70%{transform:scale(3.2);opacity:0}100%{transform:scale(3.2);opacity:0}}
 .cs-hero h2{font-size:clamp(28px,4.2vw,46px);font-weight:800;line-height:1.05;color:#fff}
 .cs-hero h2 span{background:linear-gradient(90deg,#74bfeb,#a9f0d1);-webkit-background-clip:text;background-clip:text;color:transparent}
 .cs-hero p.lede{color:#bfe2f6;margin:12px 0 20px;font-size:16px}
 .cs-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
-.cs-stat{background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.03));border:1px solid rgba(116,191,235,.28);border-radius:12px;padding:14px 16px;backdrop-filter:blur(4px)}
+.cs-stat{background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.03));border:1px solid rgba(116,191,235,.28);border-radius:12px;padding:14px 16px}
 .cs-stat{font:inherit;text-align:left;color:inherit;cursor:pointer;transition:border-color .2s,background .2s,transform .2s}.cs-stat:hover{border-color:rgba(116,191,235,.7);transform:translateY(-1px)}.cs-stat.on{border-color:#74bfeb;background:linear-gradient(180deg,rgba(116,191,235,.28),rgba(116,191,235,.10))}
 .cs-stat em{display:block;font-style:normal;font-size:11.5px;font-weight:700;color:#74bfeb;margin-top:8px;letter-spacing:.02em}.cs-stat em::after{content:' ›'}.cs-stat.on em::after{content:' ⌄'}
 .cs-drill{position:relative;margin-top:14px;background:rgba(6,26,42,.55);border:1px solid rgba(116,191,235,.35);border-radius:12px;padding:14px 16px 16px}
@@ -4621,7 +4622,7 @@ html[data-theme="dark"] .cs{--cs-hot:#74bfeb}
 .cs-sbar .lg span{display:inline-flex;align-items:center;gap:6px}.cs-sbar .lg em{width:9px;height:9px;border-radius:50%;display:inline-block}
 @media(max-width:560px){.cs-hero{padding:22px 18px}.cs-stat b{font-size:28px}}
 /* section nav */
-.cs-nav{position:sticky;top:0;z-index:5;display:flex;gap:6px;overflow-x:auto;padding:10px 2px;margin:10px 0 0;background:color-mix(in srgb,var(--surface-2,#f6fafd) 86%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);scrollbar-width:none}
+.cs-nav{position:sticky;top:0;z-index:5;display:flex;gap:6px;overflow-x:auto;padding:10px 2px;margin:10px 0 0;background:var(--surface-2,#f6fafd);scrollbar-width:none}
 .cs-nav::-webkit-scrollbar{display:none}
 .cs-nav button{flex:none;font:inherit;font-size:13px;font-weight:600;color:var(--ink-2);background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:6px 14px;cursor:pointer;transition:all .15s}
 .cs-nav button:hover{color:var(--ink);border-color:var(--cs-sky)}
@@ -4654,15 +4655,15 @@ html[data-theme="dark"] .cs{--cs-hot:#74bfeb}
 .cs-e{fill:none;stroke:var(--cs-edge);stroke-width:1.4;transition:opacity .25s,stroke .25s,stroke-width .25s}
 .cs-e.hand{stroke-dasharray:4 5;stroke:color-mix(in srgb,var(--warn,#a2701a) 55%,var(--cs-edge))}
 .cs-e.quiet{opacity:0;pointer-events:none}.cs-e.quiet.hot{opacity:.9}
-.cs-e.hot{stroke:var(--cs-hot);stroke-width:2.6;stroke-dasharray:8 6;animation:csFlow 1s linear infinite}
+.cs-e.hot{stroke:var(--cs-hot);stroke-width:2.6;stroke-dasharray:8 6}
+.cs-mapin.moving .cs-e.hot:not(.hand):not(.soon){stroke-opacity:.2;stroke-dasharray:none}
 .cs-e.hot.hand{stroke:var(--warn,#a2701a);stroke-dasharray:3 6;animation:none}
 .cs-e.soon{stroke-dasharray:1 6;stroke-linecap:round;stroke-width:2;stroke:color-mix(in srgb,#9fb3c4 80%,transparent)}
 .cs-e.hot.soon{stroke:#7f98ad;stroke-dasharray:1 6;stroke-width:3;animation:none}
 .cs-lb.soon rect{stroke:#9fb3c4;stroke-dasharray:2 3}
 .cs-fi.soon{border-style:dotted;opacity:.85}
 .cs-soonb{font-size:10.5px;font-weight:700;color:#7f98ad;border:1px dotted currentColor;border-radius:4px;padding:0 5px;white-space:nowrap}
-@keyframes csFlow{to{stroke-dashoffset:-14}}
-.cs-p{fill:#74bfeb;filter:url(#csGlow)}
+.cs-mapin{position:relative;min-width:760px}.cs-mapin canvas,.cs-mapin .cs-top{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.cs-mapin .cs-top{min-width:0;overflow:visible}.cs-top .cs-n{pointer-events:auto}
 .cs-n{cursor:pointer;outline:none;transition:opacity .25s}
 .cs-n .box{fill:var(--surface);stroke:var(--border-strong,var(--border));stroke-width:1.2;transition:stroke .2s,stroke-width .2s}
 .cs-n:hover .box,.cs-n:focus-visible .box{stroke:var(--cs-sky);stroke-width:2.2}
@@ -4671,9 +4672,7 @@ html[data-theme="dark"] .cs{--cs-hot:#74bfeb}
 .cs-n .sub{font:500 10px ui-monospace,Menlo,monospace;fill:var(--ink-3)}
 .cs-n .sd{transform-box:fill-box;transform-origin:center}
 .cs-n .sd.live{fill:#2fbf71}.cs-n .sd.soon{fill:#e0a83c}.cs-n .sd.build{fill:#9fb3c4}
-.cs-n .ring{fill:none;stroke:#2fbf71;stroke-width:1.5;transform-box:fill-box;transform-origin:center;animation:csRing 2.4s ease-out infinite;opacity:0}
-@keyframes csRing{0%{transform:scale(.6);opacity:.8}100%{transform:scale(2.4);opacity:0}}
-.cs-n.dim,.cs-e.dim,.cs-p.dim,.cs-lb.dim{opacity:.1}
+.cs-n.dim,.cs-e.dim,.cs-lb.dim{opacity:.1}
 .cs-n.sel .box{stroke:var(--cs-hot);stroke-width:2.8;filter:url(#csShadow)}
 .cs-n.lit .box{stroke:var(--cs-sky);stroke-width:2.2}
 .cs-n.eng .box{fill:var(--surface-3,var(--surface-2))}
@@ -4835,7 +4834,7 @@ html[data-theme="dark"] .cs .cs-ph .cs-build{color:#456179}
 .cs-sbtn.pri,.cs-btn.pri{background:var(--navy,#0d314c);color:#fff;border-color:var(--navy,#0d314c)}
 .cs-btn{font:inherit;font-size:13px;font-weight:600;border:1px solid var(--border);background:var(--surface);color:var(--ink);border-radius:8px;padding:6px 12px;cursor:pointer}
 .cs-btn.danger{color:var(--bad,#b3372c)}
-@media (prefers-reduced-motion: reduce){ .cs-p,.cs-n .ring{display:none} .cs *{transition:none!important;animation:none!important} .cs-rv{opacity:1;transform:none} }
+@media (prefers-reduced-motion: reduce){ .cs-mapin canvas{display:none} .cs *{transition:none!important;animation:none!important} .cs-rv{opacity:1;transform:none} }
 
 /* road to rock solid */
 .cs-rs{display:grid;gap:12px}
@@ -4958,7 +4957,7 @@ function draw(){ const root=P.el; if(!root) return; root.textContent=''; root.cl
   const b1=band('How it fits together','The System Map', P.edit ? 'Edit mode: select a box to change it, drag a box to move it, or use Add a System and Add a Connection above.' : 'MBA and Microsoft 365 on the left, MISMO’s own apps in the middle, the outside world on the right, and the shared engine underneath. Point at a box to see what it touches; select it for the full story.');
   const tl=h('div','cs-tools'); chips(d, tl); tl.appendChild(finder(d)); b1.appendChild(tl);
   const g=h('div','cs-grid'); g.style.marginTop='12px';
-  const left=h('div','cs-card cs-mapwrap'); const mb=h('div','cs-mapbox'); mb.appendChild(map(d)); left.appendChild(mb);
+  const left=h('div','cs-card cs-mapwrap'); const mb=h('div','cs-mapbox'); const mi=h('div','cs-mapin'); mi.appendChild(map(d)); if(pulseOn){ mi.classList.add('moving'); mi.appendChild(pulses()); } mi.appendChild(P.svgTop); mb.appendChild(mi); left.appendChild(mb);
   const lg=h('div','cs-legend'); lg.innerHTML='<span><svg width="30" height="8" aria-hidden="true"><line x1="0" y1="4" x2="30" y2="4" stroke="var(--cs-hot)" stroke-width="2.4" stroke-dasharray="8 6"/><circle cx="20" cy="4" r="3" fill="#74bfeb"/></svg>Work moving automatically</span><span><svg width="30" height="8" aria-hidden="true"><line x1="0" y1="4" x2="30" y2="4" stroke="#a2701a" stroke-width="1.8" stroke-dasharray="3 5"/></svg>Copied by a person</span><span><svg width="30" height="8" aria-hidden="true"><line x1="1" y1="4" x2="29" y2="4" stroke="#9fb3c4" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="1 6"/></svg>Not live yet</span><span><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4" fill="#2fbf71"/></svg>Live</span><span><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4" fill="#e0a83c"/></svg>Launching</span><span><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4" fill="#9fb3c4"/></svg>Building</span>'+(P.edit?'<span><svg width="10" height="10" aria-hidden="true"><circle cx="5" cy="5" r="4" fill="#a2701a"/></svg>To confirm</span>':'');
   left.appendChild(lg); P.tourHost=left; g.appendChild(left);
   const panel=h('aside','cs-card cs-panel'); panel.setAttribute('aria-live','polite'); g.appendChild(panel); P.panel=panel; balance(left, panel); b1.appendChild(g); root.appendChild(b1); addSec('System Map', b1);
@@ -5087,7 +5086,8 @@ function network(cv){ const ctx=cv.getContext && cv.getContext('2d'); if(!ctx) r
   const seed=()=>{ pts.length=0; const n=Math.round(Math.min(60, Math.max(24, w*hh/9000))); for(let i=0;i<n;i++) pts.push({x:Math.random()*w, y:Math.random()*hh, vx:(Math.random()-.5)*.25, vy:(Math.random()-.5)*.25, r:Math.random()*1.6+.8}); };
   const frame=()=>{ ctx.clearRect(0,0,w,hh); for(let i=0;i<pts.length;i++){ const a=pts[i]; for(let j=i+1;j<pts.length;j++){ const b=pts[j], dx=a.x-b.x, dy=a.y-b.y, dd=dx*dx+dy*dy; if(dd<16000){ ctx.strokeStyle='rgba(116,191,235,'+(0.35*(1-dd/16000)).toFixed(3)+')'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); } } }
     pts.forEach(p=>{ ctx.fillStyle='rgba(169,216,243,.9)'; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); }); };
-  const tick=()=>{ if(!cv.isConnected) return; if(!document.hidden){ pts.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; if(p.x<0||p.x>w) p.vx*=-1; if(p.y<0||p.y>hh) p.vy*=-1; }); frame(); } requestAnimationFrame(tick); };
+  let seen=true; if('IntersectionObserver' in window){ const io=new IntersectionObserver(es=>{ seen=es[0].isIntersecting; }); io.observe(cv); }
+  const tick=()=>{ if(!cv.isConnected) return; if(!document.hidden && seen){ pts.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; if(p.x<0||p.x>w) p.vx*=-1; if(p.y<0||p.y>hh) p.vy*=-1; }); frame(); } requestAnimationFrame(tick); };
   requestAnimationFrame(()=>{ size(); seed(); if(reduce()) frame(); else tick(); }); }
 function chips(d, box){ box.setAttribute('aria-label','Filter by area or find a system');
   const add=(k,label,col)=>{ const b=btn('cs-chip', null, ()=>{ P.filter=k; box.querySelectorAll('.cs-chip').forEach(x=>x.setAttribute('aria-pressed', String(x===b))); paintState(); }); if(col){ const i=h('i'); i.style.background=col; b.appendChild(i); } b.append(label); b.setAttribute('aria-pressed', String(P.filter===k)); box.appendChild(b); };
@@ -5115,12 +5115,12 @@ function map(d){ const svg=sv('svg',{viewBox:'0 0 1200 720', role:'img', 'aria-l
   defs.innerHTML='<filter id="csGlow" x="-200%" y="-200%" width="500%" height="500%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="csShadow" x="-20%" y="-40%" width="140%" height="190%"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#14486e" flood-opacity=".35"/></filter><linearGradient id="csZ" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--surface-2)"/><stop offset="1" stop-color="var(--surface)"/></linearGradient>';
   [[12,22,196,500],[288,22,634,500],[992,22,196,500],[12,584,1176,112]].forEach(z=>sv('rect',{class:'cs-zone',x:z[0],y:z[1],width:z[2],height:z[3],rx:12,fill:'url(#csZ)'},svg));
   [['MBA & Microsoft 365',110,44],['MISMO apps · resources.mismo.org',605,44],['Outside MISMO',1090,44],['Engine room · every app runs on these',600,606]].forEach(z=>{ const t=sv('text',{class:'cs-zl',x:z[1],y:z[2],'text-anchor':'middle'},svg); t.textContent=z[0]; });
-  const gE=sv('g',{},svg), gP=sv('g',{},svg), gN=sv('g',{},svg), gL=sv('g',{},svg); const by={}; d.systems.forEach(s=>by[s.id]=s);
+  const top=sv('svg',{viewBox:'0 0 1200 720', class:'cs-top', role:'group', 'aria-label':'MISMO’s systems'}); P.svgTop=top; const gE=sv('g',{},svg), gN=sv('g',{},top), gL=sv('g',{},top); const by={}; d.systems.forEach(s=>by[s.id]=s);
   P.edges=[]; P.nodes={}; const pairs={};
   d.connections.forEach((c,i0)=>{ const a=by[c.from], b=by[c.to]; if(!a || !b) return;
     const pk=[c.from,c.to].sort().join('|'), f0=pairs[pk]; if(!f0) pairs[pk]={i:i0, from:c.from}; const i=!f0 ? i0 : (f0.from===c.from ? f0.i+1 : f0.i); /* a second line between the same two boxes curves the other way */
     const geo=edgeGeo(a,b,i); const path=sv('path',{class:'cs-e'+(c.how==='hand'?' hand':c.how==='soon'?' soon':'')+(c.quiet?' quiet':''), d:geo.d, id:pre+i0},gE); const tt=sv('title',{},path); tt.textContent=a.name+' → '+b.name+': '+c.what+(c.how==='hand'?' (copied by a person)':c.how==='soon'?' (not live yet)':'');
-    const e={c, el:path, i}; if(pulseOn && c.how!=='hand' && c.how!=='soon' && !c.quiet){ const ci=sv('circle',{class:'cs-p',r:3.2},gP); const m=sv('animateMotion',{dur:(3.6+(i%5)*.7)+'s',repeatCount:'indefinite',begin:(i*0.37%4)+'s'},ci); const mp=sv('mpath',{},m); mp.setAttribute('href','#'+pre+i0); mp.setAttributeNS('http://www.w3.org/1999/xlink','href','#'+pre+i0); e.p=ci; }
+    const e={c, el:path, i}; if(c.how!=='hand' && c.how!=='soon' && !c.quiet) e.p={dur:(3.6+(i%5)*.7)*1000, off:(i*0.37%4)*1000, dim:false, pts:null};
     /* the label that appears on the line when its system is selected */
     const lbTxt=(c.what.length>30 ? c.what.slice(0,29)+'…' : c.what); const lw=Math.round(lbTxt.length*5.9+14);
     const lb=sv('g',{class:'cs-lb'+(c.how==='hand'?' hand':c.how==='soon'?' soon':'')+(geo.len<lw+40 || c.quiet?' short':''), transform:'translate('+Math.round(geo.mx-lw/2)+','+Math.round(geo.my-10)+')'},gL); sv('rect',{x:0,y:0,width:lw,height:20,rx:10},lb); const lt=sv('text',{x:lw/2,y:13.5,'text-anchor':'middle'},lb); lt.textContent=lbTxt; e.lb=lb; e.box={x:Math.round(geo.mx-lw/2), y:Math.round(geo.my-10), w:lw, h:20};
@@ -5129,7 +5129,7 @@ function map(d){ const svg=sv('svg',{viewBox:'0 0 1200 720', role:'img', 'aria-l
     sv('rect',{class:'box',x:0,y:0,width:W,height:H,rx:9},g); sv('rect',{class:'bar',x:0,y:0,width:5,height:H,rx:2.5,fill:colorOf(d,s)},g);
     const two=!!(s.statusNote || s.zone==='eng' || s.sub); const t=sv('text',{x:13,y:two?17:25},g); t.textContent=s.name.length>19 ? s.name.slice(0,18)+'…' : s.name;
     if(two){ const t2=sv('text',{class:'sub',x:13,y:31},g); t2.textContent=s.statusNote || s.sub || (s.id==='robots'?'run on schedules':s.id==='flows'?'inside Microsoft 365':'used by every app'); }
-    const k=stKey(s); if(k==='live' && pulseOn && s.zone==='apps') sv('circle',{class:'ring',cx:W-11,cy:11,r:4},g); sv('circle',{class:'sd '+k,cx:W-11,cy:11,r:4},g);
+    const k=stKey(s); sv('circle',{class:'sd '+k,cx:W-11,cy:11,r:4},g);
     if(P.edit && (s.confirm || d.connections.some(c=>c.confirm && (c.from===s.id || c.to===s.id)))){ sv('circle',{class:'cf',cx:W-11,cy:H-10,r:4},g); }
     P.nodes[s.id]=g;
     g.addEventListener('click', ()=>{ if(g._moved){ g._moved=false; return; } select(s.id); });
@@ -5137,13 +5137,37 @@ function map(d){ const svg=sv('svg',{viewBox:'0 0 1200 720', role:'img', 'aria-l
     g.addEventListener('mouseenter', ()=>{ P.hover=s.id; paintState(); }); g.addEventListener('mouseleave', ()=>{ P.hover=null; paintState(); });
     if(P.edit) dragable(g, s, d); });
   return svg; }
+/* the moving dots on each automatic line and the ring on each live system, drawn on one canvas.
+   Runs only while the map is on screen and the tab is showing. */
+function pulses(){ const cv=h('canvas'); cv.setAttribute('aria-hidden','true'); const ctx=cv.getContext && cv.getContext('2d'); if(!ctx) return cv;
+  let seen=true, w=0, hh=0, k=1, dpr=1, hot='#14486e', hotAt=-1e9; const t0=performance.now();
+  const size=()=>{ const r=cv.getBoundingClientRect(); if(!r.width) return false; dpr=Math.min(2, window.devicePixelRatio||1); if(Math.abs(r.width-w)>.5 || Math.abs(r.height-hh)>.5){ w=r.width; hh=r.height; cv.width=Math.round(w*dpr); cv.height=Math.round(hh*dpr); } k=w/1200; return true; };
+  const sample=e=>{ const L=e.el.getTotalLength(), n=Math.max(12, Math.min(90, Math.round(L/8))), a=[]; for(let j=0;j<=n;j++){ const q=e.el.getPointAtLength(L*j/n); a.push(q.x, q.y); } e.p.pts=a; };
+  if('IntersectionObserver' in window){ const io=new IntersectionObserver(es=>{ seen=es[0].isIntersecting; }); io.observe(cv); }
+  const frame=now=>{ if(!cv.isConnected) return; requestAnimationFrame(frame); if(!seen || document.hidden || !size()) return;
+    ctx.setTransform(dpr*k,0,0,dpr*k,0,0); ctx.clearRect(0,0,1200,720);
+    const d=M.data; const t=now-t0; if(now-hotAt>1000){ hotAt=now; hot=getComputedStyle(cv).getPropertyValue('--cs-hot').trim()||'#14486e'; }
+    /* the flowing dashes on the selected system's lines */
+    ctx.setLineDash([8,6]); ctx.lineDashOffset=-(t/1000*14)%14; ctx.lineWidth=2.6; ctx.strokeStyle=hot;
+    (P.edges||[]).forEach(e=>{ const c=e.el.classList; if(!c.contains('hot') || c.contains('hand') || c.contains('soon')) return; const dd=e.el.getAttribute('d'); if(e.pd!==dd){ e.pd=dd; e.p2=new Path2D(dd); } ctx.globalAlpha=e.c.quiet?.9:1; ctx.stroke(e.p2); });
+    ctx.setLineDash([]);
+    /* live rings */
+    if(d && P.nodes) d.systems.forEach(s=>{ if(s.zone!=='apps' || stKey(s)!=='live') return; const n=P.nodes[s.id]; if(!n || n.classList.contains('dim')) return; const f=(t%2400)/2400, ease=1-Math.pow(1-f,2);
+      ctx.globalAlpha=.8*(1-f); ctx.strokeStyle='#2fbf71'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(s.x+W/2-11, s.y-H/2+11, 4*(1+1.4*ease), 0, Math.PI*2); ctx.stroke(); });
+    /* dots */
+    (P.edges||[]).forEach(e=>{ const p=e.p; if(!p) return; if(!p.pts) sample(e); const a=p.pts, n=a.length/2-1; const f=(((t-p.off)%p.dur)+p.dur)%p.dur/p.dur*n, j=Math.min(n-1, Math.floor(f)), r=f-j;
+      const x=a[2*j]+(a[2*j+2]-a[2*j])*r, y=a[2*j+1]+(a[2*j+3]-a[2*j+1])*r; const al=p.dim?.1:1;
+      ctx.globalAlpha=.28*al; ctx.fillStyle='#74bfeb'; ctx.beginPath(); ctx.arc(x,y,6,0,Math.PI*2); ctx.fill();
+      ctx.globalAlpha=al; ctx.beginPath(); ctx.arc(x,y,3.2,0,Math.PI*2); ctx.fill(); });
+    ctx.globalAlpha=1; };
+  requestAnimationFrame(frame); return cv; }
 /* in Edit mode, drag a box to move it; the new spot saves when you let go */
 function dragable(g, s, d){ g.addEventListener('pointerdown', ev=>{ if(ev.button!==0) return; const svg=P.svg; const pt=svg.createSVGPoint();
   const loc=e=>{ pt.x=e.clientX; pt.y=e.clientY; return pt.matrixTransform(svg.getScreenCTM().inverse()); };
   const st=loc(ev), ox=s.x, oy=s.y; let moved=false; g.setPointerCapture(ev.pointerId);
   const mv=e=>{ const p=loc(e); const nx=Math.round(Math.max(W/2+8, Math.min(1200-W/2-8, ox+p.x-st.x))), ny=Math.round(Math.max(H/2+8, Math.min(720-H/2-8, oy+p.y-st.y)));
     if(!moved && Math.hypot(nx-ox, ny-oy)<4) return; moved=true; g.classList.add('drag'); s.x=nx; s.y=ny; g.setAttribute('transform','translate('+(nx-W/2)+','+(ny-H/2)+')');
-    const by={}; d.systems.forEach(z=>by[z.id]=z); P.edges.forEach(e2=>{ if(e2.c.from===s.id || e2.c.to===s.id){ const a=by[e2.c.from], b=by[e2.c.to]; e2.el.setAttribute('d', edgePath(a,b,e2.i)); } }); };
+    const by={}; d.systems.forEach(z=>by[z.id]=z); P.edges.forEach(e2=>{ if(e2.c.from===s.id || e2.c.to===s.id){ const a=by[e2.c.from], b=by[e2.c.to]; e2.el.setAttribute('d', edgePath(a,b,e2.i)); if(e2.p) e2.p.pts=null; } }); };
   const up=()=>{ g.removeEventListener('pointermove', mv); g.removeEventListener('pointerup', up); g.removeEventListener('pointercancel', up); g.classList.remove('drag');
     if(moved){ g._moved=true; const nd=clone(d); const t=nd.systems.find(z=>z.id===s.id); t.x=s.x; t.y=s.y; s.x=ox; s.y=oy; save(nd, 'Moved '+s.name+'.'); } };
   g.addEventListener('pointermove', mv); g.addEventListener('pointerup', up); g.addEventListener('pointercancel', up); }); }
@@ -5155,7 +5179,7 @@ function paintState0(){ const d=M.data; if(!d || d.empty || !P.nodes) return; co
   if(P.jr){ const j=journeys(d).find(x=>x.id===P.jr.id); if(j){ const upto=j.steps.slice(0, P.jr.i+1).map(z=>z.sys), cur=j.steps[P.jr.i].sys, on={}; upto.forEach(x=>on[x]=1);
       const hotE=new Set(); for(let k=1;k<=P.jr.i;k++){ const a=j.steps[k].from || j.steps[k-1].sys, b=j.steps[k].sys; P.edges.forEach(e=>{ if((e.c.from===a && e.c.to===b) || (e.c.from===b && e.c.to===a)) hotE.add(e); }); }
       d.systems.forEach(s=>{ const n=P.nodes[s.id]; if(!n) return; n.classList.toggle('dim', !on[s.id]); n.classList.toggle('sel', s.id===cur); n.classList.toggle('lit', !!on[s.id] && s.id!==cur); });
-      P.edges.forEach(e=>{ const hot=hotE.has(e); e.el.classList.toggle('dim', !hot); e.el.classList.toggle('hot', hot); if(e.p) e.p.classList.toggle('dim', !hot); e.lb.classList.toggle('on', hot && (e.c.from===cur || e.c.to===cur)); e.lb.classList.toggle('dim', false); });
+      P.edges.forEach(e=>{ const hot=hotE.has(e); e.el.classList.toggle('dim', !hot); e.el.classList.toggle('hot', hot); if(e.p) e.p.dim=!hot; e.lb.classList.toggle('on', hot && (e.c.from===cur || e.c.to===cur)); e.lb.classList.toggle('dim', false); });
       return; } }
   const q=P.q, Q=q ? d.systems.filter(s=>(s.name+' '+(s.what||'')).toLowerCase().indexOf(q)>=0).map(s=>s.id) : null;
   const focus=P.hover||P.sel, L=focus ? linked(focus) : null, f=P.filter;
@@ -5163,7 +5187,7 @@ function paintState0(){ const d=M.data; if(!d || d.empty || !P.nodes) return; co
     const on= Q ? Q.indexOf(s.id)>=0 : L ? !!L[s.id] : (!f || s.area===f || s.zone==='eng' || (!s.area && d.connections.some(c=>(c.from===s.id && by[c.to] && by[c.to].area===f) || (c.to===s.id && by[c.from] && by[c.from].area===f))));
     n.classList.toggle('dim', !on); n.classList.toggle('sel', s.id===P.sel); n.classList.toggle('lit', !!(Q && on)); });
   P.edges.forEach(e=>{ const a=by[e.c.from], b=by[e.c.to]; const on= Q ? false : focus ? (e.c.from===focus || e.c.to===focus) : (!f || a.area===f || b.area===f);
-    e.el.classList.toggle('dim', !on); e.el.classList.toggle('hot', !!focus && on); if(e.p) e.p.classList.toggle('dim', !on); e.lb.classList.toggle('on', !!P.sel && !P.hover && on && !Q); }); }
+    e.el.classList.toggle('dim', !on); e.el.classList.toggle('hot', !!focus && on); if(e.p) e.p.dim=!on; e.lb.classList.toggle('on', !!P.sel && !P.hover && on && !Q); }); }
 /* any row or card tied to a system: select it to light that system up on the map and open its details */
 function goTo(el, id, d, hintHost){ if(!id || !d.systems.some(x=>x.id===id)) return; const nm=d.systems.find(x=>x.id===id).name;
   el.classList.add('cs-go'); el.tabIndex=0; el.setAttribute('role','button'); el.setAttribute('aria-label', (el.textContent||'').trim().slice(0,80)+' — show '+nm+' on the map');
