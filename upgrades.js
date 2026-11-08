@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261108u';
+var BUILD='20261108w';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -5053,6 +5053,16 @@ html[data-theme="dark"] .cs-cv-det .bk:not(.sys) small{color:#5fd29a}
 .cs-rqg .rq .due{background:color-mix(in srgb,#e0a83c 20%,transparent);color:#9a6510}.cs-rqg .rq .aws{background:color-mix(in srgb,#74bfeb 20%,transparent);color:var(--cs-hot)}.cs-rqg .rq .lat{background:var(--surface-2);color:var(--ink-3)}
 .cs-rqg .rq .dt{grid-column:2/-1;padding:4px 0 8px;display:grid;gap:6px}.cs-rqg .rq .dt small{font-size:11.5px;color:var(--ink-3)}
 .cs-rqg .rq.open{background:var(--surface-2);padding:6px 8px;margin:2px -8px}
+.cs-rsum2 .cs-lks .l.ok b{color:#2b8a3e}
+.cs-dsw{padding:4px 14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));column-gap:24px;margin-bottom:10px}
+.cs-dsw .w{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:start;padding:10px 0;border-bottom:1px solid color-mix(in srgb,var(--border) 60%,transparent)}
+.cs-dsw .w .n{font-size:22px;font-weight:800;line-height:1;min-width:34px;height:34px;display:grid;place-items:center;border-radius:8px;background:color-mix(in srgb,#2b8a3e 14%,var(--surface));color:#2b8a3e}
+.cs-dsw .w p{margin:0 0 5px;font-size:13.5px;font-weight:700;line-height:1.35}.cs-dsw .w .tgs{display:flex;flex-wrap:wrap;gap:4px 12px}.cs-dsw .w .dt{font-size:11.5px;color:var(--ink-3);white-space:nowrap;padding-top:2px}
+.cs-dsg{break-inside:avoid;padding:8px 14px 10px;border-bottom:1px solid color-mix(in srgb,var(--border) 70%,transparent)}
+.cs-dsg .gh{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}.cs-dsg .gh .cs-rtag{font-size:12.5px;font-weight:800;color:var(--ink);text-transform:uppercase;letter-spacing:.04em}
+.cs-dsg .gh em{font-style:normal;font-size:11.5px;font-weight:800;min-width:22px;text-align:center;padding:1px 6px;border-radius:5px;background:color-mix(in srgb,#2b8a3e 14%,var(--surface));color:#2b8a3e}
+.cs-dsg .it{display:grid;grid-template-columns:44px minmax(0,1fr);gap:8px;padding:3px 0;font-size:12.5px;line-height:1.35}.cs-dsg .it .dt{color:var(--ink-3);font-size:11.5px;padding-top:1px;white-space:nowrap}
+.cs-dsg .cs-mini2{margin-top:4px}
 @media(max-width:900px){.cs-rqbox{column-count:1}}
 .cs-ri.none{display:block;font-size:13px;color:var(--ink-3)}.cs-ri .asked{font-size:11.5px;color:var(--ink-3)}.cs-rqd{display:grid;gap:6px;margin-top:4px;font-size:12.5px;line-height:1.5;color:var(--ink-2)}.cs-rqd p{margin:0}.cs-rqd ul{margin:0;padding-left:18px;display:grid;gap:3px}.cs-rqd b{color:var(--ink);font-weight:700}
 .cs-ri .due{font-size:11px;font-weight:700;padding:1px 6px;border-radius:4px;background:color-mix(in srgb,#e0a83c 20%,transparent);color:#9a6510}
@@ -5280,6 +5290,7 @@ function paintTodos(d){ const wrap=P.rsWrap; if(!wrap) return; wrap.textContent=
   const jump=sel=>{ requestAnimationFrame(()=>{ const t=wrap.querySelector(sel); if(t) t.scrollIntoView({block:'start', behavior:reduce()?'auto':'smooth'}); }); };
   lanesAll.forEach(l=>{ const n=rest.filter(x=>!x.it.done && laneOf(x.it.who)===l).length+(l==='Perry'?rqOpen:0); const r=btn('l'+(l==='You'?' you':'')+(P.rsLane===l?' on':''),null,()=>{ P.rsLane=P.rsLane===l?null:l; paintTodos(M.data); jump(P.rsLane==='Perry' && rqOpen ? '.cs-rqsec' : '.cs-opennow'); }); r.setAttribute('aria-pressed',String(P.rsLane===l)); r.title=P.rsLane===l?'Show everyone':'Show only '+lname(l); r.appendChild(h('b',null,String(n))); r.appendChild(h('span',null,lname(l))); lk.appendChild(r); });
   const sn=safe.filter(x=>!x.it.done).length; if(sn){ const r=btn('l',null,()=>jump('.cs-snsec')); r.title='Go to Safety Nets'; r.appendChild(h('b',null,String(sn))); r.appendChild(h('span',null,'Safety nets to build')); lk.appendChild(r); }
+  const DS=doneSoFar(d, all, by); if(DS.length){ const r=btn('l ok',null,()=>jump('.cs-dssec')); r.title='Go to Done So Far'; r.appendChild(h('b',null,String(DS.length))); r.appendChild(h('span',null,'Done so far')); lk.appendChild(r); }
   lk.style.setProperty('--n', lk.children.length); lk.style.setProperty('--n2', Math.ceil(lk.children.length/2)); sm.appendChild(lk); wrap.appendChild(sm);
   const tag=sy=>{ const t=btn('cs-rtag',null,()=>select(sy.id,true)); t.style.setProperty('--pc',colorOf(d,sy)); t.textContent=sy.name; t.title='Show '+sy.name+' on the map'; return t; };
   const check=(x)=>{ const ck=btn('cs-ck'+(x.it.done?' on':'')); ck.innerHTML='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'; ck.setAttribute('aria-label',(x.it.done?'Mark not done: ':'Mark done: ')+x.it.t); ck.setAttribute('aria-pressed', String(!!x.it.done)); if(ed) ck.addEventListener('click', ()=>toggleTodo(x.sys, x.it.id)); else { ck.disabled=true; ck.title='Jonna checks these off'; } return ck; };
@@ -5307,6 +5318,7 @@ function paintTodos(d){ const wrap=P.rsWrap; if(!wrap) return; wrap.textContent=
           if(!x){ c=h('span','c ok'); c.title=z[1]+': in place'; c.innerHTML='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'; }
           else { c=btn('c'+(x.it.done?' ok':' todo')); c.innerHTML='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'; c.title=x.it.t+(x.it.done?' (done)':'')+(ed?' — select to '+(x.it.done?'reopen':'check off'):''); c.setAttribute('aria-label', sy.name+': '+x.it.t+(x.it.done?', done':', open')); if(ed) c.addEventListener('click', ()=>toggleTodo(x.sys, x.it.id)); else c.disabled=true; }
           r.appendChild(c); }); tb.appendChild(r); }); mx.appendChild(tb); }); sf.appendChild(mx); wrap.appendChild(sf); }
+  doneSection(d, wrap, by, tag, DS, R);
   /* coming up later: a timeline, not counted until it's close */
   if(later.length){ const lt=h('div','cs-rsec'); const sh3=h('div','cs-rsh'); sh3.appendChild(h('h3',null,'Coming Up Later')); const ds=later.map(x=>dueOf(x.it)).sort((a,b)=>a-b); const fmt=x=>x.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
     sh3.appendChild(h('span',null, later.length+' items between '+fmt(ds[0])+' and '+fmt(ds[ds.length-1])+'. Each one moves into Open Now '+LATER_DAYS+' days before its date.')); lt.appendChild(sh3);
@@ -5314,6 +5326,29 @@ function paintTodos(d){ const wrap=P.rsWrap; if(!wrap) return; wrap.textContent=
         const tx=h('div'); tx.appendChild(tag(sy)); tx.appendChild(h('span','t', x.it.t.replace(/ before [A-Z][a-z]+ \d{1,2}, \d{4}/,''))); it.appendChild(tx); it.title=x.it.d||x.it.t; ul.appendChild(it); });
     tlc.appendChild(ul); lt.appendChild(tlc); wrap.appendChild(lt); }
 }
+/* Done So Far: what each system has already finished on its way to rock solid. Three sources, newest first:
+   the record's progress list (from each system's GitHub history), items checked off here, and Perry's finished requests. */
+function doneSoFar(d, all, by){ const out=[]; const day=x=>{ const t=new Date(x); return isNaN(t) ? null : t; };
+  (Array.isArray(d.progress) ? d.progress : []).forEach(p=>{ if(by[p.sys] && p.t) out.push({sys:p.sys, t:p.t, on:day(p.on+'T12:00:00'), src:p.src||'', id:p.id}); });
+  const past=t=>t.replace(/^(Add|Start|Write|Turn on|Confirm|Move|Correct|Fill out|Check|Set up|Build|Switch|Update|Remove|Ask|Make|Send|Get|Put|Give|Fix)\b/, w=>({Add:'Added',Start:'Started',Write:'Wrote','Turn on':'Turned on',Confirm:'Confirmed',Move:'Moved',Correct:'Corrected','Fill out':'Filled out',Check:'Checked','Set up':'Set up',Build:'Built',Switch:'Switched',Update:'Updated',Remove:'Removed',Ask:'Asked',Make:'Made',Send:'Sent',Get:'Got',Put:'Put',Give:'Gave',Fix:'Fixed'})[w]);
+  all.filter(x=>x.it.done).forEach(x=>out.push({sys:x.sys, t:past(x.it.t), on:x.it.at?day(x.it.at):null, src:'Checked off here', id:x.it.id}));
+  ((M.req && M.req.items) || []).filter(x=>x.done && by[x.sys]).forEach(x=>out.push({sys:x.sys, t:x.t, on:x.doneOn?day(x.doneOn+'T12:00:00'):null, src:'Request for Perry', id:x.id}));
+  return out.sort((a,b)=>(b.on||0)-(a.on||0)); }
+function doneSection(d, wrap, by, tag, DS, R){ if(!DS.length) return; const fmt=x=>x ? x.toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+  const sec=h('div','cs-rsec cs-dssec'); const sh=h('div','cs-rsh'); sh.appendChild(h('h3',null,'Done So Far'));
+  const sys=[...new Set(DS.map(x=>x.sys))]; const first=DS.map(x=>x.on).filter(Boolean).sort((a,b)=>a-b)[0];
+  sh.appendChild(h('span',null, DS.length+' finished across '+sys.length+' systems'+(first?' since '+first.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'')+', from each system’s GitHub history and what’s been checked off here.')); sec.appendChild(sh);
+  /* the same fix made in several systems shows once, across the top */
+  const byT={}; DS.forEach(x=>{ (byT[x.t]=byT[x.t]||[]).push(x); }); const shared=Object.keys(byT).filter(t=>new Set(byT[t].map(x=>x.sys)).size>=3); const isShared=new Set(shared);
+  if(shared.length){ const sw=h('div','cs-card cs-dsw'); shared.forEach(t=>{ const L=byT[t]; const r=h('div','w'); const n=h('b','n',String(new Set(L.map(x=>x.sys)).size)); r.appendChild(n); const tx=h('div','tx'); tx.appendChild(h('p',null,t)); const tg=h('div','tgs'); [...new Set(L.map(x=>x.sys))].sort((a,b)=>R(a)-R(b)).forEach(s=>tg.appendChild(tag(by[s]))); tx.appendChild(tg); r.appendChild(tx); const ds=L.map(x=>x.on).filter(Boolean).sort((a,b)=>a-b); if(ds.length) r.appendChild(h('span','dt',fmt(ds[0])+(fmt(ds[ds.length-1])!==fmt(ds[0])?' – '+fmt(ds[ds.length-1]):''))); sw.appendChild(r); }); sec.appendChild(sw); }
+  /* then each system's own list, the systems with the most done first, newest first inside */
+  const G={}; DS.filter(x=>!isShared.has(x.t)).forEach(x=>{ (G[x.sys]=G[x.sys]||[]).push(x); }); const P0=P.dsOpen=P.dsOpen||{}; const CAP=5;
+  const box=h('div','cs-card cs-cols3 cs-dsl'); Object.keys(G).sort((a,b)=>G[b].length-G[a].length || R(a)-R(b)).forEach(sid=>{ const sy=by[sid], L=G[sid]; const g=h('div','cs-dsg'); g.style.setProperty('--pc',colorOf(d,sy));
+    const gh=h('div','gh'); gh.appendChild(tag(sy)); gh.appendChild(h('em',null,String(L.length))); g.appendChild(gh);
+    (P0[sid] ? L : L.slice(0,CAP)).forEach(x=>{ const r=h('div','it'); r.appendChild(h('span','dt',fmt(x.on))); const t=h('span','t',x.t); if(x.src) t.title=x.src; r.appendChild(t); g.appendChild(r); });
+    if(L.length>CAP) g.appendChild(btn('cs-mini2', P0[sid] ? 'Show fewer' : '+'+(L.length-CAP)+' more', ()=>{ P0[sid]=!P0[sid]; paintTodos(M.data); }));
+    box.appendChild(g); });
+  if(box.children.length) sec.appendChild(box); wrap.appendChild(sec); }
 /* Requests for Perry: the save relay and AWS. Kept in their own record (systemsmap / requests) so Perry can check them off;
    systems ask for them in the MISMO Connections Map's "Requests for Perry" table, and a refresh brings new rows in. */
 const RQA={relay:'Save relay', aws:'AWS'};
