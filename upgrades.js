@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261108q';
+var BUILD='20261108r';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -5025,6 +5025,23 @@ html[data-theme="dark"] .cs-cv-det .bk:not(.sys) small{color:#5fd29a}
 .cs-lh{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 9px;background:var(--surface-2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
 .cs-grp:first-child .cs-lh{border-top:0}.cs-lh b{font-size:13.5px}.cs-lh em{font-style:normal;font-size:12px;font-weight:800;min-width:24px;text-align:center;padding:2px 7px;border-radius:5px;background:var(--surface);color:var(--ink-2)}
 .cs-lh.you{background:var(--navy,#0d314c);border-color:var(--navy,#0d314c)}.cs-lh.you b{color:#fff}.cs-lh.you em{background:rgba(255,255,255,.16);color:#fff}
+.cs-rsum2 .cs-lks .l{font:inherit;text-align:left;cursor:pointer;color:inherit;transition:border-color .15s,box-shadow .15s,transform .15s}.cs-rsum2 .cs-lks .l:hover{border-color:var(--cs-sky);transform:translateY(-1px)}
+.cs-rsum2 .cs-lks .l.on{box-shadow:inset 0 0 0 2px var(--cs-sky);border-color:var(--cs-sky)}.cs-rsum2 .cs-lks .l.you.on{box-shadow:inset 0 0 0 2px #74bfeb}
+.cs-fil{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;color:var(--ink-2)}.cs-none2{padding:14px 16px;font-size:13px;color:var(--ink-3)}
+.cs-rqsum{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12.5px;color:var(--ink-2)}.cs-rqsum b{font-size:15px;color:var(--ink)}
+.cs-rqbox{column-count:2;column-gap:0;column-rule:1px solid var(--border);padding:4px 0}
+.cs-rqg{break-inside:avoid;padding:8px 14px 10px;border-bottom:1px solid color-mix(in srgb,var(--border) 70%,transparent)}
+.cs-rqg .gh{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}.cs-rqg .gh .cs-rtag{font-size:12.5px;font-weight:800;color:var(--ink);text-transform:uppercase;letter-spacing:.04em}
+.cs-rqg .gh em{font-style:normal;font-size:11.5px;font-weight:800;min-width:22px;text-align:center;padding:1px 6px;border-radius:5px;background:var(--surface-2);color:var(--ink-2)}
+.cs-rqg .rq{display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:8px;align-items:center;padding:4px 0;border-radius:6px}
+.cs-rqg .rq .cs-ck{width:18px;height:18px;border-radius:5px}.cs-rqg .rq .cs-ck svg{width:12px;height:12px}
+.cs-rqg .rq .cs-tt{font-size:13px;font-weight:500;line-height:1.35}.cs-rqg .rq .cs-tt:hover{color:var(--cs-hot);text-decoration:underline}
+.cs-rqg .rq.open .cs-tt{font-weight:700}.cs-rqg .rq.done .cs-tt{color:var(--ink-3);text-decoration:line-through}
+.cs-rqg .rq .tgs{display:flex;gap:4px}.cs-rqg .rq .tgs span{font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:4px;white-space:nowrap}
+.cs-rqg .rq .due{background:color-mix(in srgb,#e0a83c 20%,transparent);color:#9a6510}.cs-rqg .rq .aws{background:color-mix(in srgb,#74bfeb 20%,transparent);color:var(--cs-hot)}.cs-rqg .rq .lat{background:var(--surface-2);color:var(--ink-3)}
+.cs-rqg .rq .dt{grid-column:2/-1;padding:4px 0 8px;display:grid;gap:6px}.cs-rqg .rq .dt small{font-size:11.5px;color:var(--ink-3)}
+.cs-rqg .rq.open{background:var(--surface-2);padding:6px 8px;margin:2px -8px}
+@media(max-width:900px){.cs-rqbox{column-count:1}}
 .cs-ri.none{display:block;font-size:13px;color:var(--ink-3)}.cs-ri .asked{font-size:11.5px;color:var(--ink-3)}.cs-rqd{display:grid;gap:6px;margin-top:4px;font-size:12.5px;line-height:1.5;color:var(--ink-2)}.cs-rqd p{margin:0}.cs-rqd ul{margin:0;padding-left:18px;display:grid;gap:3px}.cs-rqd b{color:var(--ink);font-weight:700}
 .cs-ri .due{font-size:11px;font-weight:700;padding:1px 6px;border-radius:4px;background:color-mix(in srgb,#e0a83c 20%,transparent);color:#9a6510}
 .cs-rqf{display:grid;grid-template-columns:140px 200px minmax(0,1fr) minmax(0,1fr) auto;gap:10px;align-items:end;padding:12px 14px}
@@ -5237,15 +5254,19 @@ function paintTodos(d){ const wrap=P.rsWrap; if(!wrap) return; wrap.textContent=
   st.appendChild(h('p',null, doneN+' done · '+later.length+' scheduled for later, not counted yet')); sm.appendChild(st);
   const lanesAll=[...new Set(rest.filter(x=>!x.it.done).map(x=>laneOf(x.it.who)))]; const LORD=['You','Perry','MBA IT and Higher Logic','claude','Website Claude']; lanesAll.sort((a,b)=>((LORD.indexOf(a)+1)||9)-((LORD.indexOf(b)+1)||9));
   const lk=h('div','cs-lks'); const lname=l=>l==='claude' ? 'Each system’s Claude' : l==='You' ? 'Waiting on you' : l;
-  lanesAll.forEach(l=>{ const n=rest.filter(x=>!x.it.done && laneOf(x.it.who)===l).length; const r=h('div','l'+(l==='You'?' you':'')); r.appendChild(h('b',null,String(n))); r.appendChild(h('span',null,lname(l))); lk.appendChild(r); });
-  const sn=safe.filter(x=>!x.it.done).length; if(sn){ const r=h('div','l'); r.appendChild(h('b',null,String(sn))); r.appendChild(h('span',null,'Safety nets to build')); lk.appendChild(r); }
+  /* each tile filters Open Now to that lane; select it again for everyone. Perry's tile also counts his relay and AWS requests */
+  const rqOpen=(M.req && Array.isArray(M.req.items)) ? M.req.items.filter(x=>!x.done).length : 0; if(rqOpen && lanesAll.indexOf('Perry')<0) lanesAll.splice(Math.min(1,lanesAll.length),0,'Perry');
+  const jump=sel=>{ requestAnimationFrame(()=>{ const t=wrap.querySelector(sel); if(t) t.scrollIntoView({block:'start', behavior:reduce()?'auto':'smooth'}); }); };
+  lanesAll.forEach(l=>{ const n=rest.filter(x=>!x.it.done && laneOf(x.it.who)===l).length+(l==='Perry'?rqOpen:0); const r=btn('l'+(l==='You'?' you':'')+(P.rsLane===l?' on':''),null,()=>{ P.rsLane=P.rsLane===l?null:l; paintTodos(M.data); jump(P.rsLane==='Perry' && rqOpen ? '.cs-rqsec' : '.cs-opennow'); }); r.setAttribute('aria-pressed',String(P.rsLane===l)); r.title=P.rsLane===l?'Show everyone':'Show only '+lname(l); r.appendChild(h('b',null,String(n))); r.appendChild(h('span',null,lname(l))); lk.appendChild(r); });
+  const sn=safe.filter(x=>!x.it.done).length; if(sn){ const r=btn('l',null,()=>jump('.cs-snsec')); r.title='Go to Safety Nets'; r.appendChild(h('b',null,String(sn))); r.appendChild(h('span',null,'Safety nets to build')); lk.appendChild(r); }
   lk.style.setProperty('--n', lk.children.length); lk.style.setProperty('--n2', Math.ceil(lk.children.length/2)); sm.appendChild(lk); wrap.appendChild(sm);
   const tag=sy=>{ const t=btn('cs-rtag',null,()=>select(sy.id,true)); t.style.setProperty('--pc',colorOf(d,sy)); t.textContent=sy.name; t.title='Show '+sy.name+' on the map'; return t; };
   const check=(x)=>{ const ck=btn('cs-ck'+(x.it.done?' on':'')); ck.innerHTML='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'; ck.setAttribute('aria-label',(x.it.done?'Mark not done: ':'Mark done: ')+x.it.t); ck.setAttribute('aria-pressed', String(!!x.it.done)); if(ed) ck.addEventListener('click', ()=>toggleTodo(x.sys, x.it.id)); else { ck.disabled=true; ck.title='Jonna checks these off'; } return ck; };
   /* open now, by who it waits on, packed into three even columns */
-  const showDone=!!P.rsDone; const sec=h('div','cs-rsec'); const sh=h('div','cs-rsh'); sh.appendChild(h('h3',null,'Open Now')); sh.appendChild(h('span',null,'By who it’s waiting on. Select an item for the details.'));
+  const showDone=!!P.rsDone; const sec=h('div','cs-rsec cs-opennow'); const sh=h('div','cs-rsh'); sh.appendChild(h('h3',null,'Open Now')); sh.appendChild(h('span',null,'By who it’s waiting on. Select an item for the details.'));
   const tg=btn('cs-mini2', showDone ? 'Hide finished' : 'Show finished ('+rest.filter(x=>x.it.done).length+')', ()=>{ P.rsDone=!P.rsDone; paintTodos(M.data); }); sh.appendChild(tg); sec.appendChild(sh);
-  const lanes=[...new Set(rest.filter(x=>showDone || !x.it.done).map(x=>laneOf(x.it.who)))].sort((a,b)=>((LORD.indexOf(a)+1)||9)-((LORD.indexOf(b)+1)||9));
+  if(P.rsLane){ const f=h('div','cs-fil'); f.append('Showing only '+lname(P.rsLane)+' '); f.appendChild(btn('cs-mini2','Show everyone', ()=>{ P.rsLane=null; paintTodos(M.data); })); sec.appendChild(f); }
+  const lanes=[...new Set(rest.filter(x=>showDone || !x.it.done).map(x=>laneOf(x.it.who)))].filter(l=>!P.rsLane || l===P.rsLane).sort((a,b)=>((LORD.indexOf(a)+1)||9)-((LORD.indexOf(b)+1)||9));
   /* one card, three newspaper columns: the browser balances them, so the columns always end level */
   const box=h('div','cs-card cs-cols3');
   lanes.forEach(l=>{ const L=rest.filter(x=>(showDone||!x.it.done) && laneOf(x.it.who)===l).sort((a,b)=>(a.it.done?1:0)-(b.it.done?1:0) || R(a.sys)-R(b.sys));
@@ -5256,10 +5277,10 @@ function paintTodos(d){ const wrap=P.rsWrap; if(!wrap) return; wrap.textContent=
       if(P.rsItem===it.id){ if(it.d) tx.appendChild(h('p',null,it.d)); if(it.src) tx.appendChild(h('small',null,'From: '+it.src)); if(it.done && it.at) tx.appendChild(h('small',null,'Done '+new Date(it.at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+(it.by?' by '+it.by.replace(/^./,c=>c.toUpperCase()):''))); }
       row.appendChild(tx);
       if(k===0){ const g=h('div','cs-grp'); g.appendChild(lh); g.appendChild(row); box.appendChild(g); } else box.appendChild(row); }); });
-  sec.appendChild(box); wrap.appendChild(sec);
+  if(box.children.length) sec.appendChild(box); else sec.appendChild(h('div','cs-card cs-none2','Nothing open here.')); wrap.appendChild(sec);
   reqSection(d, wrap, by, tag);
   /* the four safety nets, one row per system */
-  const ss=[...new Set(safe.map(x=>x.sys))].sort((a,b)=>R(a)-R(b)); if(ss.length){ const sf=h('div','cs-rsec'); const sh2=h('div','cs-rsh'); sh2.appendChild(h('h3',null,'Safety Nets')); sh2.appendChild(h('span',null,'Every system gets a how-it-works guide, automatic tests, automatic publishing and a change log, built by its Claude. A filled square is done.')); sf.appendChild(sh2);
+  const ss=[...new Set(safe.map(x=>x.sys))].sort((a,b)=>R(a)-R(b)); if(ss.length){ const sf=h('div','cs-rsec cs-snsec'); const sh2=h('div','cs-rsh'); sh2.appendChild(h('h3',null,'Safety Nets')); sh2.appendChild(h('span',null,'Every system gets a how-it-works guide, automatic tests, automatic publishing and a change log, built by its Claude. A filled square is done.')); sf.appendChild(sh2);
     const mx=h('div','cs-card cs-sn'); const half=Math.ceil(ss.length/2); [ss.slice(0,half), ss.slice(half)].forEach(part=>{ if(!part.length) return; const tb=h('div','tb'); const hr=h('div','hr'); hr.appendChild(h('span',null,'')); SAFE.forEach(z=>hr.appendChild(h('span',null,z[1]))); tb.appendChild(hr);
       part.forEach(id=>{ const sy=by[id]; const r=h('div','r'); r.appendChild(tag(sy)); SAFE.forEach(z=>{ const x=safe.find(q=>q.sys===id && safeK(q.it)===z[0]); let c;
           if(!x){ c=h('span','c ok'); c.title=z[1]+': in place'; c.innerHTML='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'; }
@@ -5283,7 +5304,7 @@ function rqDetail(t){ const w=h('div','cs-rqd'); let ul=null; String(t).split(/\
     const put=(el,txt)=>{ const m=/^([A-Z][A-Za-z ’'/&-]{1,28}):\s(.*)$/.exec(txt); if(m){ el.appendChild(h('b',null,m[1]+': ')); el.append(m[2]); } else el.textContent=txt; return el; };
     if(/^- /.test(L)){ if(!ul){ ul=h('ul'); w.appendChild(ul); } const li=h('li'); li.textContent=L.slice(2); ul.appendChild(li); } else { ul=null; w.appendChild(put(h('p'), L)); } }); return w; }
 function reqSection(d, wrap, by, tag){ const Q=(M.req && Array.isArray(M.req.items)) ? M.req.items : []; const can=canReq(); if(!Q.length && !can) return;
-  const sec=h('div','cs-rsec'); const sh=h('div','cs-rsh'); sh.appendChild(h('h3',null,'Requests for Perry: Save Relay and AWS'));
+  const sec=h('div','cs-rsec cs-rqsec'); const sh=h('div','cs-rsh'); sh.appendChild(h('h3',null,'Requests for Perry: Save Relay and AWS'));
   sh.appendChild(h('span',null,'What each system needs from the save relay or MISMO’s AWS account. Perry checks them off here; a system asks for one in the MISMO Connections Map.'));
   const showDone=!!P.rqDone, nd=Q.filter(x=>x.done).length; if(nd) sh.appendChild(btn('cs-mini2', showDone ? 'Hide finished' : 'Show finished ('+nd+')', ()=>{ P.rqDone=!P.rqDone; paintTodos(M.data); }));
   if(can) sh.appendChild(btn('cs-mini2', P.rqAdd ? 'Cancel' : '+ Add a Request', ()=>{ P.rqAdd=!P.rqAdd; paintTodos(M.data); })); sec.appendChild(sh);
@@ -5291,16 +5312,21 @@ function reqSection(d, wrap, by, tag){ const Q=(M.req && Array.isArray(M.req.ite
     const t=h('input'); t.placeholder='What’s needed'; t.maxLength=140; const dd=h('input'); dd.placeholder='Why, or any details (optional)'; dd.maxLength=400;
     const lab=(l,el)=>{ const w=h('label'); w.appendChild(h('span',null,l)); w.appendChild(el); return w; }; f.appendChild(lab('For',ar)); f.appendChild(lab('System',sy)); f.appendChild(lab('Request',t)); f.appendChild(lab('Details',dd));
     f.appendChild(btn('cs-btn pri','Add', ()=>{ const tt=t.value.trim(); if(!tt){ t.focus(); return; } const nx=clone(M.req||{items:[]}); nx.items=nx.items||[]; nx.items.push({id:'rq'+Date.now().toString(36), area:ar.value, sys:sy.value, t:tt, d:dd.value.trim(), by:me(), on:todayISO()}); P.rqAdd=false; saveReq(nx,'Request added for Perry'); })); sec.appendChild(f); setTimeout(()=>t.focus(),0); }
-  const box=h('div','cs-card cs-cols2'); const fmt=iso=>iso ? longDate(iso) : '';
-  Object.keys(RQA).forEach(k=>{ const L=Q.filter(x=>x.area===k && (showDone || !x.done)).sort((a,b)=>(a.done?1:0)-(b.done?1:0) || (a.later?1:0)-(b.later?1:0) || String(a.due||'9').localeCompare(String(b.due||'9'))); const lh=h('div','cs-lh'); lh.appendChild(h('b',null,RQA[k])); lh.appendChild(h('em',null,String(L.filter(x=>!x.done).length)));
-    if(!L.length){ const g=h('div','cs-grp'); g.appendChild(lh); g.appendChild(h('div','cs-ri none','Nothing open.')); box.appendChild(g); return; }
-    L.forEach((x,i)=>{ const sy=by[x.sys]; const row=h('div','cs-ri'+(x.done?' done':'')+(P.rsItem===x.id?' open':'')); row.style.setProperty('--pc', sy ? colorOf(d,sy) : '#7f98ad');
+  const fmt=iso=>iso ? longDate(iso) : '', sfmt=iso=>{ const x=new Date(iso+'T12:00'); return isNaN(x) ? iso : x.toLocaleDateString('en-US',{month:'short',day:'numeric'}); };
+  const L0=Q.filter(x=>showDone || !x.done); const open=Q.filter(x=>!x.done), dated=open.filter(x=>x.due).sort((a,b)=>a.due.localeCompare(b.due));
+  const sum=h('div','cs-rqsum'); [[open.length,'open'],[open.filter(x=>x.area==='relay').length,'save relay'],[open.filter(x=>x.area==='aws').length,'AWS'],[dated.length,'with a date'+(dated.length?', first '+sfmt(dated[0].due):'')]].forEach(([n,t])=>{ const k=h('span'); k.appendChild(h('b',null,String(n))); k.append(' '+t); sum.appendChild(k); }); sec.appendChild(sum);
+  /* one group per system, the most urgent first; each request is one line, details on click */
+  const G={}; L0.forEach(x=>{ (G[x.sys]=G[x.sys]||[]).push(x); }); const key=L=>{ const o=L.filter(x=>!x.done); const dd=o.filter(x=>x.due).map(x=>x.due).sort()[0]; return (dd||'9999')+'|'+String(100-o.length).padStart(3,'0'); };
+  const box=h('div','cs-card cs-rqbox');
+  Object.keys(G).sort((a,b)=>key(G[a]).localeCompare(key(G[b]))).forEach(sid=>{ const sy=by[sid]; const L=G[sid].sort((a,b)=>(a.done?1:0)-(b.done?1:0) || (a.later?1:0)-(b.later?1:0) || String(a.due||'9').localeCompare(String(b.due||'9')));
+    const g=h('div','cs-rqg'); g.style.setProperty('--pc', sy ? colorOf(d,sy) : '#7f98ad'); const gh=h('div','gh'); gh.appendChild(sy ? tag(sy) : h('b',null,sid)); gh.appendChild(h('em',null,String(L.filter(x=>!x.done).length))); g.appendChild(gh);
+    L.forEach(x=>{ const row=h('div','rq'+(x.done?' done':'')+(P.rsItem===x.id?' open':''));
       const ck=btn('cs-ck'+(x.done?' on':'')); ck.innerHTML='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'; ck.setAttribute('aria-label',(x.done?'Mark not done: ':'Mark done: ')+x.t); ck.setAttribute('aria-pressed', String(!!x.done));
       if(can) ck.addEventListener('click', ()=>{ const nx=clone(M.req); const it=nx.items.find(z=>z.id===x.id); it.done=!it.done; if(it.done){ it.doneOn=todayISO(); it.doneBy=me(); } else { delete it.doneOn; delete it.doneBy; } saveReq(nx, (it.done?'Done: ':'Back on the list: ')+it.t); }); else { ck.disabled=true; ck.title='Perry or Jonna checks these off'; }
-      row.appendChild(ck); const tx=h('div','tx'); const tt=btn('cs-tt', x.t); tt.addEventListener('click', ()=>{ P.rsItem=P.rsItem===x.id?null:x.id; paintTodos(M.data); }); tx.appendChild(tt);
-      const mt=h('div','mt'); if(sy) mt.appendChild(tag(sy)); if(x.due && !x.done) mt.appendChild(h('span','due','Needed by '+fmt(x.due))); if(x.later && !x.done) mt.appendChild(h('span','asked','Later, no rush')); if(x.on) mt.appendChild(h('span','asked','Asked '+fmt(x.on)+(x.from?' by '+x.from:''))); tx.appendChild(mt);
-      if(P.rsItem===x.id){ if(x.d) tx.appendChild(rqDetail(x.d)); if(x.done && x.doneOn) tx.appendChild(h('small',null,'Done '+fmt(x.doneOn)+(x.doneBy?' by '+x.doneBy.replace(/^./,c=>c.toUpperCase()):''))); }
-      row.appendChild(tx); if(i===0){ const g=h('div','cs-grp'); g.appendChild(lh); g.appendChild(row); box.appendChild(g); } else box.appendChild(row); }); });
+      row.appendChild(ck); const tt=btn('cs-tt', x.t); tt.setAttribute('aria-expanded', String(P.rsItem===x.id)); tt.addEventListener('click', ()=>{ P.rsItem=P.rsItem===x.id?null:x.id; paintTodos(M.data); }); row.appendChild(tt);
+      const tg=h('span','tgs'); if(x.area==='aws') tg.appendChild(h('span','aws','AWS')); if(x.due && !x.done) tg.appendChild(h('span','due','By '+sfmt(x.due))); else if(x.later && !x.done) tg.appendChild(h('span','lat','Later')); row.appendChild(tg);
+      if(P.rsItem===x.id){ const dt=h('div','dt'); if(x.d) dt.appendChild(rqDetail(x.d)); dt.appendChild(h('small',null,(x.on?'Asked '+fmt(x.on)+(x.from?' by '+x.from:''):'')+(x.done && x.doneOn ? ' · Done '+fmt(x.doneOn)+(x.doneBy?' by '+x.doneBy.replace(/^./,c=>c.toUpperCase()):''):''))); row.appendChild(dt); }
+      g.appendChild(row); }); box.appendChild(g); });
   sec.appendChild(box); wrap.appendChild(sec); }
 function toggleTodo(sys, id){ const d=M.data; const nd=clone(d); const g=nd.todos.find(x=>x.sys===sys); const it=g && g.items.find(x=>x.id===id); if(!it) return;
   it.done=!it.done; if(it.done){ it.at=Date.now(); it.by=me(); } else { delete it.at; delete it.by; }
