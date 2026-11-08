@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261107zq';
+var BUILD='20261107zr';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4743,9 +4743,10 @@ html[data-theme="dark"] .cs .cs-ph .cs-build{color:#456179}
 .cs-cf{display:block;margin-top:6px;font-size:12.5px;color:var(--warn,#a2701a);background:color-mix(in srgb,var(--warn,#a2701a) 10%,transparent);border-radius:8px;padding:6px 8px}
 /* start-here panel */
 .cs-start{padding:18px;display:grid;gap:14px}
+.cs-krow{display:flex;align-items:baseline;justify-content:space-between;gap:10px}.cs-all{font:inherit;font-size:12.5px;font-weight:700;color:var(--cs-hot);background:none;border:0;padding:0;cursor:pointer;white-space:nowrap}.cs-all:hover{text-decoration:underline}
 .cs-start h3{font-size:19px;font-weight:800}
 .cs-start p{margin:0;color:var(--ink-2);font-size:13.5px}
-.cs-jbtn{display:flex;align-items:center;gap:10px;width:100%;text-align:left;font:inherit;color:inherit;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:9px 12px;cursor:pointer;transition:all .15s}
+.cs-jbtn{display:flex;align-items:center;gap:10px;width:100%;text-align:left;font:inherit;color:inherit;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:9px 12px;cursor:pointer;transition:border-color .15s,transform .15s}
 .cs-jbtn:hover,.cs-jbtn:focus-visible{border-color:var(--cs-sky);transform:translateY(-1px)}
 .cs-jbtn .pl{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--navy,#0d314c);color:#fff}
 .cs-jbtn .pl svg{width:12px;height:12px;fill:#fff;margin-left:2px}
@@ -5248,16 +5249,20 @@ function intro(p, d){ const w=h('div','cs-start'); p.appendChild(w);
   if(P.edit){ w.appendChild(h('div','cs-k','Edit mode')); w.appendChild(h('h3',null,'Change the Map')); w.appendChild(h('p',null,'Select a system to change its status or details, or to add, change or set aside its connections. Drag a box to move it. Every save updates the “as of” date.'));
     const n=confirms(d); if(n) w.appendChild(h('span','cs-cf', n+' item'+(n>1?'s':'')+' still to confirm, marked with an amber dot. They’re only marked here, not for everyone else.'));
     return; }
-  w.appendChild(h('div','cs-k','Start here')); w.appendChild(h('h3',null,'Pick a System, or Follow the Work'));
+  const kr=h('div','cs-krow'); kr.appendChild(h('div','cs-k','Start here')); w.appendChild(kr); w.appendChild(h('h3',null,'Pick a System, or Follow the Work'));
   w.appendChild(h('p',null,'Every line is a hand-off between two systems. Moving dots show work flowing automatically; dashed lines are copied by a person.'));
   /* as many stories as fit beside the map (the area filters already sit above it) */
   const J=journeys(d); const B=J.map(j=>{ const b=btn('cs-jbtn'); const pl=h('span','pl'); pl.innerHTML=svgI('play'); b.appendChild(pl); const tx=h('span'); tx.appendChild(h('b',null,j.title)); tx.appendChild(h('small',null,j.steps.length+' steps across the map')); b.appendChild(tx); b.addEventListener('click', ()=>startJourney(j.id)); w.appendChild(b); return b; });
-  const more=btn('cs-ib','', ()=>{ const t=P.el && [...P.el.querySelectorAll('.cs-band')].find(x=>x.querySelector('.cs-jgrid')); if(t) t.scrollIntoView({block:'start', behavior:reduce()?'auto':'smooth'}); }); more.style.justifySelf='start'; w.appendChild(more);
-  const fit=()=>{ if(!w.isConnected) return; B.forEach(b=>{ b.hidden=false; b.style.paddingTop=b.style.paddingBottom=''; }); more.hidden=true; const g=p.parentNode, one=!g || getComputedStyle(g).gridTemplateColumns.split(' ').filter(Boolean).length<2, cap=one ? 0 : p.clientHeight;
-    let n=B.length; if(!cap){ n=Math.min(6,B.length); B.forEach((b,i)=>b.hidden=i>=n); } else { more.hidden=false; while(n>3 && p.scrollHeight>cap+1){ n--; B[n].hidden=true; } if(n===B.length) more.hidden=true; }
-    more.hidden = n>=B.length; more.textContent='See all '+B.length+' stories →';
+  const more=btn('cs-all','', ()=>{ const t=P.el && [...P.el.querySelectorAll('.cs-band')].find(x=>x.querySelector('.cs-jgrid')); if(t) t.scrollIntoView({block:'start', behavior:reduce()?'auto':'smooth'}); }); kr.appendChild(more);
+  /* fill the panel: as many stories as fit; if spacing them a little closer lets one more in, do that */
+  const fit=()=>{ if(!w.isConnected) return; const g=p.parentNode, one=!g || getComputedStyle(g).gridTemplateColumns.split(' ').filter(Boolean).length<2, cap=one ? 0 : p.clientHeight;
+    const run=tight=>{ w.style.gap=tight?'9px':''; B.forEach(b=>{ b.hidden=false; b.style.paddingTop=b.style.paddingBottom=tight?'6px':''; }); more.hidden=false;
+      let n=B.length; if(!cap){ n=Math.min(6,B.length); B.forEach((b,i)=>b.hidden=i>=n); } else { more.hidden=B.length<=3; while(n>3 && p.scrollHeight>cap+1){ n--; B[n].hidden=true; more.hidden=false; } }
+      more.hidden = n>=B.length; return n; };
+    let n=run(false), tight=false; if(cap && n<B.length){ const n2=run(true); if(n2>n){ n=n2; tight=true; } else n=run(false); }
+    more.textContent='See all '+B.length+' stories →';
     /* share any space left over among the stories shown, so the panel ends level with the map */
-    if(cap){ const left=cap-p.scrollHeight; if(left>2){ const per=Math.min(14, left/n/2); B.slice(0,n).forEach(b=>{ b.style.paddingTop=b.style.paddingBottom=(9+per)+'px'; }); } } };
+    if(cap){ const left=cap-p.scrollHeight, base=tight?6:9; if(left>2){ const per=Math.min(14, left/n/2); B.slice(0,n).forEach(b=>{ b.style.paddingTop=b.style.paddingBottom=(base+per)+'px'; }); } } };
   requestAnimationFrame(fit); if('ResizeObserver' in window){ const ro=new ResizeObserver(()=>{ if(!w.isConnected){ ro.disconnect(); return; } fit(); }); ro.observe(p); } }
 
 /* ---------- Edit mode ---------- */
