@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261108m';
+var BUILD='20261108n';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4551,7 +4551,8 @@ function toast(msg, undo){ const t=window.__nxToast; if(t) t(msg, undo); }
 
 /* ---------- the data: one private record, read after sign-in ---------- */
 function start(){ if(M.sub || !S.db || !S.db.collection) return; M.sub=true;
-  try{ S.db.collection('systemsmap').onSnapshot(snap=>{ const d=(snap && snap.docs ? snap.docs : []).find(x=>x.id==='current'); let b=null; try{ b=d ? JSON.parse(JSON.stringify(d.data()||{})) : null; }catch(e){ b=null; }
+  try{ S.db.collection('systemsmap').onSnapshot(snap=>{ const rq=(snap && snap.docs ? snap.docs : []).find(x=>x.id==='requests'); if(rq){ let r=null; try{ r=JSON.parse(JSON.stringify(rq.data()||{})); }catch(e){} if(r && (!M.req || r.at!==M.req.at)){ M.req=r; if(M.data && !M.data.empty && P.rsWrap && P.rsWrap.isConnected) paintTodos(M.data); } }
+      const d=(snap && snap.docs ? snap.docs : []).find(x=>x.id==='current'); let b=null; try{ b=d ? JSON.parse(JSON.stringify(d.data()||{})) : null; }catch(e){ b=null; }
       if(b && Array.isArray(b.systems)){ if(M.data && !M.data.empty && b.at && b.at===M.data.at) return; /* our own save coming back */ fix(b); M.data=b; } else if(!M.data) M.data={empty:true}; else return;
       notify(false); }, e=>{ M.err=e; if(!M.data){ M.data={empty:true}; notify(false); } }); }catch(e){ M.err=e; } }
 function fix(d){ d.areas=d.areas||{}; d.connections=d.connections||[]; d.protection=d.protection||[]; d.replaced=d.replaced||[]; d.automations=d.automations||[]; d.archived=d.archived||{systems:[],connections:[]};
@@ -5019,7 +5020,16 @@ html[data-theme="dark"] .cs-cv-det .bk:not(.sys) small{color:#5fd29a}
 .cs-rsec{display:grid;gap:10px;margin-top:8px}
 .cs-rsh{display:flex;align-items:baseline;gap:6px 14px;flex-wrap:wrap}.cs-rsh h3{margin:0;font-size:17px}.cs-rsh span{font-size:13px;color:var(--ink-3);flex:1;min-width:200px}
 .cs-mini2{font:inherit;font-size:12.5px;font-weight:700;color:var(--cs-hot);background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 10px;cursor:pointer}.cs-mini2:hover{border-color:var(--cs-sky)}
-.cs-lanes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start}.cs-lanes .col{display:grid;gap:12px;align-content:start}
+.cs-cols3,.cs-cols2{column-count:3;column-gap:0;column-rule:1px solid var(--border);padding:0;overflow:hidden}.cs-cols2{column-count:2}
+.cs-cols3>*,.cs-cols2>*{break-inside:avoid;-webkit-column-break-inside:avoid}
+.cs-lh{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 9px;background:var(--surface-2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.cs-grp:first-child .cs-lh{border-top:0}.cs-lh b{font-size:13.5px}.cs-lh em{font-style:normal;font-size:12px;font-weight:800;min-width:24px;text-align:center;padding:2px 7px;border-radius:5px;background:var(--surface);color:var(--ink-2)}
+.cs-lh.you{background:var(--navy,#0d314c);border-color:var(--navy,#0d314c)}.cs-lh.you b{color:#fff}.cs-lh.you em{background:rgba(255,255,255,.16);color:#fff}
+.cs-ri.none{display:block;font-size:13px;color:var(--ink-3)}.cs-ri .asked{font-size:11.5px;color:var(--ink-3)}
+.cs-rqf{display:grid;grid-template-columns:140px 200px minmax(0,1fr) minmax(0,1fr) auto;gap:10px;align-items:end;padding:12px 14px}
+.cs-rqf label{display:grid;gap:4px;font-size:11.5px;font-weight:700;color:var(--ink-3)}.cs-rqf input,.cs-rqf select{font:inherit;font-size:13.5px;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);min-width:0}
+@media(max-width:1100px){.cs-cols3{column-count:2}.cs-rqf{grid-template-columns:1fr 1fr}.cs-rqf label:nth-child(3),.cs-rqf label:nth-child(4){grid-column:1/-1}}
+@media(max-width:700px){.cs-cols3,.cs-cols2{column-count:1}}
 .cs-lane{padding:4px 0 6px;overflow:hidden}.cs-lane .lh{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 8px;border-bottom:1px solid var(--border)}
 .cs-lane .lh b{font-size:13.5px}.cs-lane .lh em{font-style:normal;font-size:12px;font-weight:800;min-width:24px;text-align:center;padding:2px 7px;border-radius:5px;background:var(--surface-2);color:var(--ink-2)}
 .cs-lane.you .lh{background:var(--navy,#0d314c);border-bottom-color:var(--navy,#0d314c)}.cs-lane.you .lh b{color:#fff}.cs-lane.you .lh em{background:rgba(255,255,255,.16);color:#fff}
@@ -5044,8 +5054,8 @@ html[data-theme="dark"] .cs-cv-det .bk:not(.sys) small{color:#5fd29a}
 .cs-later .its{display:grid;gap:8px}.cs-later .it{display:grid;grid-template-columns:40px minmax(0,1fr);gap:10px;align-items:center}
 .cs-later .dt{display:grid;place-items:center;height:40px;border-radius:7px;background:color-mix(in srgb,var(--pc) 12%,var(--surface));border:1px solid color-mix(in srgb,var(--pc) 35%,transparent);line-height:1}.cs-later .dt b{font-size:15px}.cs-later .dt small{font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--ink-3)}
 .cs-later .it .cs-rtag{font-size:12.5px;color:var(--ink)}.cs-later .it .t{display:block;font-size:12px;color:var(--ink-3);margin-top:1px}
-@media(max-width:1100px){.cs-lanes{grid-template-columns:repeat(2,minmax(0,1fr))}.cs-sn{grid-template-columns:minmax(0,1fr)}.cs-sn .tb+.tb{border-left:0;border-top:1px solid var(--border)}.cs-rsum2{grid-template-columns:auto minmax(0,1fr)}.cs-rsum2 .cs-lks{grid-column:1/-1}.cs-rsum2 .st{border-right:0}}
-@media(max-width:700px){.cs-lanes{grid-template-columns:minmax(0,1fr)}.cs-sn .hr,.cs-sn .r{grid-template-columns:minmax(0,1fr) repeat(4,46px)}.cs-sn .hr span{font-size:9px}.cs-sn .tb{padding:4px 12px}.cs-rsum2{padding:16px}.cs-rsum2 .big b{font-size:36px}}
+@media(max-width:1100px){.cs-sn{grid-template-columns:minmax(0,1fr)}.cs-sn .tb+.tb{border-left:0;border-top:1px solid var(--border)}.cs-rsum2{grid-template-columns:auto minmax(0,1fr)}.cs-rsum2 .cs-lks{grid-column:1/-1}.cs-rsum2 .st{border-right:0}}
+@media(max-width:700px){.cs-sn .hr,.cs-sn .r{grid-template-columns:minmax(0,1fr) repeat(4,46px)}.cs-sn .hr span{font-size:9px}.cs-sn .tb{padding:4px 12px}.cs-rsum2{padding:16px}.cs-rsum2 .big b{font-size:36px}}
 
 
 /* what depends on one person */
@@ -5235,18 +5245,18 @@ function paintTodos(d){ const wrap=P.rsWrap; if(!wrap) return; wrap.textContent=
   const showDone=!!P.rsDone; const sec=h('div','cs-rsec'); const sh=h('div','cs-rsh'); sh.appendChild(h('h3',null,'Open Now')); sh.appendChild(h('span',null,'By who it’s waiting on. Select an item for the details.'));
   const tg=btn('cs-mini2', showDone ? 'Hide finished' : 'Show finished ('+rest.filter(x=>x.it.done).length+')', ()=>{ P.rsDone=!P.rsDone; paintTodos(M.data); }); sh.appendChild(tg); sec.appendChild(sh);
   const lanes=[...new Set(rest.filter(x=>showDone || !x.it.done).map(x=>laneOf(x.it.who)))].sort((a,b)=>((LORD.indexOf(a)+1)||9)-((LORD.indexOf(b)+1)||9));
-  const cols=[[],[],[]], ht=[0,0,0], sz=l=>rest.filter(x=>(showDone||!x.it.done) && laneOf(x.it.who)===l).length+1.5;
-  /* "waiting on you" leads the first column; the other lanes go, biggest first, into whichever column is shortest, so the three end close to level */
-  const first=lanes[0]; if(first){ cols[0].push(first); ht[0]+=sz(first); } lanes.slice(1).sort((a,b)=>sz(b)-sz(a)).forEach(l=>{ const c=ht.indexOf(Math.min(...ht)); cols[c].push(l); ht[c]+=sz(l); });
-  cols.forEach(c=>c.sort((a,b)=>((LORD.indexOf(a)+1)||9)-((LORD.indexOf(b)+1)||9)));
-  const grid=h('div','cs-lanes'); cols.forEach(cl=>{ const col=h('div','col'); cl.forEach(l=>{ const L=rest.filter(x=>(showDone||!x.it.done) && laneOf(x.it.who)===l).sort((a,b)=>(a.it.done?1:0)-(b.it.done?1:0) || R(a.sys)-R(b.sys));
-      const ln=h('div','cs-card cs-lane'+(l==='You'?' you':'')); const lh=h('div','lh'); lh.appendChild(h('b',null,lname(l))); lh.appendChild(h('em',null,String(L.filter(x=>!x.it.done).length))); ln.appendChild(lh);
-      L.forEach(x=>{ const sy=by[x.sys]; const it=x.it; const row=h('div','cs-ri'+(it.done?' done':'')+(P.rsItem===it.id?' open':'')); row.style.setProperty('--pc',colorOf(d,sy)); row.appendChild(check(x));
-        const tx=h('div','tx'); const tt=btn('cs-tt', it.t); tt.setAttribute('aria-expanded', String(P.rsItem===it.id)); tt.addEventListener('click', ()=>{ P.rsItem=P.rsItem===it.id?null:it.id; paintTodos(M.data); }); tx.appendChild(tt);
-        const mt=h('div','mt'); mt.appendChild(tag(sy)); if(l==='claude' || /claude/i.test(l)) {} else if(laneOf(it.who)!==it.who) mt.appendChild(h('span','who',it.who)); tx.appendChild(mt);
-        if(P.rsItem===it.id){ if(it.d) tx.appendChild(h('p',null,it.d)); if(it.src) tx.appendChild(h('small',null,'From: '+it.src)); if(it.done && it.at) tx.appendChild(h('small',null,'Done '+new Date(it.at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+(it.by?' by '+it.by.replace(/^./,c=>c.toUpperCase()):''))); }
-        row.appendChild(tx); ln.appendChild(row); });
-      col.appendChild(ln); }); grid.appendChild(col); }); sec.appendChild(grid); wrap.appendChild(sec);
+  /* one card, three newspaper columns: the browser balances them, so the columns always end level */
+  const box=h('div','cs-card cs-cols3');
+  lanes.forEach(l=>{ const L=rest.filter(x=>(showDone||!x.it.done) && laneOf(x.it.who)===l).sort((a,b)=>(a.it.done?1:0)-(b.it.done?1:0) || R(a.sys)-R(b.sys));
+    const lh=h('div','cs-lh'+(l==='You'?' you':'')); lh.appendChild(h('b',null,lname(l))); lh.appendChild(h('em',null,String(L.filter(x=>!x.it.done).length)));
+    L.forEach((x,k)=>{ const sy=by[x.sys]; const it=x.it; const row=h('div','cs-ri'+(it.done?' done':'')+(P.rsItem===it.id?' open':'')); row.style.setProperty('--pc',colorOf(d,sy)); row.appendChild(check(x));
+      const tx=h('div','tx'); const tt=btn('cs-tt', it.t); tt.setAttribute('aria-expanded', String(P.rsItem===it.id)); tt.addEventListener('click', ()=>{ P.rsItem=P.rsItem===it.id?null:it.id; paintTodos(M.data); }); tx.appendChild(tt);
+      const mt=h('div','mt'); mt.appendChild(tag(sy)); if(!/claude/i.test(l) && laneOf(it.who)!==it.who) mt.appendChild(h('span','who',it.who)); tx.appendChild(mt);
+      if(P.rsItem===it.id){ if(it.d) tx.appendChild(h('p',null,it.d)); if(it.src) tx.appendChild(h('small',null,'From: '+it.src)); if(it.done && it.at) tx.appendChild(h('small',null,'Done '+new Date(it.at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+(it.by?' by '+it.by.replace(/^./,c=>c.toUpperCase()):''))); }
+      row.appendChild(tx);
+      if(k===0){ const g=h('div','cs-grp'); g.appendChild(lh); g.appendChild(row); box.appendChild(g); } else box.appendChild(row); }); });
+  sec.appendChild(box); wrap.appendChild(sec);
+  reqSection(d, wrap, by, tag);
   /* the four safety nets, one row per system */
   const ss=[...new Set(safe.map(x=>x.sys))].sort((a,b)=>R(a)-R(b)); if(ss.length){ const sf=h('div','cs-rsec'); const sh2=h('div','cs-rsh'); sh2.appendChild(h('h3',null,'Safety Nets')); sh2.appendChild(h('span',null,'Every system gets a how-it-works guide, automatic tests, automatic publishing and a change log, built by its Claude. A filled square is done.')); sf.appendChild(sh2);
     const mx=h('div','cs-card cs-sn'); const half=Math.ceil(ss.length/2); [ss.slice(0,half), ss.slice(half)].forEach(part=>{ if(!part.length) return; const tb=h('div','tb'); const hr=h('div','hr'); hr.appendChild(h('span',null,'')); SAFE.forEach(z=>hr.appendChild(h('span',null,z[1]))); tb.appendChild(hr);
@@ -5261,6 +5271,32 @@ function paintTodos(d){ const wrap=P.rsWrap; if(!wrap) return; wrap.textContent=
         const tx=h('div'); tx.appendChild(tag(sy)); tx.appendChild(h('span','t', x.it.t.replace(/ before [A-Z][a-z]+ \d{1,2}, \d{4}/,''))); it.appendChild(tx); it.title=x.it.d||x.it.t; ul.appendChild(it); });
     tlc.appendChild(ul); lt.appendChild(tlc); wrap.appendChild(lt); }
 }
+/* Requests for Perry: the save relay and AWS. Kept in their own record (systemsmap / requests) so Perry can check them off;
+   systems ask for them in the MISMO Connections Map's "Requests for Perry" table, and a refresh brings new rows in. */
+const RQA={relay:'Save relay', aws:'AWS'};
+const canReq=()=>canEdit() || me()==='perry';
+function saveReq(next, msg){ const prev=M.req ? clone(M.req) : null; next.at=Date.now(); next.by=me(); M.req=next; if(M.data && !M.data.empty) paintTodos(M.data);
+  return Promise.resolve().then(()=>S.db.collection('systemsmap').doc('requests').set(next)).then(()=>{ if(msg) toast(msg, prev ? ()=>saveReq(prev, 'Put back the way it was.') : null); }, e=>{ console.error(e); toast('That didn’t save. Try again in a moment.'); if(prev){ M.req=prev; if(M.data) paintTodos(M.data); } }); }
+function reqSection(d, wrap, by, tag){ const Q=(M.req && Array.isArray(M.req.items)) ? M.req.items : []; const can=canReq(); if(!Q.length && !can) return;
+  const sec=h('div','cs-rsec'); const sh=h('div','cs-rsh'); sh.appendChild(h('h3',null,'Requests for Perry: Save Relay and AWS'));
+  sh.appendChild(h('span',null,'What each system needs from the save relay or MISMO’s AWS account. Perry checks them off here; a system asks for one in the MISMO Connections Map.'));
+  const showDone=!!P.rqDone, nd=Q.filter(x=>x.done).length; if(nd) sh.appendChild(btn('cs-mini2', showDone ? 'Hide finished' : 'Show finished ('+nd+')', ()=>{ P.rqDone=!P.rqDone; paintTodos(M.data); }));
+  if(can) sh.appendChild(btn('cs-mini2', P.rqAdd ? 'Cancel' : '+ Add a Request', ()=>{ P.rqAdd=!P.rqAdd; paintTodos(M.data); })); sec.appendChild(sh);
+  if(P.rqAdd && can){ const f=h('div','cs-card cs-rqf'); const ar=h('select'); Object.keys(RQA).forEach(k=>ar.appendChild(new Option(RQA[k],k))); const sy=h('select'); d.systems.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(x=>sy.appendChild(new Option(x.name,x.id)));
+    const t=h('input'); t.placeholder='What’s needed'; t.maxLength=140; const dd=h('input'); dd.placeholder='Why, or any details (optional)'; dd.maxLength=400;
+    const lab=(l,el)=>{ const w=h('label'); w.appendChild(h('span',null,l)); w.appendChild(el); return w; }; f.appendChild(lab('For',ar)); f.appendChild(lab('System',sy)); f.appendChild(lab('Request',t)); f.appendChild(lab('Details',dd));
+    f.appendChild(btn('cs-btn pri','Add', ()=>{ const tt=t.value.trim(); if(!tt){ t.focus(); return; } const nx=clone(M.req||{items:[]}); nx.items=nx.items||[]; nx.items.push({id:'rq'+Date.now().toString(36), area:ar.value, sys:sy.value, t:tt, d:dd.value.trim(), by:me(), on:todayISO()}); P.rqAdd=false; saveReq(nx,'Request added for Perry'); })); sec.appendChild(f); setTimeout(()=>t.focus(),0); }
+  const box=h('div','cs-card cs-cols2'); const fmt=iso=>iso ? longDate(iso) : '';
+  Object.keys(RQA).forEach(k=>{ const L=Q.filter(x=>x.area===k && (showDone || !x.done)).sort((a,b)=>(a.done?1:0)-(b.done?1:0)); const lh=h('div','cs-lh'); lh.appendChild(h('b',null,RQA[k])); lh.appendChild(h('em',null,String(L.filter(x=>!x.done).length)));
+    if(!L.length){ const g=h('div','cs-grp'); g.appendChild(lh); g.appendChild(h('div','cs-ri none','Nothing open.')); box.appendChild(g); return; }
+    L.forEach((x,i)=>{ const sy=by[x.sys]; const row=h('div','cs-ri'+(x.done?' done':'')+(P.rsItem===x.id?' open':'')); row.style.setProperty('--pc', sy ? colorOf(d,sy) : '#7f98ad');
+      const ck=btn('cs-ck'+(x.done?' on':'')); ck.innerHTML='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'; ck.setAttribute('aria-label',(x.done?'Mark not done: ':'Mark done: ')+x.t); ck.setAttribute('aria-pressed', String(!!x.done));
+      if(can) ck.addEventListener('click', ()=>{ const nx=clone(M.req); const it=nx.items.find(z=>z.id===x.id); it.done=!it.done; if(it.done){ it.doneOn=todayISO(); it.doneBy=me(); } else { delete it.doneOn; delete it.doneBy; } saveReq(nx, (it.done?'Done: ':'Back on the list: ')+it.t); }); else { ck.disabled=true; ck.title='Perry or Jonna checks these off'; }
+      row.appendChild(ck); const tx=h('div','tx'); const tt=btn('cs-tt', x.t); tt.addEventListener('click', ()=>{ P.rsItem=P.rsItem===x.id?null:x.id; paintTodos(M.data); }); tx.appendChild(tt);
+      const mt=h('div','mt'); if(sy) mt.appendChild(tag(sy)); if(x.on) mt.appendChild(h('span','asked','Asked '+fmt(x.on)+(x.from?' by '+x.from:''))); tx.appendChild(mt);
+      if(P.rsItem===x.id){ if(x.d) tx.appendChild(h('p',null,x.d)); if(x.done && x.doneOn) tx.appendChild(h('small',null,'Done '+fmt(x.doneOn)+(x.doneBy?' by '+x.doneBy.replace(/^./,c=>c.toUpperCase()):''))); }
+      row.appendChild(tx); if(i===0){ const g=h('div','cs-grp'); g.appendChild(lh); g.appendChild(row); box.appendChild(g); } else box.appendChild(row); }); });
+  sec.appendChild(box); wrap.appendChild(sec); }
 function toggleTodo(sys, id){ const d=M.data; const nd=clone(d); const g=nd.todos.find(x=>x.sys===sys); const it=g && g.items.find(x=>x.id===id); if(!it) return;
   it.done=!it.done; if(it.done){ it.at=Date.now(); it.by=me(); } else { delete it.at; delete it.by; }
   P.rsItem=null; save(nd, (it.done?'Checked off: ':'Back on the list: ')+it.t); }
