@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261107zm';
+var BUILD='20261107zn';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4602,6 +4602,16 @@ html[data-theme="dark"] .cs{--cs-hot:#74bfeb}
 .cs-hero p.lede{color:#bfe2f6;margin:12px 0 20px;font-size:16px}
 .cs-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
 .cs-stat{background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.03));border:1px solid rgba(116,191,235,.28);border-radius:12px;padding:14px 16px;backdrop-filter:blur(4px)}
+.cs-stat{font:inherit;text-align:left;color:inherit;cursor:pointer;transition:border-color .2s,background .2s,transform .2s}.cs-stat:hover{border-color:rgba(116,191,235,.7);transform:translateY(-1px)}.cs-stat.on{border-color:#74bfeb;background:linear-gradient(180deg,rgba(116,191,235,.28),rgba(116,191,235,.10))}
+.cs-stat em{display:block;font-style:normal;font-size:11.5px;font-weight:700;color:#74bfeb;margin-top:8px;letter-spacing:.02em}.cs-stat em::after{content:' ›'}.cs-stat.on em::after{content:' ⌄'}
+.cs-drill{position:relative;margin-top:14px;background:rgba(6,26,42,.55);border:1px solid rgba(116,191,235,.35);border-radius:12px;padding:14px 16px 16px}
+.cs-dh{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}.cs-dh h3{margin:0;color:#fff;font-size:17px}.cs-dh p{margin:3px 0 0;color:#a9d8f3;font-size:13px}
+.cs-dx{flex:none;width:30px;height:30px;border-radius:50%;border:1px solid rgba(116,191,235,.45);background:transparent;color:#fff;font-size:18px;line-height:1;cursor:pointer}.cs-dx:hover{background:rgba(116,191,235,.2)}
+.cs-dg{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:6px;max-height:380px;overflow:auto;padding-right:4px}
+.cs-di{display:flex;gap:10px;align-items:flex-start;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-left:3px solid var(--pc,#74bfeb);border-radius:6px;padding:8px 10px;font-size:13px;color:#e9f4fb}
+.cs-di.cs-go{cursor:pointer}.cs-di.cs-go:hover,.cs-di.cs-go:focus-visible{background:rgba(116,191,235,.16);outline:none}
+.cs-di b{display:block;font-weight:700;color:#fff}.cs-di b i{font-style:normal;color:#74bfeb}.cs-di b s{color:#a9d8f3;font-weight:500}.cs-di small{display:block;color:#a9d8f3;font-size:12px;margin-top:2px;line-height:1.4}
+.cs-dc{flex:none;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#74bfeb;border:1px solid rgba(116,191,235,.4);border-radius:4px;padding:2px 5px;margin-top:1px;max-width:92px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cs-stat b{display:block;font-variant-numeric:tabular-nums;font-size:34px;font-weight:800;color:#fff;line-height:1}
 .cs-stat span{display:block;font-size:12.5px;color:#a9d8f3;margin-top:6px}
 .cs-sbar{margin-top:16px}
@@ -4925,8 +4935,11 @@ function stKey(s){ return s.status==='Live'?'live':s.status==='Launching'?'soon'
 function stTag(s){ return h('span','cs-tag cs-'+stKey(s), s.status==='Live' ? 'Live' : (s.statusNote||s.status||'Building')); }
 function counts(d){ const apps=d.systems.filter(s=>s.zone==='apps').length; const auto=d.connections.filter(c=>c.how!=='hand' && c.how!=='soon' && !c.quiet).length, soonN=d.connections.filter(c=>c.how==='soon').length;
   const jobs=d.automations.reduce((n,g)=>n+(g.items||[]).length,0); const A=d.systems.filter(s=>s.zone==='apps');
-  return {apps, auto, hand:d.connections.filter(c=>c.how==='hand').length, soonN, jobs, swaps:d.replaced.length,
+  return {apps, auto, hand:d.connections.filter(c=>c.how==='hand').length, soonN, jobs, swaps:swaps(d).length,
   live:A.filter(s=>s.status==='Live').length, launching:A.filter(s=>s.status==='Launching').length, building:A.filter(s=>s.status!=='Live' && s.status!=='Launching').length, soon:A.filter(s=>s.status!=='Live')}; }
+function swaps(d){ const L=d.replaced.slice(), have=new Set(L.map(r=>r.sys).filter(Boolean));
+  d.systems.filter(x=>x.zone==='apps' && x.replaced && !have.has(x.id)).forEach(x=>L.push({before:x.replaced, after:x.name, detail:x.what||'', sys:x.id}));
+  return L; }
 function confirms(d){ return d.systems.filter(s=>s.confirm).length + d.connections.filter(c=>c.confirm).length; }
 function journeys(d){ return (Array.isArray(d.journeys)?d.journeys:[]).map(j=>Object.assign({}, j, {steps:(j.steps||[]).filter(st=>d.systems.some(s=>s.id===st.sys))})).filter(j=>j.steps.length>1); }
 
@@ -4971,7 +4984,7 @@ function draw(){ const root=P.el; if(!root) return; root.textContent=''; root.cl
   sec.appendChild(ly); b2.appendChild(sec); root.appendChild(b2); addSec('Security', b2);
   /* replaced */
   const b3=band('What changed','What Each System Replaced','Each one took a manual process off a spreadsheet or out of an inbox. Select one to see the system on the map.'); const sw=h('div','cs-swaps');
-  d.replaced.forEach(s=>{ const c0=h('div','cs-card cs-swap cs-rv'); const sy=s.sys && d.systems.find(x=>x.id===s.sys); if(sy) c0.style.setProperty('--pc', colorOf(d,sy)); c0.appendChild(h('div','old',s.before)); c0.appendChild(h('div','new',s.after)); c0.appendChild(h('p',null,s.detail)); goTo(c0, s.sys, d, c0); sw.appendChild(c0); }); b3.appendChild(sw); root.appendChild(b3); addSec('What Changed', b3);
+  swaps(d).forEach(s=>{ const c0=h('div','cs-card cs-swap cs-rv'); const sy=s.sys && d.systems.find(x=>x.id===s.sys); if(sy) c0.style.setProperty('--pc', colorOf(d,sy)); c0.appendChild(h('div','old',s.before)); c0.appendChild(h('div','new',s.after)); c0.appendChild(h('p',null,s.detail)); goTo(c0, s.sys, d, c0); sw.appendChild(c0); }); b3.appendChild(sw); root.appendChild(b3); addSec('What Changed', b3);
   /* automation */
   const b4=band('Automation','What Runs on Its Own','Work that used to wait for someone to remember it now happens on a schedule or the moment something changes. Select any job to see where it runs.'); const cd=h('div','cs-cad');
   d.automations.forEach(gp=>{ const col=h('div','cs-card cs-cadcol cs-rv'); const hd=h('div','cs-cadh'); const ic=h('span','ic'); ic.innerHTML=svgI(cadIcon(gp.cadence)); hd.appendChild(ic); hd.appendChild(h('h3',null,gp.cadence)); hd.appendChild(h('em',null,String((gp.items||[]).length))); col.appendChild(hd);
@@ -5044,13 +5057,31 @@ function hero(d, c){ const hs=h('section','cs-hero'); const cv=h('canvas'); hs.a
   const t=h('h2'); t.append('One connected operation, '); t.appendChild(h('span',null,'built in-house')); hs.appendChild(t);
   if(d.lede) hs.appendChild(h('p','lede',d.lede));
   const st=h('div','cs-stats'); const nums=[];
-  [[c.apps,'MISMO systems on resources.mismo.org'],[c.auto,'automatic hand-offs between systems'],[c.jobs,'jobs that run on their own'],[c.swaps,'manual processes replaced']].forEach(x=>{ const s=h('div','cs-stat'); const b=h('b',null, P.counted||reduce() ? String(x[0]) : '0'); s.appendChild(b); s.appendChild(h('span',null,x[1])); st.appendChild(s); nums.push([b,x[0]]); }); hs.appendChild(st);
+  const dr=h('div','cs-drill'); dr.hidden=true;
+  [['apps',c.apps,'MISMO systems on resources.mismo.org'],['auto',c.auto,'automatic hand-offs between systems'],['jobs',c.jobs,'jobs that run on their own'],['swaps',c.swaps,'manual processes replaced']].forEach(x=>{ const s=btn('cs-stat'); s.dataset.k=x[0]; const b=h('b',null, P.counted||reduce() ? String(x[1]) : '0'); s.appendChild(b); s.appendChild(h('span',null,x[2])); s.appendChild(h('em',null,'See the list')); s.setAttribute('aria-expanded','false');
+    s.addEventListener('click', ()=>{ P.drill = P.drill===x[0] ? null : x[0]; drill(d, st, dr); }); st.appendChild(s); nums.push([b,x[1]]); }); hs.appendChild(st); hs.appendChild(dr); if(P.drill) drill(d, st, dr);
   const sb=h('div','cs-sbar'); const bar=h('div','bar'); const segs=[[c.live,'#2fbf71','Live'],[c.launching,'#e0a83c','Launching'],[c.building,'#9fb3c4','Building']];
   segs.forEach(z=>{ const i=h('i'); i.style.background=z[1]; i.style.width=P.counted||reduce() ? (c.apps?z[0]/c.apps*100:0)+'%' : '0%'; i.title=z[0]+' '+z[2]; bar.appendChild(i); }); sb.appendChild(bar);
   const lg=h('div','lg'); segs.forEach(z=>{ const s=h('span'); const e=h('em'); e.style.background=z[1]; s.appendChild(e); s.append(z[0]+' '+z[2]); lg.appendChild(s); }); sb.appendChild(lg); hs.appendChild(sb);
   if(!P.counted && !reduce()){ P.counted=true; const t0=performance.now(); const step=now=>{ const k=Math.min(1,(now-t0)/1100), e=1-Math.pow(1-k,3); nums.forEach(([b,n])=>b.textContent=String(Math.round(n*e))); if(k<1) requestAnimationFrame(step); }; requestAnimationFrame(step);
     setTimeout(()=>{ [...bar.children].forEach((i,k)=>i.style.width=(c.apps?segs[k][0]/c.apps*100:0)+'%'); }, 120); }
   network(cv); return hs; }
+/* the list behind each hero number */
+function drill(d, st, dr){ const k=P.drill; st.querySelectorAll('.cs-stat').forEach(b=>{ const on=b.dataset.k===k; b.classList.toggle('on', on); b.setAttribute('aria-expanded', String(on)); });
+  dr.textContent=''; dr.hidden=!k; if(!k) return; const by={}; d.systems.forEach(x=>by[x.id]=x);
+  const it=(sys, top, sub, pre)=>{ const r=h('div','cs-di'); const sy=by[sys]; if(sy) r.style.setProperty('--pc', colorOf(d,sy)); if(pre) r.appendChild(pre); const tx=h('div'); tx.appendChild(top); if(sub) tx.appendChild(h('small',null,sub)); r.appendChild(tx); if(sy) goTo(r, sys, d, null); return r; };
+  let title='', note='', L=[];
+  if(k==='apps'){ const A=d.systems.filter(x=>x.zone==='apps'); title=A.length+' MISMO Systems'; note='Every system built for MISMO on resources.mismo.org.';
+    L=A.map(x=>{ const t=h('b',null,x.name); return it(x.id, t, x.status==='Live' ? 'Live' : (x.statusNote||x.status||'Building')); }); }
+  if(k==='auto'){ const A=d.connections.filter(c=>c.how!=='hand' && c.how!=='soon' && !c.quiet && by[c.from] && by[c.to]); title=A.length+' Automatic Hand-Offs'; note='Work that moves from one system to another with no one copying it.';
+    L=A.map(c=>{ const t=h('b'); t.append(by[c.from].name); t.appendChild(h('i',null,' → ')); t.append(by[c.to].name); return it(c.from, t, c.what); }); }
+  if(k==='jobs'){ const n=d.automations.reduce((a,g)=>a+(g.items||[]).length,0); title=n+' Jobs That Run on Their Own'; note='On a schedule or the moment something changes.';
+    d.automations.forEach(g=>(g.items||[]).forEach(j=>{ const t=h('b',null,j.name); L.push(it(j.sys, t, j.detail, h('span','cs-dc',g.cadence))); })); }
+  if(k==='swaps'){ const S=swaps(d); title=S.length+' Manual Processes Replaced'; note='What each system took off a spreadsheet, out of an inbox or out of a meeting.';
+    L=S.map(r=>{ const t=h('b'); t.appendChild(h('s',null,r.before)); t.appendChild(h('i',null,' → ')); t.append(r.after); return it(r.sys, t, r.detail); }); }
+  const hd=h('div','cs-dh'); const tx=h('div'); tx.appendChild(h('h3',null,title)); tx.appendChild(h('p',null,note+' Select any one to see it on the map.')); hd.appendChild(tx);
+  const x=btn('cs-dx','×', ()=>{ P.drill=null; drill(d, st, dr); }); x.setAttribute('aria-label','Close the list'); hd.appendChild(x); dr.appendChild(hd);
+  const g=h('div','cs-dg'); L.forEach(r=>g.appendChild(r)); dr.appendChild(g); }
 function network(cv){ const ctx=cv.getContext && cv.getContext('2d'); if(!ctx) return; let w=0,hh=0,dpr=Math.min(2,window.devicePixelRatio||1); const pts=[];
   const size=()=>{ const r=cv.getBoundingClientRect(); w=r.width; hh=r.height; cv.width=Math.max(1,w*dpr); cv.height=Math.max(1,hh*dpr); ctx.setTransform(dpr,0,0,dpr,0,0); };
   const seed=()=>{ pts.length=0; const n=Math.round(Math.min(60, Math.max(24, w*hh/9000))); for(let i=0;i<n;i++) pts.push({x:Math.random()*w, y:Math.random()*hh, vx:(Math.random()-.5)*.25, vy:(Math.random()-.5)*.25, r:Math.random()*1.6+.8}); };
