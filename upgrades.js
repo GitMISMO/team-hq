@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261108e';
+var BUILD='20261108f';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -5290,8 +5290,8 @@ function declutter(){ const shown=[]; (P.edges||[]).forEach(e=>{ e.lb.classList.
 function paintState(){ paintState0(); declutter(); }
 function paintState0(){ const d=M.data; if(!d || d.empty || !P.nodes) return; const by={}; d.systems.forEach(s=>by[s.id]=s);
   /* a journey being played lights up its path */
-  if(P.jr){ const j=journeys(d).find(x=>x.id===P.jr.id); if(j){ const upto=j.steps.slice(0, P.jr.i+1).map(z=>z.sys), cur=j.steps[P.jr.i].sys, on={}; upto.forEach(x=>on[x]=1); j.steps.slice(0, P.jr.i+1).forEach(z=>{ if(z.from) on[z.from]=1; }); /* the system the work came from lights up too */
-      const hotE=new Set(); for(let k=1;k<=P.jr.i;k++){ const a=j.steps[k].from || j.steps[k-1].sys, b=j.steps[k].sys; const fw=P.edges.filter(e=>e.c.from===a && e.c.to===b); (fw.length ? fw : P.edges.filter(e=>e.c.from===b && e.c.to===a)).forEach(e=>hotE.add(e)); } /* only the line the work travels on lights up */
+  if(P.jr){ const j=journeys(d).find(x=>x.id===P.jr.id); if(j){ const upto=j.steps.slice(0, P.jr.i+1).map(z=>z.sys), cur=j.steps[P.jr.i].sys, on={}; upto.forEach(x=>on[x]=1); j.steps.slice(0, P.jr.i+1).forEach(z=>{ if(z.from) on[z.from]=1; if(z.to) on[z.to]=1; }); /* the system the work came from, or goes to, lights up too */
+      const hotE=new Set(); for(let k=0;k<=P.jr.i;k++){ const z=j.steps[k], a=z.to ? z.sys : z.from, b=z.to || z.sys; if(!a || a===b) continue; /* a step lights a line only when it names where the work comes from or goes to */ const fw=P.edges.filter(e=>e.c.from===a && e.c.to===b); (fw.length ? fw : P.edges.filter(e=>e.c.from===b && e.c.to===a)).forEach(e=>hotE.add(e)); } /* only the line the work travels on lights up */
       d.systems.forEach(s=>{ const n=P.nodes[s.id]; if(!n) return; n.classList.toggle('dim', !on[s.id]); n.classList.toggle('sel', s.id===cur); n.classList.toggle('lit', !!on[s.id] && s.id!==cur); });
       P.edges.forEach(e=>{ const hot=hotE.has(e); e.el.classList.toggle('dim', !hot); e.el.classList.toggle('hot', hot); if(e.p) e.p.dim=!hot; e.lb.classList.toggle('on', hot && (e.c.from===cur || e.c.to===cur)); e.lb.classList.toggle('dim', false); });
       return; } }
