@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261108a';
+var BUILD='20261108b';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4536,7 +4536,7 @@ const EDITORS=['jonna'];
 const NS='http://www.w3.org/2000/svg', W=148, H=40;
 const ZONES={apps:'MISMO apps', mba:'MBA & Microsoft 365', out:'Outside MISMO', eng:'Engine room'};
 const ST=['Live','Launching','Building'];
-const AC={'--c1':'#2477b8','--c2':'#eb6834','--c3':'#1baf7a','--c4':'#c98500','--c5':'#d55181','--c6':'#008300'};
+const AC={'--c1':'#2477b8','--c2':'#eb6834','--c3':'#1baf7a','--c4':'#c98500','--c5':'#d55181','--c6':'#008300','--c7':'#6f52d9'};
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const M={data:null, sub:false, listeners:[], err:null};
 function h(t,c,x){ const e=document.createElement(t); if(c) e.className=c; if(x!=null) e.textContent=x; return e; }
@@ -4652,6 +4652,7 @@ html[data-theme="dark"] .cs{--cs-hot:#74bfeb}
 .cs-mapbox svg{display:block;width:100%;min-width:760px;height:auto;touch-action:pan-x pan-y}
 .cs-zl{font:700 11px sans-serif;font-family:inherit;letter-spacing:.14em;text-transform:uppercase;fill:var(--ink-3)}
 .cs-zone{stroke:var(--rule,var(--border));stroke-width:1}
+.cs-gl{font:700 9.5px sans-serif;font-family:inherit;letter-spacing:.1em;text-transform:uppercase;fill:var(--ink-3)}
 .cs-e{fill:none;stroke:var(--cs-edge);stroke-width:1.4;transition:opacity .25s,stroke .25s,stroke-width .25s}
 .cs-e.hand{stroke-dasharray:4 5;stroke:color-mix(in srgb,var(--warn,#a2701a) 55%,var(--cs-edge))}
 .cs-e.quiet{opacity:0;pointer-events:none}.cs-e.quiet.hot{opacity:.9}
@@ -5022,6 +5023,7 @@ function counts(d){ const apps=d.systems.filter(s=>s.zone==='apps').length; cons
   const jobs=d.automations.reduce((n,g)=>n+(g.items||[]).length,0); const A=d.systems.filter(s=>s.zone==='apps');
   return {apps, auto, hand:d.connections.filter(c=>c.how==='hand').length, soonN, jobs, swaps:swaps(d).length,
   live:A.filter(s=>s.status==='Live').length, launching:A.filter(s=>s.status==='Launching').length, building:A.filter(s=>s.status!=='Live' && s.status!=='Launching').length, soon:A.filter(s=>s.status!=='Live')}; }
+function appRank(d){ const r={}; let i=0; (d.appGroups||[]).forEach(g=>(g.ids||[]).forEach(id=>{ if(r[id]==null) r[id]=i++; })); return id=>r[id]==null ? 999 : r[id]; }
 function swaps(d){ const L=d.replaced.slice(), have=new Set(L.map(r=>r.sys).filter(Boolean));
   d.systems.filter(x=>x.zone==='apps' && x.replaced && !have.has(x.id)).forEach(x=>L.push({before:x.replaced, after:x.name, detail:x.what||'', sys:x.id}));
   return L; }
@@ -5097,7 +5099,7 @@ function paintTodos(d){ const wrap=P.rsWrap; if(!wrap) return; wrap.textContent=
   sm.appendChild(r); wrap.appendChild(sm);
   /* one card per system */
   const order=T.slice().sort((a,b)=>{ const fa=FIRST.indexOf(a.sys), fb=FIRST.indexOf(b.sys); const la=a.items.filter(x=>!x.done).length, lb=b.items.filter(x=>!x.done).length;
-    if((la===0)!==(lb===0)) return la===0 ? 1 : -1; if(fa>=0 || fb>=0) return (fa<0?99:fa)-(fb<0?99:fb); return lb-la || by[a.sys].name.localeCompare(by[b.sys].name); });
+    if((la===0)!==(lb===0)) return la===0 ? 1 : -1; if(d.appGroups){ const R=appRank(d); const ra=R(a.sys), rb=R(b.sys); if(ra!==rb) return ra-rb; return by[a.sys].name.localeCompare(by[b.sys].name); } if(fa>=0 || fb>=0) return (fa<0?99:fa)-(fb<0?99:fb); return lb-la || by[a.sys].name.localeCompare(by[b.sys].name); });
   P.rsOpen=P.rsOpen||{};
   order.forEach(g=>{ const sy=by[g.sys]; const items=g.items.filter(x=>!W || x.who===W); if(W && !items.length) return;
     const gl=g.items.filter(x=>!x.done).length; const card=h('div','cs-card cs-sys'+(P.rsOpen[g.sys]?' open':''));
@@ -5166,8 +5168,8 @@ function drill(d, st, dr){ const k=P.drill; st.querySelectorAll('.cs-stat').forE
   dr.textContent=''; dr.hidden=!k; if(!k) return; const by={}; d.systems.forEach(x=>by[x.id]=x);
   const it=(sys, top, sub, pre)=>{ const r=h('div','cs-di'); const sy=by[sys]; if(sy) r.style.setProperty('--pc', colorOf(d,sy)); if(pre) r.appendChild(pre); const tx=h('div'); tx.appendChild(top); if(sub) tx.appendChild(h('small',null,sub)); r.appendChild(tx); if(sy) goTo(r, sys, d, null); return r; };
   let title='', note='', L=[];
-  if(k==='apps'){ const A=d.systems.filter(x=>x.zone==='apps'); title=A.length+' MISMO Systems'; note='Every system built for MISMO on resources.mismo.org.';
-    L=A.map(x=>{ const t=h('b',null,x.name); return it(x.id, t, x.status==='Live' ? 'Live' : (x.statusNote||x.status||'Building')); }); }
+  if(k==='apps'){ const R=appRank(d); const A=d.systems.filter(x=>x.zone==='apps').sort((a,b)=>R(a.id)-R(b.id)); title=A.length+' MISMO Systems'; note='Every system built for MISMO on resources.mismo.org, most important first.'; const gOf={}; (d.appGroups||[]).forEach(g=>(g.ids||[]).forEach(id=>gOf[id]=g.name));
+    L=A.map(x=>{ const t=h('b',null,x.name); return it(x.id, t, (gOf[x.id] ? gOf[x.id]+' · ' : '')+(x.status==='Live' ? 'Live' : (x.statusNote||x.status||'Building'))); }); }
   if(k==='auto'){ const A=d.connections.filter(c=>c.how!=='hand' && c.how!=='soon' && !c.quiet && by[c.from] && by[c.to]); title=A.length+' Automatic Hand-Offs'; note='Work that moves from one system to another with no one copying it.';
     L=A.map(c=>{ const t=h('b'); t.append(by[c.from].name); t.appendChild(h('i',null,' → ')); t.append(by[c.to].name); return it(c.from, t, c.what); }); }
   if(k==='jobs'){ const n=d.automations.reduce((a,g)=>a+(g.items||[]).length,0); title=n+' Jobs That Run on Their Own'; note='On a schedule or the moment something changes.';
@@ -5212,6 +5214,7 @@ function map(d){ const F=frame(d); P.vb=F.vb; const svg=sv('svg',{viewBox:'0 0 1
   defs.innerHTML='<filter id="csGlow" x="-200%" y="-200%" width="500%" height="500%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="csShadow" x="-20%" y="-40%" width="140%" height="190%"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#14486e" flood-opacity=".35"/></filter><linearGradient id="csZ" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--surface-2)"/><stop offset="1" stop-color="var(--surface)"/></linearGradient>';
   [[12,22,196,F.zb-22],[288,22,634,F.zb-22],[992,22,196,F.zb-22],[12,F.et,1176,90]].forEach(z=>sv('rect',{class:'cs-zone',x:z[0],y:z[1],width:z[2],height:z[3],rx:12,fill:'url(#csZ)'},svg));
   [['MBA & Microsoft 365',110,44],['MISMO apps · resources.mismo.org',605,44],['Outside MISMO',1090,44],['Engine room · every app runs on these',600,F.et+22]].forEach(z=>{ const t=sv('text',{class:'cs-zl',x:z[1],y:z[2],'text-anchor':'middle'},svg); t.textContent=z[0]; });
+  (d.appGroups||[]).forEach(g=>{ const M0=(g.ids||[]).map(id=>d.systems.find(x=>x.id===id)).filter(x=>x && x.zone==='apps' && x.y!=null); if(!M0.length) return; const y0=Math.min(...M0.map(x=>x.y)), x0=Math.min(...M0.filter(x=>x.y===y0).map(x=>x.x)); const t=sv('text',{class:'cs-gl',x:x0-W/2+2,y:y0-H/2-7},svg); t.textContent=g.name; });
   const top=sv('svg',{viewBox:'0 0 1200 '+F.vb, class:'cs-top', role:'group', 'aria-label':'MISMO’s systems'}); P.svgTop=top; const gE=sv('g',{},svg), gN=sv('g',{},top), gL=sv('g',{},top); const by={}; d.systems.forEach(s=>by[s.id]= s.zone==='eng' ? Object.assign({}, s, {y:F.ey}) : s);
   P.edges=[]; P.nodes={}; const pairs={};
   d.connections.forEach((c,i0)=>{ const a=by[c.from], b=by[c.to]; if(!a || !b) return;
@@ -5400,7 +5403,7 @@ function intro(p, d){ p.classList.add('is-intro'); const w=h('div','cs-start'); 
   const kr=h('div','cs-krow'); kr.appendChild(h('div','cs-k','Start here')); w.appendChild(kr); w.appendChild(h('h3',null,'Pick a System, or Follow the Work'));
   w.appendChild(h('p',null,'Every line is a hand-off between two systems. Moving dots show work flowing automatically; dashed lines are copied by a person.'));
   /* as many stories as fit beside the map (the area filters already sit above it) */
-  const J=journeys(d); const B=J.map(j=>{ const b=btn('cs-jbtn'); const pl=h('span','pl'); pl.innerHTML=svgI('play'); b.appendChild(pl); const tx=h('span'); tx.appendChild(h('b',null,j.title)); tx.appendChild(h('small',null,j.steps.length+' steps across the map')); b.appendChild(tx); b.addEventListener('click', ()=>startJourney(j.id)); w.appendChild(b); return b; });
+  const AO=Object.keys(d.areas); const J=journeys(d).map((j,i)=>[j,i]).sort((a,b)=>(AO.indexOf(jArea(d,a[0]))-AO.indexOf(jArea(d,b[0])))||(a[1]-b[1])).map(x=>x[0]); const B=J.map(j=>{ const b=btn('cs-jbtn'); const pl=h('span','pl'); pl.innerHTML=svgI('play'); b.appendChild(pl); const tx=h('span'); tx.appendChild(h('b',null,j.title)); tx.appendChild(h('small',null,j.steps.length+' steps across the map')); b.appendChild(tx); b.addEventListener('click', ()=>startJourney(j.id)); w.appendChild(b); return b; });
   const more=btn('cs-all','', ()=>{ const t=P.el && [...P.el.querySelectorAll('.cs-band')].find(x=>x.querySelector('.cs-sb')); if(t) t.scrollIntoView({block:'start', behavior:reduce()?'auto':'smooth'}); }); kr.appendChild(more);
   /* fill the panel: as many stories as fit; if spacing them a little closer lets one more in, do that */
   const fit=()=>{ if(!w.isConnected) return; const g=p.parentNode, one=!g || getComputedStyle(g).gridTemplateColumns.split(' ').filter(Boolean).length<2, cap=one ? 0 : p.clientHeight;
