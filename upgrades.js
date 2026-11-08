@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261108g';
+var BUILD='20261108h';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -5512,12 +5512,15 @@ function intro(p, d){ p.classList.add('is-intro'); const w=h('div','cs-start'); 
   const kr=h('div','cs-krow'); kr.appendChild(h('div','cs-k','Start here')); w.appendChild(kr); w.appendChild(h('h3',null,'Pick a System, or Follow the Work'));
   w.appendChild(h('p',null,'Every line is a hand-off between two systems. Moving dots show work flowing automatically; dashed lines are copied by a person.'));
   /* as many stories as fit beside the map (the area filters already sit above it) */
-  const AO=Object.keys(d.areas); const J=journeys(d).map((j,i)=>[j,i]).sort((a,b)=>(AO.indexOf(jArea(d,a[0]))-AO.indexOf(jArea(d,b[0])))||(a[1]-b[1])).map(x=>x[0]); const B=J.map(j=>{ const b=btn('cs-jbtn'); const pl=h('span','pl'); pl.innerHTML=svgI('play'); b.appendChild(pl); const tx=h('span'); tx.appendChild(h('b',null,j.title)); tx.appendChild(h('small',null,j.steps.length+' steps across the map')); b.appendChild(tx); b.addEventListener('click', ()=>startJourney(j.id)); w.appendChild(b); return b; });
+  /* the longest story for each app group comes first, in the groups' order of importance, then the rest by number of steps */
+  const AO=[]; (d.appGroups||[]).forEach(g=>{ const s0=(g.ids||[]).map(id=>d.systems.find(x=>x.id===id)).find(x=>x && x.area); if(s0 && AO.indexOf(s0.area)<0) AO.push(s0.area); }); Object.keys(d.areas).forEach(k=>{ if(AO.indexOf(k)<0) AO.push(k); });
+  const byLen=journeys(d).map((j,i)=>[j,i]).sort((a,b)=>(b[0].steps.length-a[0].steps.length)||(a[1]-b[1])).map(x=>x[0]);
+  const lead=AO.map(k=>byLen.find(j=>jArea(d,j)===k)).filter(Boolean); const J=lead.concat(byLen.filter(j=>lead.indexOf(j)<0)); const B=J.map(j=>{ const b=btn('cs-jbtn'); const pl=h('span','pl'); pl.innerHTML=svgI('play'); b.appendChild(pl); const tx=h('span'); tx.appendChild(h('b',null,j.title)); tx.appendChild(h('small',null,j.steps.length+' steps across the map')); b.appendChild(tx); b.addEventListener('click', ()=>startJourney(j.id)); w.appendChild(b); return b; });
   const more=btn('cs-all','', ()=>{ const t=P.el && [...P.el.querySelectorAll('.cs-band')].find(x=>x.querySelector('.cs-sb')); if(t) t.scrollIntoView({block:'start', behavior:reduce()?'auto':'smooth'}); }); kr.appendChild(more);
   /* fill the panel: as many stories as fit; if spacing them a little closer lets one more in, do that */
   const fit=()=>{ if(!w.isConnected) return; const g=p.parentNode, one=!g || getComputedStyle(g).gridTemplateColumns.split(' ').filter(Boolean).length<2, cap=one ? 0 : p.clientHeight;
     const run=tight=>{ w.style.gap=tight?'9px':''; B.forEach(b=>{ b.hidden=false; b.style.paddingTop=b.style.paddingBottom=tight?'6px':''; }); more.hidden=false;
-      let n=B.length; if(!cap){ n=Math.min(6,B.length); B.forEach((b,i)=>b.hidden=i>=n); } else { more.hidden=B.length<=3; while(n>3 && p.scrollHeight>cap+1){ n--; B[n].hidden=true; more.hidden=false; } }
+      let n=B.length; if(!cap){ n=Math.min(Math.max(6, lead.length),B.length); B.forEach((b,i)=>b.hidden=i>=n); } else { const MIN=Math.max(3, lead.length); more.hidden=B.length<=MIN; while(n>MIN && p.scrollHeight>cap+1){ n--; B[n].hidden=true; more.hidden=false; } }
       more.hidden = n>=B.length; return n; };
     let n=run(false), tight=false; if(cap && n<B.length){ const n2=run(true); if(n2>n){ n=n2; tight=true; } else n=run(false); }
     more.textContent='See all '+B.length+' stories →';
