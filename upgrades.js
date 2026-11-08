@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261108h';
+var BUILD='20261108i';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -5102,7 +5102,18 @@ function confirms(d){ return d.systems.filter(s=>s.confirm).length + d.connectio
 function journeys(d){ return (Array.isArray(d.journeys)?d.journeys:[]).map(j=>Object.assign({}, j, {steps:(j.steps||[]).filter(st=>d.systems.some(s=>s.id===st.sys))})).filter(j=>j.steps.length>1); }
 
 function page(){ start(); const root=h('div','cs'+(P.edit?' editing':'')); P.el=root; draw(); return root; }
-function draw(){ const root=P.el; if(!root) return; root.textContent=''; root.className='cs'+(P.edit?' editing':'');
+/* a redraw (a save from anywhere) keeps the reader exactly where they were: the section at the top of the screen stays put (November 8, 2026) */
+function scroller(el){ for(let n=el && el.parentElement; n && n!==document.body; n=n.parentElement){ const o=getComputedStyle(n).overflowY; if((o==='auto'||o==='scroll') && n.scrollHeight>n.clientHeight+1) return n; } return document.scrollingElement || document.documentElement; }
+function draw(){ const root=P.el; if(!root) return; if(!root.isConnected || !root.firstChild) return draw0();
+  const sc=scroller(root), vt=sc===document.scrollingElement||sc===document.documentElement ? 0 : sc.getBoundingClientRect().top;
+  const marks=[...root.querySelectorAll('.cs-hero, .cs-grid, section.cs-band')]; let ai=-1, at=0; for(let i=0;i<marks.length;i++){ const r=marks[i].getBoundingClientRect(); if(r.bottom>vt+1){ ai=i; at=r.top; break; } }
+  const st0=sc.scrollTop; root.style.minHeight=root.offsetHeight+'px'; draw0();
+  if(ai>=0){ const m2=[...root.querySelectorAll('.cs-hero, .cs-grid, section.cs-band')][ai]; if(m2){ const dt=m2.getBoundingClientRect().top-at; if(Math.abs(dt)>.5) sc.scrollTop+=dt; } } else sc.scrollTop=st0;
+  requestAnimationFrame(()=>{ const m3=ai>=0 && [...root.querySelectorAll('.cs-hero, .cs-grid, section.cs-band')][ai]; const before=m3 ? m3.getBoundingClientRect().top : 0; root.style.minHeight=''; if(m3){ const dt=m3.getBoundingClientRect().top-before; if(Math.abs(dt)>.5) sc.scrollTop+=dt; } }); }
+/* the page stops its animations while you scroll, so scrolling stays smooth */
+let SCROLLED=0; try{ document.addEventListener('scroll', ()=>{ SCROLLED=performance.now(); }, {capture:true, passive:true}); window.addEventListener('wheel', ()=>{ SCROLLED=performance.now(); }, {passive:true}); window.addEventListener('touchmove', ()=>{ SCROLLED=performance.now(); }, {passive:true}); }catch(e){}
+const scrolling=now=>(now||performance.now())-SCROLLED<220;
+function draw0(){ const root=P.el; if(!root) return; root.textContent=''; root.className='cs'+(P.edit?' editing':'');
   const d=M.data;
   if(!d){ root.appendChild(h('div','cs-empty','Getting Connected Systems…')); return; }
   if(d.empty){ const e=h('div','cs-empty'); e.appendChild(h('b',null,'Connected Systems hasn’t been loaded yet.')); e.appendChild(h('p',null, canEdit() ? 'Ask Team HQ’s Claude to “refresh Connected Systems” and it will bring everything in from the MISMO Connections Map.' : 'Jonna will bring it in from the MISMO Connections Map.')); root.appendChild(e); return; }
@@ -5282,7 +5293,7 @@ function network(cv){ const ctx=cv.getContext && cv.getContext('2d'); if(!ctx) r
   const frame=()=>{ ctx.clearRect(0,0,w,hh); for(let i=0;i<pts.length;i++){ const a=pts[i]; for(let j=i+1;j<pts.length;j++){ const b=pts[j], dx=a.x-b.x, dy=a.y-b.y, dd=dx*dx+dy*dy; if(dd<16000){ ctx.strokeStyle='rgba(116,191,235,'+(0.35*(1-dd/16000)).toFixed(3)+')'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); } } }
     pts.forEach(p=>{ ctx.fillStyle='rgba(169,216,243,.9)'; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); }); };
   let seen=true; if('IntersectionObserver' in window){ const io=new IntersectionObserver(es=>{ seen=es[0].isIntersecting; }); io.observe(cv); }
-  const tick=()=>{ if(!cv.isConnected) return; if(!document.hidden && seen){ pts.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; if(p.x<0||p.x>w) p.vx*=-1; if(p.y<0||p.y>hh) p.vy*=-1; }); frame(); } requestAnimationFrame(tick); };
+  const tick=now=>{ if(!cv.isConnected) return; if(!document.hidden && seen && !scrolling(now)){ pts.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; if(p.x<0||p.x>w) p.vx*=-1; if(p.y<0||p.y>hh) p.vy*=-1; }); frame(); } requestAnimationFrame(tick); };
   requestAnimationFrame(()=>{ size(); seed(); if(reduce()) frame(); else tick(); }); }
 function chips(d, box){ box.setAttribute('aria-label','Filter by area or find a system');
   const add=(k,label,col)=>{ const b=btn('cs-chip', null, ()=>{ P.filter=k; box.querySelectorAll('.cs-chip').forEach(x=>x.setAttribute('aria-pressed', String(x===b))); paintState(); }); if(col){ const i=h('i'); i.style.background=col; b.appendChild(i); } b.append(label); b.setAttribute('aria-pressed', String(P.filter===k)); box.appendChild(b); };
@@ -5353,8 +5364,9 @@ function pulses(){ const cv=h('canvas'); cv.setAttribute('aria-hidden','true'); 
   const size=()=>{ const r=cv.getBoundingClientRect(); if(!r.width) return false; dpr=Math.min(2, window.devicePixelRatio||1); if(Math.abs(r.width-w)>.5 || Math.abs(r.height-hh)>.5){ w=r.width; hh=r.height; cv.width=Math.round(w*dpr); cv.height=Math.round(hh*dpr); } k=w/1200; return true; };
   const sample=e=>{ const L=e.el.getTotalLength(), n=Math.max(12, Math.min(90, Math.round(L/8))), a=[]; for(let j=0;j<=n;j++){ const q=e.el.getPointAtLength(L*j/n); a.push(q.x, q.y); } e.p.pts=a; };
   if('IntersectionObserver' in window){ const io=new IntersectionObserver(es=>{ seen=es[0].isIntersecting; }); io.observe(cv); }
-  const frame=now=>{ if(!cv.isConnected) return; requestAnimationFrame(frame); if(!seen || document.hidden || !size()) return;
-    ctx.setTransform(dpr*k,0,0,dpr*k,0,0); ctx.clearRect(0,0,1200,720);
+  let dirty=true; if('ResizeObserver' in window){ const ro=new ResizeObserver(()=>{ dirty=true; if(!cv.isConnected) ro.disconnect(); }); ro.observe(cv); }
+  const frame=now=>{ if(!cv.isConnected) return; requestAnimationFrame(frame); if(!seen || document.hidden || scrolling(now)) return; if(dirty || !('ResizeObserver' in window)){ if(!size()) return; dirty=false; } if(!w) return;
+    ctx.setTransform(dpr*k,0,0,dpr*k,0,0); ctx.clearRect(0,0,1200,hh/k+2);
     const d=M.data; const t=now-t0; if(now-hotAt>1000){ hotAt=now; hot=getComputedStyle(cv).getPropertyValue('--cs-hot').trim()||'#14486e'; }
     /* the flowing dashes on the selected system's lines */
     ctx.setLineDash([8,6]); ctx.lineDashOffset=-(t/1000*14)%14; ctx.lineWidth=2.6; ctx.strokeStyle=hot;
@@ -6302,6 +6314,7 @@ function paint(){
     else vDash();
   }catch(e){ console.error(e); body.appendChild(h('p','nx-empty','Something went wrong drawing this view.')); }
   body.scrollTop=sy; const sl2=body.querySelector('.nx-sl, .nx-dl'); if(sl2) sl2.scrollTop=sly;
+  if(k==='systems' && sy){ const back=()=>{ if(body.scrollTop<sy-2 && body.scrollHeight-body.clientHeight>body.scrollTop+2) body.scrollTop=sy; }; requestAnimationFrame(back); setTimeout(back, 250); } /* parts of that page size themselves a moment later */
   drawTabbar();
 }
 window.__nxToast=toast;
@@ -7601,7 +7614,7 @@ function openCatalog(){
 /* new numbers from a system: redraw the dashboard once they've stopped arriving, not for every one */
 /* an app newly found on resources.mismo.org: show it in the menus straight away */
 window.addEventListener('hq:sys', ()=>{ if(!ui.on || dashEdit || busy() || !shell || shell.hidden) return; drawRail(); });
-window.addEventListener('hq:bset', ()=>{ if(!ui.on || dashEdit || busy() || !shell || shell.hidden) return; drawRail(); paint(); });
+window.addEventListener('hq:bset', ()=>{ if(!ui.on || dashEdit || busy() || !shell || shell.hidden) return; drawRail(); if(viewKind()!=='systems') paint(); });
 let countsT=null; window.addEventListener('hq:counts', ()=>{ clearTimeout(countsT); countsT=setTimeout(refreshSysTiles, 600); });
 function refreshSysTiles(){ if(!ui.on || viewKind()!=='day' || tdrag || !shell || shell.hidden) return; const grid=body.querySelector('.nx-tiles'); if(!grid) return;
   const L=dashEdit || dashLayout();
@@ -7828,7 +7841,8 @@ let lastSig='';
 function hsh(str){ let x=0; for(let i=0;i<str.length;i++){ x=((x<<5)-x+str.charCodeAt(i))|0; } return x; }
 const sig=()=>[S.tasks.length, hsh(S.tasks.map(t=>[t.id,t.at,t.s,t.due,t.w,t.r,t.o,(t.d||[]).join(','),t.p,t.t,(t.notes||'').length,(t.sub||[]).map(z=>z.done?1:0).join(''),(t.wait||[]).join(','),t.rep||'',(t.fol||[]).join(','),t.repNext||''].join('|')).join('~')), (S.asks||[]).length, (S.asks||[]).map(a=>a.state).join(''), (S.nudges||[]).filter(n=>!n.done).length, S.rocks.length+'/'+S.rocks.map(r=>(Array.isArray(r.upd)&&r.upd[0]&&r.upd[0].at)||0).join(','), (window.__hqx&&window.__hqx.sig?window.__hqx.sig():''), (ui.view==='mine'?syncSig():''), Object.keys((window.__cal&&window.__cal.CAL&&window.__cal.CAL.by)||{}).length, (window.__cal&&window.__cal.CAL&&window.__cal.CAL.at)||0].join(':');
 function busy(){ if(drag || tdrag!=null || menuEl || document.documentElement.classList.contains('nx-boxing') || document.querySelector('.hqx-ov')) return true; const a=document.activeElement; return !!(a && (a.tagName==='INPUT' || a.tagName==='SELECT' || a.tagName==='TEXTAREA') && (shell && shell.contains(a))); }
-const live=setInterval(()=>{ if(!ui.on || document.hidden) return; const s=sig(); if(s===lastSig) return; if(busy()) return; lastSig=s; drawRail(); paint(); }, 1200);
+/* Connected Systems keeps itself current, so task and inbox changes elsewhere don't rebuild it (and move the reader) */
+const live=setInterval(()=>{ if(!ui.on || document.hidden) return; const s=sig(); if(s===lastSig) return; if(busy()) return; lastSig=s; drawRail(); if(viewKind()!=='systems') paint(); }, 1200);
 const clock=setInterval(()=>{ if(!ui.on || document.hidden || busy()) return; drawRail(); if(shell && !shell.hidden && (viewKind()==='day' || viewKind()==='person')) paint(); }, 60e3);
 /* if the classic page redraws its rail, put our items back */
 const railMo=new MutationObserver(()=>{ if(!ui.on) return; const nav=navEl(); if(nav && railNodes.length && !nav.contains(railNodes[0])) drawRail(); });
