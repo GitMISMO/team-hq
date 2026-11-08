@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261107zv';
+var BUILD='20261108a';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4321,7 +4321,7 @@ const css=h('style'); css.id='mob-css'; css.textContent=`
   /* the top bar fits on a phone: no bell in the Expenses app, tighter buttons on Team HQ (November 7, 2026) */
   html.app-exp #hq-bell{display:none!important}
   header.hqtop .hqtop-r{gap:4px!important}
-  header.hqtop .hqtop-r .mastbtn{width:30px!important;height:30px!important;min-width:30px!important;padding:0!important}
+  header.hqtop .hqtop-r .mastbtn{width:30px!important;height:30px!important;min-width:30px!important;padding:0!important;justify-content:center!important;gap:0!important}
   html.app-exp header.hqtop .exp-hq{padding-left:8px!important;padding-right:8px!important}
   @media (max-width:380px){header.hqtop .logoplate{padding:4px 6px!important}header.hqtop .mastrule{margin:0 5px!important}}
   .mob-bar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:95;background:var(--surface);border-top:1px solid var(--border);box-shadow:0 -6px 20px rgba(6,32,47,.10);padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px))}
@@ -4719,7 +4719,7 @@ html[data-theme="dark"] .cs{--cs-hot:#74bfeb}
 /* side panel */
 .cs-start [hidden]{display:none!important}
 .cs-panel{min-width:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}
-@media(max-width:1100px){.cs-panel{height:auto!important}}
+@media(max-width:1100px){.cs-panel{height:auto!important;overflow:visible;overscroll-behavior:auto}}
 .cs-ph{padding:16px 18px 14px;color:#fff;background:linear-gradient(135deg,var(--pc,#14486e),color-mix(in srgb,var(--pc,#14486e) 55%,#06202f));position:relative}
 .cs-ph .cs-k{color:rgba(255,255,255,.85)}
 .cs-ph h3{font-size:21px;font-weight:800;margin:4px 0 8px;color:#fff;padding-right:28px}
@@ -4804,7 +4804,7 @@ html[data-theme="dark"] .cs .cs-ph .cs-build{color:#456179}
 .cs-sbs li:hover,.cs-sbs li:focus-visible{border-color:var(--cs-sky);border-top-color:var(--pc,#74bfeb);transform:translateY(-1px);outline:none}
 .cs-sbs .sn{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;background:var(--cs-hot);color:var(--surface)}
 .cs-sbs b{display:block;font-size:13.5px}.cs-sbs p{margin:3px 0 0;font-size:12.5px;line-height:1.45;color:var(--ink-2)}
-@media(max-width:900px){.cs-sbb{grid-template-columns:minmax(0,1fr)}.cs-sbl{border-right:0;border-bottom:1px solid var(--border);max-height:240px}.cs-sbfind{margin-left:0;width:100%}.cs-sbh{flex-direction:column}}
+@media(max-width:900px){.cs-sbb{grid-template-columns:minmax(0,1fr)}.cs-sbl{border-right:0;border-bottom:1px solid var(--border);max-height:none!important;flex-direction:row;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;overscroll-behavior-y:auto;scroll-snap-type:x proximity;padding:10px}.cs-sbl .cs-sbg{display:none}.cs-sbi{flex:0 0 210px;scroll-snap-align:start;background:var(--surface-2)}.cs-sbfind{margin-left:0;width:100%}.cs-sbh{flex-direction:column}}
 /* journeys */
 .cs-jgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
 .cs-jc{padding:16px;display:grid;gap:10px;cursor:pointer;transition:transform .2s,box-shadow .2s,border-color .2s;text-align:left;font:inherit;color:inherit}
@@ -4821,7 +4821,7 @@ html[data-theme="dark"] .cs .cs-ph .cs-build{color:#456179}
 .cs-gauge{padding:14px 20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
 .cs-gauge svg{width:96px;height:96px;flex:none}
 .cs-gauge .gt{flex:1;min-width:200px;display:grid;gap:4px}.cs-gauge .gt b{font-size:18px;font-weight:800}
-.cs-gauge .gl{display:flex;flex-wrap:wrap;gap:6px}
+.cs-gauge .gl{display:flex;flex-wrap:wrap;gap:6px}.cs-gauge .gl .cs-tag{white-space:normal;max-width:100%}.cs-sec>*{min-width:0}@media(max-width:560px){.cs-gauge{padding:14px}.cs-gauge .gt{min-width:0;flex-basis:100%}}
 .cs-gauge .tr{fill:none;stroke:var(--surface-3,var(--border));stroke-width:12}
 .cs-gauge .pg{fill:none;stroke:url(#csG);stroke-width:12;stroke-linecap:round;transition:stroke-dasharray 1.2s cubic-bezier(.2,.7,.2,1)}
 .cs-gauge .n{font-size:32px;font-weight:800;fill:var(--ink)}.cs-gauge .of{font-size:12px;fill:var(--ink-3);font-weight:600}
@@ -4845,6 +4845,23 @@ html[data-theme="dark"] .cs .cs-ph .cs-build{color:#456179}
 .cs-swap .new:before{content:"→";color:#74bfeb;display:inline-block;transition:transform .2s}
 .cs-swap:hover .new:before{transform:translateX(4px)}
 .cs-swap p{margin:0;font-size:13.5px;color:var(--ink-2)}
+.cs-swipe{display:none}.cs-chipset{display:contents}
+/* phones: one easy scroll down the page (November 8, 2026) */
+@media(max-width:900px){
+ .cs-panel.is-intro{display:none}
+ .cs-swipe{display:block;font-size:12px;color:var(--ink-3);padding:8px 14px 0}
+ .cs-chipset,.cs-sbtabs{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;scrollbar-width:none;width:100%;padding-bottom:2px}.cs-chipset::-webkit-scrollbar,.cs-sbtabs::-webkit-scrollbar{display:none}
+ .cs-chipset>*,.cs-sbtabs>*{flex:none}.cs-tools .cs-find{flex:1 0 100%;margin:0}.cs-tools .cs-find input{width:100%}
+ .cs-legend{gap:6px 14px;font-size:12px}
+}
+@media(max-width:560px){
+ .cs-hero h2{font-size:26px}.cs-hero .lede{font-size:14px;line-height:1.5}.cs-stat{padding:12px}.cs-stat span{font-size:12px}
+ .cs-band{margin-top:28px}.cs-sh h2{font-size:21px}.cs-sh p{font-size:13.5px}
+ .cs-swaps{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.cs-swap{padding:10px 12px}.cs-swap p{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;font-size:12.5px}
+ .cs-wkg li small,.cs-cad li small{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+ .cs-wkg li.open small,.cs-cad li.open small{display:block}
+ .cs-sbs{grid-template-columns:minmax(0,1fr);gap:6px}.cs-sbs li{padding:8px 10px}
+}
 /* automation */
 .cs-cad{display:grid;gap:10px}
 .cs-cadcol{padding:12px 14px;display:grid;grid-template-columns:230px minmax(0,1fr);gap:14px;align-items:center}
@@ -5024,9 +5041,9 @@ function draw(){ const root=P.el; if(!root) return; root.textContent=''; root.cl
   if(P.edit) root.appendChild(editBar(d));
   /* map */
   const b1=band('How it fits together','The System Map', P.edit ? 'Edit mode: select a box to change it, drag a box to move it, or use Add a System and Add a Connection above.' : 'MBA and Microsoft 365 on the left, MISMO’s own apps in the middle, the outside world on the right, and the shared engine underneath. Point at a box to see what it touches; select it for the full story.');
-  const tl=h('div','cs-tools'); chips(d, tl); tl.appendChild(finder(d)); b1.appendChild(tl);
+  const tl=h('div','cs-tools'); const cset=h('div','cs-chipset'); chips(d, cset); tl.appendChild(cset); tl.appendChild(finder(d)); b1.appendChild(tl);
   const g=h('div','cs-grid'); g.style.marginTop='12px';
-  const left=h('div','cs-card cs-mapwrap'); const mb=h('div','cs-mapbox'); const mi=h('div','cs-mapin'); mi.appendChild(map(d)); if(pulseOn){ mi.classList.add('moving'); mi.appendChild(pulses()); } mi.appendChild(P.svgTop); P.mapin=mi; if('ResizeObserver' in window){ const ro=new ResizeObserver(()=>{ if(!mi.isConnected){ ro.disconnect(); return; } placeBub(); }); ro.observe(mi); } mb.appendChild(mi); left.appendChild(mb);
+  const left=h('div','cs-card cs-mapwrap'); const mb=h('div','cs-mapbox'); const sw0=h('p','cs-swipe','Swipe the map sideways to see all of it; tap a box for its details.'); left.appendChild(sw0); const mi=h('div','cs-mapin'); mi.appendChild(map(d)); if(pulseOn){ mi.classList.add('moving'); mi.appendChild(pulses()); } mi.appendChild(P.svgTop); P.mapin=mi; if('ResizeObserver' in window){ const ro=new ResizeObserver(()=>{ if(!mi.isConnected){ ro.disconnect(); return; } placeBub(); }); ro.observe(mi); } mb.appendChild(mi); left.appendChild(mb);
   const lg=h('div','cs-legend'); lg.innerHTML='<span><svg width="30" height="8" aria-hidden="true"><line x1="0" y1="4" x2="30" y2="4" stroke="var(--cs-hot)" stroke-width="2.4" stroke-dasharray="8 6"/><circle cx="20" cy="4" r="3" fill="#74bfeb"/></svg>Work moving automatically</span><span><svg width="30" height="8" aria-hidden="true"><line x1="0" y1="4" x2="30" y2="4" stroke="#a2701a" stroke-width="1.8" stroke-dasharray="3 5"/></svg>Copied by a person</span><span><svg width="30" height="8" aria-hidden="true"><line x1="1" y1="4" x2="29" y2="4" stroke="#9fb3c4" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="1 6"/></svg>Not live yet</span><span><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4" fill="#2fbf71"/></svg>Live</span><span><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4" fill="#e0a83c"/></svg>Launching</span><span><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4" fill="#9fb3c4"/></svg>Building</span>'+(P.edit?'<span><svg width="10" height="10" aria-hidden="true"><circle cx="5" cy="5" r="4" fill="#a2701a"/></svg>To confirm</span>':'');
   left.appendChild(lg); P.tourHost=left; g.appendChild(left);
   const panel=h('aside','cs-card cs-panel'); panel.setAttribute('aria-live','polite'); g.appendChild(panel); P.panel=panel; balance(left, panel); b1.appendChild(g); root.appendChild(b1); addSec('System Map', b1);
@@ -5352,7 +5369,7 @@ function placeBub(){ const d=M.data, mi=P.mapin, b=mi && mi.querySelector('.cs-b
   if(w==='below' || w==='above') b.style.setProperty('--ax', Math.max(14, Math.min(bw-14, px-l))+'px'); else b.style.setProperty('--ay', Math.max(14, Math.min(bh-14, py-t))+'px'); }
 
 /* ---------- the side panel: what a system does (or, in Edit mode, the form) ---------- */
-function side(){ const p=P.panel, d=M.data; if(!p || !d || d.empty) return; p.textContent='';
+function side(){ const p=P.panel, d=M.data; if(!p || !d || d.empty) return; p.textContent=''; p.classList.remove('is-intro');
   if(P.form){ const w=h('div','cs-ep'); p.appendChild(w); P.form(w); return; }
   let id=P.sel; if(P.jr){ const j=journeys(d).find(x=>x.id===P.jr.id); if(j){ storyPanel(p, d, j); return; } }
   if(!id){ intro(p, d); return; }
@@ -5376,7 +5393,7 @@ function side(){ const p=P.panel, d=M.data; if(!p || !d || d.empty) return; p.te
   pb.appendChild(fl);
   const facts=h('dl','cs-facts'); const row=(k,v)=>{ if(!v) return; const w=h('div'); w.appendChild(h('dt',null,k)); const dd=h('dd'); if(typeof v==='string') dd.textContent=v; else dd.appendChild(v); w.appendChild(dd); facts.appendChild(w); };
   row('Where it lives', s.where); if(s.replaced) row('Replaced', h('s',null,s.replaced)); if(facts.children.length) pb.appendChild(facts); }
-function intro(p, d){ const w=h('div','cs-start'); p.appendChild(w);
+function intro(p, d){ p.classList.add('is-intro'); const w=h('div','cs-start'); p.appendChild(w);
   if(P.edit){ w.appendChild(h('div','cs-k','Edit mode')); w.appendChild(h('h3',null,'Change the Map')); w.appendChild(h('p',null,'Select a system to change its status or details, or to add, change or set aside its connections. Drag a box to move it. Every save updates the “as of” date.'));
     const n=confirms(d); if(n) w.appendChild(h('span','cs-cf', n+' item'+(n>1?'s':'')+' still to confirm, marked with an amber dot. They’re only marked here, not for everyone else.'));
     return; }
@@ -7676,7 +7693,7 @@ function openMenuSheet(){
   const grp=(t)=>menuEl.appendChild(h('div','nx-ml',t));
   const item=(label, fn, iconHtml)=>{ const b=btn('nx-mi', null, ()=>{ closeMenus(); fn(); }); b.innerHTML=(iconHtml||'')+'<span>'+label+'</span>'; menuEl.appendChild(b); };
   grp('You'); Object.keys(VIEWS).filter(k=>!VIEWS[k].team).forEach(k=>item(VIEWS[k].t, ()=>open(k), ic(VIEWS[k].i)));
-  grp('Team Pages'); Object.keys(VIEWS).filter(k=>VIEWS[k].team && (k!=='systems' || window.__hqSystems)).forEach(k=>item(VIEWS[k].t, ()=>open(k), ic(VIEWS[k].i))); [...document.querySelectorAll('.hq.rail nav button[data-hq]')].forEach(b=>{ const s=b.querySelector('svg'); item(b.textContent.trim(), ()=>openClassic(b.dataset.hq), s?s.outerHTML:''); });
+  grp('Team Pages'); [...document.querySelectorAll('.hq.rail nav button[data-hq]')].forEach(b=>{ const s=b.querySelector('svg'); item(b.textContent.trim(), ()=>openClassic(b.dataset.hq), s?s.outerHTML:''); }); /* team views (Connected Systems) after the other team pages, as on the left menu */ Object.keys(VIEWS).filter(k=>VIEWS[k].team && (k!=='systems' || window.__hqSystems)).forEach(k=>item(VIEWS[k].t, ()=>open(k), ic(VIEWS[k].i)));
   { const hb=document.getElementById('help-btn'); if(hb){ const s=hb.querySelector('svg'); item('Help', ()=>{ hideApp(); ui.view='c:help'; save(); pushView(ui.view); hb.click(); markRail(); }, s?s.outerHTML:''); } }
   document.body.appendChild(menuEl);
   { const mine=menuEl; setTimeout(()=>document.addEventListener('click', function off(e){ if(menuEl!==mine){ document.removeEventListener('click', off); return; } if(mine && !mine.contains(e.target) && !e.target.closest('.nx-tbm')){ closeMenus(); document.removeEventListener('click', off); } }), 0); }
