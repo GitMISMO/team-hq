@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261108o';
+var BUILD='20261108q';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -5025,7 +5025,8 @@ html[data-theme="dark"] .cs-cv-det .bk:not(.sys) small{color:#5fd29a}
 .cs-lh{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 9px;background:var(--surface-2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
 .cs-grp:first-child .cs-lh{border-top:0}.cs-lh b{font-size:13.5px}.cs-lh em{font-style:normal;font-size:12px;font-weight:800;min-width:24px;text-align:center;padding:2px 7px;border-radius:5px;background:var(--surface);color:var(--ink-2)}
 .cs-lh.you{background:var(--navy,#0d314c);border-color:var(--navy,#0d314c)}.cs-lh.you b{color:#fff}.cs-lh.you em{background:rgba(255,255,255,.16);color:#fff}
-.cs-ri.none{display:block;font-size:13px;color:var(--ink-3)}.cs-ri .asked{font-size:11.5px;color:var(--ink-3)}.cs-ri .due{font-size:11px;font-weight:700;padding:1px 6px;border-radius:4px;background:color-mix(in srgb,#e0a83c 20%,transparent);color:#9a6510}
+.cs-ri.none{display:block;font-size:13px;color:var(--ink-3)}.cs-ri .asked{font-size:11.5px;color:var(--ink-3)}.cs-rqd{display:grid;gap:6px;margin-top:4px;font-size:12.5px;line-height:1.5;color:var(--ink-2)}.cs-rqd p{margin:0}.cs-rqd ul{margin:0;padding-left:18px;display:grid;gap:3px}.cs-rqd b{color:var(--ink);font-weight:700}
+.cs-ri .due{font-size:11px;font-weight:700;padding:1px 6px;border-radius:4px;background:color-mix(in srgb,#e0a83c 20%,transparent);color:#9a6510}
 .cs-rqf{display:grid;grid-template-columns:140px 200px minmax(0,1fr) minmax(0,1fr) auto;gap:10px;align-items:end;padding:12px 14px}
 .cs-rqf label{display:grid;gap:4px;font-size:11.5px;font-weight:700;color:var(--ink-3)}.cs-rqf input,.cs-rqf select{font:inherit;font-size:13.5px;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);min-width:0}
 @media(max-width:1100px){.cs-cols3{column-count:2}.cs-rqf{grid-template-columns:1fr 1fr}.cs-rqf label:nth-child(3),.cs-rqf label:nth-child(4){grid-column:1/-1}}
@@ -5277,6 +5278,10 @@ const RQA={relay:'Save relay', aws:'AWS'};
 const canReq=()=>canEdit() || me()==='perry';
 function saveReq(next, msg){ const prev=M.req ? clone(M.req) : null; next.at=Date.now(); next.by=me(); M.req=next; if(M.data && !M.data.empty) paintTodos(M.data);
   return Promise.resolve().then(()=>S.db.collection('systemsmap').doc('requests').set(next)).then(()=>{ if(msg) toast(msg, prev ? ()=>saveReq(prev, 'Put back the way it was.') : null); }, e=>{ console.error(e); toast('That didn’t save. Try again in a moment.'); if(prev){ M.req=prev; if(M.data) paintTodos(M.data); } }); }
+/* request details: plain lines become paragraphs, lines starting "- " become a list, "Label:" at the start of a line is bolded */
+function rqDetail(t){ const w=h('div','cs-rqd'); let ul=null; String(t).split(/\n/).forEach(line=>{ const L=line.trim(); if(!L){ ul=null; return; }
+    const put=(el,txt)=>{ const m=/^([A-Z][A-Za-z ’'/&-]{1,28}):\s(.*)$/.exec(txt); if(m){ el.appendChild(h('b',null,m[1]+': ')); el.append(m[2]); } else el.textContent=txt; return el; };
+    if(/^- /.test(L)){ if(!ul){ ul=h('ul'); w.appendChild(ul); } const li=h('li'); li.textContent=L.slice(2); ul.appendChild(li); } else { ul=null; w.appendChild(put(h('p'), L)); } }); return w; }
 function reqSection(d, wrap, by, tag){ const Q=(M.req && Array.isArray(M.req.items)) ? M.req.items : []; const can=canReq(); if(!Q.length && !can) return;
   const sec=h('div','cs-rsec'); const sh=h('div','cs-rsh'); sh.appendChild(h('h3',null,'Requests for Perry: Save Relay and AWS'));
   sh.appendChild(h('span',null,'What each system needs from the save relay or MISMO’s AWS account. Perry checks them off here; a system asks for one in the MISMO Connections Map.'));
@@ -5294,7 +5299,7 @@ function reqSection(d, wrap, by, tag){ const Q=(M.req && Array.isArray(M.req.ite
       if(can) ck.addEventListener('click', ()=>{ const nx=clone(M.req); const it=nx.items.find(z=>z.id===x.id); it.done=!it.done; if(it.done){ it.doneOn=todayISO(); it.doneBy=me(); } else { delete it.doneOn; delete it.doneBy; } saveReq(nx, (it.done?'Done: ':'Back on the list: ')+it.t); }); else { ck.disabled=true; ck.title='Perry or Jonna checks these off'; }
       row.appendChild(ck); const tx=h('div','tx'); const tt=btn('cs-tt', x.t); tt.addEventListener('click', ()=>{ P.rsItem=P.rsItem===x.id?null:x.id; paintTodos(M.data); }); tx.appendChild(tt);
       const mt=h('div','mt'); if(sy) mt.appendChild(tag(sy)); if(x.due && !x.done) mt.appendChild(h('span','due','Needed by '+fmt(x.due))); if(x.later && !x.done) mt.appendChild(h('span','asked','Later, no rush')); if(x.on) mt.appendChild(h('span','asked','Asked '+fmt(x.on)+(x.from?' by '+x.from:''))); tx.appendChild(mt);
-      if(P.rsItem===x.id){ if(x.d) tx.appendChild(h('p',null,x.d)); if(x.done && x.doneOn) tx.appendChild(h('small',null,'Done '+fmt(x.doneOn)+(x.doneBy?' by '+x.doneBy.replace(/^./,c=>c.toUpperCase()):''))); }
+      if(P.rsItem===x.id){ if(x.d) tx.appendChild(rqDetail(x.d)); if(x.done && x.doneOn) tx.appendChild(h('small',null,'Done '+fmt(x.doneOn)+(x.doneBy?' by '+x.doneBy.replace(/^./,c=>c.toUpperCase()):''))); }
       row.appendChild(tx); if(i===0){ const g=h('div','cs-grp'); g.appendChild(lh); g.appendChild(row); box.appendChild(g); } else box.appendChild(row); }); });
   sec.appendChild(box); wrap.appendChild(sec); }
 function toggleTodo(sys, id){ const d=M.data; const nd=clone(d); const g=nd.todos.find(x=>x.sys===sys); const it=g && g.items.find(x=>x.id===id); if(!it) return;
