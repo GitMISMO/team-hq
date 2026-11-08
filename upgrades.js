@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261108t';
+var BUILD='20261108u';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4630,6 +4630,9 @@ html[data-theme="dark"] .cs{--cs-hot:#74bfeb}
 .cs-nav button{flex:none;font:inherit;font-size:13px;font-weight:600;color:var(--ink-2);background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:6px 14px;cursor:pointer;transition:all .15s}
 .cs-nav button:hover{color:var(--ink);border-color:var(--cs-sky)}
 .cs-nav button.on{background:var(--navy,#0d314c);color:#fff;border-color:var(--navy,#0d314c)}
+.cs-nav button em{font-style:normal;font-size:11px;font-weight:800;margin-left:7px;padding:1px 6px;border-radius:4px;background:var(--surface-2);color:var(--ink-2)}.cs-nav button.on em{background:rgba(255,255,255,.18);color:#fff}
+.cs-nav button.map{color:var(--cs-hot);background:transparent;border-style:dashed}
+.cs-band[hidden]{display:none!important}
 /* sections */
 .cs-band{padding:22px 0 8px;scroll-margin-top:56px}
 .cs-sh{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:14px}
@@ -4876,7 +4879,7 @@ html[data-theme="dark"] .cs .cs-ph .cs-build{color:#456179}
 .cs-rp-row .was .ic{flex:none;width:32px;height:32px;border-radius:7px;display:grid;place-items:center;background:color-mix(in srgb,var(--sc) 14%,var(--surface));color:var(--sc);border:1px solid color-mix(in srgb,var(--sc) 30%,transparent)}
 .cs-rp-row .was .ic svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .cs-rp-row small{display:block;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:3px}
-.cs-rp-row .was s{display:block;font-size:13.5px;line-height:1.4;color:var(--ink-2);text-decoration-thickness:1.5px;text-decoration-color:color-mix(in srgb,#c23b2e 55%,transparent)}
+.cs-rp-row .was s{display:block;font-size:13.5px;line-height:1.4;color:var(--ink-2);text-decoration:none}
 .cs-rp-row .arw{display:grid;place-items:center;color:var(--pc)}.cs-rp-row .arw svg{width:36px;height:16px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;overflow:visible}
 .cs-rp-row .arw .ln{stroke-dasharray:4 4;transition:stroke-dashoffset .5s}.cs-rp-row .arw .hd{transition:transform .2s}
 .cs-rp-row .now{position:relative;padding:14px 16px 14px 18px;background:color-mix(in srgb,var(--pc) 8%,var(--surface));border-left:1px solid color-mix(in srgb,var(--pc) 22%,transparent)}
@@ -5234,8 +5237,17 @@ function draw0(){ const root=P.el; if(!root) return; root.textContent=''; root.c
     const ul=h('ul'); (gp.items||[]).forEach(it=>{ const li=h('li',null,it.name); li.appendChild(h('small',null,it.detail)); goTo(li, it.sys, d, null); ul.appendChild(li); }); col.appendChild(ul); cd.appendChild(col); }); b4.appendChild(cd); root.appendChild(b4); addSec('On Its Own', b4);
   const ft=h('p','cs-foot'); ft.textContent='As of '+longDate(d.asOf)+'. Brought in from the MISMO Connections Map'+(d.refreshedAt?' on '+longDate(d.refreshedAt):'')+(c.hand?'; '+c.hand+' connection'+(c.hand>1?'s are':' is')+' copied by a person and shown dashed':'')+(c.soonN?'; '+c.soonN+' '+(c.soonN>1?'aren’t':'isn’t')+' live yet and '+(c.soonN>1?'are':'is')+' dotted':'')+'.'; root.appendChild(ft);
   /* nav buttons */
-  secs.forEach(([label, el], i)=>{ const b=btn(i===0?'on':'', label, ()=>el.scrollIntoView({block:'start', behavior:reduce()?'auto':'smooth'})); nav.appendChild(b); });
-  watchSections(root, nav, secs.map(x=>x[1]));
+  /* everything below the map is one section at a time: the nav is a row of tabs, so the page never becomes an endless scroll (November 8, 2026) */
+  const tabs=secs.slice(1); if(!tabs.some(x=>x[0]===P.secTab)) P.secTab=tabs.length ? tabs[0][0] : null;
+  const cnt={'Follow the Work':journeys(d).length, 'What Changed':swaps(d).length, 'On Its Own':c.jobs, 'Security':d.protection.filter(l=>/in place/i.test(l.status||'')).length+'/'+d.protection.length};
+  { const T=(d.todos||[]).reduce((n,g)=>n+(g.items||[]).filter(it=>!it.done && !(dueOf(it) && (dueOf(it)-new Date())/864e5>LATER_DAYS)).length,0)+((M.req&&M.req.items)||[]).filter(x=>!x.done).length; cnt['To Rock Solid']=T; }
+  if(d.keyperson && d.keyperson.people) cnt[d.keyperson.nav||'Coverage']=d.keyperson.people.filter(x=>(x.items||[]).length).length;
+  const show=(label, scroll)=>{ P.secTab=label; tabs.forEach(([l, el])=>{ el.hidden= l!==label; }); [...nav.children].forEach(b=>{ const on=b.dataset.tab===label; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
+    if(scroll){ const el=(tabs.find(x=>x[0]===label)||[])[1]; if(el) requestAnimationFrame(()=>el.scrollIntoView({block:'start', behavior:reduce()?'auto':'smooth'})); } };
+  P.showTab=show; nav.setAttribute('role','tablist');
+  secs.forEach(([label, el], i)=>{ const b=btn(i===0?'map':'', null, ()=> i===0 ? el.scrollIntoView({block:'start', behavior:reduce()?'auto':'smooth'}) : show(label, true)); b.dataset.tab=i===0?'':label; if(i){ b.setAttribute('role','tab'); }
+    if(i===0){ b.innerHTML='<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" style="fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;margin-right:6px;vertical-align:-2px"><path d="M12 19V5M5 12l7-7 7 7"/></svg>'; b.append(label); } else { b.append(label); if(cnt[label]!=null) b.appendChild(h('em',null,String(cnt[label]))); } nav.appendChild(b); });
+  show(P.secTab, false);
   if(P.sel && !d.systems.some(s=>s.id===P.sel)) P.sel=null;
   paintState(); side(); reveal(root); if(P.jr) tourCard(); }
 /* ---------- the road to rock solid: what's left on each system ---------- */
@@ -5667,7 +5679,7 @@ function side(){ const p=P.panel, d=M.data; if(!p || !d || d.empty) return; p.te
   if(Q.length){ const hd=h('div','cs-fl'); hd.append(s.id==='team' ? 'Opens as dashboard tiles' : 'Team HQ tile'); hd.appendChild(h('small',null,'· '+Q.length)); fl.appendChild(hd); const box=h('div','cs-qt'); Q.forEach(c=>{ const o=by[c.from===s.id?c.to:c.from]; if(!o) return; const b=btn('cs-qc', o.name, ()=>select(o.id)); const i=h('i'); i.style.background=colorOf(d,o); b.prepend(i); box.appendChild(b); }); fl.appendChild(box); if(s.id!=='team') fl.appendChild(h('p','cs-note','Its headline numbers show on a Team HQ dashboard tile, and the tile opens it.')); }
   pb.appendChild(fl);
   const facts=h('dl','cs-facts'); const row=(k,v)=>{ if(!v) return; const w=h('div'); w.appendChild(h('dt',null,k)); const dd=h('dd'); if(typeof v==='string') dd.textContent=v; else dd.appendChild(v); w.appendChild(dd); facts.appendChild(w); };
-  row('Where it lives', s.where); if(s.replaced) row('Replaced', h('s',null,s.replaced)); if(facts.children.length) pb.appendChild(facts); }
+  row('Where it lives', s.where); if(s.replaced) row('Replaced', h('span',null,s.replaced)); if(facts.children.length) pb.appendChild(facts); }
 function intro(p, d){ p.classList.add('is-intro'); if(P.fitPanel) P.fitPanel(); const w=h('div','cs-start'); p.appendChild(w);
   if(P.edit){ w.appendChild(h('div','cs-k','Edit mode')); w.appendChild(h('h3',null,'Change the Map')); w.appendChild(h('p',null,'Select a system to change its status or details, or to add, change or set aside its connections. Drag a box to move it. Every save updates the “as of” date.'));
     const n=confirms(d); if(n) w.appendChild(h('span','cs-cf', n+' item'+(n>1?'s':'')+' still to confirm, marked with an amber dot. They’re only marked here, not for everyone else.'));
@@ -5679,7 +5691,7 @@ function intro(p, d){ p.classList.add('is-intro'); if(P.fitPanel) P.fitPanel(); 
   const AO=[]; (d.appGroups||[]).forEach(g=>{ const s0=(g.ids||[]).map(id=>d.systems.find(x=>x.id===id)).find(x=>x && x.area); if(s0 && AO.indexOf(s0.area)<0) AO.push(s0.area); }); Object.keys(d.areas).forEach(k=>{ if(AO.indexOf(k)<0) AO.push(k); });
   const byLen=journeys(d).map((j,i)=>[j,i]).sort((a,b)=>(b[0].steps.length-a[0].steps.length)||(a[1]-b[1])).map(x=>x[0]);
   const lead=AO.map(k=>byLen.find(j=>jArea(d,j)===k)).filter(Boolean); const J=lead.concat(byLen.filter(j=>lead.indexOf(j)<0)); const B=J.map(j=>{ const b=btn('cs-jbtn'); const pl=h('span','pl'); pl.innerHTML=svgI('play'); b.appendChild(pl); const tx=h('span'); tx.appendChild(h('b',null,j.title)); tx.appendChild(h('small',null,j.steps.length+' steps across the map')); b.appendChild(tx); b.addEventListener('click', ()=>startJourney(j.id)); w.appendChild(b); return b; });
-  const more=btn('cs-all','', ()=>{ const t=P.el && [...P.el.querySelectorAll('.cs-band')].find(x=>x.querySelector('.cs-sb')); if(t) t.scrollIntoView({block:'start', behavior:reduce()?'auto':'smooth'}); }); kr.appendChild(more);
+  const more=btn('cs-all','', ()=>{ if(P.showTab) P.showTab('Follow the Work', true); }); kr.appendChild(more);
   /* fill the panel: as many stories as fit; if spacing them a little closer lets one more in, do that */
   const fit=()=>{ if(!w.isConnected) return; const g=p.parentNode, one=!g || getComputedStyle(g).gridTemplateColumns.split(' ').filter(Boolean).length<2, cap=one ? 0 : p.clientHeight;
     const run=tight=>{ w.style.gap=tight?'9px':''; B.forEach(b=>{ b.hidden=false; b.style.paddingTop=b.style.paddingBottom=tight?'6px':''; }); more.hidden=false;
