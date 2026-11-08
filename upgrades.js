@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261108i';
+var BUILD='20261108j';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4850,7 +4850,7 @@ html[data-theme="dark"] .cs .cs-ph .cs-build{color:#456179}
 .cs-swap p{margin:0;font-size:13.5px;color:var(--ink-2)}
 /* What Changed (Nov 8, 2026) */
 .cs-rp-sum{display:grid;grid-template-columns:auto minmax(0,1fr);gap:28px;align-items:center;padding:20px 24px;margin-bottom:14px;background:linear-gradient(120deg,color-mix(in srgb,#74bfeb 12%,var(--surface)),var(--surface) 60%)}
-.cs-rp-sum .big{display:grid;gap:2px;padding-right:28px;border-right:1px solid var(--border)}.cs-rp-sum .big b{font-size:58px;line-height:1;font-weight:800;letter-spacing:-.03em;color:var(--cs-hot)}.cs-rp-sum .big span{font-size:13px;font-weight:600;color:var(--ink-2);max-width:130px;line-height:1.3}
+.cs-rp-sum .big{display:grid;gap:2px;padding-right:28px;border-right:1px solid var(--border)}.cs-rp-sum .big b{font-size:58px;line-height:1;font-weight:800;letter-spacing:-.03em;color:var(--cs-hot)}.cs-rp-sum .big span{font-size:13px;font-weight:600;color:var(--ink-2);max-width:170px;line-height:1.3}
 .cs-rp-sum .rt{display:grid;gap:12px;min-width:0}
 .cs-rp-bar{display:flex;gap:3px;height:12px;border-radius:3px;overflow:hidden}.cs-rp-bar i{display:block;min-width:6px}
 .cs-rp-keys{display:flex;flex-wrap:wrap;gap:8px}
@@ -5214,11 +5214,11 @@ const KK={acct:['On their accounts','key'], hands:['Waits on them','clock'], cov
 /* What Changed: each manual process and the system that took it over (redesigned November 8, 2026) */
 const SRC={ss:['Smartsheet','grid','#1f9d63'], mail:['Email and inboxes','mail','#e0782f'], file:['Spreadsheets and files','doc','#2f80c8'], bi:['Reports','chart','#8a5cc7'], tool:['Other tools','tool','#7f98ad']};
 function srcOf(t){ t=(t||'').toLowerCase(); return /smartsheet|macts/.test(t)?'ss':/power bi|\breport/.test(t)?'bi':/email|inbox|status meeting/.test(t)?'mail':/spreadsheet|grid|pdf|word|by hand|export|\blists?\b/.test(t)?'file':'tool'; }
-function swapBand(d){ const b=band('What changed','What Each System Replaced','Every manual process MISMO retired, and the system that does the work now. Select one to see it on the map.');
+function swapBand(d){ const b=band('What changed','What Each System Replaced','Each one was a multi-step manual workflow of copying, emailing, uploading and chasing by hand. The system shown now does that work. Select one to see it on the map.');
   const by={}; d.systems.forEach(x=>by[x.id]=x); const rank=appRank(d), grpOf={}; (d.appGroups||[]).forEach(g=>(g.ids||[]).forEach(id=>{ if(!grpOf[id]) grpOf[id]=g.name; }));
   const L=swaps(d).map(s=>Object.assign({}, s, {t:srcOf(s.before)})).sort((a,c)=>rank(a.sys)-rank(c.sys));
   const cnt={}; L.forEach(s=>cnt[s.t]=(cnt[s.t]||0)+1); const types=Object.keys(SRC).filter(k=>cnt[k]);
-  const top=h('div','cs-card cs-rp-sum cs-rv'); const big=h('div','big'); big.appendChild(h('b',null,String(L.length))); big.appendChild(h('span',null,'manual processes retired')); top.appendChild(big);
+  const top=h('div','cs-card cs-rp-sum cs-rv'); const big=h('div','big'); big.appendChild(h('b',null,String(L.length))); big.appendChild(h('span',null,'multi-step manual workflows retired')); top.appendChild(big);
   const rt=h('div','rt'); const bar=h('div','cs-rp-bar'); types.forEach(k=>{ const sg=h('i'); sg.style.flex=String(cnt[k]); sg.style.background=SRC[k][2]; sg.title=SRC[k][0]+': '+cnt[k]; bar.appendChild(sg); }); rt.appendChild(bar);
   const keys=h('div','cs-rp-keys'); let F=null; const grid=h('div','cs-rp-grid'); const rows=[];
   const apply=()=>{ let vis=[]; rows.forEach(r=>{ const on=!F || r.dataset.t===F; r.hidden=!on; r.classList.remove('span'); if(on) vis.push(r); }); if(vis.length%2) vis[vis.length-1].classList.add('span'); keys.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed', String((x.dataset.t||null)===F))); };
@@ -5263,7 +5263,7 @@ function hero(d, c){ const hs=h('section','cs-hero'); const cv=h('canvas'); hs.a
   if(d.lede) hs.appendChild(h('p','lede',d.lede));
   const st=h('div','cs-stats'); const nums=[];
   const dr=h('div','cs-drill'); dr.hidden=true;
-  [['apps',c.apps,'MISMO systems on resources.mismo.org'],['auto',c.auto,'automatic hand-offs between systems'],['jobs',c.jobs,'jobs that run on their own'],['swaps',c.swaps,'manual processes replaced']].forEach(x=>{ const s=btn('cs-stat'); s.dataset.k=x[0]; const b=h('b',null, P.counted||reduce() ? String(x[1]) : '0'); s.appendChild(b); s.appendChild(h('span',null,x[2])); s.appendChild(h('em',null,'See the list')); s.setAttribute('aria-expanded','false');
+  [['apps',c.apps,'MISMO systems on resources.mismo.org'],['auto',c.auto,'automatic hand-offs between systems'],['jobs',c.jobs,'jobs that run on their own'],['swaps',c.swaps,'multi-step manual workflows replaced']].forEach(x=>{ const s=btn('cs-stat'); s.dataset.k=x[0]; const b=h('b',null, P.counted||reduce() ? String(x[1]) : '0'); s.appendChild(b); s.appendChild(h('span',null,x[2])); s.appendChild(h('em',null,'See the list')); s.setAttribute('aria-expanded','false');
     s.addEventListener('click', ()=>{ P.drill = P.drill===x[0] ? null : x[0]; drill(d, st, dr); }); st.appendChild(s); nums.push([b,x[1]]); }); hs.appendChild(st); hs.appendChild(dr); if(P.drill) drill(d, st, dr);
   const sb=h('div','cs-sbar'); const bar=h('div','bar'); const segs=[[c.live,'#2fbf71','Live'],[c.launching,'#e0a83c','Launching'],[c.building,'#9fb3c4','Building']];
   segs.forEach(z=>{ const i=h('i'); i.style.background=z[1]; i.style.width=P.counted||reduce() ? (c.apps?z[0]/c.apps*100:0)+'%' : '0%'; i.title=z[0]+' '+z[2]; bar.appendChild(i); }); sb.appendChild(bar);
@@ -5282,7 +5282,7 @@ function drill(d, st, dr){ const k=P.drill; st.querySelectorAll('.cs-stat').forE
     L=A.map(c=>{ const t=h('b'); t.append(by[c.from].name); t.appendChild(h('i',null,' → ')); t.append(by[c.to].name); return it(c.from, t, c.what); }); }
   if(k==='jobs'){ const n=d.automations.reduce((a,g)=>a+(g.items||[]).length,0); title=n+' Jobs That Run on Their Own'; note='On a schedule or the moment something changes.';
     d.automations.forEach(g=>(g.items||[]).forEach(j=>{ const t=h('b',null,j.name); L.push(it(j.sys, t, j.detail, h('span','cs-dc',g.cadence))); })); }
-  if(k==='swaps'){ const S=swaps(d); title=S.length+' Manual Processes Replaced'; note='What each system took off a spreadsheet, out of an inbox or out of a meeting.';
+  if(k==='swaps'){ const S=swaps(d); title=S.length+' Multi-Step Manual Workflows Replaced'; note='Each was a run of hand steps (copying, emailing, uploading, chasing) that a system now does. What each one took off a spreadsheet, out of an inbox or out of a meeting.';
     L=S.map(r=>{ const t=h('b'); t.appendChild(h('s',null,r.before)); t.appendChild(h('i',null,' → ')); t.append(r.after); return it(r.sys, t, r.detail); }); }
   const hd=h('div','cs-dh'); const tx=h('div'); tx.appendChild(h('h3',null,title)); tx.appendChild(h('p',null,note+' Select any one to see it on the map.')); hd.appendChild(tx);
   const x=btn('cs-dx','×', ()=>{ P.drill=null; drill(d, st, dr); }); x.setAttribute('aria-label','Close the list'); hd.appendChild(x); dr.appendChild(hd);
