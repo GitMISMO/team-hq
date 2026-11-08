@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261108f';
+var BUILD='20261108g';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4848,6 +4848,72 @@ html[data-theme="dark"] .cs .cs-ph .cs-build{color:#456179}
 .cs-swap .new:before{content:"→";color:#74bfeb;display:inline-block;transition:transform .2s}
 .cs-swap:hover .new:before{transform:translateX(4px)}
 .cs-swap p{margin:0;font-size:13.5px;color:var(--ink-2)}
+/* What Changed (Nov 8, 2026) */
+.cs-rp-sum{display:grid;grid-template-columns:auto minmax(0,1fr);gap:28px;align-items:center;padding:20px 24px;margin-bottom:14px;background:linear-gradient(120deg,color-mix(in srgb,#74bfeb 12%,var(--surface)),var(--surface) 60%)}
+.cs-rp-sum .big{display:grid;gap:2px;padding-right:28px;border-right:1px solid var(--border)}.cs-rp-sum .big b{font-size:58px;line-height:1;font-weight:800;letter-spacing:-.03em;color:var(--cs-hot)}.cs-rp-sum .big span{font-size:13px;font-weight:600;color:var(--ink-2);max-width:130px;line-height:1.3}
+.cs-rp-sum .rt{display:grid;gap:12px;min-width:0}
+.cs-rp-bar{display:flex;gap:3px;height:12px;border-radius:3px;overflow:hidden}.cs-rp-bar i{display:block;min-width:6px}
+.cs-rp-keys{display:flex;flex-wrap:wrap;gap:8px}
+.cs-rp-k{display:inline-flex;align-items:center;gap:8px;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 12px 6px 7px;cursor:pointer;transition:border-color .15s,background .15s}
+.cs-rp-k b{font-size:15px;font-weight:800}.cs-rp-k span:last-child{font-size:12.5px;color:var(--ink-2)}
+.cs-rp-k .ic{width:24px;height:24px;border-radius:5px;display:grid;place-items:center;background:color-mix(in srgb,var(--sc) 16%,transparent);color:var(--sc)}.cs-rp-k .ic svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.cs-rp-k.all{padding-left:12px}
+.cs-rp-k:hover{border-color:var(--sc,var(--cs-sky))}.cs-rp-k[aria-pressed="true"]{border-color:var(--sc,var(--cs-hot));background:color-mix(in srgb,var(--sc,#74bfeb) 12%,var(--surface));box-shadow:inset 0 0 0 1px var(--sc,var(--cs-hot))}
+.cs-rp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.cs-rp-row{display:grid;grid-template-columns:minmax(0,.85fr) 44px minmax(0,1.25fr);align-items:stretch;padding:0;overflow:hidden;transition:transform .18s,box-shadow .18s,border-color .18s}
+.cs-rp-row[hidden]{display:none}.cs-rp-row.span{grid-column:1/-1}
+.cs-rp-row .was{display:flex;gap:10px;align-items:flex-start;padding:14px 4px 14px 14px;background:repeating-linear-gradient(-45deg,transparent 0 7px,color-mix(in srgb,var(--ink-3) 5%,transparent) 7px 8px)}
+.cs-rp-row .was .ic{flex:none;width:32px;height:32px;border-radius:7px;display:grid;place-items:center;background:color-mix(in srgb,var(--sc) 14%,var(--surface));color:var(--sc);border:1px solid color-mix(in srgb,var(--sc) 30%,transparent)}
+.cs-rp-row .was .ic svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.cs-rp-row small{display:block;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:3px}
+.cs-rp-row .was s{display:block;font-size:13.5px;line-height:1.4;color:var(--ink-2);text-decoration-thickness:1.5px;text-decoration-color:color-mix(in srgb,#c23b2e 55%,transparent)}
+.cs-rp-row .arw{display:grid;place-items:center;color:var(--pc)}.cs-rp-row .arw svg{width:36px;height:16px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;overflow:visible}
+.cs-rp-row .arw .ln{stroke-dasharray:4 4;transition:stroke-dashoffset .5s}.cs-rp-row .arw .hd{transition:transform .2s}
+.cs-rp-row .now{position:relative;padding:14px 16px 14px 18px;background:color-mix(in srgb,var(--pc) 8%,var(--surface));border-left:1px solid color-mix(in srgb,var(--pc) 22%,transparent)}
+.cs-rp-row .now:before{content:"";position:absolute;right:0;top:0;bottom:0;width:4px;background:var(--pc)}
+.cs-rp-row .now small{color:color-mix(in srgb,var(--pc) 75%,var(--ink))}
+.cs-rp-row .now b{display:block;font-size:16px;line-height:1.3;font-weight:800;color:var(--ink)}
+.cs-rp-row .now p{margin:4px 0 0;font-size:13px;line-height:1.45;color:var(--ink-2)}
+.cs-rp-row.cs-go{cursor:pointer}.cs-rp-row.cs-go:hover,.cs-rp-row.cs-go:focus-visible{transform:translateY(-2px);box-shadow:0 10px 24px -14px color-mix(in srgb,var(--pc) 70%,transparent);border-color:color-mix(in srgb,var(--pc) 45%,var(--border))}
+.cs-rp-row:hover .arw .ln{stroke-dashoffset:-16}.cs-rp-row:hover .arw .hd{transform:translateX(3px)}
+@media(max-width:1100px){.cs-rp-grid{grid-template-columns:minmax(0,1fr)}.cs-rp-row.span{grid-column:auto}}
+@media(max-width:640px){.cs-rp-sum{grid-template-columns:minmax(0,1fr);gap:14px;padding:16px}.cs-rp-sum .big{border-right:0;padding-right:0;display:flex;align-items:baseline;gap:10px}.cs-rp-sum .big b{font-size:44px}.cs-rp-sum .big span{max-width:none}
+ .cs-rp-keys{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px}.cs-rp-keys::-webkit-scrollbar{display:none}.cs-rp-k{flex:none}
+ .cs-rp-row{grid-template-columns:minmax(0,1fr)}.cs-rp-row .was{padding:12px 14px 4px}.cs-rp-row .arw{height:26px;justify-items:start;padding-left:22px}.cs-rp-row .arw svg{transform:rotate(90deg);width:22px}.cs-rp-row .now{border-left:0;border-top:1px solid color-mix(in srgb,var(--pc) 22%,transparent);padding:12px 18px 14px 14px}}
+/* Coverage (Nov 8, 2026) */
+.cs-cv{display:grid;gap:12px}
+.cs-cv-ros{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.cs-cv-p{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto auto;column-gap:10px;row-gap:8px;align-items:center;text-align:left;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;position:relative;transition:border-color .15s,box-shadow .15s,transform .15s}
+.cs-cv-p:hover{border-color:var(--cs-sky);transform:translateY(-1px)}
+.cs-cv-p .av,.cs-cv-det .who .av{flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:12.5px;font-weight:800;background:var(--cs-hot);color:var(--surface)}
+.cs-cv-p .tx{min-width:0}.cs-cv-p .tx b{display:block;font-size:14.5px;line-height:1.25}.cs-cv-p .tx small{display:block;font-size:11.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cs-cv-p .mb{grid-column:1/-1;display:flex;gap:2px;height:6px;border-radius:2px;overflow:hidden;background:var(--surface-2)}.cs-cv-p .mb i{display:block}
+.cs-cv-p em{grid-column:1/-1;font-style:normal;font-size:11.5px;font-weight:700;color:var(--ink-3);margin-top:-3px}
+.cs-cv-p[aria-selected="true"]{border-color:var(--cs-hot);box-shadow:inset 0 0 0 1px var(--cs-hot),0 8px 20px -14px var(--cs-hot);background:color-mix(in srgb,#74bfeb 10%,var(--surface))}
+.cs-cv-p[aria-selected="true"]:after{content:"";position:absolute;left:50%;bottom:-8px;width:12px;height:12px;background:inherit;border-right:1px solid var(--cs-hot);border-bottom:1px solid var(--cs-hot);transform:translateX(-50%) rotate(45deg)}
+.cs-cv-det{display:grid;grid-template-columns:minmax(0,1fr);padding:0;overflow:hidden}
+.cs-cv-det .side{display:grid;grid-template-columns:minmax(220px,max-content) max-content minmax(0,1fr);gap:22px;align-items:center;padding:18px 20px;background:linear-gradient(100deg,color-mix(in srgb,#74bfeb 13%,var(--surface)),var(--surface-2));border-bottom:1px solid var(--border)}
+.cs-cv-det .who{display:flex;gap:12px;align-items:center}.cs-cv-det .who .av{width:52px;height:52px;font-size:17px}.cs-cv-det .who h3{margin:0;font-size:19px;line-height:1.2}.cs-cv-det .who p{margin:2px 0 0;font-size:12.5px;color:var(--ink-3)}
+.cs-cv-det .st{display:flex;gap:8px}
+.cs-cv-det .st .s{display:grid;grid-template-columns:26px auto;grid-template-rows:auto auto;column-gap:8px;align-items:center;padding:8px 12px 8px 9px;border-radius:7px;background:var(--surface);border:1px solid var(--border);min-width:118px}.cs-cv-det .st .s .ic{grid-row:span 2}
+.cs-cv-det .st .s.zero{display:none}
+.cs-cv-det .st .ic,.cs-cv-det .its .ic{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;background:color-mix(in srgb,var(--kc) 16%,transparent);color:var(--kc)}
+.cs-cv-det .st svg,.cs-cv-det .its svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.cs-cv-det .st b{font-size:20px;font-weight:800;line-height:1}.cs-cv-det .st span:last-child{font-size:11.5px;color:var(--ink-2);white-space:nowrap}
+.cs-cv-det .bk{align-self:stretch;display:flex;flex-direction:column;justify-content:center;padding:10px 14px;border-radius:8px;background:color-mix(in srgb,#1f9d63 9%,var(--surface));border:1px solid color-mix(in srgb,#1f9d63 30%,transparent)}
+.cs-cv-det .bk small{display:block;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#13784b;margin-bottom:3px}.cs-cv-det .bk p{margin:0;font-size:13px;line-height:1.45;color:var(--ink-2)}
+.cs-cv-det .bk.sys{background:var(--surface);border-color:var(--border)}.cs-cv-det .bk.sys small{color:var(--ink-3)}.cs-cv-det .bk .sl{display:flex;flex-wrap:wrap;gap:6px 14px}.cs-cv-det .bk .sy{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink-2)}.cs-cv-det .bk .sy:before{content:"";width:9px;height:9px;border-radius:2px;background:var(--pc)}
+html[data-theme="dark"] .cs-cv-det .bk:not(.sys) small{color:#5fd29a}
+@media (prefers-color-scheme: dark){ html:not([data-theme="light"]) .cs-cv-det .bk:not(.sys) small{color:#5fd29a} }
+.cs-cv-det .its{list-style:none;margin:0;padding:16px 18px 6px;column-count:2;column-gap:12px}.cs-cv-det .its.c3{column-count:3}
+.cs-cv-det .its li{break-inside:avoid;margin:0 0 10px;padding:11px 13px 12px;border:1px solid var(--border);border-top:3px solid var(--kc);border-radius:8px;background:var(--surface);transition:transform .15s,box-shadow .15s,border-color .15s}
+.cs-cv-det .its .tg{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}.cs-cv-det .its .tg .ic{width:20px;height:20px;border-radius:5px}.cs-cv-det .its .tg svg{width:12px;height:12px}
+.cs-cv-det .its .sy{margin-left:auto;display:inline-flex;align-items:center;gap:5px;text-transform:none;letter-spacing:0;font-size:11.5px;font-weight:600;color:var(--ink-2)}.cs-cv-det .its .sy:before{content:"";width:8px;height:8px;border-radius:2px;background:var(--pc)}
+.cs-cv-det .its b{display:block;font-size:14px;line-height:1.3}.cs-cv-det .its p{margin:3px 0 0;font-size:12.5px;line-height:1.45;color:var(--ink-2)}
+.cs-cv-det .its li.cs-go{cursor:pointer}.cs-cv-det .its li.cs-go:hover,.cs-cv-det .its li.cs-go:focus-visible{transform:translateY(-2px);box-shadow:0 8px 18px -12px var(--kc)}
+@media(max-width:1180px){.cs-cv-det .side{grid-template-columns:minmax(0,1fr) max-content}.cs-cv-det .bk{grid-column:1/-1}.cs-cv-det .its.c3{column-count:2}}
+@media(max-width:700px){.cs-cv-ros{display:flex;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px 10px}.cs-cv-ros::-webkit-scrollbar{display:none}.cs-cv-p{flex:none;width:200px}
+ .cs-cv-det .side{grid-template-columns:minmax(0,1fr);gap:12px;padding:16px}.cs-cv-det .st .s{flex:1;min-width:0}.cs-cv-det .its,.cs-cv-det .its.c3{column-count:1;padding:14px 14px 4px}}
 .cs-swipe{display:none}.cs-chipset{display:contents}
 /* phones: one easy scroll down the page (November 8, 2026) */
 @media(max-width:900px){
@@ -4995,6 +5061,9 @@ document.head.appendChild(css);
 /* ---------- small pictures ---------- */
 const ICO={
   shield:'<path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/>',
+  grid:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16M15 4v16"/>',
+  chart:'<path d="M3 20h18M6 20v-6M11 20V6M16 20v-9M21 20V9"/>',
+  tool:'<path d="M14.5 6.5a4 4 0 0 0-5.3 5.3L4 17l3 3 5.2-5.2a4 4 0 0 0 5.3-5.3l-2.6 2.6-2.4-.6-.6-2.4z"/>',
   key:'<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M15 8l2 2"/>',
   lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
   mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/>',
@@ -5070,8 +5139,7 @@ function draw(){ const root=P.el; if(!root) return; root.textContent=''; root.cl
   d.protection.forEach((l,i)=>{ const ok=/in place/i.test(l.status||''); const r=h('div','cs-card cs-layer cs-rv'+(ok?'':' prog')); const n=h('div','n'); n.innerHTML=svgI(layerIcon(l.title)); r.appendChild(n); const tx=h('div'); const lt=h('div','lt'); lt.appendChild(h('b',null,l.title)); lt.appendChild(h('span','cs-tag '+(ok?'cs-live':'cs-soon'), l.status||'')); tx.appendChild(lt); tx.appendChild(h('p',null,l.detail)); r.appendChild(tx); goTo(r, l.sys, d, tx); ly.appendChild(r); });
   sec.appendChild(ly); b2.appendChild(sec); root.appendChild(b2); addSec('Security', b2);
   /* replaced */
-  const b3=band('What changed','What Each System Replaced','Each one took a manual process off a spreadsheet or out of an inbox. Select one to see the system on the map.'); const sw=h('div','cs-swaps');
-  swaps(d).forEach(s=>{ const c0=h('div','cs-card cs-swap cs-rv'); const sy=s.sys && d.systems.find(x=>x.id===s.sys); if(sy) c0.style.setProperty('--pc', colorOf(d,sy)); c0.appendChild(h('div','old',s.before)); c0.appendChild(h('div','new',s.after)); c0.appendChild(h('p',null,s.detail)); goTo(c0, s.sys, d, c0); sw.appendChild(c0); }); b3.appendChild(sw); root.appendChild(b3); addSec('What Changed', b3);
+  const b3=swapBand(d); root.appendChild(b3); addSec('What Changed', b3);
   /* automation */
   const b4=band('Automation','What Runs on Its Own','Work that used to wait for someone to remember it now happens on a schedule or the moment something changes. Select any job to see where it runs.'); const cd=h('div','cs-cad');
   d.automations.forEach(gp=>{ const col=h('div','cs-card cs-cadcol cs-rv'); const hd=h('div','cs-cadh'); const ic=h('span','ic'); ic.innerHTML=svgI(cadIcon(gp.cadence)); hd.appendChild(ic); hd.appendChild(h('h3',null,gp.cadence)); hd.appendChild(h('em',null,String((gp.items||[]).length))); col.appendChild(hd);
@@ -5132,16 +5200,43 @@ function balance(left, panel){ const fit=()=>{ if(!left.isConnected) return; pan
 /* ---------- what depends on one person ---------- */
 /* who keeps it running: each person the work leans on, what runs on their accounts, what waits on them, and who covers */
 const KK={acct:['On their accounts','key'], hands:['Waits on them','clock'], cover:['Already covered','shield']};
+/* What Changed: each manual process and the system that took it over (redesigned November 8, 2026) */
+const SRC={ss:['Smartsheet','grid','#1f9d63'], mail:['Email and inboxes','mail','#e0782f'], file:['Spreadsheets and files','doc','#2f80c8'], bi:['Reports','chart','#8a5cc7'], tool:['Other tools','tool','#7f98ad']};
+function srcOf(t){ t=(t||'').toLowerCase(); return /smartsheet|macts/.test(t)?'ss':/power bi|\breport/.test(t)?'bi':/email|inbox|status meeting/.test(t)?'mail':/spreadsheet|grid|pdf|word|by hand|export|\blists?\b/.test(t)?'file':'tool'; }
+function swapBand(d){ const b=band('What changed','What Each System Replaced','Every manual process MISMO retired, and the system that does the work now. Select one to see it on the map.');
+  const by={}; d.systems.forEach(x=>by[x.id]=x); const rank=appRank(d), grpOf={}; (d.appGroups||[]).forEach(g=>(g.ids||[]).forEach(id=>{ if(!grpOf[id]) grpOf[id]=g.name; }));
+  const L=swaps(d).map(s=>Object.assign({}, s, {t:srcOf(s.before)})).sort((a,c)=>rank(a.sys)-rank(c.sys));
+  const cnt={}; L.forEach(s=>cnt[s.t]=(cnt[s.t]||0)+1); const types=Object.keys(SRC).filter(k=>cnt[k]);
+  const top=h('div','cs-card cs-rp-sum cs-rv'); const big=h('div','big'); big.appendChild(h('b',null,String(L.length))); big.appendChild(h('span',null,'manual processes retired')); top.appendChild(big);
+  const rt=h('div','rt'); const bar=h('div','cs-rp-bar'); types.forEach(k=>{ const sg=h('i'); sg.style.flex=String(cnt[k]); sg.style.background=SRC[k][2]; sg.title=SRC[k][0]+': '+cnt[k]; bar.appendChild(sg); }); rt.appendChild(bar);
+  const keys=h('div','cs-rp-keys'); let F=null; const grid=h('div','cs-rp-grid'); const rows=[];
+  const apply=()=>{ let vis=[]; rows.forEach(r=>{ const on=!F || r.dataset.t===F; r.hidden=!on; r.classList.remove('span'); if(on) vis.push(r); }); if(vis.length%2) vis[vis.length-1].classList.add('span'); keys.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed', String((x.dataset.t||null)===F))); };
+  const all=btn('cs-rp-k all',null,()=>{ F=null; apply(); }); all.appendChild(h('b',null,String(L.length))); all.appendChild(h('span',null,'All')); keys.appendChild(all);
+  types.forEach(k=>{ const kb=btn('cs-rp-k',null,()=>{ F= F===k ? null : k; apply(); }); kb.dataset.t=k; kb.style.setProperty('--sc', SRC[k][2]); const ic=h('span','ic'); ic.innerHTML=svgI(SRC[k][1]); kb.appendChild(ic); kb.appendChild(h('b',null,String(cnt[k]))); kb.appendChild(h('span',null,SRC[k][0])); keys.appendChild(kb); });
+  rt.appendChild(keys); top.appendChild(rt); b.appendChild(top);
+  L.forEach(s=>{ const sy=s.sys && by[s.sys]; const r=h('div','cs-card cs-rp-row cs-rv'); r.dataset.t=s.t; r.style.setProperty('--pc', sy ? colorOf(d,sy) : '#74bfeb'); r.style.setProperty('--sc', SRC[s.t][2]);
+    const was=h('div','was'); const ic=h('span','ic'); ic.innerHTML=svgI(SRC[s.t][1]); was.appendChild(ic); const wt=h('div'); wt.appendChild(h('small',null,'Before · '+SRC[s.t][0])); wt.appendChild(h('s',null,s.before)); was.appendChild(wt); r.appendChild(was);
+    const ar=h('div','arw'); ar.innerHTML='<svg viewBox="0 0 40 16" aria-hidden="true"><path class="ln" d="M2 8H34"/><path class="hd" d="M28 3l6 5-6 5"/></svg>'; r.appendChild(ar);
+    const nw=h('div','now'); nw.appendChild(h('small',null, sy && grpOf[sy.id] ? grpOf[sy.id] : 'Across MISMO')); nw.appendChild(h('b',null,s.after)); if(s.detail) nw.appendChild(h('p',null,s.detail)); r.appendChild(nw);
+    if(sy) goTo(r, s.sys, d, null); rows.push(r); grid.appendChild(r); });
+  b.appendChild(grid); apply(); return b; }
+/* Coverage: pick a person to see what leans on them (redesigned November 8, 2026) */
 function peopleBand(d){ const K=d.keyperson; const b=band(K.kicker||'Coverage', K.title||'Who Keeps It Running', K.lede||''); const by={}; d.systems.forEach(s=>by[s.id]=s);
-  const P0=K.people.filter(x=>(x.items||[]).length); const strip=h('div','cs-card cs-wk-sum');
-  P0.forEach((x,i)=>{ const c=btn('cs-wk-p'); c.appendChild(h('span','av',x.name.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase())); const tx=h('span'); tx.appendChild(h('b',null,x.name)); tx.appendChild(h('small',null,(x.items||[]).length+' item'+((x.items||[]).length>1?'s':''))); c.appendChild(tx); c.addEventListener('click', ()=>{ const t=b.querySelectorAll('.cs-wk')[i]; if(t) t.scrollIntoView({block:'nearest', behavior:reduce()?'auto':'smooth'}); }); strip.appendChild(c); });
-  b.appendChild(strip); const grid=h('div','cs-wks');
-  P0.forEach(x=>{ const card=h('div','cs-card cs-wk cs-rv'+((x.items||[]).length>9?' wide':'')); const hd=h('div','cs-wkh'); hd.appendChild(h('span','av',x.name.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase())); const tx=h('div'); tx.appendChild(h('h3',null,x.name)); if(x.role) tx.appendChild(h('p',null,x.role)); hd.appendChild(tx); card.appendChild(hd);
-    Object.keys(KK).forEach(k=>{ const L=(x.items||[]).filter(it=>(it.k||'hands')===k); if(!L.length) return; const sec=h('div','cs-wkg '+k); const sh=h('div','cs-wkgh'); const ic=h('span','ic'); ic.innerHTML=svgI(KK[k][1]); sh.appendChild(ic); sh.append(KK[k][0]); sh.appendChild(h('em',null,String(L.length))); sec.appendChild(sh);
-      const ul=h('ul'); L.forEach(it=>{ const li=h('li'); li.appendChild(h('b',null,it.t)); if(it.d) li.appendChild(h('small',null,it.d)); if(it.sys && by[it.sys]) goTo(li, it.sys, d, null); ul.appendChild(li); }); sec.appendChild(ul); card.appendChild(sec); });
-    if(x.backup){ const bk=h('div','cs-wkb'); bk.appendChild(h('b',null,'Backup ')); bk.append(x.backup); card.appendChild(bk); }
-    grid.appendChild(card); });
-  b.appendChild(grid); return b; }
+  const P0=K.people.filter(x=>(x.items||[]).length); const ini=n=>n.split(/\s+/).filter(w=>/^[A-Za-z]/.test(w) && !/^(and|of)$/i.test(w)).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const KC={acct:'#d39a2c', hands:'#2f80c8', cover:'#1f9d63'}; const n=(x,k)=>(x.items||[]).filter(it=>(it.k||'hands')===k).length;
+  const wrap=h('div','cs-cv'); const ros=h('div','cs-cv-ros'); ros.setAttribute('role','tablist'); ros.setAttribute('aria-label','People'); const det=h('div','cs-card cs-cv-det'); det.setAttribute('role','tabpanel');
+  const show=i=>{ const x=P0[i]; ros.querySelectorAll('.cs-cv-p').forEach((t,k)=>{ t.setAttribute('aria-selected', String(k===i)); t.tabIndex=k===i?0:-1; }); det.textContent='';
+    const side=h('div','side'); const hd=h('div','who'); hd.appendChild(h('span','av',ini(x.name))); const tx=h('div'); tx.appendChild(h('h3',null,x.name)); if(x.role) tx.appendChild(h('p',null,x.role)); hd.appendChild(tx); side.appendChild(hd);
+    const st=h('div','st'); Object.keys(KK).forEach(k=>{ const c=n(x,k); const r=h('div','s'+(c?'':' zero')); r.style.setProperty('--kc',KC[k]); const ic=h('span','ic'); ic.innerHTML=svgI(KK[k][1]); r.appendChild(ic); r.appendChild(h('b',null,String(c))); r.appendChild(h('span',null,KK[k][0])); st.appendChild(r); }); side.appendChild(st);
+    if(x.backup){ const bk=h('div','bk'); bk.appendChild(h('small',null,'Who steps in')); bk.appendChild(h('p',null, x.backup)); side.appendChild(bk); }
+    else { const ss=[...new Set((x.items||[]).map(it=>it.sys).filter(id=>by[id]))]; const bk=h('div','bk sys'); bk.appendChild(h('small',null,'Systems involved')); const sl=h('div','sl'); ss.forEach(id=>{ const t=h('span','sy'); t.style.setProperty('--pc',colorOf(d,by[id])); t.textContent=by[id].name; sl.appendChild(t); }); bk.appendChild(sl); side.appendChild(bk); }
+    det.appendChild(side);
+    const ul=h('ul','its'+((x.items||[]).length>=9?' c3':'')); ['acct','hands','cover'].forEach(k=>(x.items||[]).filter(it=>(it.k||'hands')===k).forEach(it=>{ const li=h('li'); li.style.setProperty('--kc',KC[k]); const tg=h('div','tg'); const ic=h('span','ic'); ic.innerHTML=svgI(KK[k][1]); tg.appendChild(ic); tg.append(KK[k][0]); const sy=it.sys && by[it.sys]; if(sy){ const sn=h('span','sy'); sn.style.setProperty('--pc',colorOf(d,sy)); sn.textContent=sy.name; tg.appendChild(sn); } li.appendChild(tg); li.appendChild(h('b',null,it.t)); if(it.d) li.appendChild(h('p',null,it.d)); if(sy) goTo(li, it.sys, d, null); ul.appendChild(li); }));
+    det.appendChild(ul); };
+  P0.forEach((x,i)=>{ const t=btn('cs-cv-p',null,()=>show(i)); t.setAttribute('role','tab'); t.appendChild(h('span','av',ini(x.name))); const tx=h('span','tx'); tx.appendChild(h('b',null,x.name)); tx.appendChild(h('small',null,x.role||'')); t.appendChild(tx);
+    const tot=(x.items||[]).length; const m=h('span','mb'); ['acct','hands','cover'].forEach(k=>{ const c=n(x,k); if(!c) return; const sg=h('i'); sg.style.flex=String(c); sg.style.background=KC[k]; m.appendChild(sg); }); t.appendChild(m); t.appendChild(h('em',null,tot+' item'+(tot>1?'s':'')));
+    t.addEventListener('keydown',e=>{ const k=e.key==='ArrowRight'||e.key==='ArrowDown'?1:e.key==='ArrowLeft'||e.key==='ArrowUp'?-1:0; if(!k) return; e.preventDefault(); const j=(i+k+P0.length)%P0.length; show(j); ros.children[j].focus(); }); ros.appendChild(t); });
+  wrap.appendChild(ros); wrap.appendChild(det); b.appendChild(wrap); if(P0.length) show(0); return b; }
 function keyBand(d){ const K=d.keyperson; const b=band('Key-person risk', K.title||'What Depends on One Person', K.lede||''); const by={}; d.systems.forEach(s=>by[s.id]=s);
   const all=[].concat(...K.groups.map(g=>g.items)); const sum=h('div','cs-card cs-kp-sum'); 
   K.groups.forEach(g=>{ const x=h('div','k '+(g.tone||'')); x.appendChild(h('b',null,String(g.items.length))); x.appendChild(h('span',null,g.short||g.title)); sum.appendChild(x); }); b.appendChild(sum);
