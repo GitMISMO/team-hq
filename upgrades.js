@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261107zp';
+var BUILD='20261107zq';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -5111,12 +5111,13 @@ function edgeGeo(a,b,i){ const p=anchor(a,b), q=anchor(b,a); const mx=(p.x+q.x)/
   const nx=-(q.y-p.y), ny=(q.x-p.x), L=Math.hypot(nx,ny)||1; const cx=mx+nx/L*off, cy=my+ny/L*off; return {d:'M'+p.x+' '+p.y+' Q'+cx+' '+cy+' '+q.x+' '+q.y, mx:(p.x+2*cx+q.x)/4, my:(p.y+2*cy+q.y)/4, len:Math.hypot(q.x-p.x,q.y-p.y)}; }
 function edgePath(a,b,i){ return edgeGeo(a,b,i).d; }
 let uid=0;
-function map(d){ const svg=sv('svg',{viewBox:'0 0 1200 720', role:'img', 'aria-label':'Map of MISMO’s systems and the connections between them'}); P.svg=svg; const pre='cse'+(++uid)+'-';
+function frame(d){ const ys=d.systems.filter(s=>s.zone!=='eng' && s.y!=null).map(s=>s.y); const zb=Math.max(300, (ys.length?Math.max(...ys):400)+H/2+20), et=zb+14; return {zb, et, ey:et+56, vb:et+90+10}; }
+function map(d){ const F=frame(d); P.vb=F.vb; const svg=sv('svg',{viewBox:'0 0 1200 '+F.vb, role:'img', 'aria-label':'Map of MISMO’s systems and the connections between them'}); P.svg=svg; const pre='cse'+(++uid)+'-';
   const defs=sv('defs',{},svg);
   defs.innerHTML='<filter id="csGlow" x="-200%" y="-200%" width="500%" height="500%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="csShadow" x="-20%" y="-40%" width="140%" height="190%"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#14486e" flood-opacity=".35"/></filter><linearGradient id="csZ" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--surface-2)"/><stop offset="1" stop-color="var(--surface)"/></linearGradient>';
-  [[12,22,196,500],[288,22,634,500],[992,22,196,500],[12,584,1176,112]].forEach(z=>sv('rect',{class:'cs-zone',x:z[0],y:z[1],width:z[2],height:z[3],rx:12,fill:'url(#csZ)'},svg));
-  [['MBA & Microsoft 365',110,44],['MISMO apps · resources.mismo.org',605,44],['Outside MISMO',1090,44],['Engine room · every app runs on these',600,606]].forEach(z=>{ const t=sv('text',{class:'cs-zl',x:z[1],y:z[2],'text-anchor':'middle'},svg); t.textContent=z[0]; });
-  const top=sv('svg',{viewBox:'0 0 1200 720', class:'cs-top', role:'group', 'aria-label':'MISMO’s systems'}); P.svgTop=top; const gE=sv('g',{},svg), gN=sv('g',{},top), gL=sv('g',{},top); const by={}; d.systems.forEach(s=>by[s.id]=s);
+  [[12,22,196,F.zb-22],[288,22,634,F.zb-22],[992,22,196,F.zb-22],[12,F.et,1176,90]].forEach(z=>sv('rect',{class:'cs-zone',x:z[0],y:z[1],width:z[2],height:z[3],rx:12,fill:'url(#csZ)'},svg));
+  [['MBA & Microsoft 365',110,44],['MISMO apps · resources.mismo.org',605,44],['Outside MISMO',1090,44],['Engine room · every app runs on these',600,F.et+22]].forEach(z=>{ const t=sv('text',{class:'cs-zl',x:z[1],y:z[2],'text-anchor':'middle'},svg); t.textContent=z[0]; });
+  const top=sv('svg',{viewBox:'0 0 1200 '+F.vb, class:'cs-top', role:'group', 'aria-label':'MISMO’s systems'}); P.svgTop=top; const gE=sv('g',{},svg), gN=sv('g',{},top), gL=sv('g',{},top); const by={}; d.systems.forEach(s=>by[s.id]= s.zone==='eng' ? Object.assign({}, s, {y:F.ey}) : s);
   P.edges=[]; P.nodes={}; const pairs={};
   d.connections.forEach((c,i0)=>{ const a=by[c.from], b=by[c.to]; if(!a || !b) return;
     const pk=[c.from,c.to].sort().join('|'), f0=pairs[pk]; if(!f0) pairs[pk]={i:i0, from:c.from}; const i=!f0 ? i0 : (f0.from===c.from ? f0.i+1 : f0.i); /* a second line between the same two boxes curves the other way */
@@ -5126,7 +5127,7 @@ function map(d){ const svg=sv('svg',{viewBox:'0 0 1200 720', role:'img', 'aria-l
     const lbTxt=(c.what.length>30 ? c.what.slice(0,29)+'…' : c.what); const lw=Math.round(lbTxt.length*5.9+14);
     const lb=sv('g',{class:'cs-lb'+(c.how==='hand'?' hand':c.how==='soon'?' soon':'')+(geo.len<lw+40 || c.quiet?' short':''), transform:'translate('+Math.round(geo.mx-lw/2)+','+Math.round(geo.my-10)+')'},gL); sv('rect',{x:0,y:0,width:lw,height:20,rx:10},lb); const lt=sv('text',{x:lw/2,y:13.5,'text-anchor':'middle'},lb); lt.textContent=lbTxt; e.lb=lb; e.box={x:Math.round(geo.mx-lw/2), y:Math.round(geo.my-10), w:lw, h:20};
     P.edges.push(e); });
-  d.systems.forEach(s=>{ const g=sv('g',{class:'cs-n'+(s.zone==='eng'?' eng':''), tabindex:0, role:'button', 'aria-label':s.name+', '+(s.status||''), transform:'translate('+(s.x-W/2)+','+(s.y-H/2)+')'},gN);
+  d.systems.forEach(s=>{ const g=sv('g',{class:'cs-n'+(s.zone==='eng'?' eng':''), tabindex:0, role:'button', 'aria-label':s.name+', '+(s.status||''), transform:'translate('+(s.x-W/2)+','+(by[s.id].y-H/2)+')'},gN);
     sv('rect',{class:'box',x:0,y:0,width:W,height:H,rx:9},g); sv('rect',{class:'bar',x:0,y:0,width:5,height:H,rx:2.5,fill:colorOf(d,s)},g);
     const two=!!(s.statusNote || s.zone==='eng' || s.sub); const t=sv('text',{x:13,y:two?17:25},g); t.textContent=s.name.length>19 ? s.name.slice(0,18)+'…' : s.name;
     if(two){ const t2=sv('text',{class:'sub',x:13,y:31},g); t2.textContent=s.statusNote || s.sub || (s.id==='robots'?'run on schedules':s.id==='flows'?'inside Microsoft 365':'used by every app'); }
@@ -5166,8 +5167,8 @@ function pulses(){ const cv=h('canvas'); cv.setAttribute('aria-hidden','true'); 
 function dragable(g, s, d){ g.addEventListener('pointerdown', ev=>{ if(ev.button!==0) return; const svg=P.svg; const pt=svg.createSVGPoint();
   const loc=e=>{ pt.x=e.clientX; pt.y=e.clientY; return pt.matrixTransform(svg.getScreenCTM().inverse()); };
   const st=loc(ev), ox=s.x, oy=s.y; let moved=false; g.setPointerCapture(ev.pointerId);
-  const mv=e=>{ const p=loc(e); const nx=Math.round(Math.max(W/2+8, Math.min(1200-W/2-8, ox+p.x-st.x))), ny=Math.round(Math.max(H/2+8, Math.min(720-H/2-8, oy+p.y-st.y)));
-    if(!moved && Math.hypot(nx-ox, ny-oy)<4) return; moved=true; g.classList.add('drag'); s.x=nx; s.y=ny; g.setAttribute('transform','translate('+(nx-W/2)+','+(ny-H/2)+')');
+  const mv=e=>{ const p=loc(e); const nx=Math.round(Math.max(W/2+8, Math.min(1200-W/2-8, ox+p.x-st.x))), ny=s.zone==='eng' ? oy : Math.round(Math.max(H/2+8, Math.min((P.vb||720)-H/2-8, oy+p.y-st.y)));
+    if(!moved && Math.hypot(nx-ox, ny-oy)<4) return; moved=true; g.classList.add('drag'); s.x=nx; s.y=ny; g.setAttribute('transform','translate('+(nx-W/2)+','+((s.zone==='eng' ? frame(d).ey : ny)-H/2)+')');
     const by={}; d.systems.forEach(z=>by[z.id]=z); P.edges.forEach(e2=>{ if(e2.c.from===s.id || e2.c.to===s.id){ const a=by[e2.c.from], b=by[e2.c.to]; e2.el.setAttribute('d', edgePath(a,b,e2.i)); if(e2.p) e2.p.pts=null; } }); };
   const up=()=>{ g.removeEventListener('pointermove', mv); g.removeEventListener('pointerup', up); g.removeEventListener('pointercancel', up); g.classList.remove('drag');
     if(moved){ g._moved=true; const nd=clone(d); const t=nd.systems.find(z=>z.id===s.id); t.x=s.x; t.y=s.y; s.x=ox; s.y=oy; save(nd, 'Moved '+s.name+'.'); } };
@@ -5252,9 +5253,11 @@ function intro(p, d){ const w=h('div','cs-start'); p.appendChild(w);
   /* as many stories as fit beside the map (the area filters already sit above it) */
   const J=journeys(d); const B=J.map(j=>{ const b=btn('cs-jbtn'); const pl=h('span','pl'); pl.innerHTML=svgI('play'); b.appendChild(pl); const tx=h('span'); tx.appendChild(h('b',null,j.title)); tx.appendChild(h('small',null,j.steps.length+' steps across the map')); b.appendChild(tx); b.addEventListener('click', ()=>startJourney(j.id)); w.appendChild(b); return b; });
   const more=btn('cs-ib','', ()=>{ const t=P.el && [...P.el.querySelectorAll('.cs-band')].find(x=>x.querySelector('.cs-jgrid')); if(t) t.scrollIntoView({block:'start', behavior:reduce()?'auto':'smooth'}); }); more.style.justifySelf='start'; w.appendChild(more);
-  const fit=()=>{ if(!w.isConnected) return; B.forEach(b=>b.hidden=false); more.hidden=true; const g=p.parentNode, one=!g || getComputedStyle(g).gridTemplateColumns.split(' ').filter(Boolean).length<2, cap=one ? 0 : p.clientHeight;
+  const fit=()=>{ if(!w.isConnected) return; B.forEach(b=>{ b.hidden=false; b.style.paddingTop=b.style.paddingBottom=''; }); more.hidden=true; const g=p.parentNode, one=!g || getComputedStyle(g).gridTemplateColumns.split(' ').filter(Boolean).length<2, cap=one ? 0 : p.clientHeight;
     let n=B.length; if(!cap){ n=Math.min(6,B.length); B.forEach((b,i)=>b.hidden=i>=n); } else { more.hidden=false; while(n>3 && p.scrollHeight>cap+1){ n--; B[n].hidden=true; } if(n===B.length) more.hidden=true; }
-    more.hidden = n>=B.length; more.textContent='See all '+B.length+' stories →'; };
+    more.hidden = n>=B.length; more.textContent='See all '+B.length+' stories →';
+    /* share any space left over among the stories shown, so the panel ends level with the map */
+    if(cap){ const left=cap-p.scrollHeight; if(left>2){ const per=Math.min(14, left/n/2); B.slice(0,n).forEach(b=>{ b.style.paddingTop=b.style.paddingBottom=(9+per)+'px'; }); } } };
   requestAnimationFrame(fit); if('ResizeObserver' in window){ const ro=new ResizeObserver(()=>{ if(!w.isConnected){ ro.disconnect(); return; } fit(); }); ro.observe(p); } }
 
 /* ---------- Edit mode ---------- */
