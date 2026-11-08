@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261108s';
+var BUILD='20261108t';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4728,6 +4728,7 @@ html[data-theme="dark"] .cs-n .box{fill:color-mix(in srgb,var(--pc,#9fb3c4) 18%,
 .cs-ib.pri{background:var(--navy,#0d314c);color:#fff;border-color:var(--navy,#0d314c)}
 /* side panel */
 .cs-start [hidden]{display:none!important}
+.cs-start.tiny>p,.cs-start.tiny .cs-jbtn small{display:none}.cs-start.tiny .cs-jbtn b{font-size:13px}
 .cs-mapwrap.cs-stick{position:sticky;top:62px}.cs-panel.is-intro{overflow:hidden}
 .cs-panel{min-width:0;scrollbar-width:thin}
 @media(max-width:1100px){.cs-panel{height:auto!important;overflow:visible;overscroll-behavior:auto}}
@@ -5466,10 +5467,9 @@ function map(d){ const F=frame(d); P.vb=F.vb; P.ey=F.ey; const svg=sv('svg',{vie
   const defs=sv('defs',{},svg);
   defs.innerHTML='<filter id="csGlow" x="-200%" y="-200%" width="500%" height="500%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="csShadow" x="-20%" y="-40%" width="140%" height="190%"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#14486e" flood-opacity=".35"/></filter><linearGradient id="csZ" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--surface-2)"/><stop offset="1" stop-color="var(--surface)"/></linearGradient>';
   [[12,22,196,F.zb-22],[288,22,634,F.zb-22],[992,22,196,F.zb-22],[12,F.et,1176,90]].forEach(z=>sv('rect',{class:'cs-zone',x:z[0],y:z[1],width:z[2],height:z[3],rx:12,fill:'url(#csZ)'},svg));
-  defs.insertAdjacentHTML('beforeend','<pattern id="csDot" width="18" height="18" patternUnits="userSpaceOnUse"><circle cx="9" cy="9" r="1" class="cs-dotp"/></pattern>'); sv('rect',{class:'cs-dots',x:0,y:0,width:1200,height:F.vb,fill:'url(#csDot)'},svg);
   /* each app group sits on its own tinted lane, in its color */
   (d.appGroups||[]).forEach(g=>{ const M0=(g.ids||[]).map(id=>d.systems.find(x=>x.id===id)).filter(x=>x && x.zone==='apps' && x.y!=null); if(!M0.length) return; const c0=colorOf(d, M0.find(x=>x.area)||M0[0]);
-    const x0=Math.min(...M0.map(x=>x.x))-W/2-8, x1=Math.max(...M0.map(x=>x.x))+W/2+8, y0=Math.min(...M0.map(x=>x.y))-H/2-19, y1=Math.max(...M0.map(x=>x.y))+H/2+4; const r=sv('rect',{class:'cs-lanebg',x:x0,y:y0,width:x1-x0,height:y1-y0,rx:10},svg); r.style.setProperty('--pc',c0); });
+    void c0; });
   [['MBA & Microsoft 365',110,44],['MISMO apps · resources.mismo.org',605,44],['Outside MISMO',1090,44],['Engine room · every app runs on these',600,F.et+22]].forEach(z=>{ const t=sv('text',{class:'cs-zl',x:z[1],y:z[2],'text-anchor':'middle'},svg); t.textContent=z[0]; });
   (d.appGroups||[]).forEach(g=>{ const M0=(g.ids||[]).map(id=>d.systems.find(x=>x.id===id)).filter(x=>x && x.zone==='apps' && x.y!=null); if(!M0.length) return; const y0=Math.min(...M0.map(x=>x.y)), x0=Math.min(...M0.filter(x=>x.y===y0).map(x=>x.x)); const t=sv('text',{class:'cs-gl',x:x0-W/2+2,y:y0-H/2-7},svg); t.textContent=g.name; t.style.setProperty('--pc', colorOf(d, M0.find(x=>x.area)||M0[0])); });
   const top=sv('svg',{viewBox:'0 0 1200 '+F.vb, class:'cs-top', role:'group', 'aria-label':'MISMO’s systems'}); P.svgTop=top; const gE=sv('g',{},svg), gN=sv('g',{},top), gL=sv('g',{},top); const by={}; d.systems.forEach(s=>by[s.id]= s.zone==='eng' ? Object.assign({}, s, {y:F.ey}) : s);
@@ -5537,7 +5537,7 @@ function dragable(g, s, d){ g.addEventListener('pointerdown', ev=>{ if(ev.button
     if(moved){ g._moved=true; const nd=clone(d); const t=nd.systems.find(z=>z.id===s.id); t.x=s.x; t.y=s.y; s.x=ox; s.y=oy; save(nd, 'Moved '+s.name+'.'); } };
   g.addEventListener('pointermove', mv); g.addEventListener('pointerup', up); g.addEventListener('pointercancel', up); }); }
 /* the engine room: what each piece holds up. A system's own "serves" list wins; otherwise these defaults (November 8, 2026) */
-const ENGD={robots:['spon','mms','web','media','social','news','m360','cms','elect','tracker','summit','iif'], flows:['spon','pros','mms','m360','money','sched','orders','media','summit','tracker','cms','team','elect','outlook','sp','teams']};
+const ENGD={robots:['spon','mms','web','media','social','news','m360','money','cms','elect','tracker','summit','iif'], flows:['aptify','spon','pros','mms','m360','money','sched','orders','media','summit','tracker','cms','team','elect','outlook','sp','teams','web','docu']};
 function engServes(d, s){ if(!s || s.zone!=='eng') return []; const ids=new Set(d.systems.map(x=>x.id)), apps=d.systems.filter(x=>x.zone==='apps').map(x=>x.id);
   const L=Array.isArray(s.serves) ? s.serves : ENGD[s.id] ? ENGD[s.id] : s.id==='aws' ? ['relay'].concat(apps) : apps; return L.filter(x=>ids.has(x) && x!==s.id); }
 function linked(id){ const s={}; s[id]=1; const d=M.data, me0=d.systems.find(x=>x.id===id); if(me0 && me0.zone==='eng'){ engServes(d, me0).forEach(x=>s[x]=1); return s; }
@@ -5685,7 +5685,9 @@ function intro(p, d){ p.classList.add('is-intro'); if(P.fitPanel) P.fitPanel(); 
     const run=tight=>{ w.style.gap=tight?'9px':''; B.forEach(b=>{ b.hidden=false; b.style.paddingTop=b.style.paddingBottom=tight?'6px':''; }); more.hidden=false;
       let n=B.length; if(!cap){ n=Math.min(Math.max(6, lead.length),B.length); B.forEach((b,i)=>b.hidden=i>=n); } else { const MIN=Math.max(3, lead.length); more.hidden=B.length<=MIN; while(n>MIN && p.scrollHeight>cap+1){ n--; B[n].hidden=true; more.hidden=false; } }
       more.hidden = n>=B.length; return n; };
-    let n=run(false), tight=false; if(cap && n<B.length){ const n2=run(true); if(n2>n){ n=n2; tight=true; } else n=run(false); }
+    w.classList.remove('tiny'); let n=run(false), tight=false; if(cap && n<B.length){ const n2=run(true); if(n2>n){ n=n2; tight=true; } else n=run(false); }
+    /* the six group stories must always fit: if they don't, drop the small print; as a last resort let the panel grow rather than cut a story off */
+    if(cap && p.scrollHeight>cap+1){ w.classList.add('tiny'); n=run(true); tight=true; } if(cap && p.scrollHeight>cap+1){ p.style.height='auto'; }
     more.textContent='See all '+B.length+' stories →';
     /* share any space left over among the stories shown, so the panel ends level with the map */
     if(cap){ const left=cap-p.scrollHeight, base=tight?6:9; if(left>2){ const per=Math.min(14, left/n/2); B.slice(0,n).forEach(b=>{ b.style.paddingTop=b.style.paddingBottom=(base+per)+'px'; }); } } };
