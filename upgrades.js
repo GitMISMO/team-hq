@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261107zh';
+var BUILD='20261107zm';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4570,18 +4570,18 @@ function load(json, opt){ if(!canEdit()) return Promise.reject(new Error('Only a
   d.refreshedAt=todayISO(); return save(d, 'Connected Systems refreshed from the Connections Map.'); }
 
 /* ---------- where a new box goes ---------- */
-function freeSpot(d, zone){ const taken=(x,y)=>d.systems.some(s=>Math.abs(s.x-x)<W && Math.abs(s.y-y)<H+12);
+function freeSpot(d, zone){ const taken=(x,y)=>d.systems.some(s=>s.x!=null && s.y!=null && Math.abs(s.x-x)<W && Math.abs(s.y-y)<H+12);
   const cand=[];
   if(zone==='apps'){ for(let y=95;y<=495;y+=75) [365,525,685,845].forEach(x=>cand.push([x,y])); }
-  else if(zone==='mba') for(let y=95;y<=495;y+=60) cand.push([110,y]);
-  else if(zone==='out') for(let y=95;y<=495;y+=60) cand.push([1090,y]);
+  else if(zone==='mba') for(let y=95;y<=495;y+=13) cand.push([110,y]);
+  else if(zone==='out') for(let y=95;y<=495;y+=13) cand.push([1090,y]);
   else [120,240,360,480,600,720,840,960,1080].forEach(x=>cand.push([x,640]));
   const c=cand.find(p=>!taken(p[0],p[1])) || cand[cand.length-1]; return {x:c[0], y:c[1]}; }
 
 /* ---------- the styles: the Connected Systems look, in Team HQ's colors (light and dark) ---------- */
 const css=h('style'); css.id='hq-systems';
 css.textContent=`
-.cs{--cs-zone:var(--surface-2);--cs-edge:color-mix(in srgb,var(--border-strong,#adc4d6) 85%,transparent);--cs-hot:var(--navy-mid,#14486e);--cs-sky:#74bfeb;--cs-card:var(--surface);font-size:15px;line-height:1.55;color:var(--ink);max-width:1680px;margin:0 auto}
+.cs{--cs-zone:var(--surface-2);--cs-edge:color-mix(in srgb,var(--border-strong,#adc4d6) 85%,transparent);--cs-hot:var(--navy-mid,#14486e);--cs-sky:#74bfeb;--cs-card:var(--surface);font-size:15px;line-height:1.55;color:var(--ink);max-width:1680px;margin:0 auto;padding:16px clamp(16px,2.4vw,32px) 0;box-sizing:border-box}
 html[data-theme="dark"] .cs{--cs-hot:#74bfeb}
 @media (prefers-color-scheme: dark){ html:not([data-theme="light"]) .cs{--cs-hot:#74bfeb} }
 .cs h2,.cs h3{margin:0;letter-spacing:-.015em;text-wrap:balance}
@@ -4643,6 +4643,7 @@ html[data-theme="dark"] .cs{--cs-hot:#74bfeb}
 .cs-zone{stroke:var(--rule,var(--border));stroke-width:1}
 .cs-e{fill:none;stroke:var(--cs-edge);stroke-width:1.4;transition:opacity .25s,stroke .25s,stroke-width .25s}
 .cs-e.hand{stroke-dasharray:4 5;stroke:color-mix(in srgb,var(--warn,#a2701a) 55%,var(--cs-edge))}
+.cs-e.quiet{opacity:0;pointer-events:none}.cs-e.quiet.hot{opacity:.9}
 .cs-e.hot{stroke:var(--cs-hot);stroke-width:2.6;stroke-dasharray:8 6;animation:csFlow 1s linear infinite}
 .cs-e.hot.hand{stroke:var(--warn,#a2701a);stroke-dasharray:3 6;animation:none}
 .cs-e.soon{stroke-dasharray:1 6;stroke-linecap:round;stroke-width:2;stroke:color-mix(in srgb,#9fb3c4 80%,transparent)}
@@ -4717,6 +4718,8 @@ html[data-theme="dark"] .cs .cs-ph .cs-build{color:#456179}
 .cs-fi b{display:block;font-size:13px}.cs-fi small{display:block;font-size:12px;color:var(--ink-2);line-height:1.35}
 .cs-fi.hand{border-style:dashed}
 .cs-fi em{font-style:normal;font-size:11px;font-weight:700;color:var(--ink-3)}
+.cs-qt{display:flex;flex-wrap:wrap;gap:5px}
+.cs-qc{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:12px;font-weight:600;color:var(--ink);background:var(--surface-2);border:1px solid var(--border);border-radius:4px;padding:3px 8px;cursor:pointer}.cs-qc:hover{border-color:var(--cs-sky)}.cs-qc i{width:7px;height:7px;border-radius:50%}
 .cs-me{display:flex;align-items:center;justify-content:center;gap:8px;margin:2px 0;font-size:13px;font-weight:700;color:var(--cs-hot)}
 .cs-me:before,.cs-me:after{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--cs-sky),transparent)}
 .cs-me span{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--cs-sky);border-radius:4px;padding:3px 12px;background:color-mix(in srgb,#74bfeb 12%,transparent)}
@@ -4920,7 +4923,7 @@ function areaName(d,s){ return s.area && d.areas[s.area] ? d.areas[s.area].name 
 function colorOf(d,s){ return s.area && d.areas[s.area] ? (AC[d.areas[s.area].c]||'#74bfeb') : (s.zone==='eng' ? '#14486e' : '#7f98ad'); }
 function stKey(s){ return s.status==='Live'?'live':s.status==='Launching'?'soon':'build'; }
 function stTag(s){ return h('span','cs-tag cs-'+stKey(s), s.status==='Live' ? 'Live' : (s.statusNote||s.status||'Building')); }
-function counts(d){ const apps=d.systems.filter(s=>s.zone==='apps').length; const auto=d.connections.filter(c=>c.how!=='hand' && c.how!=='soon').length, soonN=d.connections.filter(c=>c.how==='soon').length;
+function counts(d){ const apps=d.systems.filter(s=>s.zone==='apps').length; const auto=d.connections.filter(c=>c.how!=='hand' && c.how!=='soon' && !c.quiet).length, soonN=d.connections.filter(c=>c.how==='soon').length;
   const jobs=d.automations.reduce((n,g)=>n+(g.items||[]).length,0); const A=d.systems.filter(s=>s.zone==='apps');
   return {apps, auto, hand:d.connections.filter(c=>c.how==='hand').length, soonN, jobs, swaps:d.replaced.length,
   live:A.filter(s=>s.status==='Live').length, launching:A.filter(s=>s.status==='Launching').length, building:A.filter(s=>s.status!=='Live' && s.status!=='Launching').length, soon:A.filter(s=>s.status!=='Live')}; }
@@ -5085,11 +5088,11 @@ function map(d){ const svg=sv('svg',{viewBox:'0 0 1200 720', role:'img', 'aria-l
   P.edges=[]; P.nodes={}; const pairs={};
   d.connections.forEach((c,i0)=>{ const a=by[c.from], b=by[c.to]; if(!a || !b) return;
     const pk=[c.from,c.to].sort().join('|'), f0=pairs[pk]; if(!f0) pairs[pk]={i:i0, from:c.from}; const i=!f0 ? i0 : (f0.from===c.from ? f0.i+1 : f0.i); /* a second line between the same two boxes curves the other way */
-    const geo=edgeGeo(a,b,i); const path=sv('path',{class:'cs-e'+(c.how==='hand'?' hand':c.how==='soon'?' soon':''), d:geo.d, id:pre+i0},gE); const tt=sv('title',{},path); tt.textContent=a.name+' → '+b.name+': '+c.what+(c.how==='hand'?' (copied by a person)':c.how==='soon'?' (not live yet)':'');
-    const e={c, el:path, i}; if(pulseOn && c.how!=='hand' && c.how!=='soon'){ const ci=sv('circle',{class:'cs-p',r:3.2},gP); const m=sv('animateMotion',{dur:(3.6+(i%5)*.7)+'s',repeatCount:'indefinite',begin:(i*0.37%4)+'s'},ci); const mp=sv('mpath',{},m); mp.setAttribute('href','#'+pre+i0); mp.setAttributeNS('http://www.w3.org/1999/xlink','href','#'+pre+i0); e.p=ci; }
+    const geo=edgeGeo(a,b,i); const path=sv('path',{class:'cs-e'+(c.how==='hand'?' hand':c.how==='soon'?' soon':'')+(c.quiet?' quiet':''), d:geo.d, id:pre+i0},gE); const tt=sv('title',{},path); tt.textContent=a.name+' → '+b.name+': '+c.what+(c.how==='hand'?' (copied by a person)':c.how==='soon'?' (not live yet)':'');
+    const e={c, el:path, i}; if(pulseOn && c.how!=='hand' && c.how!=='soon' && !c.quiet){ const ci=sv('circle',{class:'cs-p',r:3.2},gP); const m=sv('animateMotion',{dur:(3.6+(i%5)*.7)+'s',repeatCount:'indefinite',begin:(i*0.37%4)+'s'},ci); const mp=sv('mpath',{},m); mp.setAttribute('href','#'+pre+i0); mp.setAttributeNS('http://www.w3.org/1999/xlink','href','#'+pre+i0); e.p=ci; }
     /* the label that appears on the line when its system is selected */
     const lbTxt=(c.what.length>30 ? c.what.slice(0,29)+'…' : c.what); const lw=Math.round(lbTxt.length*5.9+14);
-    const lb=sv('g',{class:'cs-lb'+(c.how==='hand'?' hand':c.how==='soon'?' soon':'')+(geo.len<lw+40?' short':''), transform:'translate('+Math.round(geo.mx-lw/2)+','+Math.round(geo.my-10)+')'},gL); sv('rect',{x:0,y:0,width:lw,height:20,rx:10},lb); const lt=sv('text',{x:lw/2,y:13.5,'text-anchor':'middle'},lb); lt.textContent=lbTxt; e.lb=lb; e.box={x:Math.round(geo.mx-lw/2), y:Math.round(geo.my-10), w:lw, h:20};
+    const lb=sv('g',{class:'cs-lb'+(c.how==='hand'?' hand':c.how==='soon'?' soon':'')+(geo.len<lw+40 || c.quiet?' short':''), transform:'translate('+Math.round(geo.mx-lw/2)+','+Math.round(geo.my-10)+')'},gL); sv('rect',{x:0,y:0,width:lw,height:20,rx:10},lb); const lt=sv('text',{x:lw/2,y:13.5,'text-anchor':'middle'},lb); lt.textContent=lbTxt; e.lb=lb; e.box={x:Math.round(geo.mx-lw/2), y:Math.round(geo.my-10), w:lw, h:20};
     P.edges.push(e); });
   d.systems.forEach(s=>{ const g=sv('g',{class:'cs-n'+(s.zone==='eng'?' eng':''), tabindex:0, role:'button', 'aria-label':s.name+', '+(s.status||''), transform:'translate('+(s.x-W/2)+','+(s.y-H/2)+')'},gN);
     sv('rect',{class:'box',x:0,y:0,width:W,height:H,rx:9},g); sv('rect',{class:'bar',x:0,y:0,width:5,height:H,rx:2.5,fill:colorOf(d,s)},g);
@@ -5171,7 +5174,7 @@ function side(){ const p=P.panel, d=M.data; if(!p || !d || d.empty) return; p.te
   if(!P.jr){ const x=btn('x','×', ()=>{ P.sel=null; paintState(); side(); }); x.setAttribute('aria-label','Close'); ph.appendChild(x); } p.appendChild(ph);
   const pb=h('div','cs-pb'); p.appendChild(pb); if(s.what) pb.appendChild(h('p',null,s.what));
   /* the flow: what comes in, this system, what goes out — select any to walk the map */
-  const IN=d.connections.filter(c=>c.to===s.id && by[c.from]), OUT=d.connections.filter(c=>c.from===s.id && by[c.to]);
+  const Q=d.connections.filter(c=>c.quiet && (c.to===s.id || c.from===s.id)); const IN=d.connections.filter(c=>!c.quiet && c.to===s.id && by[c.from]), OUT=d.connections.filter(c=>!c.quiet && c.from===s.id && by[c.to]);
   const fl=h('div','cs-flow');
   const list=(L, other, title)=>{ const hd=h('div','cs-fl'); hd.append(title); hd.appendChild(h('small',null,'· '+L.length)); fl.appendChild(hd); const box=h('div','cs-fc');
     L.forEach(c=>{ const o=by[c[other]]; const b=btn('cs-fi'+(c.how==='hand'?' hand':c.how==='soon'?' soon':'')); const i=h('i'); i.style.background=colorOf(d,o); b.appendChild(i); const tx=h('span'); tx.appendChild(h('b',null,o.name)); tx.appendChild(h('small',null,c.what)); if(c.note) tx.appendChild(h('small','cs-note',c.note)); b.appendChild(tx); b.appendChild(c.how==='hand' ? h('span','cs-hand','by hand') : c.how==='soon' ? h('span','cs-soonb','not live yet') : h('em',null,'→')); b.title='Go to '+o.name; b.addEventListener('click', ()=>select(o.id)); box.appendChild(b); });
@@ -5179,7 +5182,8 @@ function side(){ const p=P.panel, d=M.data; if(!p || !d || d.empty) return; p.te
   if(IN.length) list(IN,'from','Comes in from');
   const meE=h('div','cs-me'); const sp=h('span'); sp.textContent=s.name; meE.appendChild(sp); fl.appendChild(meE);
   if(OUT.length) list(OUT,'to','Goes out to');
-  if(!IN.length && !OUT.length) fl.appendChild(h('p','cs-note','Every app runs on this, so it isn’t drawn as separate lines.'));
+  if(!IN.length && !OUT.length && !Q.length) fl.appendChild(h('p','cs-note','Every app runs on this, so it isn’t drawn as separate lines.'));
+  if(Q.length){ const hd=h('div','cs-fl'); hd.append(s.id==='team' ? 'Opens as dashboard tiles' : 'Team HQ tile'); hd.appendChild(h('small',null,'· '+Q.length)); fl.appendChild(hd); const box=h('div','cs-qt'); Q.forEach(c=>{ const o=by[c.from===s.id?c.to:c.from]; if(!o) return; const b=btn('cs-qc', o.name, ()=>select(o.id)); const i=h('i'); i.style.background=colorOf(d,o); b.prepend(i); box.appendChild(b); }); fl.appendChild(box); if(s.id!=='team') fl.appendChild(h('p','cs-note','Its headline numbers show on a Team HQ dashboard tile, and the tile opens it.')); }
   pb.appendChild(fl);
   const facts=h('dl','cs-facts'); const row=(k,v)=>{ if(!v) return; const w=h('div'); w.appendChild(h('dt',null,k)); const dd=h('dd'); if(typeof v==='string') dd.textContent=v; else dd.appendChild(v); w.appendChild(dd); facts.appendChild(w); };
   row('Where it lives', s.where); if(s.replaced) row('Replaced', h('s',null,s.replaced)); if(facts.children.length) pb.appendChild(facts); }
@@ -5301,6 +5305,8 @@ try{ Object.assign(ui, JSON.parse(localStorage.getItem(KEY)||'{}')); }catch(e){}
 if(!ui.modes || typeof ui.modes!=='object') ui.modes={}; if(!ui.groups || typeof ui.groups!=='object') ui.groups={}; if(!ui.fold || typeof ui.fold!=='object') ui.fold={};
 if(!Array.isArray(ui.tpeople)) ui.tpeople=[];
 if(['home','work','team','time'].indexOf(ui.view)>=0 || !ui.view) ui.view='day';
+/* a link straight to a page: resources.mismo.org/team-hq/?page=systems */
+let DEEP=''; try{ const pg=new URLSearchParams(location.search).get('page'); if(pg && ['systems'].indexOf(pg)>=0) DEEP=pg; }catch(e){}
 /* the new Team HQ is the only Team HQ now — no classic switch */
 ui.on=true;
 const save=()=>{ try{ localStorage.setItem(KEY, JSON.stringify({on:ui.on, view:ui.view, modes:ui.modes, groups:ui.groups, who:ui.who, proj:ui.proj, showDone:ui.showDone, tpeople:ui.tpeople, fold:ui.fold, ibf:ui.ibf})); }catch(e){} };
@@ -8343,7 +8349,7 @@ const mo=new MutationObserver(()=>{});
 /* it always opens on My Dashboard */
 /* opened from the Expenses phone app: go straight to Expenses and nothing else */
 const APPX=document.documentElement.classList.contains('app-exp') || new URLSearchParams(location.search).get('app')==='expenses';
-if(ui.on){ build(); document.documentElement.classList.add('nx-on'); drawRail(); if(APPX) openClassic('expenses'); else open('day'); navInit(); lastSig=sig(); try{ window.__hub && window.__hub.paint(); }catch(e){} }
+if(ui.on){ build(); document.documentElement.classList.add('nx-on'); drawRail(); if(APPX) openClassic('expenses'); else open(DEEP||'day'); navInit(); lastSig=sig(); try{ window.__hub && window.__hub.paint(); }catch(e){} }
 window.__nx={ version:'2.2', paint, open, setOn, parse:parseQuick, ui, pinTile,
   destroy(){ window.removeEventListener('popstate', onPop); clearInterval(live); clearInterval(clock); mo.disconnect(); railMo.disconnect(); document.removeEventListener('keydown', onKey); document.removeEventListener('click', onRailClick, true); document.removeEventListener('click', onPgx, true); window.removeEventListener('resize', onResize);
     railNodes.forEach(n=>n.remove()); restoreBoardBtn(); if(shell) shell.remove(); if(tabbar) tabbar.remove(); if(sw) sw.remove(); closeMenus(); if(toastEl) toastEl.remove(); css.remove(); document.documentElement.classList.remove('nx-on','nx-show','nx-dragging'); } };
