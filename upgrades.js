@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261107zr';
+var BUILD='20261107zs';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4685,7 +4685,28 @@ html[data-theme="dark"] .cs{--cs-hot:#74bfeb}
 .cs.editing .cs-n{cursor:grab}.cs.editing .cs-n.drag{cursor:grabbing}
 .cs-legend{display:flex;flex-wrap:wrap;gap:16px;font-size:12.5px;color:var(--ink-2);padding:10px 14px;border-top:1px solid var(--border)}
 .cs-legend span{display:inline-flex;align-items:center;gap:6px}
-/* journey player */
+/* journey player: a callout on the map beside each system, and the whole story in the panel */
+.cs-bub{position:absolute;z-index:3;width:270px;background:var(--surface);border:1.5px solid var(--cs-hot);border-radius:10px;padding:10px 12px 10px;box-shadow:0 14px 30px -14px rgba(6,32,47,.5);transition:left .35s ease,top .35s ease,opacity .2s;pointer-events:auto}
+.cs-bub::before{content:'';position:absolute;left:var(--ax,50%);width:12px;height:12px;background:var(--surface);border:1.5px solid var(--cs-hot);transform:translateX(-50%) rotate(45deg)}
+.cs-bub.below::before{top:-7.5px;border-right:0;border-bottom:0}.cs-bub.above::before{bottom:-7.5px;border-left:0;border-top:0}
+.cs-bub.right::before,.cs-bub.left::before{left:auto;top:var(--ay,50%);transform:translateY(-50%) rotate(45deg)}.cs-bub.right::before{left:-7.5px;border-top:0;border-right:0}.cs-bub.left::before{right:-7.5px;border-bottom:0;border-left:0}
+.cs-bub .bk{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--cs-hot)}
+.cs-bub .bk span{margin-left:auto;display:flex;gap:4px}
+.cs-bub .bk button{width:24px;height:24px;border:1px solid var(--border);background:var(--surface-2);color:var(--ink);border-radius:5px;font:inherit;font-size:13px;line-height:1;cursor:pointer;padding:0}
+.cs-bub .bk button:hover{border-color:var(--cs-sky)}.cs-bub .bk button:disabled{opacity:.35;cursor:default}
+.cs-bub h4{margin:4px 0 2px;font-size:14.5px;color:var(--ink)}.cs-bub p{margin:0;font-size:13px;line-height:1.45;color:var(--ink-2)}
+.cs-story{padding:16px 16px 14px;display:grid;gap:10px}
+.cs-story h3{margin:0;font-size:18px}.cs-story .bl{margin:0;font-size:13px;color:var(--ink-2)}
+.cs-story .ctl{display:flex;gap:6px;flex-wrap:wrap}
+.cs-sl{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.cs-sl li{display:grid;grid-template-columns:22px minmax(0,1fr);gap:9px;align-items:start;padding:6px 8px;border-radius:6px;border:1px solid transparent;cursor:pointer}
+.cs-sl li:hover{background:var(--surface-2)}
+.cs-sl li .sn{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11.5px;font-weight:700;background:var(--surface-2);border:1px solid var(--border);color:var(--ink-2)}
+.cs-sl li b{display:block;font-size:13px}.cs-sl li small{display:block;font-size:12px;color:var(--ink-3);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cs-sl li.now small{white-space:normal}.cs-sl li>div{min-width:0}
+.cs-sl li.done .sn{background:color-mix(in srgb,var(--cs-sky) 30%,var(--surface));border-color:var(--cs-sky);color:var(--ink)}
+.cs-sl li.now{background:color-mix(in srgb,#74bfeb 14%,var(--surface));border-color:var(--cs-sky)}
+.cs-sl li.now .sn{background:var(--cs-hot);border-color:var(--cs-hot);color:#fff}.cs-sl li.now small{color:var(--ink-2)}
+@media (prefers-reduced-motion: reduce){.cs-bub{transition:none}}
 .cs-tour{margin:0 12px 12px;background:linear-gradient(135deg,color-mix(in srgb,#74bfeb 14%,var(--surface)),var(--surface));border:1px solid var(--cs-sky);border-radius:14px;padding:12px 14px;box-shadow:0 18px 40px -22px rgba(6,32,47,.45);display:grid;gap:6px;animation:csUp .35s ease}
 @keyframes csUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .cs-tour .th{display:flex;align-items:center;gap:8px}.cs-tour .th b{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--cs-hot)}
@@ -4959,7 +4980,7 @@ function draw(){ const root=P.el; if(!root) return; root.textContent=''; root.cl
   const b1=band('How it fits together','The System Map', P.edit ? 'Edit mode: select a box to change it, drag a box to move it, or use Add a System and Add a Connection above.' : 'MBA and Microsoft 365 on the left, MISMO’s own apps in the middle, the outside world on the right, and the shared engine underneath. Point at a box to see what it touches; select it for the full story.');
   const tl=h('div','cs-tools'); chips(d, tl); tl.appendChild(finder(d)); b1.appendChild(tl);
   const g=h('div','cs-grid'); g.style.marginTop='12px';
-  const left=h('div','cs-card cs-mapwrap'); const mb=h('div','cs-mapbox'); const mi=h('div','cs-mapin'); mi.appendChild(map(d)); if(pulseOn){ mi.classList.add('moving'); mi.appendChild(pulses()); } mi.appendChild(P.svgTop); mb.appendChild(mi); left.appendChild(mb);
+  const left=h('div','cs-card cs-mapwrap'); const mb=h('div','cs-mapbox'); const mi=h('div','cs-mapin'); mi.appendChild(map(d)); if(pulseOn){ mi.classList.add('moving'); mi.appendChild(pulses()); } mi.appendChild(P.svgTop); P.mapin=mi; if('ResizeObserver' in window){ const ro=new ResizeObserver(()=>{ if(!mi.isConnected){ ro.disconnect(); return; } placeBub(); }); ro.observe(mi); } mb.appendChild(mi); left.appendChild(mb);
   const lg=h('div','cs-legend'); lg.innerHTML='<span><svg width="30" height="8" aria-hidden="true"><line x1="0" y1="4" x2="30" y2="4" stroke="var(--cs-hot)" stroke-width="2.4" stroke-dasharray="8 6"/><circle cx="20" cy="4" r="3" fill="#74bfeb"/></svg>Work moving automatically</span><span><svg width="30" height="8" aria-hidden="true"><line x1="0" y1="4" x2="30" y2="4" stroke="#a2701a" stroke-width="1.8" stroke-dasharray="3 5"/></svg>Copied by a person</span><span><svg width="30" height="8" aria-hidden="true"><line x1="1" y1="4" x2="29" y2="4" stroke="#9fb3c4" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="1 6"/></svg>Not live yet</span><span><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4" fill="#2fbf71"/></svg>Live</span><span><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4" fill="#e0a83c"/></svg>Launching</span><span><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4" fill="#9fb3c4"/></svg>Building</span>'+(P.edit?'<span><svg width="10" height="10" aria-hidden="true"><circle cx="5" cy="5" r="4" fill="#a2701a"/></svg>To confirm</span>':'');
   left.appendChild(lg); P.tourHost=left; g.appendChild(left);
   const panel=h('aside','cs-card cs-panel'); panel.setAttribute('aria-live','polite'); g.appendChild(panel); P.panel=panel; balance(left, panel); b1.appendChild(g); root.appendChild(b1); addSec('System Map', b1);
@@ -5205,25 +5226,51 @@ function select(id, scroll){ stopJourney(true); P.sel=(P.sel===id && !P.edit && 
 let jTimer=0;
 function startJourney(id){ P.sel=null; P.hover=null; P.filter=null; P.q=''; P.form=null; P.jr={id, i:0, playing:!reduce()}; if(P.el){ P.el.querySelectorAll('.cs-chip').forEach((c,i)=>c.setAttribute('aria-pressed', String(i===0))); const f=P.el.querySelector('.cs-find input'); if(f) f.value=''; }
   paintState(); side(); tourCard(); const mw=P.el && P.el.querySelector('.cs-mapwrap'); if(mw) mw.scrollIntoView({block:'start', behavior:reduce()?'auto':'smooth'}); tickJourney(); }
-function stopJourney(quiet){ clearTimeout(jTimer); if(!P.jr) return; P.jr=null; const t=P.el && P.el.querySelector('.cs-tour'); if(t) t.remove(); if(!quiet){ paintState(); side(); } }
+function stopJourney(quiet){ clearTimeout(jTimer); if(!P.jr) return; P.jr=null; const t=P.el && P.el.querySelector('.cs-bub'); if(t) t.remove(); if(!quiet){ paintState(); side(); } }
 function stepJourney(k){ const d=M.data; const j=d && journeys(d).find(x=>x.id===(P.jr||{}).id); if(!j) return; P.jr.i=Math.max(0, Math.min(j.steps.length-1, P.jr.i+k)); paintState(); side(); tourCard(); }
-function tickJourney(){ clearTimeout(jTimer); if(!P.jr || !P.jr.playing) return; jTimer=setTimeout(()=>{ if(!P.jr || !P.el || !P.el.isConnected) return; const d=M.data; const j=journeys(d).find(x=>x.id===P.jr.id); if(!j) return; if(P.jr.i>=j.steps.length-1){ P.jr.playing=false; tourCard(); return; } stepJourney(1); tickJourney(); }, 3200); }
-function tourCard(){ const d=M.data; const host=P.tourHost; if(!host || !P.jr) return; const j=journeys(d).find(x=>x.id===P.jr.id); if(!j) return;
-  let t=host.querySelector('.cs-tour'); if(!t){ t=h('div','cs-tour'); t.setAttribute('role','region'); t.setAttribute('aria-label','Journey'); const lg=host.querySelector('.cs-legend'); host.insertBefore(t, lg||null); } t.textContent='';
-  const st=j.steps[P.jr.i], sy=d.systems.find(x=>x.id===st.sys);
-  const th=h('div','th'); th.appendChild(h('b',null,j.title)); th.appendChild(h('span',null,'Step '+(P.jr.i+1)+' of '+j.steps.length)); t.appendChild(th);
-  const dots=h('div','dots'); j.steps.forEach((x,i)=>{ const dd=h('i'); if(i<=P.jr.i) dd.className='on'; dots.appendChild(dd); }); t.appendChild(dots);
-  t.appendChild(h('h4',null,sy.name)); t.appendChild(h('p',null,st.text||sy.what));
-  const ctl=h('div','ctl'); ctl.appendChild(btn('cs-ib','← Back', ()=>{ P.jr.playing=false; stepJourney(-1); }));
-  const last=P.jr.i>=j.steps.length-1;
-  ctl.appendChild(btn('cs-ib', P.jr.playing ? 'Pause' : (last ? 'Play Again' : 'Play'), ()=>{ if(last && !P.jr.playing){ P.jr.i=0; P.jr.playing=true; paintState(); side(); tourCard(); tickJourney(); return; } P.jr.playing=!P.jr.playing; tourCard(); tickJourney(); }));
-  ctl.appendChild(btn('cs-ib pri', last ? 'Done' : 'Next →', ()=>{ if(last){ stopJourney(); return; } P.jr.playing=false; stepJourney(1); }));
-  t.appendChild(ctl); }
+function tickJourney(){ clearTimeout(jTimer); if(!P.jr || !P.jr.playing) return; jTimer=setTimeout(()=>{ if(!P.jr || !P.el || !P.el.isConnected) return; const d=M.data; const j=journeys(d).find(x=>x.id===P.jr.id); if(!j) return; if(P.jr.i>=j.steps.length-1){ P.jr.playing=false; side(); tourCard(); return; } stepJourney(1); tickJourney(); }, 3200); }
+function jrPlay(){ const d=M.data; const j=d && P.jr && journeys(d).find(x=>x.id===P.jr.id); if(!j) return; const last=P.jr.i>=j.steps.length-1;
+  if(last && !P.jr.playing){ P.jr.i=0; P.jr.playing=true; paintState(); side(); tourCard(); tickJourney(); return; } P.jr.playing=!P.jr.playing; side(); tourCard(); tickJourney(); }
+function jrGo(i){ if(!P.jr) return; P.jr.playing=false; P.jr.i=i; paintState(); side(); tourCard(); }
+/* the whole story, step by step, in the panel */
+function storyPanel(p, d, j){ const by={}; d.systems.forEach(x=>by[x.id]=x); const w=h('div','cs-story'); p.appendChild(w);
+  const kr=h('div','cs-krow'); kr.appendChild(h('div','cs-k','Follow the work · '+j.steps.length+' steps')); const x=btn('cs-all','Close ×', ()=>stopJourney()); kr.appendChild(x); w.appendChild(kr);
+  w.appendChild(h('h3',null,j.title)); if(j.blurb) w.appendChild(h('p','bl',j.blurb));
+  const last=P.jr.i>=j.steps.length-1, ctl=h('div','ctl');
+  const bk=btn('cs-ib','← Back', ()=>{ P.jr.playing=false; stepJourney(-1); }); bk.disabled=P.jr.i===0; ctl.appendChild(bk);
+  ctl.appendChild(btn('cs-ib', P.jr.playing ? 'Pause' : (last ? 'Play Again' : 'Play'), jrPlay));
+  ctl.appendChild(btn('cs-ib pri', last ? 'Done' : 'Next →', ()=>{ if(last){ stopJourney(); return; } P.jr.playing=false; stepJourney(1); })); w.appendChild(ctl);
+  const ol=h('ol','cs-sl'); let cur=null;
+  j.steps.forEach((st,i)=>{ const sy=by[st.sys]; if(!sy) return; const li=h('li', i<P.jr.i?'done':i===P.jr.i?'now':''); li.appendChild(h('span','sn',String(i+1))); const tx=h('div'); tx.appendChild(h('b',null,sy.name)); tx.appendChild(h('small',null,st.text||sy.what||'')); li.appendChild(tx);
+    li.tabIndex=0; li.setAttribute('role','button'); li.setAttribute('aria-current', i===P.jr.i?'step':'false'); li.addEventListener('click', ()=>jrGo(i)); li.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); jrGo(i); } });
+    if(i===P.jr.i) cur=li; ol.appendChild(li); }); w.appendChild(ol);
+  /* keep the current step in view inside the panel, without moving the page */
+  /* spread the steps a little when there's room, so the panel ends level with the map */
+  requestAnimationFrame(()=>{ const left=p.clientHeight-p.scrollHeight, L=[...ol.children]; if(left>4 && L.length){ const per=Math.min(8, left/L.length/2); L.forEach(li=>{ li.style.paddingTop=li.style.paddingBottom=(6+per)+'px'; }); } });
+  if(cur) requestAnimationFrame(()=>{ const pr=p.getBoundingClientRect(), cr=cur.getBoundingClientRect(); if(cr.bottom>pr.bottom-8) p.scrollTop+=cr.bottom-pr.bottom+16; else if(cr.top<pr.top+8) p.scrollTop-=pr.top-cr.top+16; }); }
+/* the callout on the map, beside the system the work has reached */
+function tourCard(){ const d=M.data, mi=P.mapin; const old=mi && mi.querySelector('.cs-bub'); if(!mi || !P.jr){ if(old) old.remove(); return; }
+  const j=journeys(d).find(x=>x.id===P.jr.id); if(!j) return; const st=j.steps[P.jr.i], sy=d.systems.find(x=>x.id===st.sys); if(!sy) return;
+  const b=old || h('div','cs-bub'); b.setAttribute('role','status'); b.textContent='';
+  const bk=h('div','bk'); bk.append('Step '+(P.jr.i+1)+' of '+j.steps.length); const nav=h('span'); const pv=btn(null,'←', ()=>{ P.jr.playing=false; stepJourney(-1); }); pv.disabled=P.jr.i===0; pv.setAttribute('aria-label','Back');
+  const nx=btn(null,'→', ()=>{ P.jr.playing=false; stepJourney(1); }); nx.disabled=P.jr.i>=j.steps.length-1; nx.setAttribute('aria-label','Next'); nav.appendChild(pv); nav.appendChild(nx); bk.appendChild(nav); b.appendChild(bk);
+  b.appendChild(h('h4',null,sy.name)); b.appendChild(h('p',null,st.text||sy.what||'')); if(!old) mi.appendChild(b); placeBub(); }
+function placeBub(){ const d=M.data, mi=P.mapin, b=mi && mi.querySelector('.cs-bub'); if(!b || !P.jr) return; const j=journeys(d).find(x=>x.id===P.jr.id); if(!j) return; const st=j.steps[P.jr.i];
+  const F=frame(d), Y=x=>x.zone==='eng'?F.ey:x.y; const s=d.systems.find(x=>x.id===st.sys); if(!s) return; const mw=mi.clientWidth, mh=mi.clientHeight, k=mw/1200, bw=Math.min(270, mw-16); b.style.width=bw+'px'; const bh=b.offsetHeight;
+  const px=s.x*k, py=Y(s)*k, hw=W/2*k, hh=H/2*k, g=12;
+  /* the boxes in this story: the callout tries not to cover them */
+  const R=j.steps.map(z=>d.systems.find(x=>x.id===z.sys)).filter(Boolean).map(x=>({l:(x.x-W/2)*k, t:(Y(x)-H/2)*k, r:(x.x+W/2)*k, b:(Y(x)+H/2)*k}));
+  const clampX=x=>Math.max(8, Math.min(mw-bw-8, x)), clampY=y=>Math.max(4, Math.min(mh-bh-4, y));
+  const C=[ ['below', clampX(px-bw/2), py+hh+g], ['above', clampX(px-bw/2), py-hh-g-bh], ['right', px+hw+g, clampY(py-bh/2)], ['left', px-hw-g-bw, clampY(py-bh/2)] ];
+  const cost=c=>{ const [w,l,t]=c; if(l<4 || t<2 || l+bw>mw-4 || t+bh>mh-2) return 1e9; let a=0; R.forEach(r=>{ const ox=Math.max(0, Math.min(l+bw, r.r)-Math.max(l, r.l)), oy=Math.max(0, Math.min(t+bh, r.b)-Math.max(t, r.t)); a+=ox*oy; }); return a; };
+  let best=C[0], bc=cost(C[0]); C.slice(1).forEach(c=>{ const v=cost(c); if(v<bc-1){ best=c; bc=v; } });
+  const [w,l,t]=best; b.classList.remove('below','above','right','left'); b.classList.add(w); b.style.left=l+'px'; b.style.top=t+'px';
+  if(w==='below' || w==='above') b.style.setProperty('--ax', Math.max(14, Math.min(bw-14, px-l))+'px'); else b.style.setProperty('--ay', Math.max(14, Math.min(bh-14, py-t))+'px'); }
 
 /* ---------- the side panel: what a system does (or, in Edit mode, the form) ---------- */
 function side(){ const p=P.panel, d=M.data; if(!p || !d || d.empty) return; p.textContent='';
   if(P.form){ const w=h('div','cs-ep'); p.appendChild(w); P.form(w); return; }
-  let id=P.sel; if(P.jr){ const j=journeys(d).find(x=>x.id===P.jr.id); if(j) id=j.steps[P.jr.i].sys; }
+  let id=P.sel; if(P.jr){ const j=journeys(d).find(x=>x.id===P.jr.id); if(j){ storyPanel(p, d, j); return; } }
   if(!id){ intro(p, d); return; }
   const s=d.systems.find(x=>x.id===id); if(!s){ intro(p,d); return; }
   if(P.edit){ const w=h('div','cs-ep'); p.appendChild(w); sysForm(w, d, s); return; }
