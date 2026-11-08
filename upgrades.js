@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261108d';
+var BUILD='20261108e';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -5229,12 +5229,14 @@ function map(d){ const F=frame(d); P.vb=F.vb; const svg=sv('svg',{viewBox:'0 0 1
   (d.appGroups||[]).forEach(g=>{ const M0=(g.ids||[]).map(id=>d.systems.find(x=>x.id===id)).filter(x=>x && x.zone==='apps' && x.y!=null); if(!M0.length) return; const y0=Math.min(...M0.map(x=>x.y)), x0=Math.min(...M0.filter(x=>x.y===y0).map(x=>x.x)); const t=sv('text',{class:'cs-gl',x:x0-W/2+2,y:y0-H/2-7},svg); t.textContent=g.name; });
   const top=sv('svg',{viewBox:'0 0 1200 '+F.vb, class:'cs-top', role:'group', 'aria-label':'MISMO’s systems'}); P.svgTop=top; const gE=sv('g',{},svg), gN=sv('g',{},top), gL=sv('g',{},top); const by={}; d.systems.forEach(s=>by[s.id]= s.zone==='eng' ? Object.assign({}, s, {y:F.ey}) : s);
   P.edges=[]; P.nodes={}; const pairs={}; const OBS=Object.values(by), USED={};
-  d.connections.forEach((c,i0)=>{ const a=by[c.from], b=by[c.to]; if(!a || !b) return;
+  /* lines that go the same way between the same two boxes, the same way (automatic or by hand), are drawn as one line that lists them all */
+  const GRP={}, LINES=[]; d.connections.forEach((c,i0)=>{ const gk=c.from+'>'+c.to+'|'+(c.how||'')+'|'+(c.quiet?1:0); if(GRP[gk]){ GRP[gk].cs.push(c); return; } GRP[gk]={c, i0, cs:[c]}; LINES.push(GRP[gk]); });
+  LINES.forEach(G=>{ const c=G.c, i0=G.i0, cs=G.cs; const a=by[c.from], b=by[c.to]; if(!a || !b) return;
     const pk=[c.from,c.to].sort().join('|'), f0=pairs[pk]; if(!f0) pairs[pk]={i:i0, from:c.from}; const i=!f0 ? i0 : (f0.from===c.from ? f0.i+1 : f0.i); /* a second line between the same two boxes curves the other way */
-    const geo=routeGeo(a,b,i,OBS,USED[pk]); (USED[pk]=USED[pk]||[]).push(geo.key); const path=sv('path',{class:'cs-e'+(c.how==='hand'?' hand':c.how==='soon'?' soon':'')+(c.quiet?' quiet':''), d:geo.d, id:pre+i0},gE); const tt=sv('title',{},path); tt.textContent=a.name+' → '+b.name+': '+c.what+(c.how==='hand'?' (copied by a person)':c.how==='soon'?' (not live yet)':'');
-    const e={c, el:path, i}; if(c.how!=='hand' && c.how!=='soon' && !c.quiet) e.p={dur:(3.6+(i%5)*.7)*1000, off:(i*0.37%4)*1000, dim:false, pts:null};
+    const geo=routeGeo(a,b,i,OBS,USED[pk]); (USED[pk]=USED[pk]||[]).push(geo.key); const path=sv('path',{class:'cs-e'+(c.how==='hand'?' hand':c.how==='soon'?' soon':'')+(c.quiet?' quiet':''), d:geo.d, id:pre+i0},gE); const tt=sv('title',{},path); tt.textContent=a.name+' → '+b.name+': '+cs.map(x=>x.what).join('; ')+(c.how==='hand'?' (copied by a person)':c.how==='soon'?' (not live yet)':'');
+    const e={c, cs, el:path, i}; if(c.how!=='hand' && c.how!=='soon' && !c.quiet) e.p={dur:(3.6+(i%5)*.7)*1000, off:(i*0.37%4)*1000, dim:false, pts:null};
     /* the label that appears on the line when its system is selected */
-    const lbTxt=(c.what.length>30 ? c.what.slice(0,29)+'…' : c.what); const lw=Math.round(lbTxt.length*5.9+14);
+    const more=cs.length>1 ? ' +'+(cs.length-1) : '', lbMax=30-more.length; const lbTxt=(c.what.length>lbMax ? c.what.slice(0,lbMax-1)+'…' : c.what)+more; const lw=Math.round(lbTxt.length*5.9+14);
     const lb=sv('g',{class:'cs-lb'+(c.how==='hand'?' hand':c.how==='soon'?' soon':'')+(geo.len<lw+40 || c.quiet?' short':''), transform:'translate('+Math.round(geo.mx-lw/2)+','+Math.round(geo.my-10)+')'},gL); sv('rect',{x:0,y:0,width:lw,height:20,rx:10},lb); const lt=sv('text',{x:lw/2,y:13.5,'text-anchor':'middle'},lb); lt.textContent=lbTxt; e.lb=lb; e.box={x:Math.round(geo.mx-lw/2), y:Math.round(geo.my-10), w:lw, h:20};
     P.edges.push(e); });
   d.systems.forEach(s=>{ const g=sv('g',{class:'cs-n'+(s.zone==='eng'?' eng':''), tabindex:0, role:'button', 'aria-label':s.name+', '+(s.status||''), transform:'translate('+(s.x-W/2)+','+(by[s.id].y-H/2)+')'},gN);
@@ -5289,7 +5291,7 @@ function paintState(){ paintState0(); declutter(); }
 function paintState0(){ const d=M.data; if(!d || d.empty || !P.nodes) return; const by={}; d.systems.forEach(s=>by[s.id]=s);
   /* a journey being played lights up its path */
   if(P.jr){ const j=journeys(d).find(x=>x.id===P.jr.id); if(j){ const upto=j.steps.slice(0, P.jr.i+1).map(z=>z.sys), cur=j.steps[P.jr.i].sys, on={}; upto.forEach(x=>on[x]=1); j.steps.slice(0, P.jr.i+1).forEach(z=>{ if(z.from) on[z.from]=1; }); /* the system the work came from lights up too */
-      const hotE=new Set(); for(let k=1;k<=P.jr.i;k++){ const a=j.steps[k].from || j.steps[k-1].sys, b=j.steps[k].sys; P.edges.forEach(e=>{ if((e.c.from===a && e.c.to===b) || (e.c.from===b && e.c.to===a)) hotE.add(e); }); }
+      const hotE=new Set(); for(let k=1;k<=P.jr.i;k++){ const a=j.steps[k].from || j.steps[k-1].sys, b=j.steps[k].sys; const fw=P.edges.filter(e=>e.c.from===a && e.c.to===b); (fw.length ? fw : P.edges.filter(e=>e.c.from===b && e.c.to===a)).forEach(e=>hotE.add(e)); } /* only the line the work travels on lights up */
       d.systems.forEach(s=>{ const n=P.nodes[s.id]; if(!n) return; n.classList.toggle('dim', !on[s.id]); n.classList.toggle('sel', s.id===cur); n.classList.toggle('lit', !!on[s.id] && s.id!==cur); });
       P.edges.forEach(e=>{ const hot=hotE.has(e); e.el.classList.toggle('dim', !hot); e.el.classList.toggle('hot', hot); if(e.p) e.p.dim=!hot; e.lb.classList.toggle('on', hot && (e.c.from===cur || e.c.to===cur)); e.lb.classList.toggle('dim', false); });
       return; } }
