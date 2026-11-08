@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261108j';
+var BUILD='20261108m';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4881,7 +4881,7 @@ html[data-theme="dark"] .cs .cs-ph .cs-build{color:#456179}
  .cs-rp-keys{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px}.cs-rp-keys::-webkit-scrollbar{display:none}.cs-rp-k{flex:none}
  .cs-rp-row{grid-template-columns:minmax(0,1fr)}.cs-rp-row .was{padding:12px 14px 4px}.cs-rp-row .arw{height:26px;justify-items:start;padding-left:22px}.cs-rp-row .arw svg{transform:rotate(90deg);width:22px}.cs-rp-row .now{border-left:0;border-top:1px solid color-mix(in srgb,var(--pc) 22%,transparent);padding:12px 18px 14px 14px}}
 /* Coverage (Nov 8, 2026) */
-.cs-cv{display:grid;gap:12px}
+.cs-cv{display:grid;gap:12px}.cs-cv .av{box-shadow:none}
 .cs-cv-ros{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
 .cs-cv-p{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto auto;column-gap:10px;row-gap:8px;align-items:center;text-align:left;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;position:relative;transition:border-color .15s,box-shadow .15s,transform .15s}
 .cs-cv-p:hover{border-color:var(--cs-sky);transform:translateY(-1px)}
@@ -5007,6 +5007,46 @@ html[data-theme="dark"] .cs-cv-det .bk:not(.sys) small{color:#5fd29a}
 .cs-tid{padding:0 12px 12px 42px;font-size:13px;color:var(--ink-2);display:grid;gap:6px}
 .cs-tid small{color:var(--ink-3)}
 .cs-sysf{display:flex;justify-content:flex-end;padding:0 16px 14px}
+/* Road to Rock Solid (Nov 8, 2026) */
+.cs-rsum2{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:22px;align-items:center;padding:18px 22px;background:linear-gradient(110deg,color-mix(in srgb,#2fbf71 9%,var(--surface)),var(--surface) 55%)}
+.cs-rsum2 .ring{position:relative;width:80px;height:80px}.cs-rsum2 .ring svg{width:80px;height:80px;transform:rotate(-90deg)}.cs-rsum2 .ring circle{fill:none;stroke-width:8}.cs-rsum2 .ring .bg{stroke:var(--surface-3,var(--border))}.cs-rsum2 .ring .fg{stroke:#2fbf71;stroke-linecap:round;transition:stroke-dasharray 1s}
+.cs-rsum2 .ring b{position:absolute;inset:0;display:grid;place-items:center;font-size:17px;font-weight:800}
+.cs-rsum2 .st{padding-right:22px;border-right:1px solid var(--border)}.cs-rsum2 .big{display:flex;align-items:baseline;gap:8px}.cs-rsum2 .big b{font-size:44px;font-weight:800;line-height:1;color:var(--cs-hot);font-variant-numeric:tabular-nums}.cs-rsum2 .big span{font-size:14px;font-weight:700;color:var(--ink-2)}
+.cs-rsum2 .st p{margin:4px 0 0;font-size:12.5px;color:var(--ink-3)}
+.cs-rsum2 .cs-lks{display:grid;grid-template-columns:repeat(var(--n,6),minmax(0,1fr));gap:8px}@media(max-width:1400px){.cs-rsum2 .cs-lks{grid-template-columns:repeat(var(--n2,3),minmax(0,1fr))}}@media(max-width:560px){.cs-rsum2 .cs-lks{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.cs-rsum2 .cs-lks .l{display:grid;gap:1px;padding:8px 12px;border-radius:8px;background:var(--surface);border:1px solid var(--border)}.cs-rsum2 .cs-lks .l b{font-size:20px;font-weight:800;line-height:1.1}.cs-rsum2 .cs-lks .l span{font-size:12px;color:var(--ink-2)}
+.cs-rsum2 .cs-lks .l.you{background:var(--navy,#0d314c);border-color:var(--navy,#0d314c)}.cs-rsum2 .cs-lks .l.you b,.cs-rsum2 .cs-lks .l.you span{color:#fff}
+.cs-rsec{display:grid;gap:10px;margin-top:8px}
+.cs-rsh{display:flex;align-items:baseline;gap:6px 14px;flex-wrap:wrap}.cs-rsh h3{margin:0;font-size:17px}.cs-rsh span{font-size:13px;color:var(--ink-3);flex:1;min-width:200px}
+.cs-mini2{font:inherit;font-size:12.5px;font-weight:700;color:var(--cs-hot);background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 10px;cursor:pointer}.cs-mini2:hover{border-color:var(--cs-sky)}
+.cs-lanes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start}.cs-lanes .col{display:grid;gap:12px;align-content:start}
+.cs-lane{padding:4px 0 6px;overflow:hidden}.cs-lane .lh{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 8px;border-bottom:1px solid var(--border)}
+.cs-lane .lh b{font-size:13.5px}.cs-lane .lh em{font-style:normal;font-size:12px;font-weight:800;min-width:24px;text-align:center;padding:2px 7px;border-radius:5px;background:var(--surface-2);color:var(--ink-2)}
+.cs-lane.you .lh{background:var(--navy,#0d314c);border-bottom-color:var(--navy,#0d314c)}.cs-lane.you .lh b{color:#fff}.cs-lane.you .lh em{background:rgba(255,255,255,.16);color:#fff}
+.cs-ri{display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;align-items:start;padding:9px 14px;border-top:1px solid color-mix(in srgb,var(--border) 60%,transparent);position:relative}
+.cs-ri:first-of-type{border-top:0}.cs-ri:before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:0 3px 3px 0;background:var(--pc);opacity:.85}
+.cs-ri .tx{min-width:0;display:grid;gap:4px}.cs-ri .cs-tt{font-size:13.5px;line-height:1.35}.cs-ri p{margin:2px 0 0;font-size:12.5px;line-height:1.45;color:var(--ink-2)}.cs-ri small{font-size:11.5px;color:var(--ink-3)}
+.cs-ri .mt{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.cs-ri .mt .who{font-size:11px;font-weight:700;color:#9a6510}
+.cs-ri.done .cs-tt{color:var(--ink-3);text-decoration:line-through}.cs-ri.open{background:var(--surface-2)}
+.cs-rtag{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:11.5px;font-weight:600;color:var(--ink-2);background:none;border:0;padding:0;cursor:pointer;white-space:nowrap}.cs-rtag:before{content:"";width:8px;height:8px;border-radius:2px;background:var(--pc)}.cs-rtag:hover{color:var(--cs-hot);text-decoration:underline}
+.cs-sn{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;padding:6px 0}
+.cs-sn .tb{padding:4px 16px}.cs-sn .tb+.tb{border-left:1px solid var(--border)}
+.cs-sn .hr,.cs-sn .r{display:grid;grid-template-columns:minmax(0,1fr) repeat(4,68px);align-items:center;gap:4px}
+.cs-sn .hr{padding:6px 0;border-bottom:1px solid var(--border)}.cs-sn .hr span{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);text-align:center;line-height:1.2}
+.cs-sn .r{padding:5px 0;border-bottom:1px solid color-mix(in srgb,var(--border) 55%,transparent)}.cs-sn .r:last-child{border-bottom:0}.cs-sn .r .cs-rtag{font-size:13px;color:var(--ink);white-space:normal;text-align:left}
+.cs-sn .c{justify-self:center;width:24px;height:24px;border-radius:6px;display:grid;place-items:center;padding:0;font:inherit;border:1.5px solid transparent}
+.cs-sn .c svg{width:14px;height:14px;fill:none;stroke:#fff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.cs-sn .c.ok{background:#2fbf71}.cs-sn .c.todo{background:var(--surface);border:1.5px dashed color-mix(in srgb,#e0a83c 80%,var(--border));cursor:pointer}.cs-sn .c.todo svg{opacity:0}
+.cs-sn button.c.todo:hover{background:color-mix(in srgb,#e0a83c 14%,var(--surface))}.cs-sn button.c.todo:hover svg{opacity:.35;stroke:#9a6510}.cs-sn button.c[disabled]{cursor:default}
+.cs-later{padding:14px 16px}.cs-later .its{grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px 16px!important}
+.cs-later .m{padding:14px 16px;border-left:1px solid var(--border)}.cs-later .m:first-child{border-left:0}
+.cs-later h4{margin:0 0 10px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.cs-later .its{display:grid;gap:8px}.cs-later .it{display:grid;grid-template-columns:40px minmax(0,1fr);gap:10px;align-items:center}
+.cs-later .dt{display:grid;place-items:center;height:40px;border-radius:7px;background:color-mix(in srgb,var(--pc) 12%,var(--surface));border:1px solid color-mix(in srgb,var(--pc) 35%,transparent);line-height:1}.cs-later .dt b{font-size:15px}.cs-later .dt small{font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--ink-3)}
+.cs-later .it .cs-rtag{font-size:12.5px;color:var(--ink)}.cs-later .it .t{display:block;font-size:12px;color:var(--ink-3);margin-top:1px}
+@media(max-width:1100px){.cs-lanes{grid-template-columns:repeat(2,minmax(0,1fr))}.cs-sn{grid-template-columns:minmax(0,1fr)}.cs-sn .tb+.tb{border-left:0;border-top:1px solid var(--border)}.cs-rsum2{grid-template-columns:auto minmax(0,1fr)}.cs-rsum2 .cs-lks{grid-column:1/-1}.cs-rsum2 .st{border-right:0}}
+@media(max-width:700px){.cs-lanes{grid-template-columns:minmax(0,1fr)}.cs-sn .hr,.cs-sn .r{grid-template-columns:minmax(0,1fr) repeat(4,46px)}.cs-sn .hr span{font-size:9px}.cs-sn .tb{padding:4px 12px}.cs-rsum2{padding:16px}.cs-rsum2 .big b{font-size:36px}}
+
 
 /* what depends on one person */
 .cs-wk-sum{display:flex;flex-wrap:wrap;gap:6px;padding:10px;margin-bottom:12px}
@@ -5165,43 +5205,61 @@ function draw0(){ const root=P.el; if(!root) return; root.textContent=''; root.c
 const FIRST=['m360','team','orders','cms'];
 function whoLabel(w, sy){ return w==='claude' ? (sy ? sy.name+'’s Claude' : 'Its Claude') : w; }
 function whoCls(w){ return w==='You' ? 'you' : (w==='claude' || /claude/i.test(w)) ? '' : 'ext'; }
-function todoBand(d){ const b=band('Road to rock solid','What’s Left to Make Each System Rock Solid','Everything still open on each system, from the Systems Readiness Scorecard, the Connections Map and each system’s open items. Select a system for its list, and an item for the details.');
+function todoBand(d){ const b=band('Road to rock solid','What’s Left to Make Each System Rock Solid','What’s open now, who it’s waiting on, and the four safety nets every system gets. Things that aren’t due for months, like key renewals, wait in Coming Up Later and don’t count until they’re close.');
   const wrap=h('div','cs-rs'); b.appendChild(wrap); P.rsWrap=wrap; paintTodos(d); return b; }
-function paintTodos(d){ const wrap=P.rsWrap; if(!wrap) return; wrap.textContent=''; const by={}; d.systems.forEach(s=>by[s.id]=s);
-  const T=d.todos.filter(g=>by[g.sys] && (g.items||[]).length); const all=[].concat(...T.map(g=>g.items)); const done=all.filter(x=>x.done).length, left=all.length-done;
-  const W=P.rsWho||'';
+/* Road to Rock Solid, redesigned November 8, 2026: open now by who it waits on, a safety-net grid, and a timeline for later */
+const SAFE=[['guide','Guide',/how-it-works guide/i],['tests','Auto tests',/automatic tests/i],['pub','Auto publishing',/automatic publishing/i],['log','Change log',/change log/i]];
+const LATER_DAYS=60;
+function dueOf(it){ if(it.due){ const x=new Date(it.due); if(!isNaN(x)) return x; } const m=/before ([A-Z][a-z]{2,8} \d{1,2}, \d{4})/.exec(it.t||''); if(m){ const x=new Date(m[1]); if(!isNaN(x)) return x; } return null; }
+function laneOf(w){ return w==='You' ? 'You' : w==='claude' ? 'claude' : /^(MBA IT|Higher Logic)$/.test(w) ? 'MBA IT and Higher Logic' : w; }
+function paintTodos(d){ const wrap=P.rsWrap; if(!wrap) return; wrap.textContent=''; const by={}; d.systems.forEach(s=>by[s.id]=s); const R=appRank(d), ed=canEdit(), now=new Date();
+  const T=d.todos.filter(g=>by[g.sys] && (g.items||[]).length); const all=[]; T.forEach(g=>g.items.forEach(it=>all.push({g, it, sys:g.sys})));
+  const safeK=it=>{ if(it.who!=='claude') return null; const k=SAFE.find(z=>z[2].test(it.t) && !/:/.test(it.t)); return k ? k[0] : null; };
+  const later=all.filter(x=>{ const due=dueOf(x.it); return due && !x.it.done && (due-now)/864e5>LATER_DAYS; });
+  const isLater=new Set(later.map(x=>x.it.id)); const safe=all.filter(x=>safeK(x.it)); const isSafe=new Set(safe.map(x=>x.it.id));
+  const rest=all.filter(x=>!isLater.has(x.it.id) && !isSafe.has(x.it.id));
+  const openNow=all.filter(x=>!x.it.done && !isLater.has(x.it.id)), doneN=all.filter(x=>x.it.done).length, countable=all.length-later.length;
   /* summary */
-  const sm=h('div','cs-card cs-rsum'); const bg=h('div','big'); bg.append(String(left)); bg.appendChild(h('small',null,'items left')); sm.appendChild(bg);
-  const r=h('div'); const bar=h('div','bar'); const bi=h('i'); bi.style.width=(all.length?Math.round(done/all.length*100):0)+'%'; bar.appendChild(bi); r.appendChild(bar);
-  const meta=h('div','meta'); meta.appendChild(h('span',null, done+' of '+all.length+' done')); meta.appendChild(h('span',null, T.filter(g=>g.items.every(x=>x.done)).length+' of '+T.length+' systems complete'));
-  const mine=all.filter(x=>!x.done && x.who==='You').length; if(mine) meta.appendChild(h('span',null, mine+' waiting on you')); r.appendChild(meta);
-  const wh=h('div','cs-who'); const whos=['','You','claude'].concat([...new Set(all.map(x=>x.who).filter(w=>w!=='You' && w!=='claude'))].sort());
-  whos.forEach(w=>{ const n=all.filter(x=>!x.done && (!w || x.who===w)).length; const c=btn('cs-chip', (w==='' ? 'Everyone' : w==='claude' ? 'Each system’s Claude' : w)+' · '+n, ()=>{ P.rsWho=w; paintTodos(M.data); }); c.setAttribute('aria-pressed', String(W===w)); wh.appendChild(c); }); r.appendChild(wh);
-  sm.appendChild(r); wrap.appendChild(sm);
-  /* one card per system */
-  const order=T.slice().sort((a,b)=>{ const fa=FIRST.indexOf(a.sys), fb=FIRST.indexOf(b.sys); const la=a.items.filter(x=>!x.done).length, lb=b.items.filter(x=>!x.done).length;
-    if((la===0)!==(lb===0)) return la===0 ? 1 : -1; if(d.appGroups){ const R=appRank(d); const ra=R(a.sys), rb=R(b.sys); if(ra!==rb) return ra-rb; return by[a.sys].name.localeCompare(by[b.sys].name); } if(fa>=0 || fb>=0) return (fa<0?99:fa)-(fb<0?99:fb); return lb-la || by[a.sys].name.localeCompare(by[b.sys].name); });
-  P.rsOpen=P.rsOpen||{};
-  order.forEach(g=>{ const sy=by[g.sys]; const items=g.items.filter(x=>!W || x.who===W); if(W && !items.length) return;
-    const gl=g.items.filter(x=>!x.done).length; const card=h('div','cs-card cs-sys'+(P.rsOpen[g.sys]?' open':''));
-    const hd=btn('cs-sysh'); hd.setAttribute('aria-expanded', String(!!P.rsOpen[g.sys])); const dot=h('i'); dot.style.background=colorOf(d,sy); hd.appendChild(dot);
-    const nm=h('span','nm'); nm.appendChild(h('b',null,sy.name)); nm.appendChild(stTag(sy)); if(FIRST.indexOf(g.sys)>=0) nm.appendChild(h('small',null,'daily use')); hd.appendChild(nm);
-    const pg=h('span','pg'); const ps=h('s'); ps.style.width=(g.items.length?Math.round((g.items.length-gl)/g.items.length*100):0)+'%'; pg.appendChild(ps); hd.appendChild(pg);
-    hd.appendChild(h('span','lf'+(gl?'':' done'), gl ? gl+' left' : 'Done ✓'));
-    const cv=document.createElementNS(NS,'svg'); cv.setAttribute('viewBox','0 0 24 24'); cv.setAttribute('class','cv'); cv.innerHTML='<path d="M6 9l6 6 6-6"/>'; hd.appendChild(cv);
-    hd.addEventListener('click', ()=>{ P.rsOpen[g.sys]=!P.rsOpen[g.sys]; paintTodos(M.data); });
-    card.appendChild(hd);
-    if(P.rsOpen[g.sys]){ const L=h('div','cs-tl2');
-      items.slice().sort((a,b)=>(a.done?1:0)-(b.done?1:0)).forEach(it=>{ const row=h('div','cs-ti'+(it.done?' done':'')); const top=h('div','cs-tih');
-        const ck=btn('cs-ck'+(it.done?' on':'')); ck.innerHTML='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'; ck.setAttribute('aria-label',(it.done?'Mark not done: ':'Mark done: ')+it.t); ck.setAttribute('aria-pressed', String(!!it.done));
-        if(canEdit()) ck.addEventListener('click', ()=>toggleTodo(g.sys, it.id)); else { ck.disabled=true; ck.title='Jonna checks these off'; }
-        top.appendChild(ck);
-        const tt=btn('cs-tt', it.t); tt.setAttribute('aria-expanded', String(P.rsItem===it.id)); tt.addEventListener('click', ()=>{ P.rsItem=P.rsItem===it.id?null:it.id; paintTodos(M.data); }); top.appendChild(tt);
-        const tg=h('span','cs-tg'); if(it.kind) tg.appendChild(h('span','cs-kb',it.kind)); tg.appendChild(h('span','cs-wb '+whoCls(it.who), whoLabel(it.who, sy))); top.appendChild(tg); row.appendChild(top);
-        if(P.rsItem===it.id){ const dd=h('div','cs-tid'); if(it.d) dd.appendChild(h('div',null,it.d)); if(it.src) dd.appendChild(h('small',null,'From: '+it.src)); if(it.done && it.at) dd.appendChild(h('small',null,'Done '+new Date(it.at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+(it.by?' by '+it.by.replace(/^./,c=>c.toUpperCase()):''))); row.appendChild(dd); }
-        L.appendChild(row); });
-      card.appendChild(L); const f=h('div','cs-sysf'); const go=btn('cs-ib','Show '+sy.name+' on the map →', ()=>select(g.sys, true)); f.appendChild(go); card.appendChild(f); }
-    wrap.appendChild(card); });
+  const sm=h('div','cs-card cs-rsum2'); const ring=h('div','ring'); const pct=countable ? Math.round(doneN/countable*100) : 0; const C=2*Math.PI*34;
+  ring.innerHTML='<svg viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="34" class="bg"/><circle cx="40" cy="40" r="34" class="fg" stroke-dasharray="'+(C*pct/100).toFixed(1)+' '+C.toFixed(1)+'"/></svg>'; ring.appendChild(h('b',null,pct+'%')); sm.appendChild(ring);
+  const st=h('div','st'); const big=h('div','big'); big.appendChild(h('b',null,String(openNow.length))); big.appendChild(h('span',null,'open now')); st.appendChild(big);
+  st.appendChild(h('p',null, doneN+' done · '+later.length+' scheduled for later, not counted yet')); sm.appendChild(st);
+  const lanesAll=[...new Set(rest.filter(x=>!x.it.done).map(x=>laneOf(x.it.who)))]; const LORD=['You','Perry','MBA IT and Higher Logic','claude','Website Claude']; lanesAll.sort((a,b)=>((LORD.indexOf(a)+1)||9)-((LORD.indexOf(b)+1)||9));
+  const lk=h('div','cs-lks'); const lname=l=>l==='claude' ? 'Each system’s Claude' : l==='You' ? 'Waiting on you' : l;
+  lanesAll.forEach(l=>{ const n=rest.filter(x=>!x.it.done && laneOf(x.it.who)===l).length; const r=h('div','l'+(l==='You'?' you':'')); r.appendChild(h('b',null,String(n))); r.appendChild(h('span',null,lname(l))); lk.appendChild(r); });
+  const sn=safe.filter(x=>!x.it.done).length; if(sn){ const r=h('div','l'); r.appendChild(h('b',null,String(sn))); r.appendChild(h('span',null,'Safety nets to build')); lk.appendChild(r); }
+  lk.style.setProperty('--n', lk.children.length); lk.style.setProperty('--n2', Math.ceil(lk.children.length/2)); sm.appendChild(lk); wrap.appendChild(sm);
+  const tag=sy=>{ const t=btn('cs-rtag',null,()=>select(sy.id,true)); t.style.setProperty('--pc',colorOf(d,sy)); t.textContent=sy.name; t.title='Show '+sy.name+' on the map'; return t; };
+  const check=(x)=>{ const ck=btn('cs-ck'+(x.it.done?' on':'')); ck.innerHTML='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'; ck.setAttribute('aria-label',(x.it.done?'Mark not done: ':'Mark done: ')+x.it.t); ck.setAttribute('aria-pressed', String(!!x.it.done)); if(ed) ck.addEventListener('click', ()=>toggleTodo(x.sys, x.it.id)); else { ck.disabled=true; ck.title='Jonna checks these off'; } return ck; };
+  /* open now, by who it waits on, packed into three even columns */
+  const showDone=!!P.rsDone; const sec=h('div','cs-rsec'); const sh=h('div','cs-rsh'); sh.appendChild(h('h3',null,'Open Now')); sh.appendChild(h('span',null,'By who it’s waiting on. Select an item for the details.'));
+  const tg=btn('cs-mini2', showDone ? 'Hide finished' : 'Show finished ('+rest.filter(x=>x.it.done).length+')', ()=>{ P.rsDone=!P.rsDone; paintTodos(M.data); }); sh.appendChild(tg); sec.appendChild(sh);
+  const lanes=[...new Set(rest.filter(x=>showDone || !x.it.done).map(x=>laneOf(x.it.who)))].sort((a,b)=>((LORD.indexOf(a)+1)||9)-((LORD.indexOf(b)+1)||9));
+  const cols=[[],[],[]], ht=[0,0,0], sz=l=>rest.filter(x=>(showDone||!x.it.done) && laneOf(x.it.who)===l).length+1.5;
+  /* "waiting on you" leads the first column; the other lanes go, biggest first, into whichever column is shortest, so the three end close to level */
+  const first=lanes[0]; if(first){ cols[0].push(first); ht[0]+=sz(first); } lanes.slice(1).sort((a,b)=>sz(b)-sz(a)).forEach(l=>{ const c=ht.indexOf(Math.min(...ht)); cols[c].push(l); ht[c]+=sz(l); });
+  cols.forEach(c=>c.sort((a,b)=>((LORD.indexOf(a)+1)||9)-((LORD.indexOf(b)+1)||9)));
+  const grid=h('div','cs-lanes'); cols.forEach(cl=>{ const col=h('div','col'); cl.forEach(l=>{ const L=rest.filter(x=>(showDone||!x.it.done) && laneOf(x.it.who)===l).sort((a,b)=>(a.it.done?1:0)-(b.it.done?1:0) || R(a.sys)-R(b.sys));
+      const ln=h('div','cs-card cs-lane'+(l==='You'?' you':'')); const lh=h('div','lh'); lh.appendChild(h('b',null,lname(l))); lh.appendChild(h('em',null,String(L.filter(x=>!x.it.done).length))); ln.appendChild(lh);
+      L.forEach(x=>{ const sy=by[x.sys]; const it=x.it; const row=h('div','cs-ri'+(it.done?' done':'')+(P.rsItem===it.id?' open':'')); row.style.setProperty('--pc',colorOf(d,sy)); row.appendChild(check(x));
+        const tx=h('div','tx'); const tt=btn('cs-tt', it.t); tt.setAttribute('aria-expanded', String(P.rsItem===it.id)); tt.addEventListener('click', ()=>{ P.rsItem=P.rsItem===it.id?null:it.id; paintTodos(M.data); }); tx.appendChild(tt);
+        const mt=h('div','mt'); mt.appendChild(tag(sy)); if(l==='claude' || /claude/i.test(l)) {} else if(laneOf(it.who)!==it.who) mt.appendChild(h('span','who',it.who)); tx.appendChild(mt);
+        if(P.rsItem===it.id){ if(it.d) tx.appendChild(h('p',null,it.d)); if(it.src) tx.appendChild(h('small',null,'From: '+it.src)); if(it.done && it.at) tx.appendChild(h('small',null,'Done '+new Date(it.at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+(it.by?' by '+it.by.replace(/^./,c=>c.toUpperCase()):''))); }
+        row.appendChild(tx); ln.appendChild(row); });
+      col.appendChild(ln); }); grid.appendChild(col); }); sec.appendChild(grid); wrap.appendChild(sec);
+  /* the four safety nets, one row per system */
+  const ss=[...new Set(safe.map(x=>x.sys))].sort((a,b)=>R(a)-R(b)); if(ss.length){ const sf=h('div','cs-rsec'); const sh2=h('div','cs-rsh'); sh2.appendChild(h('h3',null,'Safety Nets')); sh2.appendChild(h('span',null,'Every system gets a how-it-works guide, automatic tests, automatic publishing and a change log, built by its Claude. A filled square is done.')); sf.appendChild(sh2);
+    const mx=h('div','cs-card cs-sn'); const half=Math.ceil(ss.length/2); [ss.slice(0,half), ss.slice(half)].forEach(part=>{ if(!part.length) return; const tb=h('div','tb'); const hr=h('div','hr'); hr.appendChild(h('span',null,'')); SAFE.forEach(z=>hr.appendChild(h('span',null,z[1]))); tb.appendChild(hr);
+      part.forEach(id=>{ const sy=by[id]; const r=h('div','r'); r.appendChild(tag(sy)); SAFE.forEach(z=>{ const x=safe.find(q=>q.sys===id && safeK(q.it)===z[0]); let c;
+          if(!x){ c=h('span','c ok'); c.title=z[1]+': in place'; c.innerHTML='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'; }
+          else { c=btn('c'+(x.it.done?' ok':' todo')); c.innerHTML='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'; c.title=x.it.t+(x.it.done?' (done)':'')+(ed?' — select to '+(x.it.done?'reopen':'check off'):''); c.setAttribute('aria-label', sy.name+': '+x.it.t+(x.it.done?', done':', open')); if(ed) c.addEventListener('click', ()=>toggleTodo(x.sys, x.it.id)); else c.disabled=true; }
+          r.appendChild(c); }); tb.appendChild(r); }); mx.appendChild(tb); }); sf.appendChild(mx); wrap.appendChild(sf); }
+  /* coming up later: a timeline, not counted until it's close */
+  if(later.length){ const lt=h('div','cs-rsec'); const sh3=h('div','cs-rsh'); sh3.appendChild(h('h3',null,'Coming Up Later')); const ds=later.map(x=>dueOf(x.it)).sort((a,b)=>a-b); const fmt=x=>x.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    sh3.appendChild(h('span',null, later.length+' items between '+fmt(ds[0])+' and '+fmt(ds[ds.length-1])+'. Each one moves into Open Now '+LATER_DAYS+' days before its date.')); lt.appendChild(sh3);
+    const tlc=h('div','cs-card cs-later'); const ul=h('div','its'); later.map(x=>Object.assign({due:dueOf(x.it)},x)).sort((a,b)=>a.due-b.due).forEach(x=>{ const sy=by[x.sys]; const it=h('div','it'); it.style.setProperty('--pc',colorOf(d,sy)); const dt=h('span','dt'); dt.appendChild(h('b',null,String(x.due.getDate()))); dt.appendChild(h('small',null,x.due.toLocaleDateString('en-US',{month:'short'}))); it.appendChild(dt);
+        const tx=h('div'); tx.appendChild(tag(sy)); tx.appendChild(h('span','t', x.it.t.replace(/ before [A-Z][a-z]+ \d{1,2}, \d{4}/,''))); it.appendChild(tx); it.title=x.it.d||x.it.t; ul.appendChild(it); });
+    tlc.appendChild(ul); lt.appendChild(tlc); wrap.appendChild(lt); }
 }
 function toggleTodo(sys, id){ const d=M.data; const nd=clone(d); const g=nd.todos.find(x=>x.sys===sys); const it=g && g.items.find(x=>x.id===id); if(!it) return;
   it.done=!it.done; if(it.done){ it.at=Date.now(); it.by=me(); } else { delete it.at; delete it.by; }
