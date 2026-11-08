@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261108b';
+var BUILD='20261108c';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -5284,7 +5284,7 @@ function paintState0(){ const d=M.data; if(!d || d.empty || !P.nodes) return; co
   const q=P.q, Q=q ? d.systems.filter(s=>(s.name+' '+(s.what||'')).toLowerCase().indexOf(q)>=0).map(s=>s.id) : null;
   const focus=P.hover||P.sel, L=focus ? linked(focus) : null, f=P.filter;
   d.systems.forEach(s=>{ const n=P.nodes[s.id]; if(!n) return;
-    const on= Q ? Q.indexOf(s.id)>=0 : L ? !!L[s.id] : (!f || s.area===f || s.zone==='eng' || (!s.area && d.connections.some(c=>(c.from===s.id && by[c.to] && by[c.to].area===f) || (c.to===s.id && by[c.from] && by[c.from].area===f))));
+    const on= Q ? Q.indexOf(s.id)>=0 : L ? !!L[s.id] : (!f || s.area===f || s.zone==='eng' || d.connections.some(c=>!c.quiet && ((c.from===s.id && by[c.to] && by[c.to].area===f) || (c.to===s.id && by[c.from] && by[c.from].area===f)))); /* a box at the other end of an area's line stays lit */
     n.classList.toggle('dim', !on); n.classList.toggle('sel', s.id===P.sel); n.classList.toggle('lit', !!(Q && on)); });
   P.edges.forEach(e=>{ const a=by[e.c.from], b=by[e.c.to]; const on= Q ? false : focus ? (e.c.from===focus || e.c.to===focus) : (!f || a.area===f || b.area===f);
     e.el.classList.toggle('dim', !on); e.el.classList.toggle('hot', !!focus && on); if(e.p) e.p.dim=!on; e.lb.classList.toggle('on', !!P.sel && !P.hover && on && !Q); }); }
