@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261108c';
+var BUILD='20261108d';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4673,7 +4673,9 @@ html[data-theme="dark"] .cs{--cs-hot:#74bfeb}
 .cs-n .sub{font:500 10px ui-monospace,Menlo,monospace;fill:var(--ink-3)}
 .cs-n .sd{transform-box:fill-box;transform-origin:center}
 .cs-n .sd.live{fill:#2fbf71}.cs-n .sd.soon{fill:#e0a83c}.cs-n .sd.build{fill:#9fb3c4}
-.cs-n.dim,.cs-e.dim,.cs-lb.dim{opacity:.1}
+.cs-e.dim,.cs-lb.dim{opacity:.1}
+/* a faded box stays solid, so a line passing behind it never looks like it ends there */
+.cs-n.dim .box{stroke:color-mix(in srgb,var(--border) 60%,transparent)}.cs-n.dim text,.cs-n.dim .bar,.cs-n.dim circle{opacity:.16}
 .cs-n.sel .box{stroke:var(--cs-hot);stroke-width:2.8;filter:url(#csShadow)}
 .cs-n.lit .box{stroke:var(--cs-sky);stroke-width:2.2}
 .cs-n.eng .box{fill:var(--surface-3,var(--surface-2))}
@@ -5207,6 +5209,16 @@ function anchor(n,m){ const dx=m.x-n.x, dy=m.y-n.y; if(Math.abs(dx)*H>Math.abs(d
 function edgeGeo(a,b,i){ const p=anchor(a,b), q=anchor(b,a); const mx=(p.x+q.x)/2, my=(p.y+q.y)/2, off=(i%2?1:-1)*Math.min(40,Math.hypot(q.x-p.x,q.y-p.y)/6);
   const nx=-(q.y-p.y), ny=(q.x-p.x), L=Math.hypot(nx,ny)||1; const cx=mx+nx/L*off, cy=my+ny/L*off; return {d:'M'+p.x+' '+p.y+' Q'+cx+' '+cy+' '+q.x+' '+q.y, mx:(p.x+2*cx+q.x)/4, my:(p.y+2*cy+q.y)/4, len:Math.hypot(q.x-p.x,q.y-p.y)}; }
 function edgePath(a,b,i){ return edgeGeo(a,b,i).d; }
+/* lines find a path that doesn't run under other boxes: try each way out of the two boxes and a range of curves, keep the one that crosses the fewest boxes */
+function anchorM(n,m,mode){ const dx=m.x-n.x, dy=m.y-n.y; const h= mode==='h' ? true : mode==='v' ? false : Math.abs(dx)*H>Math.abs(dy)*W; return h ? {x:n.x+(dx>0?W/2:-W/2), y:n.y} : {x:n.x, y:n.y+(dy>0?H/2:-H/2)}; }
+function geoM(a,b,mode,off){ const m1=mode==='hv'?'h':mode==='vh'?'v':mode, m2=mode==='hv'?'v':mode==='vh'?'h':mode; const p=anchorM(a,b,m1), q=anchorM(b,a,m2); const mx=(p.x+q.x)/2, my=(p.y+q.y)/2; const nx=-(q.y-p.y), ny=(q.x-p.x), L=Math.hypot(nx,ny)||1; const cx=mx+nx/L*off, cy=my+ny/L*off;
+  return {p, q, cx, cy, d:'M'+p.x+' '+p.y+' Q'+cx+' '+cy+' '+q.x+' '+q.y, mx:(p.x+2*cx+q.x)/4, my:(p.y+2*cy+q.y)/4, len:Math.hypot(q.x-p.x,q.y-p.y)}; }
+function crossings(g, a, b, obs){ let n=0; const hit=new Set(); for(let k=1;k<40;k++){ const t=k/40, u=1-t; const x=u*u*g.p.x+2*u*t*g.cx+t*t*g.q.x, y=u*u*g.p.y+2*u*t*g.cy+t*t*g.q.y;
+    for(const o of obs){ if(o===a || o===b || hit.has(o)) continue; if(Math.abs(x-o.x)<W/2+5 && Math.abs(y-o.y)<H/2+5){ hit.add(o); n++; } } } return n; }
+function routeGeo(a, b, i, obs, used){ const len=Math.hypot(b.x-a.x,b.y-a.y), base=Math.min(40,len/6), sgn=(i%2?1:-1); let best=null;
+  ['auto','h','v','hv','vh'].forEach(mode=>{ [base, base*0.5, 70, 110, 160, 220, 300, 380].forEach(o=>[sgn, -sgn].forEach(sg=>{ const off=o*sg; const g=geoM(a,b,mode,off); const key=mode+':'+Math.round(off);
+    const score=crossings(g,a,b,obs)*1000 + Math.abs(off) + (mode==='auto'?0:25) + (sg===sgn?0:5) + (used && used.indexOf(key)>=0 ? 5000 : 0);
+    if(!best || score<best.score){ g.score=score; g.key=key; best=g; } })); }); return best; }
 let uid=0;
 function frame(d){ const ys=d.systems.filter(s=>s.zone!=='eng' && s.y!=null).map(s=>s.y); const zb=Math.max(300, (ys.length?Math.max(...ys):400)+H/2+20), et=zb+14; return {zb, et, ey:et+56, vb:et+90+10}; }
 function map(d){ const F=frame(d); P.vb=F.vb; const svg=sv('svg',{viewBox:'0 0 1200 '+F.vb, role:'img', 'aria-label':'Map of MISMO’s systems and the connections between them'}); P.svg=svg; const pre='cse'+(++uid)+'-';
@@ -5216,10 +5228,10 @@ function map(d){ const F=frame(d); P.vb=F.vb; const svg=sv('svg',{viewBox:'0 0 1
   [['MBA & Microsoft 365',110,44],['MISMO apps · resources.mismo.org',605,44],['Outside MISMO',1090,44],['Engine room · every app runs on these',600,F.et+22]].forEach(z=>{ const t=sv('text',{class:'cs-zl',x:z[1],y:z[2],'text-anchor':'middle'},svg); t.textContent=z[0]; });
   (d.appGroups||[]).forEach(g=>{ const M0=(g.ids||[]).map(id=>d.systems.find(x=>x.id===id)).filter(x=>x && x.zone==='apps' && x.y!=null); if(!M0.length) return; const y0=Math.min(...M0.map(x=>x.y)), x0=Math.min(...M0.filter(x=>x.y===y0).map(x=>x.x)); const t=sv('text',{class:'cs-gl',x:x0-W/2+2,y:y0-H/2-7},svg); t.textContent=g.name; });
   const top=sv('svg',{viewBox:'0 0 1200 '+F.vb, class:'cs-top', role:'group', 'aria-label':'MISMO’s systems'}); P.svgTop=top; const gE=sv('g',{},svg), gN=sv('g',{},top), gL=sv('g',{},top); const by={}; d.systems.forEach(s=>by[s.id]= s.zone==='eng' ? Object.assign({}, s, {y:F.ey}) : s);
-  P.edges=[]; P.nodes={}; const pairs={};
+  P.edges=[]; P.nodes={}; const pairs={}; const OBS=Object.values(by), USED={};
   d.connections.forEach((c,i0)=>{ const a=by[c.from], b=by[c.to]; if(!a || !b) return;
     const pk=[c.from,c.to].sort().join('|'), f0=pairs[pk]; if(!f0) pairs[pk]={i:i0, from:c.from}; const i=!f0 ? i0 : (f0.from===c.from ? f0.i+1 : f0.i); /* a second line between the same two boxes curves the other way */
-    const geo=edgeGeo(a,b,i); const path=sv('path',{class:'cs-e'+(c.how==='hand'?' hand':c.how==='soon'?' soon':'')+(c.quiet?' quiet':''), d:geo.d, id:pre+i0},gE); const tt=sv('title',{},path); tt.textContent=a.name+' → '+b.name+': '+c.what+(c.how==='hand'?' (copied by a person)':c.how==='soon'?' (not live yet)':'');
+    const geo=routeGeo(a,b,i,OBS,USED[pk]); (USED[pk]=USED[pk]||[]).push(geo.key); const path=sv('path',{class:'cs-e'+(c.how==='hand'?' hand':c.how==='soon'?' soon':'')+(c.quiet?' quiet':''), d:geo.d, id:pre+i0},gE); const tt=sv('title',{},path); tt.textContent=a.name+' → '+b.name+': '+c.what+(c.how==='hand'?' (copied by a person)':c.how==='soon'?' (not live yet)':'');
     const e={c, el:path, i}; if(c.how!=='hand' && c.how!=='soon' && !c.quiet) e.p={dur:(3.6+(i%5)*.7)*1000, off:(i*0.37%4)*1000, dim:false, pts:null};
     /* the label that appears on the line when its system is selected */
     const lbTxt=(c.what.length>30 ? c.what.slice(0,29)+'…' : c.what); const lw=Math.round(lbTxt.length*5.9+14);
@@ -5267,7 +5279,7 @@ function dragable(g, s, d){ g.addEventListener('pointerdown', ev=>{ if(ev.button
   const st=loc(ev), ox=s.x, oy=s.y; let moved=false; g.setPointerCapture(ev.pointerId);
   const mv=e=>{ const p=loc(e); const nx=Math.round(Math.max(W/2+8, Math.min(1200-W/2-8, ox+p.x-st.x))), ny=s.zone==='eng' ? oy : Math.round(Math.max(H/2+8, Math.min((P.vb||720)-H/2-8, oy+p.y-st.y)));
     if(!moved && Math.hypot(nx-ox, ny-oy)<4) return; moved=true; g.classList.add('drag'); s.x=nx; s.y=ny; g.setAttribute('transform','translate('+(nx-W/2)+','+((s.zone==='eng' ? frame(d).ey : ny)-H/2)+')');
-    const by={}; d.systems.forEach(z=>by[z.id]=z); P.edges.forEach(e2=>{ if(e2.c.from===s.id || e2.c.to===s.id){ const a=by[e2.c.from], b=by[e2.c.to]; e2.el.setAttribute('d', edgePath(a,b,e2.i)); if(e2.p) e2.p.pts=null; } }); };
+    const by={}; d.systems.forEach(z=>by[z.id]=z); P.edges.forEach(e2=>{ if(e2.c.from===s.id || e2.c.to===s.id){ const a=by[e2.c.from], b=by[e2.c.to]; e2.el.setAttribute('d', routeGeo(a,b,e2.i,d.systems.filter(z=>z.zone!=='eng'),null).d); if(e2.p) e2.p.pts=null; } }); };
   const up=()=>{ g.removeEventListener('pointermove', mv); g.removeEventListener('pointerup', up); g.removeEventListener('pointercancel', up); g.classList.remove('drag');
     if(moved){ g._moved=true; const nd=clone(d); const t=nd.systems.find(z=>z.id===s.id); t.x=s.x; t.y=s.y; s.x=ox; s.y=oy; save(nd, 'Moved '+s.name+'.'); } };
   g.addEventListener('pointermove', mv); g.addEventListener('pointerup', up); g.addEventListener('pointercancel', up); }); }
