@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261107zs';
+var BUILD='20261107zu';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4686,7 +4686,7 @@ html[data-theme="dark"] .cs{--cs-hot:#74bfeb}
 .cs-legend{display:flex;flex-wrap:wrap;gap:16px;font-size:12.5px;color:var(--ink-2);padding:10px 14px;border-top:1px solid var(--border)}
 .cs-legend span{display:inline-flex;align-items:center;gap:6px}
 /* journey player: a callout on the map beside each system, and the whole story in the panel */
-.cs-bub{position:absolute;z-index:3;width:270px;background:var(--surface);border:1.5px solid var(--cs-hot);border-radius:10px;padding:10px 12px 10px;box-shadow:0 14px 30px -14px rgba(6,32,47,.5);transition:left .35s ease,top .35s ease,opacity .2s;pointer-events:auto}
+.cs-bub{position:absolute;z-index:3;width:270px;box-sizing:border-box;background:var(--surface);border:1.5px solid var(--cs-hot);border-radius:10px;padding:10px 12px 10px;box-shadow:0 14px 30px -14px rgba(6,32,47,.5);transition:left .35s ease,top .35s ease,opacity .2s;pointer-events:auto}
 .cs-bub::before{content:'';position:absolute;left:var(--ax,50%);width:12px;height:12px;background:var(--surface);border:1.5px solid var(--cs-hot);transform:translateX(-50%) rotate(45deg)}
 .cs-bub.below::before{top:-7.5px;border-right:0;border-bottom:0}.cs-bub.above::before{bottom:-7.5px;border-left:0;border-top:0}
 .cs-bub.right::before,.cs-bub.left::before{left:auto;top:var(--ay,50%);transform:translateY(-50%) rotate(45deg)}.cs-bub.right::before{left:-7.5px;border-top:0;border-right:0}.cs-bub.left::before{right:-7.5px;border-bottom:0;border-left:0}
@@ -4779,6 +4779,32 @@ html[data-theme="dark"] .cs .cs-ph .cs-build{color:#456179}
 .cs-ar .m{height:6px;border-radius:3px;background:var(--surface-3,var(--border));overflow:hidden}.cs-ar .m s{display:block;height:100%;border-radius:3px}
 .cs-ar b{text-align:right;font-variant-numeric:tabular-nums}
 .cs-ar:hover .t span{text-decoration:underline}
+/* story browser */
+.cs-sb{padding:0;overflow:hidden}
+.cs-sbt{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);background:var(--surface-2)}
+.cs-sbtabs{display:flex;flex-wrap:wrap;gap:6px}
+.cs-sbtab{display:inline-flex;align-items:center;gap:7px;font:inherit;font-size:13px;font-weight:600;color:var(--ink-2);background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:6px 10px;cursor:pointer}
+.cs-sbtab i{width:8px;height:8px;border-radius:50%}.cs-sbtab em{font-style:normal;font-size:11.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.cs-sbtab:hover{border-color:var(--cs-sky);color:var(--ink)}.cs-sbtab[aria-selected="true"]{background:var(--cs-hot);border-color:var(--cs-hot);color:var(--surface)}.cs-sbtab[aria-selected="true"] em{color:inherit;opacity:.75}
+.cs-sbfind{margin-left:auto}
+.cs-sbb{display:grid;grid-template-columns:300px minmax(0,1fr);align-items:start}
+.cs-sbl{border-right:1px solid var(--border);overflow:auto;overscroll-behavior:contain;padding:8px;display:flex;flex-direction:column;gap:4px;scrollbar-width:thin}
+.cs-sbg{display:flex;align-items:center;gap:7px;flex:none;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);padding:10px 6px 4px}.cs-sbg:first-child{padding-top:4px}.cs-sbg i{width:7px;height:7px;border-radius:50%}
+.cs-sbi{display:block;width:100%;text-align:left;font:inherit;color:inherit;background:none;border:1px solid transparent;border-left:3px solid var(--pc,#74bfeb);border-radius:6px;padding:8px 10px;cursor:pointer;flex:none}
+.cs-sbi:hover{background:var(--surface-2)}.cs-sbi.on{background:color-mix(in srgb,#74bfeb 14%,var(--surface));border-color:var(--cs-sky);border-left-color:var(--pc,#74bfeb)}
+.cs-sbi b{display:block;font-size:13.5px;line-height:1.35}.cs-sbi small{display:flex;align-items:center;gap:8px;margin-top:3px;font-size:11.5px;color:var(--ink-3)}
+.cs-sbi .dots{display:inline-flex;gap:3px}.cs-sbi .dots i{width:7px;height:7px;border-radius:50%}
+.cs-sbd{padding:16px 18px 18px;min-width:0}
+.cs-sbh{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px}.cs-sbh>div{flex:1;min-width:0}
+.cs-sbh h3{margin:2px 0 4px;font-size:19px}.cs-sbh p{margin:0;font-size:13.5px;color:var(--ink-2)}
+.cs-sbplay.pri{background:var(--cs-hot);border-color:var(--cs-hot);color:var(--surface)}
+.cs-sbplay{flex:none;display:inline-flex;align-items:center;gap:7px;padding:8px 14px;font-size:13px}
+.cs-sbs{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.cs-sbs li{position:relative;display:grid;grid-template-columns:24px minmax(0,1fr);gap:10px;align-items:start;background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--pc,#74bfeb);border-radius:6px;padding:10px 12px;cursor:pointer;transition:border-color .15s,transform .15s}
+.cs-sbs li:hover,.cs-sbs li:focus-visible{border-color:var(--cs-sky);border-top-color:var(--pc,#74bfeb);transform:translateY(-1px);outline:none}
+.cs-sbs .sn{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;background:var(--cs-hot);color:var(--surface)}
+.cs-sbs b{display:block;font-size:13.5px}.cs-sbs p{margin:3px 0 0;font-size:12.5px;line-height:1.45;color:var(--ink-2)}
+@media(max-width:900px){.cs-sbb{grid-template-columns:minmax(0,1fr)}.cs-sbl{border-right:0;border-bottom:1px solid var(--border);max-height:240px}.cs-sbfind{margin-left:0;width:100%}.cs-sbh{flex-direction:column}}
 /* journeys */
 .cs-jgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
 .cs-jc{padding:16px;display:grid;gap:10px;cursor:pointer;transition:transform .2s,box-shadow .2s,border-color .2s;text-align:left;font:inherit;color:inherit}
@@ -4897,6 +4923,26 @@ html[data-theme="dark"] .cs .cs-ph .cs-build{color:#456179}
 .cs-sysf{display:flex;justify-content:flex-end;padding:0 16px 14px}
 
 /* what depends on one person */
+.cs-wk-sum{display:flex;flex-wrap:wrap;gap:6px;padding:10px;margin-bottom:12px}
+.cs-wk-p{display:inline-flex;align-items:center;gap:9px;font:inherit;color:inherit;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:6px 12px 6px 6px;cursor:pointer;text-align:left}
+.cs-wk-p:hover{border-color:var(--cs-sky)}.cs-wk-p b{display:block;font-size:13px}.cs-wk-p small{display:block;font-size:11.5px;color:var(--ink-3)}
+.cs-wk-p .av,.cs-wkh .av{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:11.5px;font-weight:800;background:var(--cs-hot);color:var(--surface)}
+.cs-wks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start}
+.cs-wk.wide{grid-column:span 2;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:14px;align-items:start}.cs-wk.wide>.cs-wkh,.cs-wk.wide>.cs-wkb{grid-column:1/-1}
+@media(max-width:1180px){.cs-wks{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.cs-wks{grid-template-columns:minmax(0,1fr)}.cs-wk.wide{grid-column:auto;grid-template-columns:minmax(0,1fr)}}
+.cs-wk{padding:14px;display:grid;gap:10px;scroll-margin-top:70px}
+.cs-wkh{display:flex;align-items:center;gap:10px}.cs-wkh .av{width:38px;height:38px;font-size:13px}.cs-wkh h3{margin:0;font-size:16px}.cs-wkh p{margin:1px 0 0;font-size:12.5px;color:var(--ink-3)}
+.cs-wkgh{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2);margin-bottom:5px}
+.cs-wkgh .ic{width:20px;height:20px;border-radius:5px;display:grid;place-items:center}.cs-wkgh .ic svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2}
+.cs-wkgh em{font-style:normal;color:var(--ink-3);font-weight:600}
+.cs-wkg.acct .ic{background:color-mix(in srgb,#e0a83c 20%,transparent);color:#9a6510}.cs-wkg.hands .ic{background:color-mix(in srgb,#74bfeb 22%,transparent);color:var(--cs-hot)}.cs-wkg.cover .ic{background:color-mix(in srgb,#2fbf71 16%,transparent);color:#0f7b5c}
+.cs-wkg ul{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.cs-wkg li{font-size:13px;line-height:1.35;padding:6px 10px;border-radius:0 6px 6px 0;background:var(--surface-2);border-left:3px solid #74bfeb}
+.cs-wkg.acct li{border-left-color:#e0a83c}.cs-wkg.cover li{border-left-color:#2fbf71}
+.cs-wkg li b{display:block;font-weight:600}.cs-wkg li small{display:block;color:var(--ink-3);font-size:12px;margin-top:1px}
+.cs-wkg li.cs-go:hover,.cs-wkg li.cs-go:focus-visible{background:color-mix(in srgb,#74bfeb 14%,var(--surface-2));transform:translateX(2px)}
+.cs-wkb{font-size:12.5px;color:var(--ink-2);border-top:1px solid var(--border);padding-top:8px}.cs-wkb b{color:#0f7b5c}
 .cs-kp-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0;margin-bottom:12px;overflow:hidden}
 .cs-kp-sum .k{padding:14px 18px;border-left:4px solid #74bfeb}
 .cs-kp-sum .k+.k{border-top:0}
@@ -4985,15 +5031,13 @@ function draw(){ const root=P.el; if(!root) return; root.textContent=''; root.cl
   left.appendChild(lg); P.tourHost=left; g.appendChild(left);
   const panel=h('aside','cs-card cs-panel'); panel.setAttribute('aria-live','polite'); g.appendChild(panel); P.panel=panel; balance(left, panel); b1.appendChild(g); root.appendChild(b1); addSec('System Map', b1);
   /* journeys */
-  if(J.length && !P.edit){ const bj=band('Follow the work','How Work Moves, Step by Step','Pick a story and watch it travel across the map, one hand-off at a time.'); const jg=h('div','cs-jgrid');
-    J.forEach(j=>{ const cd=btn('cs-card cs-jc cs-rv'); cd.appendChild(h('div','cs-k', j.steps.length+' steps')); cd.appendChild(h('h3',null,j.title)); if(j.blurb) cd.appendChild(h('p',null,j.blurb));
-      const st=h('div','cs-steps'); j.steps.forEach((s0,i)=>{ const sy=d.systems.find(x=>x.id===s0.sys); if(i) st.appendChild(h('em',null,'→')); const sp=h('span'); const ii=h('i'); ii.style.background=colorOf(d,sy); sp.appendChild(ii); sp.append(sy.name); st.appendChild(sp); }); cd.appendChild(st);
-      const go=h('span','go'); go.innerHTML=svgI('play').replace('<svg','<svg width="12" height="12" style="fill:currentColor"')+'Play it on the map'; cd.appendChild(go);
-      cd.addEventListener('click', ()=>startJourney(j.id)); jg.appendChild(cd); });
-    bj.appendChild(jg); root.appendChild(bj); addSec('Follow the Work', bj); }
+  if(J.length && !P.edit){ const nSys=new Set(); J.forEach(x=>x.steps.forEach(z=>nSys.add(z.sys)));
+    const bj=band('Follow the work','How Work Moves, Step by Step', J.length+' stories across '+nSys.size+' systems. Pick an area, then a story; play it to watch it travel across the map.');
+    const sb=h('div','cs-card cs-sb'); bj.appendChild(sb); stories(d, sb); root.appendChild(bj); addSec('Follow the Work', bj); }
   /* the road to rock solid */
   if(Array.isArray(d.todos) && d.todos.length){ const br=todoBand(d); root.appendChild(br); addSec('To Rock Solid', br); }
-  if(d.keyperson && Array.isArray(d.keyperson.groups) && d.keyperson.groups.length){ const bk=keyBand(d); root.appendChild(bk); addSec('Depends on Jonna', bk); }
+  if(d.keyperson && Array.isArray(d.keyperson.people) && d.keyperson.people.length){ const bk=peopleBand(d); root.appendChild(bk); addSec(d.keyperson.nav||'Coverage', bk); }
+  else if(d.keyperson && Array.isArray(d.keyperson.groups) && d.keyperson.groups.length){ const bk=keyBand(d); root.appendChild(bk); addSec('Depends on Jonna', bk); }
   /* protection */
   const inPlace=d.protection.filter(l=>/in place/i.test(l.status||'')).length;
   const b2=band('Security','How the Data Is Protected','Each layer stands on its own, so a problem in one doesn’t expose the rest. Select a layer to see where it lives on the map.');
@@ -5065,6 +5109,18 @@ function toggleTodo(sys, id){ const d=M.data; const nd=clone(d); const g=nd.todo
 function balance(left, panel){ const fit=()=>{ if(!left.isConnected) return; panel.style.height=Math.max(320, left.offsetHeight)+'px'; };
   if('ResizeObserver' in window){ const ro=new ResizeObserver(fit); ro.observe(left); } requestAnimationFrame(fit); }
 /* ---------- what depends on one person ---------- */
+/* who keeps it running: each person the work leans on, what runs on their accounts, what waits on them, and who covers */
+const KK={acct:['On their accounts','key'], hands:['Waits on them','clock'], cover:['Already covered','shield']};
+function peopleBand(d){ const K=d.keyperson; const b=band(K.kicker||'Coverage', K.title||'Who Keeps It Running', K.lede||''); const by={}; d.systems.forEach(s=>by[s.id]=s);
+  const P0=K.people.filter(x=>(x.items||[]).length); const strip=h('div','cs-card cs-wk-sum');
+  P0.forEach((x,i)=>{ const c=btn('cs-wk-p'); c.appendChild(h('span','av',x.name.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase())); const tx=h('span'); tx.appendChild(h('b',null,x.name)); tx.appendChild(h('small',null,(x.items||[]).length+' item'+((x.items||[]).length>1?'s':''))); c.appendChild(tx); c.addEventListener('click', ()=>{ const t=b.querySelectorAll('.cs-wk')[i]; if(t) t.scrollIntoView({block:'nearest', behavior:reduce()?'auto':'smooth'}); }); strip.appendChild(c); });
+  b.appendChild(strip); const grid=h('div','cs-wks');
+  P0.forEach(x=>{ const card=h('div','cs-card cs-wk cs-rv'+((x.items||[]).length>9?' wide':'')); const hd=h('div','cs-wkh'); hd.appendChild(h('span','av',x.name.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase())); const tx=h('div'); tx.appendChild(h('h3',null,x.name)); if(x.role) tx.appendChild(h('p',null,x.role)); hd.appendChild(tx); card.appendChild(hd);
+    Object.keys(KK).forEach(k=>{ const L=(x.items||[]).filter(it=>(it.k||'hands')===k); if(!L.length) return; const sec=h('div','cs-wkg '+k); const sh=h('div','cs-wkgh'); const ic=h('span','ic'); ic.innerHTML=svgI(KK[k][1]); sh.appendChild(ic); sh.append(KK[k][0]); sh.appendChild(h('em',null,String(L.length))); sec.appendChild(sh);
+      const ul=h('ul'); L.forEach(it=>{ const li=h('li'); li.appendChild(h('b',null,it.t)); if(it.d) li.appendChild(h('small',null,it.d)); if(it.sys && by[it.sys]) goTo(li, it.sys, d, null); ul.appendChild(li); }); sec.appendChild(ul); card.appendChild(sec); });
+    if(x.backup){ const bk=h('div','cs-wkb'); bk.appendChild(h('b',null,'Backup ')); bk.append(x.backup); card.appendChild(bk); }
+    grid.appendChild(card); });
+  b.appendChild(grid); return b; }
 function keyBand(d){ const K=d.keyperson; const b=band('Key-person risk', K.title||'What Depends on One Person', K.lede||''); const by={}; d.systems.forEach(s=>by[s.id]=s);
   const all=[].concat(...K.groups.map(g=>g.items)); const sum=h('div','cs-card cs-kp-sum'); 
   K.groups.forEach(g=>{ const x=h('div','k '+(g.tone||'')); x.appendChild(h('b',null,String(g.items.length))); x.appendChild(h('span',null,g.short||g.title)); sum.appendChild(x); }); b.appendChild(sum);
@@ -5222,6 +5278,33 @@ function select(id, scroll){ stopJourney(true); P.sel=(P.sel===id && !P.edit && 
   paintState(); side();
   if(scroll && P.el){ const g=P.el.querySelector('.cs-grid'); const one=g && getComputedStyle(g).gridTemplateColumns.split(' ').filter(Boolean).length<2; const tgt=one ? P.panel : P.el.querySelector('.cs-mapwrap'); if(tgt) tgt.scrollIntoView({block:'start', behavior:reduce()?'auto':'smooth'}); const n=P.nodes && P.nodes[id]; if(n) setTimeout(()=>{ try{ n.focus({preventScroll:true}); }catch(e){} }, 450); } }
 
+/* ---------- the story browser: areas, a list of stories, and the chosen story's steps ---------- */
+function jArea(d, j){ if(j.area && d.areas[j.area]) return j.area; const n={}; j.steps.forEach(z=>{ const sy=d.systems.find(x=>x.id===z.sys); if(sy && sy.area) n[sy.area]=(n[sy.area]||0)+1; }); return Object.keys(n).sort((a,b)=>n[b]-n[a])[0]||'ops'; }
+function stories(d, box){ const J=journeys(d), by={}; d.systems.forEach(x=>by[x.id]=x); box.textContent='';
+  if(!P.sa || (P.sa!=='all' && !d.areas[P.sa])) P.sa='all'; if(!J.some(j=>j.id===P.sj)) P.sj=null;
+  const q=(P.sq||'').trim().toLowerCase();
+  const match=j=>(P.sa==='all' || jArea(d,j)===P.sa) && (!q || (j.title+' '+(j.blurb||'')+' '+j.steps.map(z=>(by[z.sys]||{}).name+' '+z.text).join(' ')).toLowerCase().indexOf(q)>=0);
+  const AO=Object.keys(d.areas); const L=J.filter(match).map((j,i)=>[j,i]).sort((a,b)=>(AO.indexOf(jArea(d,a[0]))-AO.indexOf(jArea(d,b[0])))||(a[1]-b[1])).map(x=>x[0]); if(!P.sj || !L.some(j=>j.id===P.sj)) P.sj=L.length ? L[0].id : null;
+  const top=h('div','cs-sbt'); const tabs=h('div','cs-sbtabs'); tabs.setAttribute('role','tablist');
+  const tab=(k,label,col)=>{ const n=J.filter(j=>k==='all' || jArea(d,j)===k).length; if(!n && k!=='all') return; const b=btn('cs-sbtab'); b.setAttribute('role','tab'); b.setAttribute('aria-selected', String(P.sa===k)); if(col){ const i=h('i'); i.style.background=col; b.appendChild(i); } b.append(label); b.appendChild(h('em',null,String(n))); b.addEventListener('click', ()=>{ P.sa=k; P.sj=null; stories(d, box); }); tabs.appendChild(b); };
+  tab('all','All',null); Object.keys(d.areas).forEach(k=>tab(k, d.areas[k].name, AC[d.areas[k].c])); top.appendChild(tabs);
+  const fd=h('label','cs-find cs-sbfind'); fd.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>'; const fi=h('input'); fi.type='search'; fi.placeholder='Find a story or system'; fi.value=P.sq||''; fi.setAttribute('aria-label','Find a story or system');
+  let ft=0; fi.addEventListener('input', ()=>{ clearTimeout(ft); ft=setTimeout(()=>{ P.sq=fi.value; stories(d, box); const n=box.querySelector('.cs-sbfind input'); if(n){ n.focus(); n.setSelectionRange(n.value.length, n.value.length); } }, 180); }); fd.appendChild(fi); top.appendChild(fd); box.appendChild(top);
+  const body=h('div','cs-sbb'); box.appendChild(body);
+  const ls=h('div','cs-sbl'); ls.setAttribute('role','listbox'); ls.setAttribute('aria-label','Stories');
+  if(!L.length) ls.appendChild(h('p','cs-note','No stories match.'));
+  let lastA=null; L.forEach(j=>{ const ja=jArea(d,j); if(P.sa==='all' && ja!==lastA){ lastA=ja; const g=h('div','cs-sbg'); const i=h('i'); i.style.background=d.areas[ja]?AC[d.areas[ja].c]:'#74bfeb'; g.appendChild(i); g.append(d.areas[ja]?d.areas[ja].name:''); ls.appendChild(g); } const b=btn('cs-sbi'+(j.id===P.sj?' on':'')); b.setAttribute('role','option'); b.setAttribute('aria-selected', String(j.id===P.sj)); const ar=d.areas[jArea(d,j)]; b.style.setProperty('--pc', ar ? AC[ar.c] : '#74bfeb');
+    b.appendChild(h('b',null,j.title)); const m=h('small'); const dots=h('span','dots'); [...new Set(j.steps.map(z=>z.sys))].slice(0,7).forEach(id=>{ const sy=by[id]; if(!sy) return; const i=h('i'); i.style.background=colorOf(d,sy); i.title=sy.name; dots.appendChild(i); }); m.appendChild(dots); m.append(j.steps.length+' steps'); b.appendChild(m);
+    b.addEventListener('click', ()=>{ P.sj=j.id; stories(d, box); }); ls.appendChild(b); });
+  body.appendChild(ls);
+  const det=h('div','cs-sbd'); body.appendChild(det); const j=J.find(x=>x.id===P.sj);
+  if(j){ const hd=h('div','cs-sbh'); const tx=h('div'); const ar=d.areas[jArea(d,j)]; tx.appendChild(h('div','cs-k',(ar?ar.name:'')+' · '+j.steps.length+' steps')); tx.appendChild(h('h3',null,j.title)); if(j.blurb) tx.appendChild(h('p',null,j.blurb)); hd.appendChild(tx);
+    const pl=btn('cs-ib pri cs-sbplay',null, ()=>startJourney(j.id)); pl.innerHTML=svgI('play').replace('<svg','<svg width="11" height="11" style="fill:currentColor"')+' Play on the Map'; hd.appendChild(pl); det.appendChild(hd);
+    const ol=h('ol','cs-sbs'); j.steps.forEach((z,i)=>{ const sy=by[z.sys]; if(!sy) return; const li=h('li'); li.style.setProperty('--pc', colorOf(d,sy)); li.appendChild(h('span','sn',String(i+1))); const t=h('div'); t.appendChild(h('b',null,sy.name)); t.appendChild(h('p',null,z.text||sy.what||'')); li.appendChild(t);
+      li.tabIndex=0; li.setAttribute('role','button'); li.title='Play from this step'; const go=()=>{ startJourney(j.id); jrGo(i); }; li.addEventListener('click', go); li.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } }); ol.appendChild(li); });
+    det.appendChild(ol); }
+  requestAnimationFrame(()=>{ if(!det.isConnected) return; const one=getComputedStyle(body).gridTemplateColumns.split(' ').filter(Boolean).length<2; ls.style.maxHeight= one ? '' : Math.max(320, det.offsetHeight)+'px'; const on=ls.querySelector('.on'); if(on && !one){ const r=on.offsetTop-ls.offsetTop; if(r<ls.scrollTop || r>ls.scrollTop+ls.clientHeight-40) ls.scrollTop=r-8; } }); }
+
 /* ---------- journeys: play a story across the map ---------- */
 let jTimer=0;
 function startJourney(id){ P.sel=null; P.hover=null; P.filter=null; P.q=''; P.form=null; P.jr={id, i:0, playing:!reduce()}; if(P.el){ P.el.querySelectorAll('.cs-chip').forEach((c,i)=>c.setAttribute('aria-pressed', String(i===0))); const f=P.el.querySelector('.cs-find input'); if(f) f.value=''; }
@@ -5259,10 +5342,11 @@ function placeBub(){ const d=M.data, mi=P.mapin, b=mi && mi.querySelector('.cs-b
   const F=frame(d), Y=x=>x.zone==='eng'?F.ey:x.y; const s=d.systems.find(x=>x.id===st.sys); if(!s) return; const mw=mi.clientWidth, mh=mi.clientHeight, k=mw/1200, bw=Math.min(270, mw-16); b.style.width=bw+'px'; const bh=b.offsetHeight;
   const px=s.x*k, py=Y(s)*k, hw=W/2*k, hh=H/2*k, g=12;
   /* the boxes in this story: the callout tries not to cover them */
-  const R=j.steps.map(z=>d.systems.find(x=>x.id===z.sys)).filter(Boolean).map(x=>({l:(x.x-W/2)*k, t:(Y(x)-H/2)*k, r:(x.x+W/2)*k, b:(Y(x)+H/2)*k}));
+  const R=j.steps.map(z=>d.systems.find(x=>x.id===z.sys)).filter(Boolean).map(x=>({l:(x.x-W/2)*k-4, t:(Y(x)-H/2)*k-4, r:(x.x+W/2)*k+4, b:(Y(x)+H/2)*k+4, w:x.id===s.id?40:1}));
+  (P.edges||[]).forEach(e=>{ const c=e.lb && e.lb.classList; if(!c || !c.contains('on') || c.contains('clash') || c.contains('short') || !e.box) return; const bx=e.box; R.push({l:bx.x*k-4, t:bx.y*k-4, r:(bx.x+bx.w)*k+4, b:(bx.y+bx.h)*k+4, w:3}); });
   const clampX=x=>Math.max(8, Math.min(mw-bw-8, x)), clampY=y=>Math.max(4, Math.min(mh-bh-4, y));
-  const C=[ ['below', clampX(px-bw/2), py+hh+g], ['above', clampX(px-bw/2), py-hh-g-bh], ['right', px+hw+g, clampY(py-bh/2)], ['left', px-hw-g-bw, clampY(py-bh/2)] ];
-  const cost=c=>{ const [w,l,t]=c; if(l<4 || t<2 || l+bw>mw-4 || t+bh>mh-2) return 1e9; let a=0; R.forEach(r=>{ const ox=Math.max(0, Math.min(l+bw, r.r)-Math.max(l, r.l)), oy=Math.max(0, Math.min(t+bh, r.b)-Math.max(t, r.t)); a+=ox*oy; }); return a; };
+  const C=[]; [['below', py+hh+g], ['above', py-hh-g-bh]].forEach(([w,t])=>[px-bw/2, px-bw+28, px-28].forEach(l=>C.push([w, clampX(l), t]))); C.push(['right', px+hw+g, clampY(py-bh/2)], ['left', px-hw-g-bw, clampY(py-bh/2)], ['right', px+hw+g, clampY(py-28)], ['left', px-hw-g-bw, clampY(py-28)], ['right', px+hw+g, clampY(py-bh+28)], ['left', px-hw-g-bw, clampY(py-bh+28)]);
+  const cost=c=>{ const [w,l,t]=c; if(l<4 || t<2 || l+bw>mw-4 || t+bh>mh-2) return 1e9; let a=0; R.forEach(r=>{ const ox=Math.max(0, Math.min(l+bw, r.r)-Math.max(l, r.l)), oy=Math.max(0, Math.min(t+bh, r.b)-Math.max(t, r.t)); a+=ox*oy*r.w; }); return a; };
   let best=C[0], bc=cost(C[0]); C.slice(1).forEach(c=>{ const v=cost(c); if(v<bc-1){ best=c; bc=v; } });
   const [w,l,t]=best; b.classList.remove('below','above','right','left'); b.classList.add(w); b.style.left=l+'px'; b.style.top=t+'px';
   if(w==='below' || w==='above') b.style.setProperty('--ax', Math.max(14, Math.min(bw-14, px-l))+'px'); else b.style.setProperty('--ay', Math.max(14, Math.min(bh-14, py-t))+'px'); }
@@ -5300,7 +5384,7 @@ function intro(p, d){ const w=h('div','cs-start'); p.appendChild(w);
   w.appendChild(h('p',null,'Every line is a hand-off between two systems. Moving dots show work flowing automatically; dashed lines are copied by a person.'));
   /* as many stories as fit beside the map (the area filters already sit above it) */
   const J=journeys(d); const B=J.map(j=>{ const b=btn('cs-jbtn'); const pl=h('span','pl'); pl.innerHTML=svgI('play'); b.appendChild(pl); const tx=h('span'); tx.appendChild(h('b',null,j.title)); tx.appendChild(h('small',null,j.steps.length+' steps across the map')); b.appendChild(tx); b.addEventListener('click', ()=>startJourney(j.id)); w.appendChild(b); return b; });
-  const more=btn('cs-all','', ()=>{ const t=P.el && [...P.el.querySelectorAll('.cs-band')].find(x=>x.querySelector('.cs-jgrid')); if(t) t.scrollIntoView({block:'start', behavior:reduce()?'auto':'smooth'}); }); kr.appendChild(more);
+  const more=btn('cs-all','', ()=>{ const t=P.el && [...P.el.querySelectorAll('.cs-band')].find(x=>x.querySelector('.cs-sb')); if(t) t.scrollIntoView({block:'start', behavior:reduce()?'auto':'smooth'}); }); kr.appendChild(more);
   /* fill the panel: as many stories as fit; if spacing them a little closer lets one more in, do that */
   const fit=()=>{ if(!w.isConnected) return; const g=p.parentNode, one=!g || getComputedStyle(g).gridTemplateColumns.split(' ').filter(Boolean).length<2, cap=one ? 0 : p.clientHeight;
     const run=tight=>{ w.style.gap=tight?'9px':''; B.forEach(b=>{ b.hidden=false; b.style.paddingTop=b.style.paddingBottom=tight?'6px':''; }); more.hidden=false;
