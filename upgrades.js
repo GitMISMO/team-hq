@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261108x';
+var BUILD='20261109a';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4549,6 +4549,7 @@ const canEdit=()=>EDITORS.indexOf(me())>=0;
 const todayISO=()=>{ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
 function longDate(iso){ if(!iso) return ''; const p=String(iso).split('-'); const d=new Date(+p[0], +p[1]-1, +p[2]); return isNaN(d) ? iso : MON[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear(); }
 const clone=o=>JSON.parse(JSON.stringify(o));
+function fallbackCopy(t){ const a=document.createElement('textarea'); a.value=t; a.setAttribute('readonly',''); a.style.position='fixed'; a.style.opacity='0'; document.body.appendChild(a); a.select(); try{ document.execCommand('copy'); }catch(e){} a.remove(); }
 function toast(msg, undo){ const t=window.__nxToast; if(t) t(msg, undo); }
 
 /* ---------- the data: one private record, read after sign-in ---------- */
@@ -5063,6 +5064,7 @@ html[data-theme="dark"] .cs-cv-det .bk:not(.sys) small{color:#5fd29a}
 .cs-dsg .gh em{font-style:normal;font-size:11.5px;font-weight:800;min-width:22px;text-align:center;padding:1px 6px;border-radius:5px;background:color-mix(in srgb,#2b8a3e 14%,var(--surface));color:#2b8a3e}
 .cs-dsg .it{display:grid;grid-template-columns:44px minmax(0,1fr);gap:8px;padding:3px 0;font-size:12.5px;line-height:1.35}.cs-dsg .it .dt{color:var(--ink-3);font-size:11.5px;padding-top:1px;white-space:nowrap}
 .cs-dsg .cs-mini2{margin-top:4px}
+.cs-copyp{display:inline-flex;align-items:center;gap:6px;margin-left:auto;align-self:center}.cs-rsh .cs-copyp span{flex:none;min-width:0;color:inherit;font-size:inherit}.cs-copyp svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 @media(max-width:900px){.cs-rqbox{column-count:1}}
 .cs-ri.none{display:block;font-size:13px;color:var(--ink-3)}.cs-ri .asked{font-size:11.5px;color:var(--ink-3)}.cs-rqd{display:grid;gap:6px;margin-top:4px;font-size:12.5px;line-height:1.5;color:var(--ink-2)}.cs-rqd p{margin:0}.cs-rqd ul{margin:0;padding-left:18px;display:grid;gap:3px}.cs-rqd b{color:var(--ink);font-weight:700}
 .cs-ri .due{font-size:11px;font-weight:700;padding:1px 6px;border-radius:4px;background:color-mix(in srgb,#e0a83c 20%,transparent);color:#9a6510}
@@ -5312,7 +5314,11 @@ function paintTodos(d){ const wrap=P.rsWrap; if(!wrap) return; wrap.textContent=
   if(box.children.length) sec.appendChild(box); else sec.appendChild(h('div','cs-card cs-none2','Nothing open here.')); wrap.appendChild(sec);
   reqSection(d, wrap, by, tag);
   /* the four safety nets, one row per system */
-  const ss=[...new Set(safe.map(x=>x.sys))].sort((a,b)=>R(a)-R(b)); if(ss.length){ const sf=h('div','cs-rsec cs-snsec'); const sh2=h('div','cs-rsh'); sh2.appendChild(h('h3',null,'Safety Nets')); sh2.appendChild(h('span',null,'Every system gets a how-it-works guide, automatic tests, automatic publishing and a change log, built by its Claude. A filled square is done.')); sf.appendChild(sh2);
+  const ss=[...new Set(safe.map(x=>x.sys))].sort((a,b)=>R(a)-R(b)); if(ss.length){ const sf=h('div','cs-rsec cs-snsec'); const sh2=h('div','cs-rsh'); sh2.appendChild(h('h3',null,'Safety Nets')); sh2.appendChild(h('span',null,'Every system gets a how-it-works guide, automatic tests, automatic publishing and a change log, built by its Claude. A filled square is done.'));
+    /* the standards prompt lives in the private record, so it can be updated without a release */
+    if(d.standardsPrompt){ const cp=btn('cs-mini2 cs-copyp',null,()=>{ const txt=d.standardsPrompt; const done=()=>toast('Copied the standards prompt. Paste it into the new system’s Claude conversation.'); try{ navigator.clipboard.writeText(txt).then(done, ()=>{ fallbackCopy(txt); done(); }); }catch(e){ fallbackCopy(txt); done(); } });
+      cp.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg><span>Copy the Standards Prompt</span>'; cp.title='Copies the prompt any new Claude building a MISMO system needs, so it meets these standards from day one'; sh2.appendChild(cp); }
+    sf.appendChild(sh2);
     const mx=h('div','cs-card cs-sn'); const half=Math.ceil(ss.length/2); [ss.slice(0,half), ss.slice(half)].forEach(part=>{ if(!part.length) return; const tb=h('div','tb'); const hr=h('div','hr'); hr.appendChild(h('span',null,'')); SAFE.forEach(z=>hr.appendChild(h('span',null,z[1]))); tb.appendChild(hr);
       part.forEach(id=>{ const sy=by[id]; const r=h('div','r'); r.appendChild(tag(sy)); SAFE.forEach(z=>{ const x=safe.find(q=>q.sys===id && safeK(q.it)===z[0]); let c;
           if(!x){ c=h('span','c ok'); c.title=z[1]+': in place'; c.innerHTML='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'; }
