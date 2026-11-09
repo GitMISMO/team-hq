@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261108w';
+var BUILD='20261108x';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -5558,11 +5558,18 @@ function pulses(){ const cv=h('canvas'); cv.setAttribute('aria-hidden','true'); 
     ctx.setLineDash([8,6]); ctx.lineDashOffset=-(t/1000*14)%14; ctx.lineWidth=2.6; ctx.strokeStyle=hot;
     (P.edges||[]).forEach(e=>{ const c=e.el.classList; if(!c.contains('hot') || c.contains('hand') || c.contains('soon')) return; const dd=e.el.getAttribute('d'); if(e.pd!==dd){ e.pd=dd; e.p2=new Path2D(dd); } ctx.globalAlpha=e.c.quiet?.9:1; ctx.strokeStyle=e.col||hot; ctx.stroke(e.p2); });
     ctx.setLineDash([]);
-    /* engine room: rails up to every system it holds up */
-    { const fo=P.hover||P.sel, es=fo && d && d.systems.find(x=>x.id===fo); if(es && es.zone==='eng' && P.ey){ const col=colorOf(d,es), L=engServes(d,es); ctx.setLineDash([2,5]); ctx.lineWidth=1.6; ctx.strokeStyle=col; ctx.globalAlpha=.55;
-        L.forEach(id=>{ const n=d.systems.find(x=>x.id===id); if(!n || n.x==null) return; const ny=n.zone==='eng' ? P.ey : n.y; const y0=P.ey-H/2, y1=ny+(n.zone==='eng'?0:H/2), mx=(es.x+n.x)/2; ctx.beginPath(); ctx.moveTo(es.x,y0); ctx.bezierCurveTo(es.x,y0-60, n.x,y1+60, n.x,y1); ctx.stroke();
-          const f=((t/1600)+(id.length*.13))%1, q=1-f, bx=q*q*q*es.x+3*q*q*f*es.x+3*q*f*f*n.x+f*f*f*n.x, byy=q*q*q*y0+3*q*q*f*(y0-60)+3*q*f*f*(y1+60)+f*f*f*y1; ctx.save(); ctx.setLineDash([]); ctx.globalAlpha=.9; ctx.fillStyle=col; ctx.beginPath(); ctx.arc(bx,byy,3,0,Math.PI*2); ctx.fill(); ctx.restore(); });
-        ctx.setLineDash([]); ctx.globalAlpha=1; } }
+    /* engine room: solid rails up to every system it holds up. They draw in from the engine box when you point at it,
+       then one soft light rides each rail slowly, so you can see what it holds up without the map buzzing */
+    { const fo=P.hover||P.sel, es=fo && d && d.systems.find(x=>x.id===fo); if(es && es.zone==='eng' && P.ey){ if(P.engFo!==fo){ P.engFo=fo; P.engT=now; }
+        const col=colorOf(d,es), L=engServes(d,es), g0=Math.min(1,(now-P.engT)/520), grow=1-Math.pow(1-g0,3), still=reduce();
+        const bz=(f,a,b,c,e)=>{ const q=1-f; return q*q*q*a+3*q*q*f*b+3*q*f*f*c+f*f*f*e; };
+        ctx.lineCap='round'; L.forEach((id,ix)=>{ const n=d.systems.find(x=>x.id===id); if(!n || n.x==null) return; const ny=n.zone==='eng' ? P.ey : n.y; const y0=P.ey-H/2, y1=ny+(n.zone==='eng'?0:H/2);
+          const X=f=>bz(f,es.x,es.x,n.x,n.x), Y=f=>bz(f,y0,y0-60,y1+60,y1); const end=Math.min(1, Math.max(0, grow*1.15-ix*.012));
+          if(end<=0) return; ctx.globalAlpha=.42; ctx.strokeStyle=col; ctx.lineWidth=1.8; ctx.beginPath(); ctx.moveTo(X(0),Y(0)); for(let k2=1;k2<=28;k2++){ const f=end*k2/28; ctx.lineTo(X(f),Y(f)); } ctx.stroke();
+          if(end<1) return; ctx.globalAlpha=.9; ctx.fillStyle=col; ctx.beginPath(); ctx.arc(n.x,y1,2.6,0,Math.PI*2); ctx.fill();
+          if(still) return; const f=(((now-P.engT)/4200)+ix*.29)%1, x=X(f), y=Y(f), a=Math.sin(Math.PI*f);
+          ctx.globalAlpha=.18*a; ctx.beginPath(); ctx.arc(x,y,7,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=.75*a; ctx.beginPath(); ctx.arc(x,y,2.4,0,Math.PI*2); ctx.fill(); });
+        ctx.globalAlpha=1; } else P.engFo=null; }
     /* live rings */
     if(d && P.nodes) d.systems.forEach(s=>{ if(s.zone!=='apps' || stKey(s)!=='live') return; const n=P.nodes[s.id]; if(!n || n.classList.contains('dim')) return; const f=(t%2400)/2400, ease=1-Math.pow(1-f,2);
       ctx.globalAlpha=.8*(1-f); ctx.strokeStyle='#2fbf71'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(s.x+W/2-11, s.y-H/2+11, 4*(1+1.4*ease), 0, Math.PI*2); ctx.stroke(); });
