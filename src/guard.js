@@ -210,7 +210,7 @@ window.__HQ_BUILD=BUILD;
       .concat(['','Team Error Log (last 7 days):']).concat((logDocs||[]).filter(function(x){ return (x.last||0)>Date.now()-7*864e5; }).map(function(x){ return '  '+new Date(x.last).toLocaleString('en-US')+' '+first(x.who)+' | '+x.page+' | '+x.kind+' x'+x.n+' | '+x.msg; })).join('\n'); }
   /* Recently Deleted: every delete is kept for 30 days by the Team HQ Recently Deleted job in the private data
      repository, which reads each save's history (so nothing has to remember to keep a copy). Restore puts it back. */
-  var KIND={tasks:'Task',rocks:'Team Project',dates:'Key Date',plans:'Plan',planitems:'Plan Item',agenda:'Agenda Item',notes:'Note',nudges:'Nudge',asks:'Ask',expenses:'Expense',comments:'Comment',syncitems:'Sync Up Item',syncs:'Sync Up',myitems:'My Item',people:'Person',templates:'Template',rules:'Rule',blocks:'Block',figures:'Figure',profiles:'Profile',datekinds:'Date Kind',plankinds:'Plan Kind'};
+  var KIND={tasks:'Task',rocks:'Team Project',dates:'Key Date',plans:'Plan',planitems:'Plan Item',agenda:'Agenda Item',notes:'Note',nudges:'Nudge',asks:'Ask',expenses:'Expense',comments:'Comment',syncitems:'Sync Up Item',syncs:'Sync Up',myitems:'My Item',people:'Person',templates:'Template',rules:'Rule',blocks:'Block',figures:'Figure',profiles:'Profile',datekinds:'Date Kind',plankinds:'Plan Kind',sodrafts:'Service Order Draft',soreviews:'Service Order Review',sotemplates:'Service Order Template'};
   function label(x){ var d=x.data||{}; var t=d.title||d.name||d.t||d.text||d.subject||d.what||d.label||''; return String(t||x.id).replace(/\s+/g,' ').slice(0,90); }
   function paintDeleted(box, adm){ var R=window.__hqRelay; if(!box) return; if(!R || !R.readOther){ box.innerHTML=''; box.appendChild(h('p','hh-quiet','Can’t read the list right now.')).style.cssText='padding:8px 10px;margin:0'; return; }
     R.readOther('team-hq','trash').then(function(t){ var o=(t&&t.docs)||{}, me=S().me, cut=Date.now()-30*864e5;
@@ -225,7 +225,7 @@ window.__HQ_BUILD=BUILD;
           else { var b=h('button',null,'Restore'); b.onclick=function(){ var s=S(); if(!s.db || !s.db.collection || !x.data){ b.textContent='Couldn’t Restore'; return; } b.disabled=true; b.textContent='Restoring…';
               Promise.resolve().then(function(){ return s.db.collection(x.col).doc(x.id).set(x.data); }).then(function(){ b.replaceWith(h('span','d2','Restored. Refresh to see it.')); }, function(){ b.disabled=false; b.textContent='Couldn’t Restore. Try Again'; }); };
             r.appendChild(b); }
-          r.appendChild(h('span','d', [first(x.by||'someone'), 'deleted it'].join(' '))); box.appendChild(r); }); }); },
+          r.appendChild(h('span','d', (x.by ? (/\s/.test(x.by) ? String(x.by).split(' ')[0] : first(x.by)) : 'Someone')+' deleted it')); box.appendChild(r); }); }); },
       function(){ box.textContent=''; box.appendChild(h('p','hh-quiet','The list of deleted items isn’t there yet. It fills in within the hour.')).style.cssText='padding:8px 10px;margin:0'; }); }
   function drawHealth(){ if(!hov || !last) return; var body=hov.querySelector('.hh-in'), w=worst(last.rows), adm=ADMINS.indexOf(S().me)>=0;
     body.innerHTML='<div class="hh-sum"><i class="hh-big '+w+'"></i><span><b>'+(w==='bad'?'Something Needs Attention':w==='warn'?'Working, With a Warning':'Everything Is Working')+'</b>. Checked '+when(last.at)+'; it checks again every 5 minutes while Team HQ is open.</span></div>'
@@ -237,7 +237,7 @@ window.__HQ_BUILD=BUILD;
     body.querySelector('[data-hh="again"]').onclick=function(e){ e.target.disabled=true; e.target.textContent='Checking…'; run(); };
     body.querySelector('[data-hh="copy"]').onclick=function(e){ loadLog().then(function(){ return navigator.clipboard.writeText(report()); }).then(function(){ e.target.textContent='Copied'; }, function(){ e.target.textContent='Couldn’t Copy'; }); };
     var cb=body.querySelector('[data-hh="clear"]'); if(cb) cb.onclick=function(){ cb.disabled=true; delLog((logDocs||[]).map(function(x){ return x.id; })).then(function(){ logDocs=[]; paintLog(); cb.disabled=false; }); };
-    function paintLog(){ var box=body.querySelector('.hh-log'); box.textContent=''; var L=(logDocs||[]).filter(function(x){ return (x.last||0)>Date.now()-7*864e5; });
+    function paintLog(){ var box=body.querySelector('.hh-log:not(.hh-del)'); box.textContent=''; var L=(logDocs||[]).filter(function(x){ return (x.last||0)>Date.now()-7*864e5; });
       if(!L.length){ box.appendChild(h('p','hh-quiet','Nothing in the last 7 days. When something breaks on anyone’s screen, it shows up here: who, which page, and what went wrong.')).style.cssText='padding:8px 10px;margin:0'; return; }
       L.slice(0,40).forEach(function(x){ var r=h('div','hh-lr'); r.appendChild(h('span','w', when(x.last))); r.appendChild(h('span','m', (x.kind||'Error')+': '+(x.msg||'')));
         if(adm){ var b=h('button',null,'Clear'); b.onclick=function(){ b.disabled=true; delLog([x.id]).then(function(){ logDocs=logDocs.filter(function(z){ return z.id!==x.id; }); paintLog(); }); }; r.appendChild(b); }
