@@ -6,6 +6,10 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 9** — Recently Deleted in System Health: anything deleted in the last 30 days, with Restore.
+- **Nov 9** — A tab left open on an older version says a newer one is out, and refreshes itself when you come back to it.
+- **Nov 9** — Page safety list: Team HQ may only load code from and send data to its own address and the save relay.
+- **Nov 9** — Daily health check of the Outlook email and calendar flows, saving and errors; emails Jonna only when something is wrong.
 - **Nov 9** — Source code, build script, guide, change log and automatic checks now live in this repository; a version goes live only after its checks pass.
 - **Nov 9** — Connected Systems: Copy the Standards Prompt button on Safety Nets.
 - **Nov 8** — Connected Systems: engine room lines are solid, draw in from the engine box, with one slow light.

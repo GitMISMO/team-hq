@@ -86,8 +86,15 @@ goes live:
 - `CHANGELOG.md` is here.
 
 Run Check in the Test Copy is the browser check on every page and tile. Still to come: browser tests on made-up
-records that run on GitHub, and a page safety list (Content-Security-Policy) on `index.html` (the checks warn
-until it is there).
+records that run on GitHub.
+
+## Page Safety List
+
+`index.html` carries a Content-Security-Policy: code only from Team HQ's own address, fonts from Google Fonts, and
+data only to its own address, the save relay and `api.resources.mismo.org` (the relay's planned mismo.org
+address). The checks fail if it goes missing. Before changing it, copy `index.html` to a test page with the new
+list, open it as a Test Copy (`?try=<version>`), run Run Check and watch for blocked requests, then change the
+real page and delete the test page.
 
 ## Saving and Data
 
@@ -120,9 +127,19 @@ The MISMO Connections Map (Jonna's Claude Doc) is the source of truth for every 
 
 ## System Health
 
-System Health (foot of the left menu) watches what Team HQ can see every 5 minutes while it is open: saving
+System Health (top bar) watches what Team HQ can see every 5 minutes while it is open: saving
 through the relay, storage, the Outlook calendar and email flows, the Outlook actions flow, the expense@ flow and
-the team error log, which gathers errors from everyone's screen. Its dot in the menu turns yellow or red.
+the team error log, which gathers errors from everyone's screen. Its dot turns yellow or red.
+
+- **Daily Health Check:** `team-hq-data/.github/workflows/health.yml` runs every weekday morning, even when nobody
+  has Team HQ open: the email and calendar flows, saving, and errors in the last day. When something is wrong it
+  opens a GitHub issue in `team-hq-data` that mentions Jonna (so GitHub emails her), and closes it when all is clear.
+- **Recently Deleted:** `team-hq-data/.github/workflows/trash.yml` runs every hour and, from the save history,
+  keeps a 30-day copy of anything deleted (`data/trash.json`). System Health lists it with Restore; Jonna sees
+  everyone's, everyone else sees their own.
+- **Newer version notice:** Publish a Version writes `version.json`. An open tab checks it every 10 minutes; if a
+  newer version is live it says so, and a background tab refreshes itself when you come back to it once nothing is
+  waiting to save.
 
 ## Jonna's Rules
 
