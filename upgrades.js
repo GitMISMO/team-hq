@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261109a';
+var BUILD='20261109c';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -29,6 +29,28 @@ if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   return;
 }
 window.__HQ_BUILD=BUILD;
+/* ---------- a newer version is out (November 9, 2026) ----------
+   Publish a Version writes version.json. Every 10 minutes, and whenever the tab comes back into view, an open
+   Team HQ checks it. If a newer version is live, a bar says so; a tab that was in the background reloads itself
+   as soon as you come back to it, once nothing is waiting to save, so an old copy never keeps running. */
+(function(){
+  if(window.__HQ_TRY || window.__hqVerWatch) return; window.__hqVerWatch=true;
+  var newer=null, hiddenAt=0, bar=null;
+  function pending(){ var n=0; try{ var F=(window.__hqRelay && window.__hqRelay.files)||{}; Object.keys(F).forEach(function(k){ n+=(F[k].pending||[]).length; }); }catch(e){} return n; }
+  function show(){ if(bar || !document.body) return; bar=document.createElement('div'); bar.id='hq-newer'; bar.setAttribute('role','status');
+    bar.style.cssText='position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:99970;display:flex;align-items:center;gap:12px;background:#0d314c;color:#fff;border-radius:8px;padding:9px 10px 9px 14px;font:500 13.5px/1.4 "IBM Plex Sans",system-ui,sans-serif;box-shadow:0 8px 24px rgba(13,49,76,.28);max-width:calc(100vw - 32px)';
+    var t=document.createElement('span'); t.textContent='A newer version of Team HQ is out. Refresh to get it.'; bar.appendChild(t);
+    var b=document.createElement('button'); b.type='button'; b.textContent='Refresh'; b.style.cssText='flex:none;background:#74bfeb;color:#0d314c;border:0;border-radius:5px;padding:6px 12px;font:inherit;font-weight:700;cursor:pointer';
+    b.onclick=function(){ if(pending()){ t.textContent='Saving your last change first…'; setTimeout(function(){ location.reload(); }, 2500); } else location.reload(); }; bar.appendChild(b);
+    document.body.appendChild(bar); }
+  function check(){ if(!navigator.onLine) return; fetch('version.json?t='+Date.now(), {cache:'no-store'}).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
+      if(j && j.v && /^[0-9a-z]+$/.test(j.v) && j.v!==BUILD){ newer=j.v; show(); } }).catch(function(){}); }
+  document.addEventListener('visibilitychange', function(){
+    if(document.hidden){ hiddenAt=Date.now(); return; }
+    if(newer && hiddenAt && !pending()){ location.reload(); return; }
+    if(Date.now()-hiddenAt>60000) check(); });
+  setTimeout(check, 20000); setInterval(function(){ if(!document.hidden) check(); }, 10*60000);
+})();
 (function(){
   if(window.__hqProb) return;
   var ADMINS=['jonna'], TEST=!!window.__HQ_TEST, MAX=25, seen={}, order=[], dirty={}, timer=null, saving=false;
@@ -117,6 +139,7 @@ window.__HQ_BUILD=BUILD;
     '.hh-bars i{display:block;height:5px;border-radius:3px;background:var(--border,#DFDCD5);overflow:hidden;grid-column:1/-1}.hh-bars i s{display:block;height:100%;background:var(--navy-mid,#14486E)}.hh-bars i s.warn{background:#A2701A}.hh-bars i s.bad{background:#A32219}'+
     '.hh-quiet{color:var(--ink-3,#71777F);font-size:12.5px;margin:6px 0 0;line-height:1.5}.hh-in h4{margin:16px 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3,#71777F)}'+
     '.hh-log{border:1px solid var(--border,#DFDCD5);border-radius:6px;overflow:hidden}.hh-lr{display:grid;grid-template-columns:auto 1fr auto;gap:2px 10px;padding:8px 10px;border-top:1px solid var(--border,#eef2f6);font-size:12.5px}.hh-lr:first-child{border-top:0}'+
+    '.hh-lr .d2{grid-row:1/3;grid-column:3;align-self:start;color:#2b8a3e;font-size:12px;font-weight:600;white-space:nowrap}'+
     '.hh-lr .w{white-space:nowrap;color:var(--ink-3,#71777F)}.hh-lr .m{font-weight:600;word-break:break-word}.hh-lr .d{grid-column:2;color:var(--ink-3,#71777F);font-size:12px}.hh-lr button{grid-row:1/3;grid-column:3;align-self:start}'+
     '.hh-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.hh-in button{font:inherit;font-size:13px;border:1px solid var(--border,#c9d6e2);background:transparent;color:inherit;border-radius:6px;padding:5px 10px;cursor:pointer}.hh-in .pri{background:var(--navy,#0d314c);color:#fff;border-color:transparent}';
   var MIN=60000, last=null, hbtn=null, hdot=null, hbar=null, hov=null, pendSince={}, running=null, logDocs=null;
@@ -199,20 +222,41 @@ window.__HQ_BUILD=BUILD;
   function report(){ if(!last) return ''; return ['Team HQ System Health, '+new Date(last.at).toLocaleString('en-US')+', version '+BUILD,'']
       .concat(last.rows.map(function(r){ return (r.level==='ok'?'OK':r.level==='warn'?'WARNING':r.level==='bad'?'PROBLEM':'NOT CHECKED')+' | '+r.title+': '+r.line+(r.list.length?'\n   - '+r.list.join('\n   - '):''); }))
       .concat(['','Team Error Log (last 7 days):']).concat((logDocs||[]).filter(function(x){ return (x.last||0)>Date.now()-7*864e5; }).map(function(x){ return '  '+new Date(x.last).toLocaleString('en-US')+' '+first(x.who)+' | '+x.page+' | '+x.kind+' x'+x.n+' | '+x.msg; })).join('\n'); }
+  /* Recently Deleted: every delete is kept for 30 days by the Team HQ Recently Deleted job in the private data
+     repository, which reads each save's history (so nothing has to remember to keep a copy). Restore puts it back. */
+  var KIND={tasks:'Task',rocks:'Team Project',dates:'Key Date',plans:'Plan',planitems:'Plan Item',agenda:'Agenda Item',notes:'Note',nudges:'Nudge',asks:'Ask',expenses:'Expense',comments:'Comment',syncitems:'Sync Up Item',syncs:'Sync Up',myitems:'My Item',people:'Person',templates:'Template',rules:'Rule',blocks:'Block',figures:'Figure',profiles:'Profile',datekinds:'Date Kind',plankinds:'Plan Kind',sodrafts:'Service Order Draft',soreviews:'Service Order Review',sotemplates:'Service Order Template'};
+  function label(x){ var d=x.data||{}; var t=d.title||d.name||d.t||d.text||d.subject||d.what||d.label||''; return String(t||x.id).replace(/\s+/g,' ').slice(0,90); }
+  function paintDeleted(box, adm){ var R=window.__hqRelay; if(!box) return; if(!R || !R.readOther){ box.innerHTML=''; box.appendChild(h('p','hh-quiet','Can’t read the list right now.')).style.cssText='padding:8px 10px;margin:0'; return; }
+    R.readOther('team-hq','trash').then(function(t){ var o=(t&&t.docs)||{}, me=S().me, cut=Date.now()-30*864e5;
+      var L=Object.keys(o).map(function(k){ return Object.assign({key:k}, o[k]); }).filter(function(x){ return x && x.col && x.id && (x.at||0)>cut && (adm || x.by===me); }).sort(function(a,b){ return (b.at||0)-(a.at||0); });
+      box.textContent='';
+      if(!L.length){ box.appendChild(h('p','hh-quiet', adm ? 'Nothing deleted in the last 30 days. Anything anyone deletes shows up here within the hour, and can be put back.' : 'Nothing you deleted in the last 30 days. Anything you delete shows up here within the hour, and can be put back.')).style.cssText='padding:8px 10px;margin:0'; return; }
+      var cols={}; L.forEach(function(x){ cols[x.col]=1; });
+      Promise.all(Object.keys(cols).map(function(c){ return R.readOther('team-hq', c).then(function(d){ return [c, (d&&d.docs)||{}]; }, function(){ return [c, null]; }); })).then(function(P){ var now={}; P.forEach(function(p){ now[p[0]]=p[1]; });
+        L.slice(0,60).forEach(function(x){ var r=h('div','hh-lr'); r.appendChild(h('span','w', when(x.at))); r.appendChild(h('span','m', (KIND[x.col]||x.col)+': '+label(x)));
+          var back=now[x.col] && Object.prototype.hasOwnProperty.call(now[x.col], x.id);
+          if(back) r.appendChild(h('span','d2','Back in place'));
+          else { var b=h('button',null,'Restore'); b.onclick=function(){ var s=S(); if(!s.db || !s.db.collection || !x.data){ b.textContent='Couldn’t Restore'; return; } b.disabled=true; b.textContent='Restoring…';
+              Promise.resolve().then(function(){ return s.db.collection(x.col).doc(x.id).set(x.data); }).then(function(){ b.replaceWith(h('span','d2','Restored. Refresh to see it.')); }, function(){ b.disabled=false; b.textContent='Couldn’t Restore. Try Again'; }); };
+            r.appendChild(b); }
+          r.appendChild(h('span','d', (x.by ? (/\s/.test(x.by) ? String(x.by).split(' ')[0] : first(x.by)) : 'Someone')+' deleted it')); box.appendChild(r); }); }); },
+      function(){ box.textContent=''; box.appendChild(h('p','hh-quiet','The list of deleted items isn’t there yet. It fills in within the hour.')).style.cssText='padding:8px 10px;margin:0'; }); }
   function drawHealth(){ if(!hov || !last) return; var body=hov.querySelector('.hh-in'), w=worst(last.rows), adm=ADMINS.indexOf(S().me)>=0;
     body.innerHTML='<div class="hh-sum"><i class="hh-big '+w+'"></i><span><b>'+(w==='bad'?'Something Needs Attention':w==='warn'?'Working, With a Warning':'Everything Is Working')+'</b>. Checked '+when(last.at)+'; it checks again every 5 minutes while Team HQ is open.</span></div>'
       +'<div class="hh-grid">'+last.rows.map(function(r){ return '<div class="hh-row '+r.level+'"><div class="hh-t">'+esc(r.title)+'</div><div class="hh-l">'+esc(r.line)+'</div>'+(r.list.length?'<ul>'+r.list.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join('')+'</ul>':'')+r.extra+'</div>'; }).join('')+'</div>'
       +'<p class="hh-quiet">Not watched from here (their work never shows in Team HQ’s data until it lands, so a stop can’t be seen): the Team HQ Expense Inbox flow for receipts emailed to expense@. Power Automate emails a flow’s owner when it keeps failing.</p>'
+      +'<h4>Recently Deleted (Last 30 Days)</h4><div class="hh-log hh-del"><p class="hh-quiet" style="padding:8px 10px;margin:0">Loading…</p></div>'
       +'<h4>Team Error Log (Last 7 Days)</h4><div class="hh-log"><p class="hh-quiet" style="padding:8px 10px;margin:0">Loading…</p></div>'
       +'<div class="hh-acts"><button type="button" class="pri" data-hh="again">Check Again</button><button type="button" data-hh="copy">Copy Report</button>'+(adm?'<button type="button" data-hh="clear">Clear the Log</button>':'')+'</div>';
     body.querySelector('[data-hh="again"]').onclick=function(e){ e.target.disabled=true; e.target.textContent='Checking…'; run(); };
     body.querySelector('[data-hh="copy"]').onclick=function(e){ loadLog().then(function(){ return navigator.clipboard.writeText(report()); }).then(function(){ e.target.textContent='Copied'; }, function(){ e.target.textContent='Couldn’t Copy'; }); };
     var cb=body.querySelector('[data-hh="clear"]'); if(cb) cb.onclick=function(){ cb.disabled=true; delLog((logDocs||[]).map(function(x){ return x.id; })).then(function(){ logDocs=[]; paintLog(); cb.disabled=false; }); };
-    function paintLog(){ var box=body.querySelector('.hh-log'); box.textContent=''; var L=(logDocs||[]).filter(function(x){ return (x.last||0)>Date.now()-7*864e5; });
+    function paintLog(){ var box=body.querySelector('.hh-log:not(.hh-del)'); box.textContent=''; var L=(logDocs||[]).filter(function(x){ return (x.last||0)>Date.now()-7*864e5; });
       if(!L.length){ box.appendChild(h('p','hh-quiet','Nothing in the last 7 days. When something breaks on anyone’s screen, it shows up here: who, which page, and what went wrong.')).style.cssText='padding:8px 10px;margin:0'; return; }
       L.slice(0,40).forEach(function(x){ var r=h('div','hh-lr'); r.appendChild(h('span','w', when(x.last))); r.appendChild(h('span','m', (x.kind||'Error')+': '+(x.msg||'')));
         if(adm){ var b=h('button',null,'Clear'); b.onclick=function(){ b.disabled=true; delLog([x.id]).then(function(){ logDocs=logDocs.filter(function(z){ return z.id!==x.id; }); paintLog(); }); }; r.appendChild(b); }
         r.appendChild(h('span','d', [first(x.who), x.page, x.device, x.n>1?x.n+' times':'once', x.build?'version '+x.build:''].filter(Boolean).join(' · '))); box.appendChild(r); }); }
+    paintDeleted(body.querySelector('.hh-del'), adm);
     loadLog().then(function(L){ var old=L.filter(function(x){ return (x.last||0)<Date.now()-30*864e5; }); if(old.length && adm) delLog(old.map(function(x){ return x.id; })); paintLog(); }); }
   function openHealth(){ if(hov && hov.isConnected){ return; } hov=h('div','hq-prob'); var pp=h('div','pp'), ph=h('div','ph'); hov.appendChild(pp); pp.appendChild(ph);
     pp.setAttribute('role','dialog'); pp.setAttribute('aria-modal','true'); pp.setAttribute('aria-label','System Health');
