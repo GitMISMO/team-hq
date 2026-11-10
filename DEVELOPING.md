@@ -65,6 +65,8 @@ prompt) lives only in the private `systemsmap` collection, never in this code.
    `z` comes `za`, `zb`. This writes `releases/upgrades-<version>.js`.
 4. **Upload** the changed `src/` files and the new release file, and add a line to `CHANGELOG.md` for anything
    people would notice. The Team HQ Checks run on every upload.
+   GitHub Pages usually puts an upload on the site within a minute or two. Now and then its deploy hangs; if the
+   Test Copy says the version isn't saved after five minutes, any later upload restarts the deploy.
 5. **Try it in the Test Copy:** `https://resources.mismo.org/team-hq/?try=<version>&check=1`. The Test Copy reads
    the real data but saves and sends nothing. `check=1` runs Run Check: every page and every tile size, looking
    for errors, empty pages, broken values and anything wider than the screen. It must say **Check Passed**.
