@@ -1043,8 +1043,8 @@ function pulses(){ const cv=h('canvas'); cv.setAttribute('aria-hidden','true'); 
   const frame=now=>{ if(!cv.isConnected) return; requestAnimationFrame(frame); if(!seen || document.hidden || scrolling(now)) return; if(dirty || !('ResizeObserver' in window)){ if(!size()) return; dirty=false; } if(!w) return;
     ctx.setTransform(dpr*k,0,0,dpr*k,0,0); ctx.clearRect(0,0,1200,hh/k+2);
     const d=M.data; const t=now-t0; if(now-hotAt>1000){ hotAt=now; hot=getComputedStyle(cv).getPropertyValue('--cs-hot').trim()||'#14486e'; }
-    /* the flowing dashes on the selected system's lines */
-    ctx.setLineDash([8,6]); ctx.lineDashOffset=-(t/1000*14)%14; ctx.lineWidth=2.6; ctx.strokeStyle=hot;
+    /* the selected system's automatic lines, drawn solid and bolder (dashes are only for work a person copies, so moving dashes here read as "by hand"); the dots already show the flow */
+    ctx.setLineDash([]); ctx.lineWidth=2.6; ctx.strokeStyle=hot;
     (P.edges||[]).forEach(e=>{ const c=e.el.classList; if(!c.contains('hot') || c.contains('hand') || c.contains('soon')) return; const dd=e.el.getAttribute('d'); if(e.pd!==dd){ e.pd=dd; e.p2=new Path2D(dd); } ctx.globalAlpha=e.c.quiet?.9:1; ctx.strokeStyle=e.col||hot; ctx.stroke(e.p2); });
     ctx.setLineDash([]);
     /* engine room: solid rails up to every system it holds up. They draw in from the engine box when you point at it,
