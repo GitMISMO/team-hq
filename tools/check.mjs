@@ -59,7 +59,7 @@ if (exists('index.html')) {
     if (read('upgrades.js').includes("var BUILD='" + live + "';")) ok('the live page and upgrades.js are both version ' + live);
     else bad('index.html loads version ' + live + ' but upgrades.js is a different version. Run Publish a Version again.', 'index.html');
   }
-  if (!/http-equiv=["']Content-Security-Policy["']/i.test(ix)) warn('index.html has no page safety list (Content-Security-Policy) yet.', 'index.html');
+  if (!/http-equiv=["']Content-Security-Policy["']/i.test(ix)) bad('index.html has lost its page safety list (Content-Security-Policy).', 'index.html');
   else ok('index.html has a page safety list');
 }
 
