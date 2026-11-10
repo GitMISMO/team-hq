@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 9** — Connected Systems: a selected system's automatic lines stay solid (moving dashes looked like work copied by hand).
 - **Nov 9** — Recently Deleted in System Health: anything deleted in the last 30 days, with Restore.
 - **Nov 9** — A tab left open on an older version says a newer one is out, and refreshes itself when you come back to it.
 - **Nov 9** — Page safety list: Team HQ may only load code from and send data to its own address and the save relay.
