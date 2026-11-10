@@ -3,6 +3,9 @@
 #   https://resources.mismo.org/team-hq/?try=<version>&check=1
 # Then run this (Actions > Publish a Version > Run workflow) with the same version to make it live.
 # To roll back, run it again with the earlier version.
+# Before anything goes live, the Team HQ checks run on that version (tools/check.mjs --publish).
+# Publishing the newest version also requires that src/ builds it exactly, so what's live is
+# always what's in this repository.
 name: Publish a Version
 on:
   workflow_dispatch:
@@ -21,6 +24,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Check the version before it goes live
+        env:
+          V: ${{ inputs.version }}
+        run: node tools/check.mjs --publish "$V"
       - name: Make the version live
         env:
           V: ${{ inputs.version }}

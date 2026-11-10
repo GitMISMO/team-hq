@@ -1,0 +1,30 @@
+# Team HQ Checks: runs on every change to Team HQ's code and on demand.
+# What it checks is in tools/check.mjs: the newest saved version parses and says which version it is,
+# no keys or tokens, the Test Copy still holds back saves, the live page and its file match,
+# every source file parses, the source builds the newest version exactly, and the change log is here.
+# A failed check emails whoever made the change (GitHub's own notice).
+name: Team HQ Checks
+on:
+  push:
+    paths:
+      - "releases/**"
+      - "src/**"
+      - "build.py"
+      - "index.html"
+      - "upgrades.js"
+      - "tools/**"
+      - "CHANGELOG.md"
+      - ".github/workflows/checks.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Team HQ checks
+        run: node tools/check.mjs
