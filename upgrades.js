@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261109e';
+var BUILD='20261111b';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -1563,6 +1563,52 @@ const css2=document.createElement('style'); css2.textContent=`.skin-tidy{margin-
 window.__skin={ version:'1.0', appExp, tidy, undoTidy,
   destroy(){ mo && mo.disconnect(); mo2 && mo2.disconnect(); const tb=mineRoot && mineRoot.querySelector('.skin-tidy'); tb && tb.remove(); window.removeEventListener('beforeinstallprompt', onBIP); added.forEach(e=>e.remove()); dock && dock.remove();
     document.documentElement.classList.remove('app-exp'); const t=exp && exp.querySelector('.exp-install'); t && t.remove(); } };
+})();
+
+/* ---------- Expenses: put an expense with no trip into a trip you already have (November 11, 2026) ----------
+   Amy, on her iPhone: a receipt snapped or emailed in without a trip lands in "No Trip Name Yet", and the only
+   choice there read like starting a new report. Now that group offers one-tap buttons for the person's own
+   trips that are still open (not submitted), closest in date first, and typing a new name is the second choice. */
+(function(){
+  const root=document.getElementById('app-expenses'); if(!root) return;
+  const DAY=864e5, MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const css=document.createElement('style'); css.textContent=
+    '.trippick{display:grid;gap:6px;margin:0 0 10px}.trippick .tp-l{font-size:13px;font-weight:600;color:var(--ink,#0d314c)}'+
+    '.trippick .tp-b{display:flex;flex-wrap:wrap;gap:6px}.trippick button{font:inherit;font-size:14px;font-weight:600;text-align:left;border:1px solid var(--line,#c9d6e2);background:var(--surface,#fff);color:var(--ink,#0d314c);border-radius:6px;padding:8px 12px;cursor:pointer;min-height:44px}'+
+    '.trippick button small{display:block;font-weight:500;font-size:12px;color:var(--ink-3,#71777F)}.trippick button.best{border-color:#0d314c;box-shadow:inset 0 0 0 1px #0d314c}'+
+    '.trippick button:disabled{opacity:.6}.tripname .tp-or{display:block;font-size:13px;font-weight:600;margin:4px 0 6px;color:var(--ink,#0d314c)}';
+  document.head.appendChild(css);
+  const day=v=>{ const t=Date.parse(String(v||'').slice(0,10)+'T12:00:00'); return isNaN(t)?null:t; };
+  const fmt=t=>{ const d=new Date(t); return MON[d.getMonth()]+' '+d.getDate(); };
+  function enhance(tn){
+    if(tn.dataset.tp) return; const S=window.__S; if(!S || !Array.isArray(S.expenses)) return;
+    const box=tn.closest('.trip'), head=box && box.querySelector('.triph'); const ht=head ? head.textContent : '';
+    /* whose expense: the names in this group (its header or rows), else the person heading above it, else the only person with an expense waiting for a trip */
+    const named=t=>(S.people||[]).filter(p=>p && p.name && t.indexOf(p.name)>=0).map(p=>p.id);
+    let who=named(ht+' '+(box ? box.textContent : ''));
+    if(!who.length){ let e=box; while(e && !who.length){ e=e.previousElementSibling; if(e && !e.classList.contains('trip')) who=named(e.textContent||''); } }
+    if(!who.length){ const w=[...new Set(S.expenses.filter(x=>!x.trip && !x.submitted).map(x=>x.who))]; who=w.length===1 ? w : [S.me]; }
+    const loose=S.expenses.filter(x=>!x.trip && !x.submitted && who.indexOf(x.who)>=0).map(x=>day(x.date)).filter(Boolean);
+    const trips={}; S.expenses.forEach(x=>{ if(!x.trip || who.indexOf(x.who)<0) return; const T=trips[x.trip]=trips[x.trip]||{n:x.trip, days:[], open:false}; const d=day(x.date); if(d) T.days.push(d); if(!x.submitted) T.open=true; });
+    const L=Object.values(trips).filter(T=>T.open).map(T=>{ const gap=loose.length && T.days.length ? Math.min(...loose.map(a=>Math.min(...T.days.map(b=>Math.abs(a-b))))) : 9e15; return Object.assign(T,{gap, first:Math.min(...T.days), last:Math.max(...T.days)}); })
+      .sort((a,b)=>a.gap-b.gap || b.last-a.last).slice(0,3);
+    tn.dataset.tp='1'; if(!L.length) return;
+    const inp=tn.querySelector('input'), go=[...tn.querySelectorAll('button')].find(b=>/Name This Trip/.test(b.textContent)); if(!inp || !go) return;
+    const n=loose.length, it=n===1?'it':'them';
+    const pk=document.createElement('div'); pk.className='trippick';
+    const lb=document.createElement('div'); lb.className='tp-l'; lb.textContent='Add '+it+' to a trip you already have:'; pk.appendChild(lb);
+    const bs=document.createElement('div'); bs.className='tp-b'; pk.appendChild(bs);
+    L.forEach((T,i)=>{ const b=document.createElement('button'); b.type='button'; if(i===0 && T.gap<=4*DAY) b.className='best';
+      b.appendChild(document.createTextNode(T.n)); const sm=document.createElement('small'); sm.textContent=(T.days.length ? (T.first===T.last ? fmt(T.first) : fmt(T.first)+' – '+fmt(T.last)) : '')+(i===0 && T.gap<=4*DAY ? ' · same dates' : ''); b.appendChild(sm);
+      b.onclick=()=>{ inp.value=T.n; [...bs.querySelectorAll('button')].forEach(z=>z.disabled=true); b.querySelector('small').textContent='Adding…'; go.click(); };
+      bs.appendChild(b); });
+    tn.insertBefore(pk, tn.firstChild);
+    const or=document.createElement('span'); or.className='tp-or'; or.textContent='Or start a new trip:'; tn.insertBefore(or, inp);
+    go.textContent='Start This Trip';
+    const sm=tn.querySelector('small:last-of-type'); if(sm && /^Names /.test(sm.textContent)) sm.remove();
+  }
+  const scan=()=>root.querySelectorAll('.tripname').forEach(enhance);
+  new MutationObserver(scan).observe(root, {childList:true, subtree:true}); scan();
 })();
 
 });
