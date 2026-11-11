@@ -279,7 +279,11 @@ window.__skin={ version:'1.0', appExp, tidy, undoTidy,
   function enhance(tn){
     if(tn.dataset.tp) return; const S=window.__S; if(!S || !Array.isArray(S.expenses)) return;
     const box=tn.closest('.trip'), head=box && box.querySelector('.triph'); const ht=head ? head.textContent : '';
-    let who=(S.people||[]).filter(p=>p && p.name && ht.indexOf(p.name)>=0).map(p=>p.id); if(!who.length) who=[S.me];
+    /* whose expense: the names in this group (its header or rows), else the person heading above it, else the only person with an expense waiting for a trip */
+    const named=t=>(S.people||[]).filter(p=>p && p.name && t.indexOf(p.name)>=0).map(p=>p.id);
+    let who=named(ht+' '+(box ? box.textContent : ''));
+    if(!who.length){ let e=box; while(e && !who.length){ e=e.previousElementSibling; if(e && !e.classList.contains('trip')) who=named(e.textContent||''); } }
+    if(!who.length){ const w=[...new Set(S.expenses.filter(x=>!x.trip && !x.submitted).map(x=>x.who))]; who=w.length===1 ? w : [S.me]; }
     const loose=S.expenses.filter(x=>!x.trip && !x.submitted && who.indexOf(x.who)>=0).map(x=>day(x.date)).filter(Boolean);
     const trips={}; S.expenses.forEach(x=>{ if(!x.trip || who.indexOf(x.who)<0) return; const T=trips[x.trip]=trips[x.trip]||{n:x.trip, days:[], open:false}; const d=day(x.date); if(d) T.days.push(d); if(!x.submitted) T.open=true; });
     const L=Object.values(trips).filter(T=>T.open).map(T=>{ const gap=loose.length && T.days.length ? Math.min(...loose.map(a=>Math.min(...T.days.map(b=>Math.abs(a-b))))) : 9e15; return Object.assign(T,{gap, first:Math.min(...T.days), last:Math.max(...T.days)}); })
