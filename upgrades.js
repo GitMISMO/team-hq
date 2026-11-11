@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261111b';
+var BUILD='20261111c';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4038,7 +4038,12 @@ function roomCard(){
 }
 
 /* ---------- on the screen ---------- */
-let pres=null, step=0, startAt=0, tick=null, steps=[];
+let pres=null, step=0, tick=null, steps=[];
+/* the meeting timer: starts at 00:00 and runs only when started; Pause stops it, Reset sets it back (November 11, 2026) */
+let tRun=false, tAcc=0, tFrom=0;
+const tNow=()=>tAcc+(tRun?Date.now()-tFrom:0);
+function tToggle(){ if(tRun){ tAcc+=Date.now()-tFrom; tRun=false; } else { tFrom=Date.now(); tRun=true; } paintClock(); }
+function tReset(){ tAcc=0; tFrom=Date.now(); paintClock(); }
 function buildSteps(){
   const m=sel(), I=items(m);
   steps=[{k:'cover'}];
@@ -4050,7 +4055,7 @@ function buildSteps(){
 function stepIndex(k){ buildSteps(); const i=steps.findIndex(s=>s.k===k); return i<0?0:i; }
 function present(at){
   buildSteps(); step=Math.max(0, Math.min(steps.length-1, at||0));
-  if(!pres){ pres=h('div','mt-pres'); document.body.appendChild(pres); document.documentElement.classList.add('mt-on'); startAt=startAt||Date.now(); tick=setInterval(paintClock, 1000);
+  if(!pres){ pres=h('div','mt-pres'); document.body.appendChild(pres); document.documentElement.classList.add('mt-on'); tick=setInterval(paintClock, 1000);
     document.addEventListener('keydown', onKey); try{ pres.requestFullscreen && pres.requestFullscreen().catch(()=>{}); }catch(e){} }
   drawPres();
 }
@@ -4060,7 +4065,9 @@ function onKey(e){ if(!pres) return; const a=document.activeElement; const typin
   else if(!typing && (e.key==='ArrowRight' || e.key==='PageDown' || e.key===' ')){ e.preventDefault(); go(1); }
   else if(!typing && (e.key==='ArrowLeft' || e.key==='PageUp')){ e.preventDefault(); go(-1); } }
 function go(d){ step=Math.max(0, Math.min(steps.length-1, step+d)); drawPres(); }
-function paintClock(){ if(!pres) return; const c=pres.querySelector('.mt-clock'); if(!c) return; const s=Math.floor((Date.now()-startAt)/1000); c.textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); }
+function paintClock(){ if(!pres) return; const c=pres.querySelector('.mt-clock'); if(!c) return; const s=Math.floor(tNow()/1000); c.textContent=(s>=3600 ? Math.floor(s/3600)+':'+String(Math.floor(s%3600/60)).padStart(2,'0') : String(Math.floor(s/60)).padStart(2,'0'))+':'+String(s%60).padStart(2,'0'); c.classList.toggle('off', !tRun);
+  const b=pres.querySelector('.mt-tgo'); if(b){ b.textContent=tRun ? 'Pause' : (tAcc ? 'Resume' : 'Start'); b.classList.toggle('run', tRun); b.setAttribute('aria-label', (tRun?'Pause':'Start')+' the meeting timer'); }
+  const z=pres.querySelector('.mt-trs'); if(z) z.hidden=!tAcc && !tRun; }
 function drawPres(){
   const m=sel(), S0=steps[step];
   pres.textContent='';
@@ -4069,7 +4076,7 @@ function drawPres(){
   const nav=h('div','mt-nav');
   SECTIONS.forEach((s,i)=>{ const on=S0.k===s.k; const b=btn('mt-chip'+(on?' on':''), null, ()=>{ step=stepIndex(s.k); drawPres(); }); b.appendChild(h('span','n',String(i+1))); b.append(s.n); nav.appendChild(b); });
   top.appendChild(nav);
-  const r=h('div','mt-tr'); r.appendChild(h('span','mt-clock','00:00')); r.appendChild(btn('mt-x','Exit', closePres)); top.appendChild(r);
+  const r=h('div','mt-tr'); r.appendChild(h('span','mt-clock','00:00')); r.appendChild(btn('mt-x mt-tgo','Start', tToggle)); const rs=btn('mt-x mt-trs','Reset', tReset); rs.title='Set the timer back to 00:00'; r.appendChild(rs); r.appendChild(btn('mt-x','Exit', closePres)); top.appendChild(r);
   pres.appendChild(top);
   const body=h('div','mt-body'); pres.appendChild(body);
   ({cover:slideCover, bnb:slideItem, proj:slideProjects, room:slidePerson, good:slideGood, wrap:slideWrap})[S0.k](body, S0, m);
@@ -4124,8 +4131,8 @@ function slideProjects(body, s, m){
     c.style.setProperty('--rc','var(--c'+(((r.color||0)%7)+1)+')');
     const t=h('div','tp'); t.appendChild(h('b',null,r.name)); t.appendChild(h('span','pv2-tag '+H.k, H.t)); c.appendChild(t);
     const bar=h('div','br'); const f=h('i'); f.style.width=H.pct+'%'; bar.appendChild(f); c.appendChild(bar);
-    const mt=h('div','mt'); if(r.lead){ mt.appendChild(av(r.lead,20)); mt.append(first(r.lead)+' · '); } mt.append(H.pct+'% done · '+H.open.length+' open'); c.appendChild(mt);
-    if(H.next) c.appendChild(h('div','nx', (H.next.due && days(H.next.due)<0 ? 'Late: ' : 'Next: ')+H.next.t));
+    const mt=h('div','mt-rmt'); if(r.lead){ mt.appendChild(av(r.lead,20)); mt.append(first(r.lead)+' · '); } mt.append(H.pct+'% done · '+H.open.length+' open'); c.appendChild(mt);
+    if(H.next) c.appendChild(h('div','mt-rnx', (H.next.due && days(H.next.due)<0 ? 'Late: ' : 'Next: ')+H.next.t));
     g.appendChild(c); });
   body.appendChild(g);
 }
@@ -4219,7 +4226,7 @@ html.mt-on{overflow:hidden}
 .mt-chip.on{background:var(--sky);color:var(--navy-deep);border-color:var(--sky)}
 .mt-chip.on .n{background:var(--navy);color:#fff}
 .mt-tr{display:flex;align-items:center;gap:12px}
-.mt-clock{font-size:20px;font-weight:700;color:var(--sky);min-width:64px;text-align:right}
+.mt-clock{font-size:20px;font-weight:700;color:var(--sky);min-width:64px;text-align:right}.mt-clock.off{opacity:.55}.mt-x.mt-tgo{min-width:84px}.mt-x.mt-tgo.run{background:rgba(116,191,235,.18);border-color:#74bfeb}.mt-trs[hidden]{display:none}
 .mt-x{border:1px solid rgba(255,255,255,.4);background:transparent;color:#fff;font:inherit;font-weight:700;padding:6px 14px;border-radius:5px;cursor:pointer}
 .mt-body{flex:1;overflow:auto;padding:clamp(16px,3vh,32px) clamp(20px,5vw,72px)}
 @media(max-height:700px){.mt-top{padding:8px 16px}.mt-sh{margin-bottom:12px}}
@@ -4265,8 +4272,8 @@ html.mt-on{overflow:hidden}
 .mt-rc:hover{border-color:var(--rc);box-shadow:0 10px 22px rgba(13,49,76,.12)}
 .mt-rc .tp{display:flex;align-items:flex-start;gap:8px}.mt-rc .tp b{flex:1;font-size:16px;line-height:1.3}
 .mt-rc .br{height:7px;background:var(--surface-3);border-radius:4px;overflow:hidden}.mt-rc .br i{display:block;height:100%;background:var(--rc)}
-.mt-rc .mt{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2)}
-.mt-rc .nx{font-size:13px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mt-rc .mt-rmt{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2)}
+.mt-rc .mt-rnx{font-size:13px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mt-person{display:grid;grid-template-columns:minmax(240px,320px) 1fr;gap:28px;align-items:start}
 @media(max-width:900px){.mt-person{grid-template-columns:1fr}}
 .mt-pl{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:22px;background:var(--surface);border:1px solid var(--border);border-radius:10px}
