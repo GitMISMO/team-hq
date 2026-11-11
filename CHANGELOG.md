@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 11** — Team Meeting on the screen: Team Projects shows full width again, and the meeting timer has Start, Pause and Reset (it no longer starts by itself).
 - **Nov 11** — Expenses: an expense with no trip offers one-tap buttons for your open trips (closest dates first); starting a new trip is the second choice.
 - **Nov 9** — Your Day tile lists the whole day's meetings, as many as fit, instead of only the next one.
 - **Nov 9** — Connected Systems: a selected system's automatic lines stay solid (moving dashes looked like work copied by hand).
