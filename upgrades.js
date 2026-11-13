@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261113c';
+var BUILD='20261113d';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -9660,11 +9660,12 @@ function toast(msg){ toastEl && toastEl.remove(); const t=toastEl=h('div','ed-to
 
 function send(T){
   const L=T.state==='reopened' ? T.fresh : T.open, P=problems(L), again=T.state==='reopened', n=L.length;
-  const title=again ? 'Send the New '+(n===1?'One':'Ones')+' to '+procName() : 'Done With '+T.trip+'?';
+  const other=T.who!==me(), your=other ? first(T.who)+'’s' : 'your';
+  const title=again ? 'Send the New '+(n===1?'One':'Ones')+' to '+procName() : other ? 'Send '+first(T.who)+'’s '+T.trip+'?' : 'Done With '+T.trip+'?';
   dialog(title, b=>{
     b.appendChild(h('p',null, again
-      ? n+(n===1?' expense was':' expenses were')+' added after you sent this trip. '+procName()+' will be told '+(n===1?'it is':'they are')+' ready to enter.'
-      : procName()+' will be told your '+T.trip+' expenses are ready to enter: '+n+(n===1?' expense, ':' expenses, ')+money(T.sum)+'. If more come in later, you can send those too.'));
+      ? n+(n===1?' expense was':' expenses were')+' added after '+(other?'this trip was':'you sent this trip')+' sent. '+(me()===PROC?'They will be marked ready to enter.':procName()+' will be told '+(n===1?'it is':'they are')+' ready to enter.')
+      : (me()===PROC ? first(T.who)+'’s '+T.trip+' expenses will be marked ready to enter: ' : procName()+' will be told '+your+' '+T.trip+' expenses are ready to enter: ')+n+(n===1?' expense, ':' expenses, ')+money(T.sum)+'.'+(other ? ' '+first(T.who)+' sees it as sent by you.' : ' If more come in later, you can send those too.')));
     if(P.length){ const w=h('div','ed-warn'); w.appendChild(h('b',null, P.length===1 ? 'One still needs something:' : P.length+' still need something:'));
       const ul=h('ul'); P.slice(0,8).forEach(p=>ul.appendChild(h('li',null,p))); w.appendChild(ul);
       w.appendChild(h('small',null,'Cancel to fix '+(P.length===1?'it':'them')+' first, or send anyway and say why below.')); b.appendChild(w); }
@@ -9673,18 +9674,26 @@ function send(T){
   }, again ? 'Send to '+procName() : 'Send to '+procName(), async b=>{
     const note=String((b.querySelector('#ed-note')||{}).value||'').trim().slice(0,400), at=Date.now();
     await Promise.all(L.map(x=>putExp(Object.assign({}, api().expOf(x.id)||x, {done:at, doneBy:me()}))));
-    if(T.who!==PROC){
+    (S.nudges||[]).filter(z=>/^exp-remind/.test(z.kind||'') && !z.done && z.who===T.who && z.trip===T.trip).forEach(z=>putN(Object.assign({}, z, {done:1})));
+    if(T.who!==PROC && me()!==PROC){
       (S.nudges||[]).filter(z=>z.kind==='exp-ready' && !z.done && z.who===T.who && z.trip===T.trip).forEach(z=>putN(Object.assign({}, z, {done:1})));
       const tot=tripOf(T.who, T.trip);
       const m=again ? first(T.who)+' added '+n+' more to '+T.trip+': ready to enter ('+tot.open.length+' in all, '+money(tot.sum)+')'
                     : first(T.who)+'’s '+T.trip+' expenses are ready to enter ('+n+', '+money(T.sum)+')';
       await putN({id:'expready-'+T.who+'-'+slug(T.trip)+'-'+at.toString(36), to:PROC, by:T.who, k:'Expenses', kind:'exp-ready', who:T.who, trip:T.trip,
-        m:m+(note ? ' — “'+note+'”' : ''), note, go:'expenses', at});
+        m:m+(other ? ' (sent by '+first(me())+')' : '')+(note ? ' — “'+note+'”' : ''), note, go:'expenses', at});
     }
-    toast(T.who===PROC ? 'Marked done.' : procName()+' has it. You’ll see Entered on this trip once it’s in DataBasics.');
+    toast(T.who===PROC || me()===PROC ? 'Marked ready to enter.' : other ? 'Sent to '+procName()+' for '+first(T.who)+'.' : procName()+' has it. You’ll see Entered on this trip once it’s in DataBasics.');
     paint(true);
   });
 }
+function remind(T){
+  const at=Date.now();
+  return putN({id:'expnudge-'+T.who+'-'+slug(T.trip)+'-'+at.toString(36), to:T.who, by:me(), k:'Expenses', kind:'exp-remind-by', who:T.who, trip:T.trip,
+    m:first(me())+' asked: when your '+T.trip+' expenses are all in, tap Done — Send to '+procName()+' on the trip in Expenses.', go:'expenses', at})
+    .then(()=>{ toast(first(T.who)+' will see it on the trip and in the bell.'); paint(true); }, ()=>toast('That didn’t send. Try again in a moment.'));
+}
+const asked=T=>(S.nudges||[]).filter(z=>z.kind==='exp-remind-by' && !z.done && z.who===T.who && z.trip===T.trip).sort((a,b)=>b.at-a.at)[0]||null;
 function takeBack(T){
   dialog('Take '+T.trip+' Back?', b=>{ b.appendChild(h('p',null,'This trip goes back to you to keep adding to, and '+procName()+'’s reminder to enter it closes. Send it again when it’s ready.')); },
     'Take It Back', async ()=>{
@@ -9703,7 +9712,7 @@ function decorate(box){
   const head=box.querySelector(':scope > .triph'), tn=head && head.querySelector('.tn'); if(!tn) return;
   const trip=(tn.firstChild && tn.firstChild.nodeType===3 ? tn.firstChild.nodeValue : '').trim(); if(!trip || trip===NOTRIP) return;
   const who=whoFor(box); if(!who) return;
-  const T=tripOf(who, trip), sig=T.state+':'+T.open.length+':'+T.fresh.length+':'+T.when;
+  const T=tripOf(who, trip), ask=asked(T), sig=T.state+':'+T.open.length+':'+T.fresh.length+':'+T.when+':'+(ask?ask.at:0);
   let bar=box.querySelector(':scope > .tripdone');
   if(bar && bar.dataset.sig===sig) return;
   if(bar) bar.remove();
@@ -9714,9 +9723,14 @@ function decorate(box){
   bar=h('div','tripdone ed-'+T.state); bar.dataset.sig=sig;
   const txt=h('span','ed-t');
   if(T.state==='adding'){
-    if(mine){ txt.textContent='When every expense for this trip is in, send it to '+procName()+' to enter.';
+    if(mine){ if(ask){ txt.appendChild(h('b',null, first(ask.by)+' asked you to send this when it’s all in. ')); txt.appendChild(document.createTextNode('Tap the button once every expense is here.')); }
+      else txt.textContent='When every expense for this trip is in, send it to '+procName()+' to enter.';
       const b=h('button','btn sm ed-go','Done — Send to '+procName()); b.type='button'; b.onclick=e=>{ e.stopPropagation(); send(tripOf(who, trip)); }; bar.appendChild(txt); bar.appendChild(b); }
-    else { txt.textContent=first(who)+' is still adding to this trip.'; bar.appendChild(txt); }
+    else { txt.appendChild(h('b',null, first(who)+' is still adding.'));
+      txt.appendChild(document.createTextNode(' '+first(who)+' sees a Done — Send to '+procName()+' button right here'+(ask ? '; '+(ask.by===me()?'you':first(ask.by))+' reminded them '+fmt(ask.at)+'.' : '.')));
+      bar.appendChild(txt);
+      const r=h('button','btn ghost sm',ask ? 'Remind Again' : 'Remind '+first(who)); r.type='button'; r.onclick=e=>{ e.stopPropagation(); r.disabled=true; remind(tripOf(who, trip)); }; bar.appendChild(r);
+      const b=h('button','btn ghost sm','Send for '+first(who)); b.type='button'; b.onclick=e=>{ e.stopPropagation(); send(tripOf(who, trip)); }; bar.appendChild(b); }
   } else if(T.state==='sent'){
     txt.appendChild(h('b',null, mine ? 'With '+procName() : 'Ready to Enter'));
     txt.appendChild(document.createTextNode(' · sent '+fmt(T.when)+(mine ? '' : ' by '+first(who))));
@@ -9728,6 +9742,8 @@ function decorate(box){
     txt.appendChild(document.createTextNode(mine ? '' : ' · '+T.sent.length+' ready to enter'));
     bar.appendChild(txt);
     if(mine){ const b=h('button','btn sm ed-go','Send the New '+(n===1?'One':'Ones')+' to '+procName()); b.type='button'; b.onclick=e=>{ e.stopPropagation(); send(tripOf(who, trip)); }; bar.appendChild(b); }
+    else if(seesAll()){ const r=h('button','btn ghost sm','Remind '+first(who)); r.type='button'; r.onclick=e=>{ e.stopPropagation(); r.disabled=true; remind(tripOf(who, trip)); }; bar.appendChild(r);
+      const b=h('button','btn ghost sm','Send for '+first(who)); b.type='button'; b.onclick=e=>{ e.stopPropagation(); send(tripOf(who, trip)); }; bar.appendChild(b); }
   }
   head.after(bar);
 }
@@ -9807,7 +9823,7 @@ const css=h('style'); css.id='ed-style'; css.textContent=
 document.head.appendChild(css);
 paint(true);
 
-window.__expDone={ version:'1.0', tripOf, allTrips, problems, sweep, paint,
+window.__expDone={ version:'1.1', tripOf, allTrips, problems, sweep, paint,
   destroy(){ mo.disconnect(); clearInterval(timer); css.remove(); root.querySelectorAll('.tripdone,.ed-ready').forEach(e=>e.remove()); } };
 })();
 
@@ -9850,6 +9866,7 @@ const NEW=[
 <li><b>Something came in later?</b> An expense added after you sent the trip shows <b>added since you sent it</b>; tap <b>Send the New One to Vanessa</b>.</li>
 <li><b>Not done after all?</b> <b>Take It Back</b> returns the trip to you.</li>
 <li><b>Forgot?</b> A week after a trip's last expense, if it hasn't been sent, you get one reminder.</li>
+<li><b>Jonna and Vanessa</b> see the same bar on everyone's trips, with <b>Remind</b> (the person sees it on the trip and in their bell) and <b>Send for</b> them.</li>
 <li><b>Mileage:</b> pick Mileage as the type and fill in <b>Miles Driven</b>. The amount is worked out at the IRS rate for the date, the miles go in the notes, and no receipt is needed.</li>
 <li><b>Emailed receipts:</b> forward a receipt to expense@mismo.org. A receipt that is the email itself (Uber, airlines) is kept as a PDF and counts as the receipt.</li>
 </ul>`},
