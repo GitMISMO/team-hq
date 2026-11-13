@@ -34,6 +34,7 @@ const NEW=[
 <li><b>Something came in later?</b> An expense added after you sent the trip shows <b>added since you sent it</b>; tap <b>Send the New One to Vanessa</b>.</li>
 <li><b>Not done after all?</b> <b>Take It Back</b> returns the trip to you.</li>
 <li><b>Forgot?</b> A week after a trip's last expense, if it hasn't been sent, you get one reminder.</li>
+<li><b>Jonna and Vanessa</b> see the same bar on everyone's trips, with <b>Remind</b> (the person sees it on the trip and in their bell) and <b>Send for</b> them.</li>
 <li><b>Mileage:</b> pick Mileage as the type and fill in <b>Miles Driven</b>. The amount is worked out at the IRS rate for the date, the miles go in the notes, and no receipt is needed.</li>
 <li><b>Emailed receipts:</b> forward a receipt to expense@mismo.org. A receipt that is the email itself (Uber, airlines) is kept as a PDF and counts as the receipt.</li>
 </ul>`},
