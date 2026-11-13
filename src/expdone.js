@@ -74,7 +74,7 @@ function send(T){
     const ta=h('textarea'); ta.rows=2; ta.id='ed-note'; lab.appendChild(ta); b.appendChild(lab);
   }, again ? 'Send to '+procName() : 'Send to '+procName(), async b=>{
     const note=String((b.querySelector('#ed-note')||{}).value||'').trim().slice(0,400), at=Date.now();
-    for(const x of L){ const cur=api().expOf(x.id)||x; await putExp(Object.assign({}, cur, {done:at, doneBy:me()})); }
+    await Promise.all(L.map(x=>putExp(Object.assign({}, api().expOf(x.id)||x, {done:at, doneBy:me()}))));
     if(T.who!==PROC){
       (S.nudges||[]).filter(z=>z.kind==='exp-ready' && !z.done && z.who===T.who && z.trip===T.trip).forEach(z=>putN(Object.assign({}, z, {done:1})));
       const tot=tripOf(T.who, T.trip);
@@ -90,7 +90,7 @@ function send(T){
 function takeBack(T){
   dialog('Take '+T.trip+' Back?', b=>{ b.appendChild(h('p',null,'This trip goes back to you to keep adding to, and '+procName()+'’s reminder to enter it closes. Send it again when it’s ready.')); },
     'Take It Back', async ()=>{
-      for(const x of T.sent){ const cur=Object.assign({}, api().expOf(x.id)||x); delete cur.done; delete cur.doneBy; await putExp(cur); }
+      await Promise.all(T.sent.map(x=>{ return putExp(Object.assign({}, api().expOf(x.id)||x, {done:0, doneBy:''})); }));
       (S.nudges||[]).filter(z=>z.kind==='exp-ready' && !z.done && z.who===T.who && z.trip===T.trip).forEach(z=>putN(Object.assign({}, z, {done:1})));
       toast('Taken back. Send it again when it’s ready.'); paint(true); });
 }
@@ -112,7 +112,7 @@ function decorate(box){
   if(T.state==='entered' || T.state==='none') return;
   const mine=who===me(), proc=who===PROC;
   if(!mine && T.state==='adding' && !seesAll()) return;
-  if(proc && mine) return;                       /* Vanessa enters her own */
+  if(proc) return;                               /* Vanessa enters her own */
   bar=h('div','tripdone ed-'+T.state); bar.dataset.sig=sig;
   const txt=h('span','ed-t');
   if(T.state==='adding'){
