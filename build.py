@@ -14,7 +14,7 @@ SRC = os.path.join(HERE, 'src')
 
 # The page's modules, in load order. Each runs inside MODS.push(function(){ ... }).
 PARTS = ['hqx.js', 'skin.js', 'projects-v2.js', 'hub.js', 'findtime.js', 'plans-v2.js', 'today.js',
-         'meeting.js', 'mobile.js', 'syncs.js', 'systems.js', 'next.js', 'oofdates.js', 'expinbox.js',
+         'meeting.js', 'mobile.js', 'syncs.js', 'systems.js', 'next.js', 'oofdates.js', 'expinbox.js', 'mileage.js',
          'tour.js', 'design.js']
 
 

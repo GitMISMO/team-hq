@@ -53,6 +53,7 @@ prompt) lives only in the private `systemsmap` collection, never in this code.
 | `next.js` | The current Team HQ shell: My Dashboard, Inbox, My Tasks, Calendar, System Health and more |
 | `oofdates.js` | Out of Office key dates from Outlook automatic replies |
 | `expinbox.js` | The expense@ inbox: emailed receipts become draft expenses |
+| `mileage.js` | Mileage in the expense editor: miles driven × the IRS rate for the date |
 | `tour.js` | The guided tour and page help |
 | `design.js` | The design layer: readable muted text, focus ring, reduced motion |
 
