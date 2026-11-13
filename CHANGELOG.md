@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 13** — Expenses: Done — Send to Vanessa on each trip; Vanessa's Ready to Enter list, oldest first; the owner hears when it's entered; expenses added later reopen the trip; one reminder a week after a trip's last expense.
 - **Nov 13** — Expenses: choosing Mileage asks for the miles driven and works out the amount at the IRS rate for the expense date (76¢ a mile from July 1, 2026); mileage needs no receipt.
 - **Nov 13** — Expense inbox: an emailed receipt with nothing attached (Uber, airlines) is kept as a PDF and counts as the expense's receipt.
 - **Nov 11** — Team Meeting on the screen: Team Projects shows full width again, and the meeting timer has Start, Pause and Reset (it no longer starts by itself).

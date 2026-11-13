@@ -54,6 +54,7 @@ prompt) lives only in the private `systemsmap` collection, never in this code.
 | `oofdates.js` | Out of Office key dates from Outlook automatic replies |
 | `expinbox.js` | The expense@ inbox: emailed receipts become draft expenses |
 | `mileage.js` | Mileage in the expense editor: miles driven × the IRS rate for the date |
+| `expdone.js` | Expenses: Done — Send to Vanessa per trip, her Ready to Enter list, entered and reminder notes |
 | `tour.js` | The guided tour and page help |
 | `design.js` | The design layer: readable muted text, focus ring, reduced motion |
 
@@ -119,6 +120,7 @@ The MISMO Connections Map (Jonna's Claude Doc) is the source of truth for every 
   important and unread mail every 15 minutes, and out-of-office replies.
 - **Team HQ Actions flow:** Do It in Outlook (flag, mark read, file, delete) and Book It meetings, from each
   person's own Outlook. **Deletes always go to Deleted Items.** Never widen this flow's filter.
+- **Done — Send to Vanessa:** marks a trip's expenses `done` and leaves Vanessa a nudge (`nudges`, kind `exp-ready`); when all are ticked entered, her nudge closes and the owner gets one (`exp-entered`). Week-old unsent trips get one `exp-remind`.
 - **expense@mismo.org:** each emailed receipt becomes a draft expense within about a minute; contractors'
   receipts go to their Service Orders expenses while Jonna's or Vanessa's Team HQ is open.
 - **Scheduler:** reads Team HQ's staff list; writes a task per request onto the organizer's board.
