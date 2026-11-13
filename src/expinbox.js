@@ -38,6 +38,64 @@ async function readAll(){ const R=window.__hqRelay; if(!R || !R.readOther) retur
   try{ const f=await R.readOther('team-hq','expinbox'); return (f && f.docs) || {}; }catch(e){ return null; } }
 function setDoc(id, d){ return S.db.collection('expinbox').doc(id).set(d); }
 
+/* ---------- the email itself as the receipt (13 Nov 2026) ----------
+   An Uber or airline receipt arrives as the email, with nothing attached. Its text is turned into a one-file PDF
+   ("Receipt - Your Thursday morning trip with Uber.pdf") and kept as the expense's receipt, so the expense
+   counts as having its receipt and the receipt can be opened and downloaded like a photographed one. */
+const LAT={'‘':"'",'’':"'",'‚':"'",'“':'"','”':'"','–':'-','—':'-','•':'*','…':'...',' ':' ',' ':' ','​':'','‌':'','‍':'','﻿':'','™':'(TM)','€':'EUR '};
+const latin=t=>String(t||'').replace(/[^\x09\x0a\x20-\x7e\xa1-\xff]/g, c=>LAT[c]!=null ? LAT[c] : '');
+function receiptLines(text){
+  let t=clean(text).replace(/\r/g,'')
+    .replace(/\[\s*(https?|cid|mailto):[^\]]*\]/gi,'').replace(/<\s*(https?|mailto):[^>]*>/gi,'')
+    .replace(/^\s*https?:\/\/\S+\s*$/gim,'');
+  t=latin(t).split('\n').map(l=>l.replace(/[ \t]+/g,' ').trim()).join('\n').replace(/\n{3,}/g,'\n\n').trim();
+  const out=[];
+  for(const raw of t.split('\n')){ let l=raw; if(!l){ out.push(''); continue; }
+    while(l.length>92){ let k=l.lastIndexOf(' ', 92); if(k<40) k=92; out.push(l.slice(0,k)); l=l.slice(k).trim(); }
+    out.push(l); }
+  return out.slice(0, 52*8);   /* eight pages at most */
+}
+function pdfBlob(title, sub, lines){
+  const W=612, H=792, M=54, LH=13, PER=Math.floor((H-2*M)/LH)-3;
+  const esc=s=>latin(s).replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)');
+  const pages=[]; for(let i=0;i<Math.max(1,lines.length);i+=PER) pages.push(lines.slice(i,i+PER));
+  const objs=[]; const add=s=>{ objs.push(s); return objs.length; };
+  add('<< /Type /Catalog /Pages 2 0 R >>'); add('');
+  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+  const kids=[];
+  pages.forEach((pg, n)=>{
+    let c='BT /F2 12 Tf '+M+' '+(H-M)+' Td ('+esc(title)+') Tj ET\n';
+    c+='BT /F1 9 Tf '+M+' '+(H-M-15)+' Td ('+esc(sub+(pages.length>1 ? '   Page '+(n+1)+' of '+pages.length : ''))+') Tj ET\n';
+    c+='BT /F1 10 Tf '+LH+' TL '+M+' '+(H-M-3*LH)+' Td\n'+pg.map(l=>'('+esc(l)+') Tj T*').join('\n')+'\nET';
+    const cs=add('<< /Length '+c.length+' >>\nstream\n'+c+'\nendstream');
+    kids.push(add('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+W+' '+H+'] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents '+cs+' 0 R >>'));
+  });
+  objs[1]='<< /Type /Pages /Kids ['+kids.map(k=>k+' 0 R').join(' ')+'] /Count '+kids.length+' >>';
+  let out='%PDF-1.4\n'; const off=[];
+  objs.forEach((o,i)=>{ off.push(out.length); out+=(i+1)+' 0 obj\n'+o+'\nendobj\n'; });
+  const x=out.length;
+  out+='xref\n0 '+(objs.length+1)+'\n0000000000 65535 f \n'+off.map(o=>String(o).padStart(10,'0')+' 00000 n \n').join('');
+  out+='trailer\n<< /Size '+(objs.length+1)+' /Root 1 0 R >>\nstartxref\n'+x+'\n%%EOF';
+  const b=new Uint8Array(out.length); for(let i=0;i<out.length;i++) b[i]=out.charCodeAt(i)&255;
+  return new Blob([b], {type:'application/pdf'});
+}
+/* save the email as the expense's receipt; true when it did */
+async function emailReceipt(eid, text, via){
+  if(window.__HQ_TEST) return false;                       /* the Test Copy saves nothing */
+  const A=api(); const x=A && A.expOf(eid); if(!x || x.asset) return false;
+  const lines=receiptLines(text); if(lines.join('').length<40) return false;
+  const a=window.claude && window.claude.use ? await window.claude.use('assets') : null; if(!a) return false;
+  const subj=String((via && via.subject) || x.name || 'Emailed receipt').replace(/^\s*\[[^\]]*\]\s*/,'');
+  const nm=('Receipt - '+subj).replace(/[\\/:*?"<>|]+/g,' ').replace(/\s+/g,' ').trim().slice(0,90)+'.pdf';
+  const when=via && via.at ? new Date(via.at) : null;
+  const sub='Emailed to '+ADDR+(via && via.from ? ' by '+via.from : '')+(when && !isNaN(when) ? ' on '+when.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '');
+  const file=new File([pdfBlob(subj, sub, lines)], nm, {type:'application/pdf'});
+  const r=await a.upload(file, {folder:'receipts'}); if(!r || !r.id) return false;
+  const y=Object.assign({}, A.expOf(eid) || x, {asset:r.id, rcptName:nm, rcptType:'application/pdf', receipt:1});
+  await A.put('expenses', y); return true;
+}
+
 /* one email → one expense per receipt (or one expense from the email itself when nothing was attached) */
 async function importOne(id, d, who){
   const A=api(); const now=Date.now();
@@ -54,7 +112,7 @@ async function importOne(id, d, who){
   /* the same email sent through again updates the expense it already made, instead of adding a second one */
   const same=x=>x.viaEmail && !x.submitted && x.viaEmail.from===via.from && x.viaEmail.subject===via.subject;
   const again=(A.list()||[]).find(x=>same(x) && x.viaEmail.at===via.at)
-    || (files.length ? null : (A.list()||[]).find(x=>same(x) && !x.asset && !x.amt && !x.rcptAmt));   /* a re-forward fills in one that came through blank */
+    || (files.length ? null : (A.list()||[]).find(x=>same(x) && !x.asset));   /* a re-forward fills in one that came through blank or without its receipt */
   if(files.length){
     for(const f of files){
       const e={trip:'', who, by:S.me, cat:'', date:'', name:'', receipt:1, rcptAmt:'', amt:'', submitted:0,
@@ -77,6 +135,7 @@ async function importOne(id, d, who){
       e.members=A.members(e); eid=await A.put('expenses', e); }
     made.push(eid);
     if(text && A.readText){ try{ await A.readText(eid, text); }catch(err){} }
+    if(d.text){ try{ await emailReceipt(eid, d.text, via); }catch(err){} }
     try{ const x=A.expOf(eid); if(x && !x.date){ const y=Object.assign({}, x, {date:sent}); await A.put('expenses', y); } }catch(err){}
   }
   const fin=Object.assign({}, cur, {claim:null, done:Date.now(), doneBy:S.me, who, exp:made}); delete fin.text;   /* the full email text isn't kept once it's been read */
@@ -332,6 +391,6 @@ mo.observe(root, {childList:true});
 const vis=new MutationObserver(()=>{ if(!root.hidden) tick(false); }); vis.observe(root, {attributes:true, attributeFilter:['hidden']});
 const start=()=>{ if(S.ready && S.me && api() && window.__hqRelay){ tick(true); timer=setInterval(()=>{ if(!document.hidden) tick(false); }, 120e3); } else setTimeout(start, 1000); };
 setTimeout(start, 4000);
-window.__expIn={ version:'1.1', tick:()=>tick(true), docs:()=>docs, whoFrom, contractorFor, loadRoster,
+window.__expIn={ version:'1.2', tick:()=>tick(true), docs:()=>docs, whoFrom, contractorFor, loadRoster, emailReceipt, receiptLines, pdfBlob,
   destroy(){ clearInterval(timer); mo && mo.disconnect(); vis.disconnect(); css.remove(); const b=root.querySelector(':scope > .expin'); b && b.remove(); } };
 })();
