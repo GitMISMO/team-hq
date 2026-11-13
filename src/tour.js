@@ -28,6 +28,15 @@ document.addEventListener('keydown', onKey);
 
 /* ---------- new help sections ---------- */
 const NEW=[
+ {after:'expenses', id:'expdone', t:'Sending a Trip to Vanessa, Mileage and Emailed Receipts', d:'Tell Vanessa a trip is ready to enter, claim mileage, and email in receipts.', h:`
+<p>You don't enter your own expenses in DataBasics; Vanessa does. When every expense for a trip is in, tap <b>Done — Send to Vanessa</b> under the trip's name. If anything still needs a receipt or a detail, it says so first; fix it, or send anyway and add a note. Vanessa sees it in her bell and at the top of her Expenses under <b>Ready to Enter</b>. The trip shows <b>With Vanessa</b>, and <b>All Submitted</b> once she has entered it (you get a note in your bell).</p>
+<ul>
+<li><b>Something came in later?</b> An expense added after you sent the trip shows <b>added since you sent it</b>; tap <b>Send the New One to Vanessa</b>.</li>
+<li><b>Not done after all?</b> <b>Take It Back</b> returns the trip to you.</li>
+<li><b>Forgot?</b> A week after a trip's last expense, if it hasn't been sent, you get one reminder.</li>
+<li><b>Mileage:</b> pick Mileage as the type and fill in <b>Miles Driven</b>. The amount is worked out at the IRS rate for the date, the miles go in the notes, and no receipt is needed.</li>
+<li><b>Emailed receipts:</b> forward a receipt to expense@mismo.org. A receipt that is the email itself (Uber, airlines) is kept as a PDF and counts as the receipt.</li>
+</ul>`},
  {after:'mytasks', id:'collab', t:'Comments, @Mentions and the Bell', d:'Talk about a task right on it, bring people in, and see what needs you.', h:`
 <p>Every task has a <b>comment thread</b> at the bottom of its side panel and of the full task editor. Type <b>@</b> and a name to bring someone in; they see it in their bell. <span class="hk">Ctrl</span> + <span class="hk">Enter</span> posts. Delete your own comment with <b>Delete</b> (and Undo if you change your mind). A task with comments shows a small speech-bubble count in its row.</p>
 <h4>The Bell</h4>

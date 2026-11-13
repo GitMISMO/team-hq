@@ -172,7 +172,7 @@ function bellItems(){ const m=me(); if(!m || !S.tasks) return []; const s=bellSt
   mineNow.forEach(t=>{ if(!t.due) return; const n=days(t.due); if(n===0 || n===1) out.push({k:n===0?'today':'tomorrow', at:t0+(n===0?2:1), t}); });
   S.tasks.forEach(t=>{ if(!isOpen(t) || !(t.wait||[]).length || !on(t)) return; const B=blockers(t); if(!B.length || B.some(isOpen)) return;
     const at=Math.max.apply(null, B.map(b=>b.at||0)); if(at>cut) out.push({k:'ready', at, t, text:B.map(b=>b.t).join(', ')+(B.length>1?' are':' is')+' done'}); });
-  (S.nudges||[]).forEach(n=>{ if(n.to!==m || n.done || (n.at||0)<cut) return; out.push({k:'nudge', at:n.at||0, who:n.k==='Rule'?null:n.by, t:S.tasks.find(x=>x.id===n.task)||null, label:n.m||n.k||'A reminder'}); });
+  (S.nudges||[]).forEach(n=>{ if(n.to!==m || n.done || (n.at||0)<cut) return; out.push({k:n.k==='Expenses'?'exp':'nudge', at:n.at||0, who:(n.k==='Rule'||n.kind==='exp-remind')?null:n.by, t:S.tasks.find(x=>x.id===n.task)||null, go:n.go||'', label:n.m||n.k||'A reminder'}); });
   return out.sort((a,b)=>b.at-a.at).slice(0,40); }
 function bellNew(L){ const s=bellState(), d=iso(today()); return L.some(x=>(x.k==='today'||x.k==='tomorrow') ? s.day!==d : x.at>(s.seen||0)); }
 function paintBell(){ if(!bell.btn) return; let L=[]; try{ L=bellItems(); }catch(e){} bell.btn.classList.toggle('has', bellNew(L)); if(bell.panel && bell.panel.isConnected) drawBellPanel(L); }
@@ -181,10 +181,10 @@ function goTask(t){ closeBell(); ui.peek=t.id; if(doers(t).indexOf(me())>=0 || t
 function drawBellPanel(L){ const p=bell.panel; p.textContent=''; const hd=h('div','nx-bl-h'); hd.appendChild(h('b',null,'Notifications')); p.appendChild(hd);
   if(!L.length){ p.appendChild(h('div','nx-bl-none','You’re all caught up. Mentions, comments on your tasks, tasks handed to you, and what’s due soon show up here.')); return; }
   const s=bellState();
-  L.forEach(x=>{ const r=btn('nx-bl-row'+((x.k==='today'||x.k==='tomorrow') ? (s.day!==iso(today())?' new':'') : (x.at>(s.seen||0)?' new':'')), null, ()=>{ if(x.t) goTask(x.t); else { closeBell(); open('mine'); } });
+  L.forEach(x=>{ const r=btn('nx-bl-row'+((x.k==='today'||x.k==='tomorrow') ? (s.day!==iso(today())?' new':'') : (x.at>(s.seen||0)?' new':'')), null, ()=>{ if(x.t) goTask(x.t); else if(x.go==='expenses'){ closeBell(); openClassic('expenses'); } else { closeBell(); open('mine'); } });
     if(x.who) r.appendChild(av(x.who,26)); else { const i=h('span','nx-bl-ic'); i.innerHTML=ic('cal'); r.appendChild(i); }
     const b=h('span','nx-bl-b'), line=h('span','nx-bl-l'); const nm=x.who ? first(x.who) : '';
-    const what={mention:nm+' mentioned you on ', comment:nm+' commented on ', assigned:nm+' handed you ', today:'Due today: ', tomorrow:'Due tomorrow: ', ready:'Ready to start: ', nudge:(nm ? nm+' nudged you: ' : 'Reminder: ')}[x.k];
+    const what={mention:nm+' mentioned you on ', comment:nm+' commented on ', assigned:nm+' handed you ', today:'Due today: ', tomorrow:'Due tomorrow: ', ready:'Ready to start: ', nudge:(nm ? nm+' nudged you: ' : 'Reminder: '), exp:''}[x.k];
     line.appendChild(document.createTextNode(what)); line.appendChild(h('b',null, x.label || (x.t && x.t.t) || '')); b.appendChild(line);
     if(x.text){ const q=h('span','nx-bl-q'); q.textContent=String(x.text).replace(/\s+/g,' ').slice(0,140); b.appendChild(q); }
     if(x.k!=='today' && x.k!=='tomorrow') b.appendChild(h('span','nx-bl-ago', cmAgo(x.at)));
