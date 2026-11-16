@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 16** — Expenses: Entered and Submitted on each trip in Ready to Enter marks all its sent expenses entered at once, with Undo.
 - **Nov 16** — Expenses: downloaded receipts are named after their expense (name, date, amount; the person's first name first when it isn't yours) instead of image.jpg.
 - **Nov 13** — Expenses: Jonna and Vanessa see the Done — Send to Vanessa bar on everyone's trips, with Remind and Send for; a reminder shows on the person's trip, phone included.
 - **Nov 13** — Expenses: Done — Send to Vanessa on each trip; Vanessa's Ready to Enter list, oldest first; the owner hears when it's entered; expenses added later reopen the trip; one reminder a week after a trip's last expense.
