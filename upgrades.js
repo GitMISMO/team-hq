@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261116a';
+var BUILD='20261116b';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -9688,7 +9688,9 @@ function dialog(title, build, okLabel, onOk){
   document.addEventListener('keydown', esc); document.body.appendChild(ov); setTimeout(()=>ok.focus(), 0);
 }
 let toastEl=null;
-function toast(msg){ toastEl && toastEl.remove(); const t=toastEl=h('div','ed-toast',msg); document.body.appendChild(t); setTimeout(()=>{ t.remove(); if(toastEl===t) toastEl=null; }, 6000); }
+function toast(msg, undo){ toastEl && toastEl.remove(); const t=toastEl=h('div','ed-toast',msg);
+  if(undo){ const u=h('button','ed-undo','Undo'); u.type='button'; u.onclick=()=>{ t.remove(); if(toastEl===t) toastEl=null; undo(); }; t.appendChild(u); }
+  document.body.appendChild(t); setTimeout(()=>{ t.remove(); if(toastEl===t) toastEl=null; }, undo ? 9000 : 6000); }
 
 function send(T){
   const L=T.state==='reopened' ? T.fresh : T.open, P=problems(L), again=T.state==='reopened', n=L.length;
@@ -9790,16 +9792,30 @@ function readyStrip(){
   old && old.remove(); if(!L.length) return;
   const s=h('div','ed-ready'); s.dataset.sig=sig;
   const hd=h('div','ed-rh'); hd.appendChild(h('b',null,'Ready to Enter')); hd.appendChild(h('small',null, L.length+(L.length===1?' trip':' trips')+' sent by their owners, oldest first')); s.appendChild(hd);
-  L.forEach(T=>{ const r=h('button','ed-row'); r.type='button';
+  L.forEach(T=>{ const r=h('div','ed-row'); r.setAttribute('role','button'); r.tabIndex=0; r.title='Open this trip below';
     r.appendChild(h('span','ed-who', first(T.who)));
     const t=h('span','ed-trip', T.trip); if(T.state==='reopened') t.appendChild(h('small',null, ' · '+T.fresh.length+' added since')); r.appendChild(t);
     r.appendChild(h('span','ed-n', T.open.length+(T.open.length===1?' expense':' expenses')));
     r.appendChild(h('span','ed-sum money', money(T.sum)));
     r.appendChild(h('span','ed-when', 'sent '+fmt(T.when)));
     const nt=(S.nudges||[]).filter(z=>z.kind==='exp-ready' && z.who===T.who && z.trip===T.trip && z.note).sort((a,b)=>b.at-a.at)[0];
+    const n=T.sent.length, b=h('button','btn sm ed-ent','Entered and Submitted'); b.type='button';
+    b.title=T.state==='reopened' ? 'Marks the '+n+' sent expenses entered in DataBasics; the '+T.fresh.length+' added since stay open' : 'Marks all '+n+' expenses entered in DataBasics';
+    b.onclick=e=>{ e.stopPropagation(); entered(T, b); }; r.appendChild(b);
     if(nt) r.appendChild(h('span','ed-q','“'+nt.note+'”'));
-    r.onclick=()=>jump(T); s.appendChild(r); });
+    r.onclick=()=>jump(T); r.onkeydown=e=>{ if((e.key==='Enter'||e.key===' ') && e.target===r){ e.preventDefault(); jump(T); } }; s.appendChild(r); });
   firstBox.parentNode.insertBefore(s, firstBox);
+}
+/* Vanessa: every sent expense on a trip marked entered in one tap, with Undo */
+async function entered(T, b){
+  const L=T.sent.slice(); if(!L.length) return;
+  b.disabled=true; b.textContent='Saving…';
+  try{ await Promise.all(L.map(x=>putExp(Object.assign({}, api().expOf(x.id)||x, {submitted:1})))); }
+  catch(e){ console.error(e); b.disabled=false; b.textContent='Entered and Submitted'; toast('That didn’t save. Try again in a moment.'); return; }
+  paint(true);
+  toast(first(T.who)+'’s '+T.trip+': '+L.length+(L.length===1?' expense':' expenses')+' marked entered.', async ()=>{
+    try{ await Promise.all(L.map(x=>putExp(Object.assign({}, api().expOf(x.id)||x, {submitted:0})))); paint(true); toast('Put back.'); }
+    catch(e){ toast('That didn’t undo. Untick them in the trip below.'); } });
 }
 function jump(T){
   const boxes=[...root.querySelectorAll('.trip')].filter(b=>{ const tn=b.querySelector(':scope > .triph .tn'); return tn && tn.firstChild && tn.firstChild.nodeValue.trim()===T.trip && whoFor(b)===T.who; });
@@ -9841,10 +9857,11 @@ const css=h('style'); css.id='ed-style'; css.textContent=
   '.tripdone .btn{border-radius:6px;white-space:nowrap}.tripdone .ed-go{min-height:36px}'+
   '.ed-ready{border:1px solid var(--line,#dfe6ee);border-left:4px solid #1d6b3a;border-radius:6px;background:var(--surface,#fff);margin:0 0 14px;overflow:hidden}'+
   '.ed-rh{display:flex;align-items:baseline;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line,#dfe6ee)}.ed-rh b{font-size:15px;color:var(--ink,#0d314c)}.ed-rh small{color:var(--ink-3,#5b6b7a);font-size:12.5px}'+
-  '.ed-row{display:grid;grid-template-columns:90px minmax(0,1fr) auto auto auto;gap:4px 14px;align-items:center;width:100%;text-align:left;font:inherit;font-size:13.5px;padding:9px 14px;border:0;border-top:1px solid var(--line,#eef2f6);background:none;color:var(--ink,#0d314c);cursor:pointer}'+
-  '.ed-row:first-of-type{border-top:0}.ed-row:hover{background:var(--surface-2,#f5f8fb)}.ed-who{font-weight:700}.ed-trip{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ed-trip small{color:#a15c00;font-weight:600}'+
+  '.ed-row{display:grid;grid-template-columns:90px minmax(0,1fr) auto auto auto auto;gap:4px 14px;align-items:center;width:100%;text-align:left;font:inherit;font-size:13.5px;padding:9px 14px;border:0;border-top:1px solid var(--line,#eef2f6);background:none;color:var(--ink,#0d314c);cursor:pointer}'+
+  '.ed-rh + .ed-row{border-top:0}.ed-row:hover{background:var(--surface-2,#f5f8fb)}.ed-who{font-weight:700}.ed-trip{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ed-trip small{color:#a15c00;font-weight:600}'+
+  '.ed-ent{border-radius:6px;white-space:nowrap}.ed-undo{margin-left:12px;border:1px solid rgba(255,255,255,.4);background:transparent;color:var(--sky,#74bfeb);font:inherit;font-weight:700;padding:3px 10px;border-radius:4px;cursor:pointer}'+
   '.ed-n,.ed-when{color:var(--ink-3,#5b6b7a);font-size:12.5px;white-space:nowrap}.ed-sum{font-weight:700;white-space:nowrap}.ed-q{grid-column:2/-1;color:var(--ink-2,#3b4a58);font-size:12.5px;font-style:italic}'+
-  '@media (max-width:620px){.ed-row{grid-template-columns:minmax(0,1fr) auto}.ed-who{grid-column:1}.ed-trip{grid-column:1/-1;white-space:normal}.ed-n,.ed-when{grid-column:auto}.ed-q{grid-column:1/-1}}'+
+  '@media (max-width:620px){.ed-row{grid-template-columns:minmax(0,1fr) auto}.ed-who{grid-column:1}.ed-trip{grid-column:1/-1;white-space:normal}.ed-n,.ed-when{grid-column:auto}.ed-ent{grid-column:1/-1;justify-self:start}.ed-q{grid-column:1/-1}}'+
   '.ed-ov{position:fixed;inset:0;z-index:400;background:rgba(6,32,47,.45);display:flex;align-items:center;justify-content:center;padding:16px}'+
   '.ed-dlg{background:var(--surface,#fff);color:var(--ink,#0d314c);border-radius:8px;max-width:480px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 20px 50px rgba(6,32,47,.35)}'+
   '.ed-dlg h2{font-size:18px;margin:0;padding:16px 18px 6px}.ed-b{padding:0 18px 6px;font-size:14px;line-height:1.45}.ed-b p{margin:6px 0 10px}'+
@@ -9855,7 +9872,7 @@ const css=h('style'); css.id='ed-style'; css.textContent=
 document.head.appendChild(css);
 paint(true);
 
-window.__expDone={ version:'1.1', tripOf, allTrips, problems, sweep, paint,
+window.__expDone={ version:'1.2', tripOf, allTrips, problems, sweep, paint,
   destroy(){ mo.disconnect(); clearInterval(timer); css.remove(); root.querySelectorAll('.tripdone,.ed-ready').forEach(e=>e.remove()); } };
 })();
 
@@ -9899,6 +9916,7 @@ const NEW=[
 <li><b>Not done after all?</b> <b>Take It Back</b> returns the trip to you.</li>
 <li><b>Forgot?</b> A week after a trip's last expense, if it hasn't been sent, you get one reminder.</li>
 <li><b>Jonna and Vanessa</b> see the same bar on everyone's trips, with <b>Remind</b> (the person sees it on the trip and in their bell) and <b>Send for</b> them.</li>
+<li><b>Vanessa:</b> each trip under <b>Ready to Enter</b> has <b>Entered and Submitted</b>, which ticks every sent expense on it at once (with Undo).</li>
 <li><b>Mileage:</b> pick Mileage as the type and fill in <b>Miles Driven</b>. The amount is worked out at the IRS rate for the date, the miles go in the notes, and no receipt is needed.</li>
 <li><b>Emailed receipts:</b> forward a receipt to expense@mismo.org. A receipt that is the email itself (Uber, airlines) is kept as a PDF and counts as the receipt.</li>
 </ul>`},
