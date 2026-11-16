@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261113d';
+var BUILD='20261116a';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -1609,6 +1609,38 @@ window.__skin={ version:'1.0', appExp, tidy, undoTidy,
   }
   const scan=()=>root.querySelectorAll('.tripname').forEach(enhance);
   new MutationObserver(scan).observe(root, {childList:true, subtree:true}); scan();
+})();
+
+/* ---------- Expenses: receipts download named after the expense (November 16, 2026) ----------
+   Download the Receipts (and Download the Receipt in an expense) saved files under the name the phone gave the
+   photo ("image.jpg"), so a folder of them couldn't be told apart. Every receipt file Team HQ fetches is
+   remembered by its blob; when that blob is saved as a download, it is named after its expense instead:
+   "Zinburger - 2026-11-11 - $45.43.jpg", with the person's first name in front when it isn't your own. */
+(function(){
+  if(!window.claude || !window.__relayFile || window.__rcptNames) return;
+  const S=window.__S; const ids=new WeakMap(); const used={};
+  const rf=window.__relayFile;
+  window.__relayFile=function(id){ return Promise.resolve(rf.apply(this, arguments)).then(b=>{ try{ if(b && typeof b==='object') ids.set(b, id); }catch(e){} return b; }); };
+  const clean=s=>String(s||'').replace(/^\s*(\[[^\]]*\]\s*)+/,'').replace(/^\s*(fwd?|fw|re)\s*:\s*/i,'').replace(/[\\/:*?"<>|\u0000-\u001f]+/g,' ').replace(/\s+/g,' ').trim();
+  const extOf=(e, name)=>{ const m=/\.([A-Za-z0-9]{2,5})$/.exec(String(e.rcptName||name||'')); if(m) return '.'+m[1].toLowerCase();
+    const t=String(e.rcptType||''); return /pdf/.test(t)?'.pdf':/png/.test(t)?'.png':/heic/.test(t)?'.heic':/webp/.test(t)?'.webp':'.jpg'; };
+  function nameFor(e, orig){
+    const p=(S.people||[]).find(z=>z.id===e.who), who=e.who && e.who!==S.me && p ? String(p.name||'').split(' ')[0] : '';
+    const amt=Number(e.amt||e.rcptAmt)||0;
+    const parts=[who, clean(e.name)||clean(e.cat)||'Receipt', e.date||'', amt ? '$'+amt.toFixed(2) : ''].filter(Boolean);
+    let base=parts.join(' - ').slice(0,120).trim(), ext=extOf(e, orig), n=base+ext;
+    /* two receipts in one download that would share a name */
+    const now=Date.now(); Object.keys(used).forEach(k=>{ if(now-used[k]>60000) delete used[k]; });
+    let i=2; while(used[n.toLowerCase()]) n=base+' ('+(i++)+')'+ext;
+    used[n.toLowerCase()]=now; return n;
+  }
+  const use=window.claude.use;
+  window.claude.use=function(cap){ const r=use.apply(this, arguments); if(cap!=='downloads') return r;
+    return Promise.resolve(r).then(dl=>{ if(!dl || !dl.save || dl.__named) return dl;
+      return Object.assign(Object.create(dl), {__named:true, save(o){ try{ const id=o && o.data ? ids.get(o.data) : null;
+        const e=id && Array.isArray(S.expenses) ? S.expenses.find(x=>x.asset===id) : null;
+        if(e) o=Object.assign({}, o, {filename:nameFor(e, o.filename)}); }catch(err){} return dl.save(o); }}); }); };
+  window.__rcptNames={version:'1.0', nameFor};
 })();
 
 });
