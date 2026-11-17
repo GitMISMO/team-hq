@@ -178,7 +178,7 @@ function readyStrip(){
     const t=h('span','ed-trip', T.trip); if(T.state==='reopened') t.appendChild(h('small',null, ' · '+T.fresh.length+' added since')); r.appendChild(t);
     r.appendChild(h('span','ed-n', T.open.length+(T.open.length===1?' expense':' expenses')));
     r.appendChild(h('span','ed-sum money', money(T.sum)));
-    r.appendChild(h('span','ed-when', 'sent '+fmt(T.when)));
+    r.appendChild(h('span','ed-when', (selfFin(T.who)?'finalized ':'sent ')+fmt(T.when)));
     const nt=(S.nudges||[]).filter(z=>z.kind==='exp-ready' && z.who===T.who && z.trip===T.trip && z.note).sort((a,b)=>b.at-a.at)[0];
     const n=T.sent.length, b=h('button','btn sm ed-ent','Entered and Submitted'); b.type='button';
     b.title=T.state==='reopened' ? 'Marks the '+n+' sent expenses entered in DataBasics; the '+T.fresh.length+' added since stay open' : 'Marks all '+n+' expenses entered in DataBasics';
