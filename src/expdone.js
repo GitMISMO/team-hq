@@ -5,7 +5,7 @@
    are ready at the top, oldest first. When every expense in the trip is ticked "Entered and submitted", her nudge
    closes and the owner is told. An expense added after the trip was sent reopens it (Vanessa is told one more came
    in), and a trip whose last expense is a week old and still not sent gets one reminder for its owner.
-   Who enters expenses: PROC. Nudges have fixed ids where they must only go once, so two open copies of Team HQ
+   Who enters expenses: PROC (Vanessa), except Jonna, who enters her own (Finalize) and Jonathan's (17 Nov 2026). Nudges have fixed ids where they must only go once, so two open copies of Team HQ
    never send the same one twice. */
 (function(){
 'use strict';
@@ -17,7 +17,6 @@ const api=()=>window.__expApi;
 const me=()=>S.me||'';
 const person=id=>(S.people||[]).find(p=>p.id===id)||null;
 const first=id=>{ const p=person(id); return p ? String(p.name||'').split(' ')[0] : 'Someone'; };
-const procName=()=>first(PROC);
 const slug=t=>String(t||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'trip';
 const money=n=>'$'+(Number(n)||0).toLocaleString('en-US',{minimumFractionDigits:2, maximumFractionDigits:2});
 const day=v=>{ const t=Date.parse(String(v||'').slice(0,10)+'T12:00:00'); return isNaN(t)?null:t; };
@@ -62,48 +61,60 @@ function toast(msg, undo){ toastEl && toastEl.remove(); const t=toastEl=h('div',
   if(undo){ const u=h('button','ed-undo','Undo'); u.type='button'; u.onclick=()=>{ t.remove(); if(toastEl===t) toastEl=null; undo(); }; t.appendChild(u); }
   document.body.appendChild(t); setTimeout(()=>{ t.remove(); if(toastEl===t) toastEl=null; }, undo ? 9000 : 6000); }
 
+/* who enters whose: Jonna enters her own and Jonathan's; Vanessa everyone else's (and her own) */
+const ROUTE={jonathan:'jonna', jonna:'jonna'}, SELF_FIN={jonna:1};
+const procOf=who=>ROUTE[who]||PROC;
+const pn=who=>first(procOf(who));
+const selfFin=who=>!!SELF_FIN[who];                 /* enters her own: "Finalize" instead of sending */
+const goLabel=who=>selfFin(who) ? 'Finalize' : 'Done — Send to '+pn(who);
+
 function send(T){
   const L=T.state==='reopened' ? T.fresh : T.open, P=problems(L), again=T.state==='reopened', n=L.length;
-  const other=T.who!==me(), your=other ? first(T.who)+'’s' : 'your';
-  const title=again ? 'Send the New '+(n===1?'One':'Ones')+' to '+procName() : other ? 'Send '+first(T.who)+'’s '+T.trip+'?' : 'Done With '+T.trip+'?';
+  const other=T.who!==me(), your=other ? first(T.who)+'’s' : 'your', fin=selfFin(T.who), P0=procOf(T.who), toProc=me()===P0;
+  const title=fin ? (again ? 'Finalize the New '+(n===1?'One':'Ones')+'?' : 'Finalize '+T.trip+'?')
+    : again ? 'Send the New '+(n===1?'One':'Ones')+' to '+pn(T.who) : other ? 'Send '+first(T.who)+'’s '+T.trip+'?' : 'Done With '+T.trip+'?';
   dialog(title, b=>{
-    b.appendChild(h('p',null, again
-      ? n+(n===1?' expense was':' expenses were')+' added after '+(other?'this trip was':'you sent this trip')+' sent. '+(me()===PROC?'They will be marked ready to enter.':procName()+' will be told '+(n===1?'it is':'they are')+' ready to enter.')
-      : (me()===PROC ? first(T.who)+'’s '+T.trip+' expenses will be marked ready to enter: ' : procName()+' will be told '+your+' '+T.trip+' expenses are ready to enter: ')+n+(n===1?' expense, ':' expenses, ')+money(T.sum)+'.'+(other ? ' '+first(T.who)+' sees it as sent by you.' : ' If more come in later, you can send those too.')));
+    b.appendChild(h('p',null, fin
+      ? (again ? n+(n===1?' expense was':' expenses were')+' added after you finalized this trip. They’ll be added to it, ready for you to submit in DataBasics.'
+               : 'This marks your '+T.trip+' expenses as finalized, ready for you to submit in DataBasics: '+n+(n===1?' expense, ':' expenses, ')+money(T.sum)+'. If more come in later, you can finalize those too.')
+      : again
+      ? n+(n===1?' expense was':' expenses were')+' added after '+(other?'this trip was':'you sent this trip')+' sent. '+(toProc?'They will be marked ready to enter.':pn(T.who)+' will be told '+(n===1?'it is':'they are')+' ready to enter.')
+      : (toProc ? first(T.who)+'’s '+T.trip+' expenses will be marked ready to enter: ' : pn(T.who)+' will be told '+your+' '+T.trip+' expenses are ready to enter: ')+n+(n===1?' expense, ':' expenses, ')+money(T.sum)+'.'+(other ? ' '+first(T.who)+' sees it as sent by you.' : ' If more come in later, you can send those too.')));
     if(P.length){ const w=h('div','ed-warn'); w.appendChild(h('b',null, P.length===1 ? 'One still needs something:' : P.length+' still need something:'));
       const ul=h('ul'); P.slice(0,8).forEach(p=>ul.appendChild(h('li',null,p))); w.appendChild(ul);
-      w.appendChild(h('small',null,'Cancel to fix '+(P.length===1?'it':'them')+' first, or send anyway and say why below.')); b.appendChild(w); }
-    const lab=h('label','ed-note'); lab.appendChild(h('span',null,'Anything '+procName()+' should know? (Optional)'));
-    const ta=h('textarea'); ta.rows=2; ta.id='ed-note'; lab.appendChild(ta); b.appendChild(lab);
-  }, again ? 'Send to '+procName() : 'Send to '+procName(), async b=>{
+      w.appendChild(h('small',null,'Cancel to fix '+(P.length===1?'it':'them')+' first, or '+(fin?'finalize anyway':'send anyway and say why below')+'.')); b.appendChild(w); }
+    if(!fin && !toProc){ const lab=h('label','ed-note'); lab.appendChild(h('span',null,'Anything '+pn(T.who)+' should know? (Optional)'));
+      const ta=h('textarea'); ta.rows=2; ta.id='ed-note'; lab.appendChild(ta); b.appendChild(lab); }
+  }, fin ? 'Finalize' : 'Send to '+pn(T.who), async b=>{
     const note=String((b.querySelector('#ed-note')||{}).value||'').trim().slice(0,400), at=Date.now();
     await Promise.all(L.map(x=>putExp(Object.assign({}, api().expOf(x.id)||x, {done:at, doneBy:me()}))));
     (S.nudges||[]).filter(z=>/^exp-remind/.test(z.kind||'') && !z.done && z.who===T.who && z.trip===T.trip).forEach(z=>putN(Object.assign({}, z, {done:1})));
-    if(T.who!==PROC && me()!==PROC){
+    if(!fin && !toProc){
       (S.nudges||[]).filter(z=>z.kind==='exp-ready' && !z.done && z.who===T.who && z.trip===T.trip).forEach(z=>putN(Object.assign({}, z, {done:1})));
       const tot=tripOf(T.who, T.trip);
       const m=again ? first(T.who)+' added '+n+' more to '+T.trip+': ready to enter ('+tot.open.length+' in all, '+money(tot.sum)+')'
                     : first(T.who)+'’s '+T.trip+' expenses are ready to enter ('+n+', '+money(T.sum)+')';
-      await putN({id:'expready-'+T.who+'-'+slug(T.trip)+'-'+at.toString(36), to:PROC, by:T.who, k:'Expenses', kind:'exp-ready', who:T.who, trip:T.trip,
+      await putN({id:'expready-'+T.who+'-'+slug(T.trip)+'-'+at.toString(36), to:P0, by:T.who, k:'Expenses', kind:'exp-ready', who:T.who, trip:T.trip,
         m:m+(other ? ' (sent by '+first(me())+')' : '')+(note ? ' — “'+note+'”' : ''), note, go:'expenses', at});
     }
-    toast(T.who===PROC || me()===PROC ? 'Marked ready to enter.' : other ? 'Sent to '+procName()+' for '+first(T.who)+'.' : procName()+' has it. You’ll see Entered on this trip once it’s in DataBasics.');
+    toast(fin ? 'Finalized. It’s at the top of Expenses under Ready to Enter.' : toProc ? 'Marked ready to enter.' : other ? 'Sent to '+pn(T.who)+' for '+first(T.who)+'.' : pn(T.who)+' has it. You’ll see Entered on this trip once it’s in DataBasics.');
     paint(true);
   });
 }
 function remind(T){
   const at=Date.now();
   return putN({id:'expnudge-'+T.who+'-'+slug(T.trip)+'-'+at.toString(36), to:T.who, by:me(), k:'Expenses', kind:'exp-remind-by', who:T.who, trip:T.trip,
-    m:first(me())+' asked: when your '+T.trip+' expenses are all in, tap Done — Send to '+procName()+' on the trip in Expenses.', go:'expenses', at})
+    m:first(me())+' asked: when your '+T.trip+' expenses are all in, tap '+goLabel(T.who)+' on the trip in Expenses.', go:'expenses', at})
     .then(()=>{ toast(first(T.who)+' will see it on the trip and in the bell.'); paint(true); }, ()=>toast('That didn’t send. Try again in a moment.'));
 }
 const asked=T=>(S.nudges||[]).filter(z=>z.kind==='exp-remind-by' && !z.done && z.who===T.who && z.trip===T.trip).sort((a,b)=>b.at-a.at)[0]||null;
 function takeBack(T){
-  dialog('Take '+T.trip+' Back?', b=>{ b.appendChild(h('p',null,'This trip goes back to you to keep adding to, and '+procName()+'’s reminder to enter it closes. Send it again when it’s ready.')); },
+  const fin=selfFin(T.who);
+  dialog('Take '+T.trip+' Back?', b=>{ b.appendChild(h('p',null, fin ? 'This trip goes back to being worked on and leaves Ready to Enter. Finalize it again when it’s ready.' : 'This trip goes back to you to keep adding to, and '+pn(T.who)+'’s reminder to enter it closes. Send it again when it’s ready.')); },
     'Take It Back', async ()=>{
       await Promise.all(T.sent.map(x=>{ return putExp(Object.assign({}, api().expOf(x.id)||x, {done:0, doneBy:''})); }));
       (S.nudges||[]).filter(z=>z.kind==='exp-ready' && !z.done && z.who===T.who && z.trip===T.trip).forEach(z=>putN(Object.assign({}, z, {done:1})));
-      toast('Taken back. Send it again when it’s ready.'); paint(true); });
+      toast('Taken back. '+(fin?'Finalize':'Send')+' it again when it’s ready.'); paint(true); });
 }
 
 /* ---------- on the page ---------- */
@@ -121,47 +132,47 @@ function decorate(box){
   if(bar && bar.dataset.sig===sig) return;
   if(bar) bar.remove();
   if(T.state==='entered' || T.state==='none') return;
-  const mine=who===me(), proc=who===PROC;
+  const mine=who===me(), fin=selfFin(who), go=goLabel(who);
   if(!mine && T.state==='adding' && !seesAll()) return;
-  if(proc) return;                               /* Vanessa enters her own */
+  if(who===procOf(who) && !fin) return;          /* Vanessa enters her own */
   bar=h('div','tripdone ed-'+T.state); bar.dataset.sig=sig;
   const txt=h('span','ed-t');
   if(T.state==='adding'){
-    if(mine){ if(ask){ txt.appendChild(h('b',null, first(ask.by)+' asked you to send this when it’s all in. ')); txt.appendChild(document.createTextNode('Tap the button once every expense is here.')); }
-      else txt.textContent='When every expense for this trip is in, send it to '+procName()+' to enter.';
-      const b=h('button','btn sm ed-go','Done — Send to '+procName()); b.type='button'; b.onclick=e=>{ e.stopPropagation(); send(tripOf(who, trip)); }; bar.appendChild(txt); bar.appendChild(b); }
+    if(mine){ if(ask){ txt.appendChild(h('b',null, first(ask.by)+' asked you to '+(fin?'finalize':'send')+' this when it’s all in. ')); txt.appendChild(document.createTextNode('Tap the button once every expense is here.')); }
+      else txt.textContent=fin ? 'When every expense for this trip is in, finalize it; it then waits for you under Ready to Enter.' : 'When every expense for this trip is in, send it to '+pn(who)+' to enter.';
+      const b=h('button','btn sm ed-go',go); b.type='button'; b.onclick=e=>{ e.stopPropagation(); send(tripOf(who, trip)); }; bar.appendChild(txt); bar.appendChild(b); }
     else { txt.appendChild(h('b',null, first(who)+' is still adding.'));
-      txt.appendChild(document.createTextNode(' '+first(who)+' sees a Done — Send to '+procName()+' button right here'+(ask ? '; '+(ask.by===me()?'you':first(ask.by))+' reminded them '+fmt(ask.at)+'.' : '.')));
+      txt.appendChild(document.createTextNode(' '+first(who)+' sees a '+go+' button right here'+(ask ? '; '+(ask.by===me()?'you':first(ask.by))+' reminded them '+fmt(ask.at)+'.' : '.')));
       bar.appendChild(txt);
       const r=h('button','btn ghost sm',ask ? 'Remind Again' : 'Remind '+first(who)); r.type='button'; r.onclick=e=>{ e.stopPropagation(); r.disabled=true; remind(tripOf(who, trip)); }; bar.appendChild(r);
-      const b=h('button','btn ghost sm','Send for '+first(who)); b.type='button'; b.onclick=e=>{ e.stopPropagation(); send(tripOf(who, trip)); }; bar.appendChild(b); }
+      const b=h('button','btn ghost sm',(fin?'Finalize':'Send')+' for '+first(who)); b.type='button'; b.onclick=e=>{ e.stopPropagation(); send(tripOf(who, trip)); }; bar.appendChild(b); }
   } else if(T.state==='sent'){
-    txt.appendChild(h('b',null, mine ? 'With '+procName() : 'Ready to Enter'));
-    txt.appendChild(document.createTextNode(' · sent '+fmt(T.when)+(mine ? '' : ' by '+first(who))));
+    txt.appendChild(h('b',null, fin ? 'Finalized' : mine ? 'With '+pn(who) : 'Ready to Enter'));
+    txt.appendChild(document.createTextNode((fin?' · ':' · sent ')+fmt(T.when)+(mine || fin ? '' : ' by '+first(who))+(fin ? ', waiting under Ready to Enter' : '')));
     bar.appendChild(txt);
     if(mine){ const b=h('button','btn ghost sm','Take It Back'); b.type='button'; b.onclick=e=>{ e.stopPropagation(); takeBack(tripOf(who, trip)); }; bar.appendChild(b); }
   } else if(T.state==='reopened'){
     const n=T.fresh.length;
-    txt.appendChild(h('b',null, n+(n===1?' expense':' expenses')+' added since '+(mine?'you sent it':'it was sent')));
+    txt.appendChild(h('b',null, n+(n===1?' expense':' expenses')+' added since '+(mine?'you '+(fin?'finalized':'sent')+' it':'it was '+(fin?'finalized':'sent'))));
     txt.appendChild(document.createTextNode(mine ? '' : ' · '+T.sent.length+' ready to enter'));
     bar.appendChild(txt);
-    if(mine){ const b=h('button','btn sm ed-go','Send the New '+(n===1?'One':'Ones')+' to '+procName()); b.type='button'; b.onclick=e=>{ e.stopPropagation(); send(tripOf(who, trip)); }; bar.appendChild(b); }
+    if(mine){ const b=h('button','btn sm ed-go',fin ? 'Finalize the New '+(n===1?'One':'Ones') : 'Send the New '+(n===1?'One':'Ones')+' to '+pn(who)); b.type='button'; b.onclick=e=>{ e.stopPropagation(); send(tripOf(who, trip)); }; bar.appendChild(b); }
     else if(seesAll()){ const r=h('button','btn ghost sm','Remind '+first(who)); r.type='button'; r.onclick=e=>{ e.stopPropagation(); r.disabled=true; remind(tripOf(who, trip)); }; bar.appendChild(r);
-      const b=h('button','btn ghost sm','Send for '+first(who)); b.type='button'; b.onclick=e=>{ e.stopPropagation(); send(tripOf(who, trip)); }; bar.appendChild(b); }
+      const b=h('button','btn ghost sm',(fin?'Finalize':'Send')+' for '+first(who)); b.type='button'; b.onclick=e=>{ e.stopPropagation(); send(tripOf(who, trip)); }; bar.appendChild(b); }
   }
   head.after(bar);
 }
-/* Vanessa's list of trips ready to enter, oldest first, at the top of Expenses */
+/* the trips waiting for whoever enters them (Vanessa, or Jonna for her own and Jonathan's), oldest first, at the top of Expenses */
 function readyStrip(){
   const old=root.querySelector('.ed-ready');
   if(!seesAll()){ old && old.remove(); return; }
-  const L=allTrips().filter(T=>T.who!==PROC && (T.state==='sent' || T.state==='reopened')).sort((a,b)=>a.when-b.when);
+  const L=allTrips().filter(T=>procOf(T.who)===me() && (T.who!==me() || selfFin(T.who)) && (T.state==='sent' || T.state==='reopened')).sort((a,b)=>a.when-b.when);
   const firstBox=root.querySelector('.exppers, .trip'); if(!firstBox){ old && old.remove(); return; }
   const sig=L.map(T=>T.who+T.trip+T.state+T.open.length+T.when).join('|');
   if(old && old.dataset.sig===sig && old.nextElementSibling===firstBox) return;
   old && old.remove(); if(!L.length) return;
   const s=h('div','ed-ready'); s.dataset.sig=sig;
-  const hd=h('div','ed-rh'); hd.appendChild(h('b',null,'Ready to Enter')); hd.appendChild(h('small',null, L.length+(L.length===1?' trip':' trips')+' sent by their owners, oldest first')); s.appendChild(hd);
+  const hd=h('div','ed-rh'); hd.appendChild(h('b',null,'Ready to Enter')); hd.appendChild(h('small',null, L.length+(L.length===1?' trip':' trips')+' sent or finalized, oldest first')); s.appendChild(hd);
   L.forEach(T=>{ const r=h('div','ed-row'); r.setAttribute('role','button'); r.tabIndex=0; r.title='Open this trip below';
     r.appendChild(h('span','ed-who', first(T.who)));
     const t=h('span','ed-trip', T.trip); if(T.state==='reopened') t.appendChild(h('small',null, ' · '+T.fresh.length+' added since')); r.appendChild(t);
@@ -211,13 +222,13 @@ function sweep(){
     putN(Object.assign({}, n, {done:1}));
     const id='expin-'+n.who+'-'+slug(n.trip);
     const prev=N.find(z=>z.id===id);
-    if(!prev || prev.done) putN({id, to:n.who, by:PROC, k:'Expenses', kind:'exp-entered', who:n.who, trip:n.trip, m:'Your '+n.trip+' expenses are entered in DataBasics ('+money(T.E.reduce((a,x)=>a+(Number(x.amt)||0),0))+').', go:'expenses', at:Date.now()}); });
+    if(n.who!==procOf(n.who) && (!prev || prev.done)) putN({id, to:n.who, by:procOf(n.who), k:'Expenses', kind:'exp-entered', who:n.who, trip:n.trip, m:'Your '+n.trip+' expenses are entered in DataBasics ('+money(T.E.reduce((a,x)=>a+(Number(x.amt)||0),0))+').', go:'expenses', at:Date.now()}); });
   /* my own trips: one reminder once the last expense is a week old and the trip still hasn't been sent */
   const now=Date.now();
-  allTrips().forEach(T=>{ if(T.who!==me() || T.who===PROC || T.state!=='adding' || !T.last) return;
+  allTrips().forEach(T=>{ if(T.who!==me() || (T.who===procOf(T.who) && !selfFin(T.who)) || T.state!=='adding' || !T.last) return;
     if(now-T.last<7*DAY || now-T.last>60*DAY) return;
     const id='expremind-'+T.who+'-'+slug(T.trip); if(have.has(id)) return; have.add(id);
-    putN({id, to:T.who, k:'Expenses', kind:'exp-remind', who:T.who, trip:T.trip, m:'Are your '+T.trip+' expenses all in? Tap Done — Send to '+procName()+' on the trip in Expenses.', go:'expenses', at:now}); });
+    putN({id, to:T.who, k:'Expenses', kind:'exp-remind', who:T.who, trip:T.trip, m:'Are your '+T.trip+' expenses all in? Tap '+goLabel(T.who)+' on the trip in Expenses.', go:'expenses', at:now}); });
 }
 const timer=setInterval(()=>{ sweep(); paint(false); }, 60000); setTimeout(sweep, 8000);
 
@@ -242,6 +253,6 @@ const css=h('style'); css.id='ed-style'; css.textContent=
 document.head.appendChild(css);
 paint(true);
 
-window.__expDone={ version:'1.2', tripOf, allTrips, problems, sweep, paint,
+window.__expDone={ version:'1.3', tripOf, allTrips, problems, sweep, paint,
   destroy(){ mo.disconnect(); clearInterval(timer); css.remove(); root.querySelectorAll('.tripdone,.ed-ready').forEach(e=>e.remove()); } };
 })();

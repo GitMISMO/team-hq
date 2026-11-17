@@ -31,6 +31,7 @@ const NEW=[
  {after:'expenses', id:'expdone', t:'Sending a Trip to Vanessa, Mileage and Emailed Receipts', d:'Tell Vanessa a trip is ready to enter, claim mileage, and email in receipts.', h:`
 <p>You don't enter your own expenses in DataBasics; Vanessa does. When every expense for a trip is in, tap <b>Done — Send to Vanessa</b> under the trip's name. If anything still needs a receipt or a detail, it says so first; fix it, or send anyway and add a note. Vanessa sees it in her bell and at the top of her Expenses under <b>Ready to Enter</b>. The trip shows <b>With Vanessa</b>, and <b>All Submitted</b> once she has entered it (you get a note in your bell).</p>
 <ul>
+<li><b>Who enters what:</b> Vanessa enters everyone's, except Jonathan's (his button says <b>Done — Send to Jonna</b>) and Jonna's own (hers says <b>Finalize</b>; finalized trips wait under her Ready to Enter).</li>
 <li><b>Something came in later?</b> An expense added after you sent the trip shows <b>added since you sent it</b>; tap <b>Send the New One to Vanessa</b>.</li>
 <li><b>Not done after all?</b> <b>Take It Back</b> returns the trip to you.</li>
 <li><b>Forgot?</b> A week after a trip's last expense, if it hasn't been sent, you get one reminder.</li>
