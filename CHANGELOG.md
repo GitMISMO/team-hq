@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 17** — Connected Systems: fixed an error the map's green "live" rings could throw the moment the page opened (flagged by the Daily Health Check).
 - **Nov 16** — Expenses: Entered and Submitted on each trip in Ready to Enter marks all its sent expenses entered at once, with Undo.
 - **Nov 16** — Expenses: downloaded receipts are named after their expense (name, date, amount; the person's first name first when it isn't yours) instead of image.jpg.
 - **Nov 13** — Expenses: Jonna and Vanessa see the Done — Send to Vanessa bar on everyone's trips, with Remind and Send for; a reminder shows on the person's trip, phone included.
