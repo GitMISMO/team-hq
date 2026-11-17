@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261117c';
+var BUILD='20261117d';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -9674,7 +9674,7 @@ function allTrips(){ const seen={}, out=[];
 function problems(E){ const out=[];
   E.forEach(x=>{ const amt=Number(x.amt)||0, meal=/^Meal Trvl/.test(x.cat||''), what=(x.name||x.cat||'An expense')+(amt?' ('+money(amt)+')':'');
     if(!x.cat || !x.date || !amt) out.push(what+': needs '+[!x.cat&&'a type', !x.date&&'a date', !amt&&'an amount'].filter(Boolean).join(', '));
-    else if(x.cat!=='Mileage' && !x.receipt && !x.asset && amt>15) out.push(what+': no receipt'); });
+    else if(x.cat!=='Mileage' && !x.receipt && !x.asset && amt>=15) out.push(what+': no receipt'); });
   return out; }
 
 /* ---------- sending ---------- */
@@ -10121,7 +10121,7 @@ const NEW=[
 <li><b>Forgot?</b> A week after a trip's last expense, if it hasn't been sent, you get one reminder.</li>
 <li><b>Jonna and Vanessa</b> see the same bar on everyone's trips, with <b>Remind</b> (the person sees it on the trip and in their bell) and <b>Send for</b> them.</li>
 <li><b>Trips:</b> pick the trip from the drop-down in the expense (New Trip… to start one). A snapped or emailed receipt joins your trip that has an expense within 3 days of it. Trips start folded; tap one to open it. Trips already entered fold into <b>Entered in DataBasics</b>.</li>
-<li><b>Meal guidelines</b> (Nov 2026): breakfast $25, lunch $40, dinner $60, snacks $15, and no more than $140 a day for all meals. Anything over $15 needs a receipt.</li>
+<li><b>Meal guidelines</b> (Nov 2026): breakfast $25, lunch $40, dinner $60, snacks $15, and no more than $140 a day for all meals. Anything $15 or more needs a receipt.</li>
 <li><b>Vanessa:</b> each trip under <b>Ready to Enter</b> has <b>Entered and Submitted</b>, which ticks every sent expense on it at once (with Undo).</li>
 <li><b>Mileage:</b> pick Mileage as the type and fill in <b>Miles Driven</b>. The amount is worked out at the IRS rate for the date, the miles go in the notes, and no receipt is needed.</li>
 <li><b>Emailed receipts:</b> forward a receipt to expense@mismo.org. A receipt that is the email itself (Uber, airlines) is kept as a PDF and counts as the receipt.</li>
