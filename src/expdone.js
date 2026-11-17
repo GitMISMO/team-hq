@@ -44,7 +44,7 @@ function allTrips(){ const seen={}, out=[];
 function problems(E){ const out=[];
   E.forEach(x=>{ const amt=Number(x.amt)||0, meal=/^Meal Trvl/.test(x.cat||''), what=(x.name||x.cat||'An expense')+(amt?' ('+money(amt)+')':'');
     if(!x.cat || !x.date || !amt) out.push(what+': needs '+[!x.cat&&'a type', !x.date&&'a date', !amt&&'an amount'].filter(Boolean).join(', '));
-    else if(x.cat!=='Mileage' && !x.receipt && !x.asset && amt>15) out.push(what+': no receipt'); });
+    else if(x.cat!=='Mileage' && !x.receipt && !x.asset && amt>=15) out.push(what+': no receipt'); });
   return out; }
 
 /* ---------- sending ---------- */
