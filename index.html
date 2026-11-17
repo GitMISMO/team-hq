@@ -8980,8 +8980,8 @@ const DB_CATS = ['Airfare','Baggage Fees','Gasoline','Hotel/Lodging','Meal Trvl 
   'Mileage','Parking','Taxi/Uber/Lyft','Tolls','Train'];
 const MEAL_CAP = {'Meal Trvl - Breakfast':25,'Meal Trvl - Lunch':40,'Meal Trvl - Dinner':60,'Meal Trvl - Snack':15};   /* MBA meal guidelines as of November 2026 */
 const DAILY_MEAL_CAP = 140;
-const RECEIPT_OVER = 15;      /* a receipt is required for anything over $15 (November 2026) */
-const MEAL_RECEIPT_OVER = 15; /* meals need a receipt over $15; without one they cap at $15 */
+const RECEIPT_OVER = 15;      /* a receipt is required for anything $15 or more (November 2026) */
+const MEAL_RECEIPT_OVER = 15; /* meals of $15 or more need a receipt */
 
 function money(n){ const v=Number(n)||0;
   return '$'+v.toLocaleString('en-US',{minimumFractionDigits:2, maximumFractionDigits:2}); }
@@ -8996,14 +8996,14 @@ function checkExp(e){
   if(isMeal(e.cat)){
     const cap=MEAL_CAP[e.cat];
     if(cap && amt>cap) out.push({lvl:'warn', m:'Over the '+e.cat.replace('Meal Trvl - ','').toLowerCase()+' guideline of '+money(cap)+'. Put the business reason in the notes or reimbursement may be delayed.'});
-    if(amt>MEAL_RECEIPT_OVER && !e.receipt) out.push({lvl:'bad', m:'Meals over '+money(MEAL_RECEIPT_OVER)+' need a receipt. Without one this caps at '+money(15)+'.'});
+    if(amt>=MEAL_RECEIPT_OVER && !e.receipt) out.push({lvl:'bad', m:'Meals of '+money(MEAL_RECEIPT_OVER)+' or more need a receipt.'});
     /* the one being entered is not in S.expenses yet, and an edit still holds the
        old amount there — so swap it in rather than counting the stale copy */
     const sameDay = S.expenses.filter(x=> x.id!==e.id && x.who===e.who && x.date===e.date && isMeal(x.cat)).concat([e]);
     const tot = sameDay.reduce((a,x)=>a+(Number(x.amt)||0),0);
     if(tot>DAILY_MEAL_CAP) out.push({lvl:'warn', m:'Meals for this day total '+money(tot)+', over the '+money(DAILY_MEAL_CAP)+' per-person daily cap.'});
-  } else if(amt>RECEIPT_OVER && !e.receipt){
-    out.push({lvl:'bad', m:'Charges over '+money(RECEIPT_OVER)+' need an original paid receipt.'});
+  } else if(amt>=RECEIPT_OVER && !e.receipt){
+    out.push({lvl:'bad', m:'Charges of '+money(RECEIPT_OVER)+' or more need an original paid receipt.'});
   }
   if(e.receipt && e.rcptAmt && Math.abs(Number(e.rcptAmt)-amt) > 0.009)
     out.push({lvl:'warn', m:'The receipt says '+money(e.rcptAmt)+' but the expense is '+money(amt)+'.'});
@@ -12855,7 +12855,7 @@ function vExpenses(root){
 
   /* numbers across the top */
   const tot=list.reduce((a,x)=>a+(Number(x.amt)||0),0);
-  const noR=list.filter(x=>!x.receipt && (Number(x.amt)||0)>RECEIPT_OVER).length;
+  const noR=list.filter(x=>!x.receipt && (Number(x.amt)||0)>=RECEIPT_OVER).length;
   const flags=list.filter(x=>x.cat && worst(x)!=='ok').length;
   const pend=list.filter(x=>!x.submitted).length;
   const need=list.filter(x=>!x.submitted && expMissing(x).length).length;
@@ -12919,7 +12919,7 @@ function vExpenses(root){
   } else byTrips(list, '');
 
   const c=el('div','callout');
-  c.innerHTML='<b>The rules built in here</b> come from MBA’s travel and expense policy, with the meal guidelines as of November 2026: a receipt for anything over '+money(RECEIPT_OVER)+', meal guidelines of '+money(MEAL_CAP['Meal Trvl - Breakfast'])+' breakfast, '+money(MEAL_CAP['Meal Trvl - Lunch'])+' lunch, '+money(MEAL_CAP['Meal Trvl - Dinner'])+' dinner, '+money(MEAL_CAP['Meal Trvl - Snack'])+' snacks, and '+money(DAILY_MEAL_CAP)+' per person per day.';
+  c.innerHTML='<b>The rules built in here</b> come from MBA’s travel and expense policy, with the meal guidelines as of November 2026: a receipt for anything '+money(RECEIPT_OVER)+' or more, meal guidelines of '+money(MEAL_CAP['Meal Trvl - Breakfast'])+' breakfast, '+money(MEAL_CAP['Meal Trvl - Lunch'])+' lunch, '+money(MEAL_CAP['Meal Trvl - Dinner'])+' dinner, '+money(MEAL_CAP['Meal Trvl - Snack'])+' snacks, and '+money(DAILY_MEAL_CAP)+' per person per day.';
   root.appendChild(c);
 }
 
@@ -17657,7 +17657,7 @@ const HELP_SECS = [
 <li>Check it, add anything missing (an expense missing details shows <b>Needs Details</b>) and click <b>Save</b>.</li>
 </ol>
 <ul>
-<li><b>MBA's travel policy</b> is built in: receipts for anything over $15, meal caps, and the rest. Anything outside policy is flagged.</li>
+<li><b>MBA's travel policy</b> is built in: receipts for anything $15 or more, meal caps, and the rest. Anything outside policy is flagged.</li>
 <li><b>After a trip</b> with no expenses claimed, Team HQ reminds you, with <b>Add Them</b> or <b>Already Claimed</b>.</li>
 <li><b>Who sees what:</b> each person sees only their own. Jonna and Vanessa see everyone's and process them in DataBasics.</li>
 </ul>
