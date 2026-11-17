@@ -54,6 +54,7 @@ prompt) lives only in the private `systemsmap` collection, never in this code.
 | `oofdates.js` | Out of Office key dates from Outlook automatic replies |
 | `expinbox.js` | The expense@ inbox: emailed receipts become draft expenses |
 | `mileage.js` | Mileage in the expense editor: miles driven × the IRS rate for the date |
+| `exporg.js` | Expenses: receipts join the person's nearby trip, the trip drop-down, folded trips and the Entered fold |
 | `expdone.js` | Expenses: Done — Send to Vanessa per trip, her Ready to Enter list, entered and reminder notes |
 | `tour.js` | The guided tour and page help |
 | `design.js` | The design layer: readable muted text, focus ring, reduced motion |

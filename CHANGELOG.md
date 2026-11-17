@@ -6,6 +6,8 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 17** — Expenses: a snapped or emailed receipt joins your trip with an expense within 3 days instead of starting a differently named one; the trip box is a drop-down that works on iPhones; trips start folded, entered trips fold into one line per person, and Jonna and Vanessa get a Jump To row and can fold each person.
+- **Nov 17** — Expenses: meal guidelines updated (breakfast $25, lunch $40, dinner $60, snacks $15, $140 a day) and anything over $15 needs a receipt.
 - **Nov 17** — Connected Systems: fixed an error the map's green "live" rings could throw the moment the page opened (flagged by the Daily Health Check).
 - **Nov 16** — Expenses: Entered and Submitted on each trip in Ready to Enter marks all its sent expenses entered at once, with Undo.
 - **Nov 16** — Expenses: downloaded receipts are named after their expense (name, date, amount; the person's first name first when it isn't yours) instead of image.jpg.
