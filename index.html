@@ -8978,9 +8978,9 @@ function editFigure(id, after){
 const DB_CATS = ['Airfare','Baggage Fees','Gasoline','Hotel/Lodging','Meal Trvl - Breakfast',
   'Meal Trvl - Snack','Meal Trvl - Lunch','Meal Trvl - Dinner','Membership Dues','Metro / Bus',
   'Mileage','Parking','Taxi/Uber/Lyft','Tolls','Train'];
-const MEAL_CAP = {'Meal Trvl - Breakfast':20,'Meal Trvl - Lunch':35,'Meal Trvl - Dinner':50,'Meal Trvl - Snack':10};
-const DAILY_MEAL_CAP = 115;
-const RECEIPT_OVER = 25;      /* original paid receipts required over $25 */
+const MEAL_CAP = {'Meal Trvl - Breakfast':25,'Meal Trvl - Lunch':40,'Meal Trvl - Dinner':60,'Meal Trvl - Snack':15};   /* MBA meal guidelines as of November 2026 */
+const DAILY_MEAL_CAP = 140;
+const RECEIPT_OVER = 15;      /* a receipt is required for anything over $15 (November 2026) */
 const MEAL_RECEIPT_OVER = 15; /* meals need a receipt over $15; without one they cap at $15 */
 
 function money(n){ const v=Number(n)||0;
@@ -12919,7 +12919,7 @@ function vExpenses(root){
   } else byTrips(list, '');
 
   const c=el('div','callout');
-  c.innerHTML='<b>The rules built in here</b> come from MBA’s January 2019 travel and expense policy: receipts over '+money(RECEIPT_OVER)+' (meals over '+money(MEAL_RECEIPT_OVER)+'), meal guidelines of '+money(20)+' breakfast, '+money(35)+' lunch, '+money(50)+' dinner, '+money(10)+' snacks, and '+money(DAILY_MEAL_CAP)+' per person per day.';
+  c.innerHTML='<b>The rules built in here</b> come from MBA’s travel and expense policy, with the meal guidelines as of November 2026: a receipt for anything over '+money(RECEIPT_OVER)+', meal guidelines of '+money(MEAL_CAP['Meal Trvl - Breakfast'])+' breakfast, '+money(MEAL_CAP['Meal Trvl - Lunch'])+' lunch, '+money(MEAL_CAP['Meal Trvl - Dinner'])+' dinner, '+money(MEAL_CAP['Meal Trvl - Snack'])+' snacks, and '+money(DAILY_MEAL_CAP)+' per person per day.';
   root.appendChild(c);
 }
 
@@ -17657,7 +17657,7 @@ const HELP_SECS = [
 <li>Check it, add anything missing (an expense missing details shows <b>Needs Details</b>) and click <b>Save</b>.</li>
 </ol>
 <ul>
-<li><b>MBA's travel policy</b> is built in: receipts over $25 (meals over $15), meal caps, and the rest. Anything outside policy is flagged.</li>
+<li><b>MBA's travel policy</b> is built in: receipts for anything over $15, meal caps, and the rest. Anything outside policy is flagged.</li>
 <li><b>After a trip</b> with no expenses claimed, Team HQ reminds you, with <b>Add Them</b> or <b>Already Claimed</b>.</li>
 <li><b>Who sees what:</b> each person sees only their own. Jonna and Vanessa see everyone's and process them in DataBasics.</li>
 </ul>
