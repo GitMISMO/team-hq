@@ -1060,8 +1060,8 @@ function pulses(){ const cv=h('canvas'); cv.setAttribute('aria-hidden','true'); 
           ctx.globalAlpha=.18*a; ctx.beginPath(); ctx.arc(x,y,7,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=.75*a; ctx.beginPath(); ctx.arc(x,y,2.4,0,Math.PI*2); ctx.fill(); });
         ctx.globalAlpha=1; } else P.engFo=null; }
     /* live rings */
-    if(d && P.nodes) d.systems.forEach(s=>{ if(s.zone!=='apps' || stKey(s)!=='live') return; const n=P.nodes[s.id]; if(!n || n.classList.contains('dim')) return; const f=(t%2400)/2400, ease=1-Math.pow(1-f,2);
-      ctx.globalAlpha=.8*(1-f); ctx.strokeStyle='#2fbf71'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(s.x+W/2-11, s.y-H/2+11, 4*(1+1.4*ease), 0, Math.PI*2); ctx.stroke(); });
+    if(d && P.nodes) d.systems.forEach(s=>{ if(s.zone!=='apps' || stKey(s)!=='live') return; const n=P.nodes[s.id]; if(!n || n.classList.contains('dim')) return; const f=(((t%2400)+2400)%2400)/2400, ease=1-Math.pow(1-f,2);   /* t can start just below 0: keep f in 0–1 so the radius never goes negative */
+      ctx.globalAlpha=.8*(1-f); ctx.strokeStyle='#2fbf71'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(s.x+W/2-11, s.y-H/2+11, Math.max(0.5, 4*(1+1.4*ease)), 0, Math.PI*2); ctx.stroke(); });
     /* dots */
     (P.edges||[]).forEach(e=>{ const p=e.p; if(!p) return; if(!p.pts) sample(e); const a=p.pts, n=a.length/2-1; const f=(((t-p.off)%p.dur)+p.dur)%p.dur/p.dur*n, j=Math.min(n-1, Math.floor(f)), r=f-j;
       const x=a[2*j]+(a[2*j+2]-a[2*j])*r, y=a[2*j+1]+(a[2*j+3]-a[2*j+1])*r; const al=p.dim?.1:1;
