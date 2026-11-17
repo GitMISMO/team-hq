@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261117f';
+var BUILD='20261117g';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -9258,7 +9258,7 @@ async function importOne(id, d, who){
         notes: note ? 'Emailed: '+note : 'Emailed receipt', asset:f.path, rcptName:f.name||'receipt', rcptType:f.type||'', at:Date.now(), reading:Date.now(), viaEmail:via};
       e.members=A.members(e);
       const eid=await A.put('expenses', e); made.push(eid);
-      try{ const blob=await A.attBlob(f.path); if(blob && /^image\//.test(blob.type||f.type||'')) await A.readAndSave(eid, blob);
+      try{ const blob=await A.attBlob(f.path); if(blob && /^image\/|pdf/i.test(blob.type||f.type||'') ) await A.readAndSave(eid, blob);   /* photos and PDFs are read the same way (PDFs since Nov 17, 2026) */
         else if(text && A.readText) await A.readText(eid, text);
         else { const x=Object.assign({}, A.expOf(eid)); x.reading=0; await A.put('expenses', x); } }
       catch(err){ try{ const x=Object.assign({}, A.expOf(eid)); x.reading=0; x.readFail=Date.now(); await A.put('expenses', x); }catch(e2){} }
