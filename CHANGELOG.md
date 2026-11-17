@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 17** — Expense inbox: a PDF receipt attached to an email is now read and fills in the expense, like a photo.
 - **Nov 17** — Expenses: Jonathan's trips go to Jonna (Done — Send to Jonna) and Jonna's own say Finalize; Jonna's Ready to Enter lists her finalized trips and Jonathan's, Vanessa's lists everyone else's.
 - **Nov 17** — Expenses: a receipt is needed for anything $15 or more (not just over $15).
 - **Nov 17** — Expenses: a snapped or emailed receipt joins your trip with an expense within 3 days instead of starting a differently named one; the trip box is a drop-down that works on iPhones; trips start folded, entered trips fold into one line per person, and Jonna and Vanessa get a Jump To row and can fold each person.
