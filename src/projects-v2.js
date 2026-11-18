@@ -277,6 +277,14 @@ function statusView(L){ const order={off:0, risk:1, good:2};
   return t; }
 /* ---------- Board ---------- */
 function board(L){ const g=h('div','pv2-grid'); L.forEach(r=>g.appendChild(card(r))); return g; }
+/* every task done: one tap moves the project to Done, so it leaves the Active list (17 Nov 2026) */
+function allDone(r, s){ return (r.status||'Active')==='Active' && s.ts.length>0 && !s.open.length; }
+function markDone(r){
+  const nx=Object.assign({}, r, {status:'Done', doneAt:Date.now(), doneBy:S.me||''});
+  if(window.__put) window.__put('rocks', nx, r); closePanel(); setTimeout(redraw, 60);
+  const t=window.__nxToast; const undo=()=>{ if(window.__put) window.__put('rocks', Object.assign({}, nx, {status:'Active', doneAt:0, doneBy:''}), nx); setTimeout(redraw, 60); };
+  if(t) t(r.name+' moved to Done.', undo);
+}
 function card(r){
   const s=stats(r), hl=health(r,s);
   const c=clickable(h('div','pv2-card'), ()=>openPanel(r.id));
@@ -299,6 +307,7 @@ function card(r){
   } else {
     nb.appendChild(h('span','lbl','Up Next'));
     nb.appendChild(h('span','tt faint', s.ts.length ? 'Everything here is done.' : 'Nothing planned yet — add the first task.'));
+    if(allDone(r, s)){ const b=btn('btn sm pv2-mdone','Mark Project Done', e=>{ e.stopPropagation(); markDone(r); }); b.title='Every task is done. Move this project to Done so it leaves the Active list.'; nb.appendChild(b); }
   }
   c.appendChild(nb);
   const parts=partsOf(r, s.ts);
@@ -428,6 +437,7 @@ function drawPanel(){
   tt.appendChild(m); ph.appendChild(tt);
   const acts=h('div','acts');
   const ad=btn('btn', null, ()=>newTask(r.id,'')); ad.innerHTML=PLUS+'<span>Add a Task</span>'; acts.appendChild(ad);
+  if(allDone(r, s)) acts.appendChild(btn('btn pv2-mdone','Mark Project Done', ()=>markDone(r)));
   acts.appendChild(btn('btn ghost','Edit Project', ()=>window.__editRock && window.__editRock(r)));
   acts.appendChild(btn('btn ghost','Update Status', ()=>statusDialog(r)));
   const x=btn('x pv2-x', null, closePanel); x.setAttribute('aria-label','Close the panel'); x.innerHTML='<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>'; acts.appendChild(x);
@@ -556,6 +566,7 @@ const css=h('style'); css.id='pv2-css'; css.textContent=`
 .pv2-segbar i.d{background:var(--good)}.pv2-segbar i.p{background:var(--c1)}.pv2-segbar i.w{background:var(--warn)}
 .pv2-pl{display:flex;justify-content:space-between;gap:10px;margin-top:6px;font-size:12px;font-weight:600;color:var(--ink-2);white-space:nowrap}
 .pv2-next{display:flex;flex-direction:column;gap:6px;background:var(--surface-2);border:1px solid var(--rule);border-radius:6px;padding:10px 12px;margin-top:auto}
+.pv2-next .pv2-mdone{align-self:flex-start;border-radius:6px;margin-top:2px}
 .pv2-next.go{cursor:pointer}.pv2-next.go:hover{border-color:var(--border-strong);background:var(--sky-wash)}
 .pv2-next .lbl,.pv2-parts .lbl{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
 .pv2-next .tt{font-size:13.5px;font-weight:600;line-height:1.35;color:var(--ink)}
