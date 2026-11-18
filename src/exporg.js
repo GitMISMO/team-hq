@@ -140,7 +140,12 @@ function organize(){
       if(!G.head.dataset.eo){ G.head.dataset.eo='1'; G.head.setAttribute('role','button'); G.head.tabIndex=0; G.head.title='Fold or unfold '+first(who)+'’s trips';
         const t=()=>{ if(foldP.has(who)) foldP.delete(who); else foldP.add(who); organize(); };
         G.head.addEventListener('click', t); G.head.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); t(); } });
-        G.head.insertBefore(h('span','eo-chev'), G.head.firstChild); }
+        G.head.insertBefore(h('span','eo-chev'), G.head.firstChild);
+        /* this person's report and receipts only */
+        const box=h('span','eo-pdl');
+        const b1=h('button','btn ghost sm','Report'); b1.type='button'; b1.title='Download '+first(who)+'’s expenses as the DataBasics report'; b1.onclick=e=>{ e.stopPropagation(); exportFor(who); };
+        const b2=h('button','btn ghost sm','Receipts'); b2.type='button'; b2.title='Download '+first(who)+'’s receipts'; b2.onclick=e=>{ e.stopPropagation(); receiptsFor(who); };
+        box.appendChild(b1); box.appendChild(b2); const amt=G.head.querySelector('.amt'); G.head.insertBefore(box, amt||null); }
       const hid=foldP.has(who); G.head.classList.toggle('eo-folded', hid); G.head.firstChild.textContent=hid?'▸':'▾';
       let n=G.head.nextElementSibling; while(n && !n.classList.contains('exppers') && !n.classList.contains('callout')){ if(n.classList.contains('trip')||n.classList.contains('eo-ent')) n.style.display=hid?'none':''; n=n.nextElementSibling; }
       if(!hid){ const f=G.head.parentNode && [...list.children].find(x=>x.classList.contains('eo-ent') && prevHead(x)===G.head); if(f) f.style.display=''; }
@@ -169,6 +174,62 @@ function jumpBar(list, groups){
 }
 const toSubmit=w=>(S.expenses||[]).filter(x=>x.who===w && !x.submitted).length;
 
+/* ---------- 4. report and receipts by person (18 Nov 2026) ----------
+   Export for DataBasics and Download the Receipts used to take everyone in the list. Now each person's name has
+   its own Report and Receipts, and the two buttons at the top ask whose (one person or everyone) when the list
+   holds more than one person. Same columns as the DataBasics template; receipts are named after the expense. */
+function scopeList(){ const L=S.expenses||[], sc=S.expScope;
+  if(sc==='todo') return L.filter(x=>!x.submitted);
+  if(sc==='needs') return L.filter(x=>!x.submitted && (!x.cat || !x.date || !Number(x.amt) || !x.name));
+  if(sc==='mine' || !seesAll()) return L.filter(x=>x.who===S.me);
+  return L; }
+const pname=id=>{ const p=(S.people||[]).find(z=>z.id===id); return p ? p.name : (id||''); };
+const csvCell=v=>{ const s=String(v==null?'':v); return /[",\n\r]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; };
+const plain=t=>String(t||'').replace(/<br\s*\/?>/gi,' ').replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/\*\*|__/g,'').replace(/\s+/g,' ').trim();
+const today=()=>{ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+async function exportFor(who){
+  const list=scopeList().filter(x=>!who || x.who===who).slice().sort((a,b)=>String(a.trip||'').localeCompare(String(b.trip||'')) || String(a.date||'').localeCompare(String(b.date||'')));
+  if(!list.length){ toast('Nothing to export for '+(who?first(who):'this list')+'.'); return; }
+  const head=['Trip Name','Consultant Name','Expense Type','Expense Date','Expense Name','Receipt (Yes/No)','Receipt Amount','Expense Amount','Invoice Submitted','Notes'];
+  const rows=[head.join(',')];
+  list.forEach(e=>rows.push([e.trip||'', pname(e.who), e.cat||'', e.date||'', e.name||'', (e.receipt||e.asset)?'Yes':'No', e.rcptAmt||'', e.amt||'', e.submitted?'Yes':'No', plain(e.notes)].map(csvCell).join(',')));
+  let dl=null; try{ dl=await window.claude.use('downloads'); }catch(err){}
+  if(!dl){ toast('Downloads are not available here.'); return; }
+  try{ await dl.save({filename:'MISMO Expenses - '+(who?pname(who):'Everyone')+' - '+today()+'.csv', data:rows.join('\r\n')}); toast('Exported '+list.length+(list.length===1?' expense':' expenses')+(who?' for '+first(who):'')+'.'); }
+  catch(err){ if(!(err && err.code==='declined')) toast('That didn’t download. Try again.'); }
+}
+async function receiptsFor(who){
+  const list=scopeList().filter(x=>x.asset && (!who || x.who===who));
+  if(!list.length){ toast('No receipts attached'+(who?' for '+first(who):'')+' in this list.'); return; }
+  const A=window.__att; if(!A){ toast('Downloads are not available here.'); return; }
+  toast('Downloading '+list.length+(list.length===1?' receipt':' receipts')+(who?' for '+first(who):'')+'…');
+  for(const e of list){ try{ await A.download(A.rcpt(e)); }catch(err){} }
+}
+/* the two buttons at the top: ask whose when the list holds more than one person */
+function pickWho(kind){
+  const L=scopeList(); const ppl=[...new Set(L.filter(x=>kind!=='rc' || x.asset).map(x=>x.who))];
+  const run=w=>kind==='rc' ? receiptsFor(w) : exportFor(w);
+  if(ppl.length<=1){ run(ppl[0]||S.me); return; }
+  ppl.sort((a,b)=>(a===S.me?-1:b===S.me?1:0) || pname(a).localeCompare(pname(b)));
+  const ov=h('div','ed-ov'), bx=h('div','ed-dlg eo-who'); bx.setAttribute('role','dialog'); bx.setAttribute('aria-modal','true');
+  bx.appendChild(h('h2',null, kind==='rc' ? 'Whose Receipts?' : 'Whose Report?'));
+  const body=h('div','ed-b'); bx.appendChild(body);
+  const close=()=>{ ov.remove(); document.removeEventListener('keydown', esc); }; const esc=e=>{ if(e.key==='Escape') close(); };
+  ppl.forEach(w=>{ const n=L.filter(x=>x.who===w && (kind!=='rc' || x.asset)).length; const b=h('button','eo-wb'); b.type='button';
+    b.appendChild(h('b',null, w===S.me ? 'Mine' : pname(w))); b.appendChild(h('small',null, n+(kind==='rc' ? (n===1?' receipt':' receipts') : (n===1?' expense':' expenses'))));
+    b.onclick=()=>{ close(); run(w); }; body.appendChild(b); });
+  const all=h('button','eo-wb all'); all.type='button'; all.appendChild(h('b',null,'Everyone')); all.appendChild(h('small',null, L.filter(x=>kind!=='rc'||x.asset).length+' in this list'));
+  all.onclick=()=>{ close(); run(''); }; body.appendChild(all);
+  const ft=h('div','ed-f'); const no=h('button','btn ghost','Cancel'); no.type='button'; no.onclick=close; ft.appendChild(no); bx.appendChild(ft);
+  ov.appendChild(bx); ov.addEventListener('click', e=>{ if(e.target===ov) close(); }); document.addEventListener('keydown', esc); document.body.appendChild(ov);
+}
+const onTop=e=>{ const b=e.target.closest && e.target.closest('button'); if(!b || !root.contains(b) || b.closest('.exppers')) return;
+  const t=b.textContent.trim(); const k=t==='Export for DataBasics' ? 'csv' : t==='Download the Receipts' ? 'rc' : null; if(!k) return;
+  e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); pickWho(k); };
+root.addEventListener('click', onTop, true);
+let toastEl=null;
+function toast(msg){ const t0=window.__nxToast; if(t0){ t0(msg); return; } toastEl && toastEl.remove(); const t=toastEl=h('div','ed-toast',msg); document.body.appendChild(t); setTimeout(()=>{ t.remove(); if(toastEl===t) toastEl=null; }, 5000); }
+
 let raf=0, busy=false;
 function pass(){ raf=0; if(busy) return; busy=true;
   try{
@@ -190,11 +251,15 @@ const css=h('style'); css.id='eo-style'; css.textContent=
   '.eo-enth small{color:var(--ink-3,#5b6b7a);font-size:12.5px}.eo-enth .amt{margin-left:auto;font-weight:700}.eo-entb{padding:10px 10px 0}'+
   '.eo-chev{display:inline-block;width:14px;color:var(--ink-3,#5b6b7a);font-size:12px}'+
   '.exppers[data-eo]{cursor:pointer}.exppers.eo-folded{opacity:.85}'+
+  '.eo-pdl{display:inline-flex;gap:6px;margin-left:auto;margin-right:12px}.eo-pdl .btn{border-radius:6px;padding:3px 9px;font-size:12.5px;min-height:28px}'+
+  '.eo-who .ed-b{display:grid;gap:6px;padding-bottom:4px}.eo-wb{display:flex;align-items:baseline;justify-content:space-between;gap:10px;width:100%;font:inherit;font-size:14px;text-align:left;border:1px solid var(--line,#c9d6e2);background:var(--surface,#fff);color:var(--ink,#0d314c);border-radius:6px;padding:10px 12px;cursor:pointer;min-height:44px}'+
+  '.eo-wb small{color:var(--ink-3,#5b6b7a);font-size:12.5px}.eo-wb:hover{border-color:var(--navy,#0d314c)}.eo-wb.all{background:var(--surface-2,#f5f8fb)}'+
   '.eo-jump{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 -12px}.eo-jump + .exppers,.eo-jump + .ed-ready{margin-top:0}.eo-jl{font-size:12.5px;font-weight:700;color:var(--ink-3,#5b6b7a);margin-right:4px}'+
   '.eo-jb{font:inherit;font-size:13.5px;font-weight:600;border:1px solid var(--line,#c9d6e2);background:var(--surface,#fff);color:var(--ink,#0d314c);border-radius:6px;padding:6px 10px;cursor:pointer;display:inline-flex;align-items:baseline;gap:6px}'+
   '.eo-jb small{font-weight:600;font-size:11.5px;color:#a15c00}.eo-jb:hover{border-color:var(--navy,#0d314c)}';
 document.head.appendChild(css);
 
-window.__expOrg={ version:'1.0', tripsOf, fixTrips, organize,
-  destroy(){ mo.disconnect(); mo2.disconnect(); clearInterval(timer); css.remove(); root.querySelectorAll('.eo-jump').forEach(e=>e.remove()); } };
+window.__expOrg={ version:'1.1', tripsOf, fixTrips, organize,
+  exportFor, receiptsFor,
+  destroy(){ root.removeEventListener('click', onTop, true); mo.disconnect(); mo2.disconnect(); clearInterval(timer); css.remove(); root.querySelectorAll('.eo-jump').forEach(e=>e.remove()); } };
 })();
