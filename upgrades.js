@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261118c';
+var BUILD='20261120a';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -764,7 +764,7 @@ const SYS=[
   ['hub','Initiative Hub','/initiative-hub/','#6B8CFF','Active workgroup initiatives by domain'],
   ['hub-requests','Work Requests','/initiative-hub/work-requests.html','#74BFEB','Requests coming in for the standards work'],
   ['glossary','Business Glossary','/glossary/','#2DD4BF','MISMO’s terms and definitions'],
-  ['mismo-link','MISMO Link','/mismo-link/','#818CF8','The MISMO Link AI beta'],
+  ['mismo-link','MISMO Link','/mismo-link/','#2477b8','MISMO Link AI pilot: agreements, testers, help desk and feedback'],
   ['qr','QR Code Manager','/qr/','#74BFEB','Codes, scan tracking and expiry'],
   ['mms','MISMO Manufacturing System','/mms/','#A78BFA','Work requests, reviews and the facilitator queue']
 ].map(([k,n,u,c,d])=>({k,n,u,c,d}));
