@@ -9075,17 +9075,18 @@ const MTG = {
   mins: 60
 };
 /* the meeting on or after a given day */
-function mtgOnOrAfter(d){
+function mtgSkipped(iso){ try{ const r=(S.dates||[]).find(z=>z.id==='teammtg'); return !!(r && r.rec && Array.isArray(r.rec.skip) && r.rec.skip.indexOf(iso)>=0); }catch(e){ return false; } } /* a Team Meeting skipped in Key Dates (Skip This One) is passed over */
+  function mtgOnOrAfter(d){
   const a=parseD(MTG.anchor); if(!a) return '';
   const step=MTG.everyWeeks*7;
   let x=new Date(a);
   if(x<d){ const gap=Math.ceil((d-x)/86400000/step); x.setDate(x.getDate()+gap*step); }
-  while(x<d) x.setDate(x.getDate()+step);
+  while(x<d) x.setDate(x.getDate()+step); let g0=0; while(mtgSkipped(isoOf(x)) && g0++<26) x.setDate(x.getDate()+step);
   return isoOf(x);
 }
 function nextMtg(){ return mtgOnOrAfter(today()); }
-function prevMtg(iso){ const d=parseD(iso); d.setDate(d.getDate()-MTG.everyWeeks*7); return isoOf(d); }
-function afterMtg(iso){ const d=parseD(iso); d.setDate(d.getDate()+MTG.everyWeeks*7); return isoOf(d); }
+function prevMtg(iso){ const d=parseD(iso); d.setDate(d.getDate()-MTG.everyWeeks*7); let g0=0; while(mtgSkipped(isoOf(d)) && g0++<26) d.setDate(d.getDate()-MTG.everyWeeks*7); return isoOf(d); }
+function afterMtg(iso){ const d=parseD(iso); d.setDate(d.getDate()+MTG.everyWeeks*7); let g0=0; while(mtgSkipped(isoOf(d)) && g0++<26) d.setDate(d.getDate()+MTG.everyWeeks*7); return isoOf(d); }
 /* the next few, so the picker is not open-ended */
 function mtgSeries(n){ const out=[]; let x=nextMtg();
   for(let i=0;i<(n||6);i++){ out.push(x); x=afterMtg(x); } return out; }
