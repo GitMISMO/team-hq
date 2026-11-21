@@ -220,7 +220,6 @@ const SYS=[
   ['iif-hq','IIF Planning HQ','/iif-hq/','#9ACD32','Lenders, invoices and payments for the IIF'],
   ['marketing-hq','MISMO Media','/marketing-hq/','#EB6834','MISMO Matters, Mic’d Up, LinkedIn and requests'],
   ['elections-hq','Elections HQ','/elections-hq/','#22B8CF','CoP, Board and Governance Committee elections'],
-  ['website-migration','Website Migration HQ','/website-migration/','#94A3B8','Pages, decisions and cutover'],
   ['cms','Certification Management System','/cms/','#F0607A','Certifications, renewals and assessors'],
   ['so','Service Orders and Agreements','/service-orders/','#FB7185','Contractor agreements and e-signature'],
   ['sponsorship','Sponsorship Portal','/sponsorship/','#38BDF8','Sponsor packages, prospects and commitments'],
@@ -231,9 +230,11 @@ const SYS=[
   ['qr','QR Code Manager','/qr/','#74BFEB','Codes, scan tracking and expiry'],
   ['mms','MISMO Manufacturing System','/mms/','#A78BFA','Work requests, reviews and the facilitator queue']
 ].map(([k,n,u,c,d])=>({k,n,u,c,d}));
-/* New apps show up by themselves: any app you've been given in People & Access that isn't listed above is added
+/* Website Migration HQ (website-migration) was retired Nov 21, 2026: it is left off here and skipped below, so it never comes back as
+   a New app; a tile for it already on someone's dashboard simply stops showing, and their saved layout is left as it is.
+   New apps show up by themselves: any app you've been given in People & Access that isn't listed above is added
    to Add a Tile (marked New), named and coloured from the app's own page. A dashboard tile is only placed when you add it. */
-const DISC='tools:team-hq:mismo.teamhq.sysfound', SYS_SKIP=/^(team-hq.*|so-.+|as-.+|admin|forms?|people|relay|test.*)$|-(files|data|routes|private|public|hours)$/i;
+const DISC='tools:team-hq:mismo.teamhq.sysfound', SYS_SKIP=/^(team-hq.*|so-.+|as-.+|admin|forms?|people|relay|test.*|website-migration)$|-(files|data|routes|private|public|hours)$/i;
 function discover(){ const a=access(); if(!a) return false; let seen={}; try{ seen=JSON.parse(localStorage.getItem(DISC)||'{}')||{}; }catch(e){}
   const save=()=>{ try{ localStorage.setItem(DISC, JSON.stringify(seen)); }catch(e){} }, tell=()=>{ try{ window.dispatchEvent(new Event('hq:sys')); }catch(e){} };
   const paths=new Set(SYS.map(z=>z.u));
@@ -252,7 +253,7 @@ function discover(){ const a=access(); if(!a) return false; let seen={}; try{ se
     }).catch(()=>{ seen[k]={bad:1, at:Date.now()}; save(); const i=SYS.findIndex(z=>z.k===k && z.auto); if(i>=0){ SYS.splice(i,1); tell(); } }); });
   tell(); return true; }
 { let tries=0; const go=()=>{ if(discover() || ++tries>40) return; setTimeout(go, 1500); }; setTimeout(go, 1500); }
-const SHORT={'cms':'CMS','so':'Service Orders','website-migration':'Website Migration','iif-hq':'IIF Planning','hub-requests':'Work Requests','marketing-hq':'MISMO Media','mms':'MMS'};
+const SHORT={'cms':'CMS','so':'Service Orders','iif-hq':'IIF Planning','hub-requests':'Work Requests','marketing-hq':'MISMO Media','mms':'MMS'};
 const FIGSRC={ 'Meeting Trackers':'meeting-trackers', 'Certification Management System':'cms', 'Member 360':'member-360', 'Financial System':'financials', 'Service Orders':'so', 'Sponsorship Portal':'sponsorship' };
 function access(){ try{ const x=window.ResourcesSession && window.ResourcesSession.current(); return (x && x.access) || null; }catch(e){ return null; } }
 function canOpen(k){ const a=access(); if(!a) return true; if(k==='so') return Object.keys(a).some(x=>/^so-/.test(x)); if(k==='scheduler') return true; return !!a[k]; }
@@ -266,7 +267,6 @@ const SYM={
   'iif-hq':'<ellipse cx="24" cy="12" rx="13" ry="5"/><path d="M11 12v8c0 2.8 5.8 5 13 5s13-2.2 13-5v-8M11 20v8c0 2.8 5.8 5 13 5s13-2.2 13-5v-8M11 28v8c0 2.8 5.8 5 13 5s13-2.2 13-5v-8"/>',
   'marketing-hq':'<path d="M6 24v0M11 18v12M16 12v24M21 20v8M26 8v32M31 16v16M36 21v6M41 14v20"/>',
   'elections-hq':'<path d="M8 24h32v16H8z"/><path d="M16 24V8h16v16"/><path d="M20 16l3 3 6-6"/>',
-  'website-migration':'<rect x="5" y="8" width="38" height="30" rx="3"/><path d="M5 15h38"/><path d="M16 28h14M25 23l5 5-5 5"/>',
   'cms':'<circle cx="24" cy="19" r="11"/><path d="M19 19l4 4 7-8"/><path d="M17 28l-4 13 7-4 4 6 4-6 7 4-4-13"/>',
   'so':'<path d="M7 38c5-1 8-6 11-6s3 5 7 5 5-4 8-4 4 2 8 2"/><path d="M30 8l8 8-14 14-9 2 2-9z"/>',
   'sponsorship':'<path d="M24 6l5 10 11 1.6-8 7.8 2 11-10-5.3-10 5.3 2-11-8-7.8L19 16z"/>',
