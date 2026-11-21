@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 21** — Elections HQ is now Leadership HQ on its tile and in the systems list.
 - **Nov 21** — Website Migration HQ is retired: it is gone from Add a Tile and the systems list, and a tile already on a dashboard no longer shows (saved layouts are left as they are).
 - **Nov 21** — Team Meeting: a meeting skipped in Key Dates (Calendar › Skip This One) is passed over, so the Team Meeting page and its Next meeting go to the following date.
 - **Nov 20** — Add a Tile: MISMO Link's tile has its own blue and reads “MISMO Link AI pilot: agreements, testers, help desk and feedback”.
