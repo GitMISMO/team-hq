@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 21** — Team Meeting: a meeting skipped in Key Dates (Calendar › Skip This One) is passed over, so the Team Meeting page and its Next meeting go to the following date.
 - **Nov 20** — Add a Tile: MISMO Link's tile has its own blue and reads “MISMO Link AI pilot: agreements, testers, help desk and feedback”.
 - **Nov 18** — Expenses: report and receipts by person. Each person's name has its own Report and Receipts buttons, and Export for DataBasics and Download the Receipts ask whose (one person or everyone).
 - **Nov 18** — Team Projects: when every task in an active project is done, its card and panel offer Mark Project Done (with Undo), which moves it off the Active list.
