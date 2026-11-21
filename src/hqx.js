@@ -227,7 +227,7 @@ const SYS=[
   ['hub','Initiative Hub','/initiative-hub/','#6B8CFF','Active workgroup initiatives by domain'],
   ['hub-requests','Work Requests','/initiative-hub/work-requests.html','#74BFEB','Requests coming in for the standards work'],
   ['glossary','Business Glossary','/glossary/','#2DD4BF','MISMO’s terms and definitions'],
-  ['mismo-link','MISMO Link','/mismo-link/','#818CF8','The MISMO Link AI beta'],
+  ['mismo-link','MISMO Link','/mismo-link/','#2477b8','MISMO Link AI pilot: agreements, testers, help desk and feedback'],
   ['qr','QR Code Manager','/qr/','#74BFEB','Codes, scan tracking and expiry'],
   ['mms','MISMO Manufacturing System','/mms/','#A78BFA','Work requests, reviews and the facilitator queue']
 ].map(([k,n,u,c,d])=>({k,n,u,c,d}));
