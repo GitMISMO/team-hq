@@ -935,6 +935,10 @@ function edit(e0, tripName){
       const L=X.tripsOf(E(), who), names=L.map(t=>t.trip);
       if(L.length){ const og=document.createElement('optgroup'); og.label=(who===me() ? 'Your' : first(who)+'’s')+' trips';
         L.forEach(t=>og.appendChild(new Option(t.trip+(X.span(t.first,t.last) ? '  ·  '+X.span(t.first,t.last) : '')+(t.state==='entered' ? '  ·  entered' : ''), t.trip))); tsel.appendChild(og); }
+      /* industry events this person is going to (Industry Events), not yet a trip of theirs */
+      let IE=[]; try{ IE=window.__hqEvents ? window.__hqEvents.tripsFor(who).filter(t=>names.indexOf(t.trip)<0) : []; }catch(x){ IE=[]; }
+      if(IE.length){ const og2=document.createElement('optgroup'); og2.label='Industry Events '+(who===me() ? 'you’re' : first(who)+'’s')+' going to';
+        IE.forEach(t=>{ og2.appendChild(new Option(t.trip+(t.from ? '  ·  '+X.span(X.day(t.from), X.day(t.to||t.from)) : ''), t.trip)); names.push(t.trip); }); tsel.appendChild(og2); }
       if(v && names.indexOf(v)<0) tsel.appendChild(new Option(v, v));
       tsel.appendChild(new Option('New Trip…', NEW)); tsel.value=v||''; tnew.hidden=true; }
     tsel.addEventListener('change', ()=>{ touched.trip=1; tag('trip', false);

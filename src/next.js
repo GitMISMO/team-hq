@@ -16,7 +16,7 @@ if(!ui.modes || typeof ui.modes!=='object') ui.modes={}; if(!ui.groups || typeof
 if(!Array.isArray(ui.tpeople)) ui.tpeople=[];
 if(['home','work','team','time'].indexOf(ui.view)>=0 || !ui.view) ui.view='day';
 /* a link straight to a page: resources.mismo.org/team-hq/?page=systems */
-let DEEP=''; try{ const pg=new URLSearchParams(location.search).get('page'); if(pg && ['systems'].indexOf(pg)>=0) DEEP=pg; }catch(e){}
+let DEEP=''; try{ const pg=new URLSearchParams(location.search).get('page'); if(pg && ['systems','events'].indexOf(pg)>=0) DEEP=pg; }catch(e){}
 /* the new Team HQ is the only Team HQ now — no classic switch */
 ui.on=true;
 const save=()=>{ try{ localStorage.setItem(KEY, JSON.stringify({on:ui.on, view:ui.view, modes:ui.modes, groups:ui.groups, who:ui.who, proj:ui.proj, showDone:ui.showDone, tpeople:ui.tpeople, fold:ui.fold, ibf:ui.ibf})); }catch(e){} };
@@ -45,6 +45,7 @@ const I={
   read:'<path d="M3 10l9-6 9 6v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3.5 10.5L12 16l8.5-5.5"/>', unread:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/><circle cx="19" cy="5" r="3" fill="currentColor"/>',
   folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11v5M9.5 13.5L12 16l2.5-2.5"/>',
   trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
+  pin:'<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
   net:'<rect x="2.5" y="3.5" width="7" height="5" rx="1.2"/><rect x="14.5" y="3.5" width="7" height="5" rx="1.2"/><rect x="8.5" y="15.5" width="7" height="5" rx="1.2"/><path d="M9.5 6h5M6 8.5c0 4 6 3 6 7M18 8.5c0 4-6 3-6 7"/>' };
 const ic=(k,c)=>'<svg class="'+(c||'')+'" viewBox="0 0 24 24" aria-hidden="true">'+I[k]+'</svg>';
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -562,7 +563,7 @@ function statusOf(p){
 
 /* ---------- the views ---------- */
 const VIEWS={
-  day:{t:'My Dashboard', i:'home'}, inbox:{t:'Inbox', i:'inbox'}, mine:{t:'My Tasks', i:'mine'}, cal:{t:'Calendar', i:'cal'}, systems:{t:'Connected Systems', i:'net', team:true} };
+  day:{t:'My Dashboard', i:'home'}, inbox:{t:'Inbox', i:'inbox'}, mine:{t:'My Tasks', i:'mine'}, cal:{t:'Calendar', i:'cal'}, events:{t:'Industry Events', i:'pin', team:true}, systems:{t:'Connected Systems', i:'net', team:true} };
 function viewKind(v){ v=v||ui.view; if(v.indexOf('p:')===0) return 'project'; if(v.indexOf('u:')===0) return 'person'; if(v.indexOf('c:')===0) return 'classic'; return v; }
 function myOpen(){ return S.tasks.filter(t=>isOpen(t) && doers(t).indexOf(me())>=0); }
 function myAsks(){ return (S.asks||[]).filter(a=>a.state!=='Built' && a.state!=='Not Doing' && (me()==='jonna' || a.by===me())); }
@@ -605,6 +606,8 @@ function drawRail(){
   placeBoardBtn(calB);
   add(railLbl('Team'), firstClassic);
   /* Connected Systems sits at the end of the Team list, just above System Health (Jonna's call) */
+  /* Industry Events (Amy's idea, Nov 2026) sits just above Connected Systems */
+  if(window.__hqEvents) add(railBtn('events','Industry Events', ic('pin')));
   if(window.__hqSystems) add(railBtn('systems','Connected Systems', ic('net')));
   markRail();
 }
@@ -681,6 +684,7 @@ function paint(){
     else if(k==='week') vWeek();
     else if(k==='people') vPeople();
     else if(k==='systems') vSystems();
+    else if(k==='events') vEvents();
     else vDash();
   }catch(e){ console.error(e); body.appendChild(h('p','nx-empty','Something went wrong drawing this view.')); }
   body.scrollTop=sy; const sl2=body.querySelector('.nx-sl, .nx-dl'); if(sl2) sl2.scrollTop=sly;
@@ -693,6 +697,10 @@ function vSystems(){ const CS=window.__hqSystems; if(!CS){ header('Connected Sys
   const ctl=[]; if(CS.canEdit()){ const eb=btn('nx-mini'+(CS.editing?' pri':''), CS.editing?'Done Editing':'Edit', ()=>{ CS.setEdit(!CS.editing); paint(); }); eb.innerHTML=ic('gear')+'<span>'+(CS.editing?'Done Editing':'Edit')+'</span>'; ctl.push(eb); }
   header('Connected Systems', ic('net'), 'How MISMO’s systems fit together', ctl);
   const pg=h('div','nx-cs'); pg.appendChild(CS.page()); body.appendChild(pg); }
+/* ---------- Industry Events (events.js draws the page; the events are kept in Team HQ's data) ---------- */
+function vEvents(){ const EV=window.__hqEvents; if(!EV){ header('Industry Events', ic('pin')); body.appendChild(h('p','nx-empty','Industry Events didn’t load. Refresh the page.')); return; }
+  header('Industry Events', ic('pin'), 'The conferences and shows MISMO goes to');
+  const pg=h('div','nx-ev'); pg.appendChild(EV.page()); body.appendChild(pg); }
 function header(title, icon, sub, controls){
   const l=h('div','nx-hl');
   if(icon){ const i=h('span','nx-hi'); i.innerHTML=icon; l.appendChild(i); }
@@ -1259,6 +1267,7 @@ const TILES={
   wins:{n:'Team Wins', g:'Team', k:'#3CCB7F', d:'What the team finished lately'},
   findtime:{n:'Find a Time', g:'Team', k:'#5AA9E6', d:'Who’s free now, and the next time you’re all free'},
   board:{n:'My Board', g:'Team', k:'#74BFEB', d:'Your own board — free-form, notebook or rows'},
+  events:{n:'Industry Events', g:'Team', k:'#E8833A', d:'The next industry event, who’s going and what’s due'},
   systems:{n:'Connected Systems', g:'Team', k:'#74BFEB', d:'How MISMO’s systems connect, what each one does, and what’s live'}
 };
 function dashDefault(){
@@ -1749,6 +1758,7 @@ function tile(cfg, i, L){
       if(more.length){ const ls=h('div','nx-kl2 nx-ftmore'); ls.appendChild(h('small','nx-ftml','Also free')); more.forEach(z=>{ const d0=new Date(z.t); const r=h('div','kr'); r.appendChild(h('b',null, WD[d0.getDay()]+' '+MON[d0.getMonth()]+' '+d0.getDate())); r.appendChild(h('span',null, tmL(z.t)+' – '+tmL(z.e))); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) ftDialog(cfg, L); }); ls.appendChild(r); }); el.appendChild(ls); } }
     el.appendChild(h('div','st-next', free+' of '+ids.length+' free now · tap for more times'));
     meta.go=()=>ftDialog(cfg, L); }
+  else if(cfg.t==='events'){ if(window.__hqEvents) window.__hqEvents.tile(el, SZ); else el.appendChild(h('div','st-sub','Open it to see the events.')); meta.go=()=>open('events'); }
   else if(cfg.t==='systems'){ if(window.__hqSystems) window.__hqSystems.tile(el, SZ); else el.appendChild(h('div','st-sub','Open it to see the map.')); meta.go=()=>open('systems'); }
   else if(cfg.t==='sys'){ meta.draw(el, top, SZ); }
   if(cfg.t!=='sys' && lvlOf(cfg)==='hi' && !tall){ el.classList.add('lv-hi'); el.querySelectorAll('.nx-kl2:not(.nx-ftmore),.nx-tl2,.nx-gaps,.mic-steps').forEach(z=>z.remove()); }
@@ -1976,7 +1986,7 @@ function openCatalog(){
   const close=()=>ov.remove();
   const sec=(t)=>box.appendChild(h('div','nx-sec',t));
   const card=(name, desc, k, symHtml, fn, on)=>{ const b=btn('nx-cti'+(on?' on':'')); b.style.setProperty('--k',k); const i=h('span','ci'); i.innerHTML=symHtml; b.appendChild(i); const t=h('span','tx'); t.appendChild(h('b',null,name)); t.appendChild(h('small',null,desc)); b.appendChild(t); b.appendChild(h('em',null,on?'On':'Add')); b.addEventListener('click', ()=>{ fn(); b.classList.add('on'); b.querySelector('em').textContent='Added'; }); return b; };
-  ['Your Day','Team'].forEach(g=>{ sec(g); const gr=h('div','nx-ctg'); Object.keys(TILES).filter(k=>TILES[k].g===g).forEach(k=>{ const on=dashEdit.some(z=>z.t===k); gr.appendChild(card(TILES[k].n, TILES[k].d, TILES[k].k, ic(k==='email'?'mail':k==='people'||k==='team'?'ppl':k==='day'||k==='load'?'cal':k==='tasks'?'mine':k==='board'?'all':k==='asks'?'inbox':k==='findtime'?'search':k==='systems'?'net':'week'), ()=>{ if(!dashEdit.some(z=>z.t===k)) dashEdit.push({t:k}); paint(); }, on)); }); box.appendChild(gr); });
+  ['Your Day','Team'].forEach(g=>{ sec(g); const gr=h('div','nx-ctg'); Object.keys(TILES).filter(k=>TILES[k].g===g).forEach(k=>{ const on=dashEdit.some(z=>z.t===k); gr.appendChild(card(TILES[k].n, TILES[k].d, TILES[k].k, ic(k==='email'?'mail':k==='people'||k==='team'?'ppl':k==='day'||k==='load'?'cal':k==='tasks'?'mine':k==='board'?'all':k==='asks'?'inbox':k==='findtime'?'search':k==='systems'?'net':k==='events'?'pin':'week'), ()=>{ if(!dashEdit.some(z=>z.t===k)) dashEdit.push({t:k}); paint(); }, on)); }); box.appendChild(gr); });
   sec('MISMO Systems'); const gs=h('div','nx-ctg'); (x?x.SYS:[]).filter(z=>x.canOpen(z.k)).sort((a,b)=>a.n.localeCompare(b.n)).forEach(z=>{ let n=dashEdit.filter(q=>q.t==='sys' && q.s===z.k).length; const cb=card(z.n, (z.auto ? 'New · ' : '')+z.d, z.c, x.symbol(z.k), ()=>{ const nt={t:'sys', s:z.k}; dashEdit.push(nt); paint(); if(n>0){ close(); setTimeout(()=>tileEditor(nt, dashEdit.length-1, dashEdit, true), 60); } }, false); const ci=cb.querySelector('.ci'); const badge=h('i','cnt'); const setB=()=>{ badge.textContent=n?String(n):''; badge.title=n?n+' on your dashboard':''; badge.hidden=!n; }; setB(); ci.appendChild(badge); cb.addEventListener('click', ()=>{ n++; setB(); cb.classList.remove('on'); cb.querySelector('em').textContent='Add'; }); gs.appendChild(cb); }); box.appendChild(gs);
   const ft=h('div','hqx-ft'); const d=btn('btn','Done', close); ft.appendChild(d); box.appendChild(ft);
   ov.appendChild(box); ov.addEventListener('click', e=>{ if(e.target===ov) close(); }); document.body.appendChild(ov);
@@ -1984,7 +1994,7 @@ function openCatalog(){
 /* new numbers from a system: redraw the dashboard once they've stopped arriving, not for every one */
 /* an app newly found on resources.mismo.org: show it in the menus straight away */
 window.addEventListener('hq:sys', ()=>{ if(!ui.on || dashEdit || busy() || !shell || shell.hidden) return; drawRail(); });
-window.addEventListener('hq:bset', ()=>{ if(!ui.on || dashEdit || busy() || !shell || shell.hidden) return; drawRail(); if(viewKind()!=='systems') paint(); });
+window.addEventListener('hq:bset', ()=>{ if(!ui.on || dashEdit || busy() || !shell || shell.hidden) return; drawRail(); if(viewKind()!=='systems' && viewKind()!=='events') paint(); });
 let countsT=null; window.addEventListener('hq:counts', ()=>{ clearTimeout(countsT); countsT=setTimeout(refreshSysTiles, 600); });
 function refreshSysTiles(){ if(!ui.on || viewKind()!=='day' || tdrag || !shell || shell.hidden) return; const grid=body.querySelector('.nx-tiles'); if(!grid) return;
   const L=dashEdit || dashLayout();
@@ -2191,7 +2201,7 @@ function openMenuSheet(){
   const grp=(t)=>menuEl.appendChild(h('div','nx-ml',t));
   const item=(label, fn, iconHtml)=>{ const b=btn('nx-mi', null, ()=>{ closeMenus(); fn(); }); b.innerHTML=(iconHtml||'')+'<span>'+label+'</span>'; menuEl.appendChild(b); };
   grp('You'); Object.keys(VIEWS).filter(k=>!VIEWS[k].team).forEach(k=>item(VIEWS[k].t, ()=>open(k), ic(VIEWS[k].i)));
-  grp('Team Pages'); [...document.querySelectorAll('.hq.rail nav button[data-hq]')].forEach(b=>{ const s=b.querySelector('svg'); item(b.textContent.trim(), ()=>openClassic(b.dataset.hq), s?s.outerHTML:''); }); /* team views (Connected Systems) after the other team pages, as on the left menu */ Object.keys(VIEWS).filter(k=>VIEWS[k].team && (k!=='systems' || window.__hqSystems)).forEach(k=>item(VIEWS[k].t, ()=>open(k), ic(VIEWS[k].i)));
+  grp('Team Pages'); [...document.querySelectorAll('.hq.rail nav button[data-hq]')].forEach(b=>{ const s=b.querySelector('svg'); item(b.textContent.trim(), ()=>openClassic(b.dataset.hq), s?s.outerHTML:''); }); /* team views (Connected Systems) after the other team pages, as on the left menu */ Object.keys(VIEWS).filter(k=>VIEWS[k].team && (k!=='systems' || window.__hqSystems) && (k!=='events' || window.__hqEvents)).forEach(k=>item(VIEWS[k].t, ()=>open(k), ic(VIEWS[k].i)));
   { const hb=document.getElementById('help-btn'); if(hb){ const s=hb.querySelector('svg'); item('Help', ()=>{ hideApp(); ui.view='c:help'; save(); pushView(ui.view); hb.click(); markRail(); }, s?s.outerHTML:''); } }
   document.body.appendChild(menuEl);
   { const mine=menuEl; setTimeout(()=>document.addEventListener('click', function off(e){ if(menuEl!==mine){ document.removeEventListener('click', off); return; } if(mine && !mine.contains(e.target) && !e.target.closest('.nx-tbm')){ closeMenus(); document.removeEventListener('click', off); } }), 0); }
@@ -2212,7 +2222,7 @@ function hsh(str){ let x=0; for(let i=0;i<str.length;i++){ x=((x<<5)-x+str.charC
 const sig=()=>[S.tasks.length, hsh(S.tasks.map(t=>[t.id,t.at,t.s,t.due,t.w,t.r,t.o,(t.d||[]).join(','),t.p,t.t,(t.notes||'').length,(t.sub||[]).map(z=>z.done?1:0).join(''),(t.wait||[]).join(','),t.rep||'',(t.fol||[]).join(','),t.repNext||''].join('|')).join('~')), (S.asks||[]).length, (S.asks||[]).map(a=>a.state).join(''), (S.nudges||[]).filter(n=>!n.done).length, S.rocks.length+'/'+S.rocks.map(r=>(Array.isArray(r.upd)&&r.upd[0]&&r.upd[0].at)||0).join(','), (window.__hqx&&window.__hqx.sig?window.__hqx.sig():''), (ui.view==='mine'?syncSig():''), Object.keys((window.__cal&&window.__cal.CAL&&window.__cal.CAL.by)||{}).length, (window.__cal&&window.__cal.CAL&&window.__cal.CAL.at)||0].join(':');
 function busy(){ if(drag || tdrag!=null || menuEl || document.documentElement.classList.contains('nx-boxing') || document.querySelector('.hqx-ov')) return true; const a=document.activeElement; return !!(a && (a.tagName==='INPUT' || a.tagName==='SELECT' || a.tagName==='TEXTAREA') && (shell && shell.contains(a))); }
 /* Connected Systems keeps itself current, so task and inbox changes elsewhere don't rebuild it (and move the reader) */
-const live=setInterval(()=>{ if(!ui.on || document.hidden) return; const s=sig(); if(s===lastSig) return; if(busy()) return; lastSig=s; drawRail(); if(viewKind()!=='systems') paint(); }, 1200);
+const live=setInterval(()=>{ if(!ui.on || document.hidden) return; const s=sig(); if(s===lastSig) return; if(busy()) return; lastSig=s; drawRail(); if(viewKind()!=='systems' && viewKind()!=='events') paint(); }, 1200);
 const clock=setInterval(()=>{ if(!ui.on || document.hidden || busy()) return; drawRail(); if(shell && !shell.hidden && (viewKind()==='day' || viewKind()==='person')) paint(); }, 60e3);
 /* if the classic page redraws its rail, put our items back */
 const railMo=new MutationObserver(()=>{ if(!ui.on) return; const nav=navEl(); if(nav && railNodes.length && !nav.contains(railNodes[0])) drawRail(); });

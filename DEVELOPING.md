@@ -50,6 +50,7 @@ prompt) lives only in the private `systemsmap` collection, never in this code.
 | `mobile.js` | Phone layout and bottom tab bar |
 | `syncs.js` | Sync Ups |
 | `systems.js` | Connected Systems (the page; its content comes from the private record) |
+| `events.js` | Industry Events: the page, the event panel, its dashboard tile, and `tripsFor` for the Expenses trip list (Nov 22, 2026) |
 | `next.js` | The current Team HQ shell: My Dashboard, Inbox, My Tasks, Calendar, System Health and more |
 | `oofdates.js` | Out of Office key dates from Outlook automatic replies |
 | `expenses.js` | Expenses: the whole page, editor, mileage, policy, trips, expense@ inbox, sending, Ready to Enter, downloads (live Nov 21, 2026; `?exp=old` turns it off for a tab) |
@@ -111,7 +112,8 @@ real page and delete the test page.
   empty calendar.
 - Collections in `team-hq-data` include the team's tasks, projects, plans and dates, plus `comments`,
   `templates`, `rules`, `syncs` and `syncitems`, `expinbox` (emailed receipts), `errors` (the team error log) and
-  `systemsmap` (Connected Systems: `current` and `requests`).
+  `systemsmap` (Connected Systems: `current` and `requests`) and `events` (Industry Events, one record per event,
+  graphics in Team HQ's file storage under `events`).
 - **Change History:** the `Team HQ Change History` job in `team-hq-data` (`tools/history.mjs`, every hour) reads each save and keeps 90 days of who changed what on tasks, Team Projects, key dates, plans, plan items and agenda items in `data/history.json`. Expenses, Sync Ups and notes are never read. Like Recently Deleted (`tools/trash.mjs`), it only writes its own file.
 - Team HQ reads other systems' headline numbers for their dashboard tiles through the relay, and each system's
   own tiles are drawn Team HQ style.
