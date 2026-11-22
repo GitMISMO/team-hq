@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261122l';
+var BUILD='20261122m';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -5436,7 +5436,7 @@ function noticeBand(d){ const b=band('Change notices','What Each System Is Waiti
   if(jon.length){ const sec=h('div','cs-cng'); sec.appendChild(h('h3',null,'Needs You')); jon.forEach(x=>row(x, sec)); b.appendChild(sec); }
   keys.forEach(k=>{ const w=by[k].filter(x=>nStat(x)==='wait'); if(!w.length) return; const sec=h('div','cs-cng'); sec.appendChild(h('h3',null,'Waiting on '+k)); w.forEach(x=>row(x, sec)); b.appendChild(sec); });
   if(done.length){ const sec=h('div','cs-cng'); sec.appendChild(h('h3',null,'Done')); done.slice().reverse().slice(0,12).forEach(x=>row(x, sec)); b.appendChild(sec); }
-  b.appendChild(h('p','cs-foot','Kept in the Change Notices table on the MISMO Connections Map and brought in with each refresh.'));
+  b.appendChild(h('p','cs-foot','Kept in GitHub (GitMISMO/mismo-connections, CHANGE-NOTICES.md), where every system’s Claude can reach them, and brought in with each refresh.'));
   return b; }
 function todoBand(d){ const b=band('Road to rock solid','What’s Left to Make Each System Rock Solid','What’s open now, who it’s waiting on, and the four safety nets every system gets. Things that aren’t due for months, like key renewals, wait in Coming Up Later and don’t count until they’re close.');
   const wrap=h('div','cs-rs'); b.appendChild(wrap); P.rsWrap=wrap; paintTodos(d); return b; }
@@ -12388,7 +12388,7 @@ const NEW=[
 <h4>Where It Comes From</h4>
 <p>The MISMO Connections Map is the source of truth. The page's content is kept in Team HQ's private data (not in its public code) and shows the date it's <b>as of</b>. To bring it up to date, ask Team HQ's Claude to <b>refresh Connected Systems</b>; it reads the Connections Map and saves the latest.</p>
 <h4>Change Notices</h4>
-<p>The <b>Change Notices</b> tab shows what each system is waiting on. When one system changes something another uses (a name, an address, a route, a data shape), its Claude posts a notice on the Connections Map for every system that has to act. Each system’s Claude checks for its own at the start of every session and on its daily check, makes the matching change in its own system, and marks it Done (or Not Needed, with the reason). Only notices marked <b>Needs Jonna</b> come to you; they’re listed first. The tab is brought up to date with each refresh.</p>
+<p>The <b>Change Notices</b> tab shows what each system is waiting on. When one system changes something another uses (a name, an address, a route, a data shape), its Claude posts a notice for every system that has to act, in GitHub (GitMISMO/mismo-connections), where every system’s Claude can reach it, including Perry’s and Vanessa’s. Each system’s Claude checks for its own at the start of every session and on its daily check, makes the matching change in its own system, and marks it Done (or Not Needed, with the reason). Only notices marked <b>Needs Jonna</b> come to you; they’re listed first. The tab is brought up to date with each refresh.</p>
 <h4>Edit Mode (Jonna)</h4>
 <p>Click <b>Edit</b> at the top. Select a system to change its status, status note or details; <b>Add a System</b> or <b>Add a Connection</b>; drag a box to move it. Anything still to confirm shows an amber dot, only in Edit mode. <b>Set Aside</b> takes something off the map without deleting it, and <b>Set Aside (n)</b> brings it back. Every save updates the as-of date, and Undo is on the message that appears.</p>`}
 ];
