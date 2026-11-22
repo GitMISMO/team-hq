@@ -172,7 +172,7 @@ const svg=d=>{ const s=document.createElementNS('http://www.w3.org/2000/svg','sv
 const IC={cam:'<path d="M3 8a2 2 0 012-2h2.5l1.3-2h6.4l1.3 2H21a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><circle cx="13" cy="13" r="3.6"/>',
   plus:'<path d="M12 5v14M5 12h14"/>', doc:'<path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6"/>', pdf:'<path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5M9 14h6M9 17h4"/>',
   none:'<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5M12 16h.01"/>', ok:'<path d="M5 12.5l4.5 4.5L19 7.5"/>', warn:'<path d="M12 3l9 16H3z"/><path d="M12 9.5v4M12 16.5h.01"/>',
-  car:'<path d="M5 16V11l2-5h10l2 5v5"/><path d="M3 16h18v3H3z"/><circle cx="7.5" cy="16" r="1.5"/><circle cx="16.5" cy="16" r="1.5"/>', wait:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'};
+  box:'<path d="M3 7h18v4H3z"/><path d="M5 11v8h14v-8M10 15h4"/>', car:'<path d="M5 16V11l2-5h10l2 5v5"/><path d="M3 16h18v3H3z"/><circle cx="7.5" cy="16" r="1.5"/><circle cx="16.5" cy="16" r="1.5"/>', wait:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'};
 const me=()=>S.me||'';
 const E=()=>Array.isArray(S.expenses) ? S.expenses : [];
 const expOf=id=>E().find(x=>x.id===id)||null;
@@ -447,7 +447,7 @@ const reading=x=>!!x.reading && Date.now()-X.num(x.reading)<3*60e3;
 const unread=()=>E().filter(x=>x.asset && !x.readAt && !reading(x) && !x.submitted && X.missing(x).length);
 
 /* ================= the page ================= */
-const UI={scope:null, scopeFor:null, fold:{}, pfold:{}, ent:{}, pend:false};
+const UI={scope:null, scopeFor:null, fold:{}, pfold:{}, ent:{}, pend:false, view:'main', aq:'', awho:'', ayear:'', afold:{}};
 let drawing=false, mineNow=false, swallow=false;
 function scopeNow(){ if(isPhone() || !seesAll()) return 'mine';
   if(!UI.scope || UI.scopeFor!==me()){ UI.scope='all'; UI.scopeFor=me(); } return UI.scope; }
@@ -486,7 +486,11 @@ function paint(r){
   r.textContent=''; r.classList.add('x2');
   const right=h('div','rowflex');
   const nb=btn('btn ghost', null, ()=>edit(null), 'Add an expense without a receipt, or type the details yourself');
-  nb.appendChild(svg(IC.plus)); nb.appendChild(h('span',null,'Add by Hand')); right.appendChild(nb);
+  nb.appendChild(svg(IC.plus)); nb.appendChild(h('span',null,'Add by Hand'));
+  if(me() && UI.view==='archive'){ paintArchive(r); return; }
+  const nArc=archTrips().length;
+  if(nArc){ const ab=btn('btn ghost x2-arcb', null, ()=>openArchive(''), 'Trips already entered in DataBasics'); ab.appendChild(svg(IC.box)); ab.appendChild(h('span',null,'Archive')); ab.appendChild(h('small',null, String(nArc))); right.appendChild(ab); }
+  right.appendChild(nb);
   vhead(r, 'Expenses', 'Snap the receipt and it’s done: Team HQ reads it and fills in the details. When a trip is all in, send it to be entered in DataBasics.', right);
   if(!me()){ const bx=h('div','box'); bx.appendChild(emptyBox('Team HQ doesn’t know who you are yet.','Sign in and your expenses show up here.')); r.appendChild(bx); return; }
   const phone=isPhone(), all=seesAll() && !phone, sc=scopeNow();
@@ -567,13 +571,13 @@ function personBox(r, who, rows, heading){
   names.sort((a,b)=>lastOf(b)-lastOf(a) || a.localeCompare(b));
   const live=names.filter(n=>n===X.NOTRIP || T[n].state!=='entered'), done=names.filter(n=>n!==X.NOTRIP && T[n].state==='entered');
   live.forEach(n=>wrap.appendChild(tripBox(who, n, rows.filter(x=>(x.trip||X.NOTRIP)===n), T[n])));
+  /* trips already entered in DataBasics live in the Archive, not here (Jonna, Nov 21, 2026) */
   if(done.length){
-    const k=who, isOpen2=!!UI.ent[k], tot=done.reduce((a,n)=>a+T[n].total,0);
-    const f=h('div','x2-ent'); const b=btn('x2-enth', null, ()=>{ UI.ent[k]=!isOpen2; draw(); }); b.setAttribute('aria-expanded', isOpen2?'true':'false');
-    b.appendChild(h('span','x2-chev', isOpen2?'▾':'▸')); b.appendChild(h('b',null,'Entered in DataBasics')); b.appendChild(h('small',null, done.length+(done.length===1?' trip':' trips')));
-    b.appendChild(h('span','amt money', X.money(tot))); f.appendChild(b);
-    if(isOpen2){ const body=h('div','x2-entb'); done.forEach(n=>body.appendChild(tripBox(who, n, rows.filter(x=>x.trip===n), T[n]))); f.appendChild(body); }
-    wrap.appendChild(f);
+    const tot=done.reduce((a,n)=>a+T[n].total,0);
+    const b=btn('x2-enth x2-arcl', null, ()=>openArchive(heading ? who : ''), 'Open the Archive');
+    b.appendChild(svg(IC.box)); b.appendChild(h('b',null, done.length+(done.length===1?' trip':' trips')+' entered in DataBasics'));
+    b.appendChild(h('small',null,'in the Archive')); b.appendChild(h('span','amt money', X.money(tot))); b.appendChild(h('span','x2-go','Open ›'));
+    wrap.appendChild(b);
   }
 }
 
@@ -758,7 +762,8 @@ function entered(T, b){
   L.forEach(x=>change(x.id, {submitted:1}));
   sayUndo(first(T.who)+'’s '+T.trip+': '+L.length+(L.length===1?' expense':' expenses')+' marked entered.', async ()=>{ L.forEach(x=>change(x.id, {submitted:0})); });
 }
-function jump(T){ UI.pfold[T.who]=false; UI.fold[T.who+'|'+T.trip]=true; if(X.tripOf(E(), T.who, T.trip).state==='entered') UI.ent[T.who]=true;
+function jump(T){ if(X.tripOf(E(), T.who, T.trip).state==='entered'){ UI.afold[T.who+'|'+T.trip]=true; UI.aq=T.trip; openArchive(seesAll() ? T.who : ''); return; }
+  UI.pfold[T.who]=false; UI.fold[T.who+'|'+T.trip]=true;
   if(scopeNow()==='needs') UI.scope='all'; draw();
   setTimeout(()=>{ const b=document.getElementById(tid(T.who, T.trip)); if(b){ b.scrollIntoView({block:'start', behavior:'smooth'}); b.classList.add('x2-hit'); setTimeout(()=>b.classList.remove('x2-hit'), 1600); } }, 60); }
 
@@ -787,6 +792,81 @@ async function receiptsFor(who, incl){
     catch(err){ if(err && err.code==='declined') return; bad++; } }
   if(bad) say(bad+(bad===1?' receipt':' receipts')+' couldn’t be downloaded. Try again in a moment.');
 }
+async function saveCSV(list, label){
+  if(!list.length){ say('Nothing to export.'); return; }
+  let dl=null; try{ dl=await window.claude.use('downloads'); }catch(e){}
+  if(!dl){ say('Downloads aren’t available here.'); return; }
+  try{ await dl.save({filename:'MISMO Expenses - '+label+' - '+X.iso(Date.now())+'.csv', data:X.csv(list, pnm, plain)}); say('Exported '+list.length+(list.length===1?' expense':' expenses')+' — the DataBasics template’s columns.'); }
+  catch(e){ if(!(e && e.code==='declined')) say('That didn’t download. Try again.'); }
+}
+async function saveReceipts(list){
+  list=list.filter(x=>x.asset); if(!list.length){ say('No receipts attached.'); return; }
+  let dl=null; try{ dl=await window.claude.use('downloads'); }catch(e){}
+  if(!dl){ say('Downloads aren’t available here.'); return; }
+  say('Downloading '+list.length+(list.length===1?' receipt…':' receipts…')); const used={}; let bad=0;
+  for(const e of list){ try{ const b=await attBlob(e.asset); await dl.save({filename:X.receiptName(e, first(e.who), used), data:new Blob([b], {type:b.type||e.rcptType||'application/octet-stream'})}); await new Promise(r=>setTimeout(r, 250)); }
+    catch(err){ if(err && err.code==='declined') return; bad++; } }
+  if(bad) say(bad+(bad===1?' receipt':' receipts')+' couldn’t be downloaded. Try again in a moment.');
+}
+
+/* ================= the Archive: trips already entered in DataBasics =================
+   A trip moves here the moment every expense on it is marked entered, and back to Expenses if one is un-entered.
+   Nothing is moved or deleted in the data: "archived" simply means entered. Grouped by month, newest first, with
+   search, a person filter (Jonna and Vanessa, on the computer) and a year filter; each trip has its own Report and Receipts. */
+function archTrips(){ const L=(seesAll() && !isPhone()) ? E() : E().filter(x=>x.who===me()); const seen={}, out=[];
+  L.forEach(x=>{ if(!x.trip) return; const k=x.who+'|'+x.trip; if(seen[k]) return; seen[k]=1; const T=X.tripOf(E(), x.who, x.trip); if(T.state==='entered') out.push(T); });
+  return out.sort((a,b)=>b.last-a.last || a.trip.localeCompare(b.trip)); }
+function openArchive(who){ UI.view='archive'; UI.awho=who||''; draw(); window.scrollTo(0,0); }
+function paintArchive(r){
+  const right=h('div','rowflex'); right.appendChild(btn('btn ghost', '‹ Back to Expenses', ()=>{ UI.view='main'; UI.aq=''; draw(); window.scrollTo(0,0); }));
+  vhead(r, 'Expenses Archive', 'Trips already entered in DataBasics, newest first. Nothing here is deleted; a trip goes back to Expenses if any of it is un-entered.', right);
+  const all=seesAll() && !isPhone(), T0=archTrips();
+  const bar=h('div','x2-abar');
+  const q=h('input'); q.type='search'; q.placeholder='Search trips, places and expenses'; q.value=UI.aq; q.setAttribute('aria-label','Search the archive'); bar.appendChild(q);
+  let ws=null; if(all){ ws=sel([{v:'',n:'Everyone'}].concat([...new Set(T0.map(t=>t.who))].sort((a,b)=>(a===me()?-1:b===me()?1:0) || pnm(a).localeCompare(pnm(b))).map(w=>({v:w, n:w===me()?'Mine':pnm(w)}))), UI.awho); ws.setAttribute('aria-label','Whose'); bar.appendChild(ws); }
+  const years=[...new Set(T0.map(t=>t.last ? new Date(t.last).getFullYear() : null).filter(Boolean))].sort((a,b)=>b-a);
+  const ys=sel([{v:'',n:'Every Year'}].concat(years.map(y=>({v:String(y), n:String(y)}))), UI.ayear); ys.setAttribute('aria-label','Year'); bar.appendChild(ys);
+  const sum=h('span','x2-asum'); bar.appendChild(sum);
+  const dlb=h('span','x2-adl'); bar.appendChild(dlb);
+  r.appendChild(bar);
+  const list=h('div','x2-alist'); r.appendChild(list);
+  const match=(T, t)=>!t || [T.trip, pnm(T.who)].concat(T.E.map(x=>(x.name||'')+' '+(x.cat||'')+' '+plain(x.notes||''))).join(' ').toLowerCase().indexOf(t)>=0;
+  const paintList=()=>{
+    const t=UI.aq.trim().toLowerCase();
+    const L=T0.filter(T=>(!UI.awho || T.who===UI.awho) && (!UI.ayear || (T.last && String(new Date(T.last).getFullYear())===UI.ayear)) && match(T, t));
+    const tot=L.reduce((a,T)=>a+T.total,0); sum.textContent=L.length+(L.length===1?' trip · ':' trips · ')+X.money(tot);
+    dlb.textContent='';
+    const exps=()=>L.flatMap(T=>T.E);
+    const label=()=>(UI.awho ? pnm(UI.awho) : all ? 'Everyone' : pnm(me()))+' - Archive'+(UI.ayear ? ' '+UI.ayear : '');
+    if(L.length){ dlb.appendChild(btn('btn ghost sm','Report', ()=>saveCSV(exps(), label()), 'Everything listed, in the DataBasics template'));
+      dlb.appendChild(btn('btn ghost sm','Receipts', ()=>saveReceipts(exps()), 'Every receipt for the trips listed')); }
+    list.textContent='';
+    if(!L.length){ const bx=h('div','box'); bx.appendChild(emptyBox(T0.length ? 'No trips match.' : 'Nothing in the archive yet.', T0.length ? 'Try another word, person or year.' : 'A trip comes here once it’s entered in DataBasics.')); list.appendChild(bx); return; }
+    const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const groups=[]; L.forEach(T=>{ const d=T.last ? new Date(T.last) : null, k=d ? d.getFullYear()+'-'+d.getMonth() : 'none';
+      let g=groups.find(x=>x.k===k); if(!g){ g={k, name:d ? MONTHS[d.getMonth()]+' '+d.getFullYear() : 'No Dates', L:[]}; groups.push(g); } g.L.push(T); });
+    groups.forEach(g=>{ const gh=h('div','x2-amh'); gh.appendChild(h('b',null,g.name)); gh.appendChild(h('small',null, g.L.length+(g.L.length===1?' trip':' trips')));
+      gh.appendChild(h('span','amt money', X.money(g.L.reduce((a,T)=>a+T.total,0)))); list.appendChild(gh);
+      g.L.forEach(T=>{ const k=T.who+'|'+T.trip, open=!!UI.afold[k]; const box=h('div','trip x2-trip x2-atrip'); box.id=tid(T.who, T.trip);
+        /* a div, not a button: it holds the trip's own Report and Receipts buttons */
+        const hd=h('div','triph x2-th'); hd.setAttribute('role','button'); hd.tabIndex=0; hd.setAttribute('aria-expanded', open?'true':'false');
+        const tog=()=>{ UI.afold[k]=!open; paintList(); }; hd.addEventListener('click', tog); hd.addEventListener('keydown', e=>{ if((e.key==='Enter'||e.key===' ') && e.target===hd){ e.preventDefault(); tog(); } });
+        hd.appendChild(h('span','x2-chev', open?'▾':'▸'));
+        const tn=h('span','tn'); tn.appendChild(document.createTextNode(T.trip));
+        tn.appendChild(h('small',null, [all && T.who!==me() ? pnm(T.who) : '', X.span(T.first, T.last), T.E.length+(T.E.length===1?' expense':' expenses')].filter(Boolean).join(' · '))); hd.appendChild(tn);
+        const tools=h('span','x2-atools');
+        tools.appendChild(btn('btn ghost sm','Report', ()=>saveCSV(T.E, pnm(T.who)+' - '+T.trip), 'This trip, in the DataBasics template'));
+        if(T.E.some(x=>x.asset)) tools.appendChild(btn('btn ghost sm','Receipts', ()=>saveReceipts(T.E), 'This trip’s receipts'));
+        hd.appendChild(tools); hd.appendChild(h('span','amt money', X.money(T.total))); box.appendChild(hd);
+        if(open){ const rows=h('div','x2-rows'); T.E.slice().sort((a,b)=>String(b.date||'9').localeCompare(String(a.date||'9'))).forEach(x=>rows.appendChild(row(x))); box.appendChild(rows); }
+        list.appendChild(box); }); });
+  };
+  let qt=0; q.addEventListener('input', ()=>{ clearTimeout(qt); qt=setTimeout(()=>{ UI.aq=q.value; paintList(); }, 150); });
+  if(ws) ws.addEventListener('change', ()=>{ UI.awho=ws.value; paintList(); });
+  ys.addEventListener('change', ()=>{ UI.ayear=ys.value; paintList(); });
+  paintList();
+}
+
 /* the two buttons at the top ask whose, and whether to include what's already entered */
 function pickWho(kind){
   const rc=kind==='rc', ppl=[...new Set(pool(true).map(x=>x.who))].sort((a,b)=>(a===me()?-1:b===me()?1:0) || pnm(a).localeCompare(pnm(b)));
@@ -1311,6 +1391,14 @@ const css=h('style'); css.id='x2-css'; css.textContent=`
 .x2-ent{border:1px solid var(--border);border-radius:6px;background:var(--surface);overflow:hidden}
 .x2-enth{display:flex;align-items:center;gap:10px;width:100%;font:inherit;font-size:14px;text-align:left;padding:11px 15px;border:0;background:var(--surface-2);color:var(--ink);cursor:pointer}
 .x2-enth small{color:var(--ink-3);font-size:12.5px}.x2-enth .amt{margin-left:auto;font-weight:700}.x2-entb{display:flex;flex-direction:column;gap:10px;padding:10px}
+.x2-arcb small{font-size:11.5px;font-weight:700;color:var(--ink-3);margin-left:2px}.x2-arcb svg,.x2-arcl svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.x2-arcl{border:1px solid var(--border)!important;border-radius:6px}.x2-arcl .x2-go{font-size:12.5px;font-weight:700;color:var(--c1);white-space:nowrap}.x2-arcl .amt{margin-left:auto}
+.x2-abar{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.x2-abar input,.x2-abar select{font:inherit;font-size:14px;min-height:36px;padding:5px 9px;border:1px solid var(--border-strong);border-radius:5px;background:var(--surface);color:var(--ink)}
+.x2-abar input{flex:1 1 240px;min-width:0}.x2-asum{font-size:13px;font-weight:600;color:var(--ink-2);margin-left:auto;white-space:nowrap}.x2-adl{display:inline-flex;gap:6px}
+.x2-alist{display:flex;flex-direction:column;gap:8px}.x2-amh{display:flex;align-items:baseline;gap:10px;margin:8px 0 0;padding:0 2px 5px;border-bottom:2px solid var(--navy)}
+:root[data-theme="dark"] .x2-amh{border-bottom-color:var(--sky)}.x2-amh b{font-size:15px}.x2-amh small{font-size:12.5px;color:var(--ink-3)}.x2-amh .amt{margin-left:auto;font-weight:700}
+.x2-atools{display:inline-flex;gap:6px;margin-left:auto}.x2-atrip .x2-th .amt{margin-left:0}
+@media (max-width:640px){.x2-asum{margin-left:0;flex-basis:100%}.x2-atools{margin-left:0}}
 .x2-in{padding:12px 14px;border:1px solid var(--border);border-left:3px solid var(--sky);border-radius:6px;background:var(--surface)}
 .x2-inh{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}.x2-inh b{font-size:14.5px}.x2-inh small{font-size:12.5px;color:var(--ink-2)}
 .x2-in ul{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:5px}
