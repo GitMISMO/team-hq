@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261121g';
+var BUILD='20261122a';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -760,7 +760,7 @@ const SYS=[
   ['marketing-hq','MISMO Media','/marketing-hq/','#EB6834','MISMO Matters, Mic’d Up, LinkedIn and requests'],
   ['elections-hq','Leadership HQ','/elections-hq/','#22B8CF','MISMO’s leadership, the Board and the yearly elections'],
   ['cms','Certification Management System','/cms/','#F0607A','Certifications, renewals and assessors'],
-  ['so','Service Orders and Agreements','/service-orders/','#FB7185','Contractor agreements and e-signature'],
+  ['so','Contractor HQ','/contractor-hq/','#FB7185','Contractor service orders, agreements, hours and expenses'],
   ['sponsorship','Sponsorship Portal','/sponsorship/','#38BDF8','Sponsor packages, prospects and commitments'],
   ['hub','Initiative Hub','/initiative-hub/','#6B8CFF','Active workgroup initiatives by domain'],
   ['hub-requests','Work Requests','/initiative-hub/work-requests.html','#74BFEB','Requests coming in for the standards work'],
@@ -792,8 +792,8 @@ function discover(){ const a=access(); if(!a) return false; let seen={}; try{ se
     }).catch(()=>{ seen[k]={bad:1, at:Date.now()}; save(); const i=SYS.findIndex(z=>z.k===k && z.auto); if(i>=0){ SYS.splice(i,1); tell(); } }); });
   tell(); return true; }
 { let tries=0; const go=()=>{ if(discover() || ++tries>40) return; setTimeout(go, 1500); }; setTimeout(go, 1500); }
-const SHORT={'cms':'CMS','so':'Service Orders','iif-hq':'IIF Planning','hub-requests':'Work Requests','marketing-hq':'MISMO Media','mms':'MMS'};
-const FIGSRC={ 'Meeting Trackers':'meeting-trackers', 'Certification Management System':'cms', 'Member 360':'member-360', 'Financial System':'financials', 'Service Orders':'so', 'Sponsorship Portal':'sponsorship' };
+const SHORT={'cms':'CMS','so':'Contractor HQ','iif-hq':'IIF Planning','hub-requests':'Work Requests','marketing-hq':'MISMO Media','mms':'MMS'};
+const FIGSRC={ 'Meeting Trackers':'meeting-trackers', 'Certification Management System':'cms', 'Member 360':'member-360', 'Financial System':'financials', 'Service Orders':'so', 'Contractor HQ':'so', 'Sponsorship Portal':'sponsorship' };
 function access(){ try{ const x=window.ResourcesSession && window.ResourcesSession.current(); return (x && x.access) || null; }catch(e){ return null; } }
 function canOpen(k){ const a=access(); if(!a) return true; if(k==='so') return Object.keys(a).some(x=>/^so-/.test(x)); if(k==='scheduler') return true; return !!a[k]; }
 function figsFor(k){ return (S.figures||[]).filter(x=>FIGSRC[x.src]===k && String(x.v||'').trim()!==''); }
@@ -2475,7 +2475,7 @@ const SYS=[
   ['marketing-hq','MISMO Media','/marketing-hq/','#EB6834','Planning','MISMO Matters, Mic’d Up, LinkedIn and requests'],
   ['elections-hq','Leadership HQ','/elections-hq/','#0E7490','Planning','MISMO’s leadership, the Board and the yearly elections'],
   ['cms','Certification Management System','/cms/','#BE123C','Certification','Certifications, renewals and assessors'],
-  ['so','Service Orders and Agreements','/service-orders/','#E11D48','Certification','Contractor agreements and e-signature'],
+  ['so','Contractor HQ','/contractor-hq/','#E11D48','Certification','Contractor service orders, agreements, hours and expenses'],
   ['sponsorship','Sponsorship Portal','/sponsorship/','#0EA5E9','Sponsorship','Sponsor packages, prospects and commitments'],
   ['hub','Initiative Hub','/initiative-hub/','#2A4DFF','Standards & Tools','Active workgroup initiatives by domain'],
   ['hub-requests','Work Requests','/initiative-hub/work-requests.html','#14486E','Standards & Tools','Requests coming in for the standards work'],
@@ -2490,7 +2490,7 @@ const EVERYDAY=[
   {k:'x-site', n:'mismo.org', u:'https://www.mismo.org/', c:'#0D314C', d:'The public website'},
   {k:'x-gh', n:'GitHub', u:'https://github.com/GitMISMO', c:'#24292F', d:'Where MISMO’s tools live'}
 ];
-const FIGSRC={ 'Meeting Trackers':'meeting-trackers', 'Certification Management System':'cms', 'Member 360':'member-360', 'Financial System':'financials', 'Service Orders':'so', 'Sponsorship Portal':'sponsorship' };
+const FIGSRC={ 'Meeting Trackers':'meeting-trackers', 'Certification Management System':'cms', 'Member 360':'member-360', 'Financial System':'financials', 'Service Orders':'so', 'Contractor HQ':'so', 'Sponsorship Portal':'sponsorship' };
 function access(){ try{ const s=window.ResourcesSession && window.ResourcesSession.current(); return (s && s.access) || null; }catch(e){ return null; } }
 function canOpen(k){ const a=access(); if(!a) return true; if(k==='so') return Object.keys(a).some(x=>/^so-/.test(x)); if(k==='scheduler'||k==='team-hq') return true; return !!a[k]; }
 function figFor(k){ const f=(S.figures||[]).filter(x=>FIGSRC[x.src]===k && String(x.v||'').trim()!=='');
@@ -2871,7 +2871,7 @@ function tileFor(s, fav, locked){
   if(locked){ t.href='#'; t.addEventListener('click', e=>{ e.preventDefault(); window.__ask2 && window.__ask2({kind:'system', t:'Access to '+s.n, why:''}); }); t.title='Ask for access to '+s.n; }
   else { t.href=s.u; t.target='_blank'; t.rel='noopener'; t.title='Open '+s.n;
     t.addEventListener('click', e=>{ const X=window.__hqx; if(!X || !X.openSys || e.metaKey || e.ctrlKey || e.shiftKey || e.button!==0 || !X.SYS.some(z=>z.k===s.k)) return; if(e.target.closest('.star')) return; e.preventDefault(); X.openSys(s.k); }); }
-  const AB={'summit-hq':'SH','meeting-trackers':'MT','scheduler':'SC','member-360':'360','financials':'$','iif-hq':'IIF','marketing-hq':'MD','elections-hq':'LH','cms':'CMS','so':'SO','sponsorship':'SP','hub':'IH','hub-requests':'WR','glossary':'BG','mismo-link':'LK','qr':'QR','x-mail':'OM','x-cal':'OC','x-teams':'T','x-site':'M','x-gh':'GH'};
+  const AB={'summit-hq':'SH','meeting-trackers':'MT','scheduler':'SC','member-360':'360','financials':'$','iif-hq':'IIF','marketing-hq':'MD','elections-hq':'LH','cms':'CMS','so':'CH','sponsorship':'SP','hub':'IH','hub-requests':'WR','glossary':'BG','mismo-link':'LK','qr':'QR','x-mail':'OM','x-cal':'OC','x-teams':'T','x-site':'M','x-gh':'GH'};
   const ic=h('span','ic', AB[s.k] || s.n.slice(0,2)); if((AB[s.k]||'').length>2) ic.style.fontSize='11.5px';
   t.appendChild(ic);
   const tx=h('span','tx'); tx.appendChild(h('b',null,s.n)); tx.appendChild(h('small',null, locked ? 'Ask for access' : s.d)); t.appendChild(tx);
@@ -10212,7 +10212,7 @@ function edit(e0, tripName){
    expinbox file. Team HQ turns each into a draft expense for the person who sent it, reads it the same way a snapped
    receipt is read, and the person reviews it. A receipt that is the email itself (Uber, airlines) is kept as a PDF.
    Jonna and Vanessa see emails from someone Team HQ can't match, and pick whose they are; a contractor's receipt goes to
-   their own expenses in the Service Orders portal. */
+   their own expenses in Contractor HQ (formerly Service Orders). */
 const ADDR='expense@mismo.org';
 let docs={}, lastRead=0, ibusy=false;
 const local=a=>String(a||'').toLowerCase().trim().split('@')[0];
@@ -10318,7 +10318,7 @@ async function importOne(id, d, who){
   const fin=Object.assign({}, cur, {claim:null, done:Date.now(), doneBy:me(), who, exp:made}); delete fin.text;
   await setDoc(id, fin);
 }
-/* contractors who claim expenses (Can Claim Expenses in the Service Orders portal): their receipts go there */
+/* contractors who claim expenses (Can Claim Expenses in Contractor HQ): their receipts go there */
 const SO_COS=[{key:'so-phoenix',slug:'phoenixteam'},{key:'so-actualize',slug:'actualize'},{key:'so-trex',slug:'trex'},{key:'so-falcon',slug:'falcon'},{key:'so-trudigital',slug:'trudigital'}];
 let roster=null, rosterAt=0;
 const relayBase=()=>{ const R=window.__hqRelay; return (R && R.config && R.config.RELAY_URL) || ''; };
@@ -10463,7 +10463,7 @@ function inboxBox(r){
     li.appendChild(h('span','s', (d.subject||'(no subject)')+(n ? ' · '+n+(n===1?' receipt':' receipts') : ' · the email is the receipt')+(atOf(d) ? ' · '+X.short(atOf(d)) : '')));
     const s=h('select','asg'); s.setAttribute('aria-label','Whose expense is this?'); s.appendChild(new Option('Whose is it?',''));
     (S.people||[]).forEach(p=>s.appendChild(new Option(p.name, p.id)));
-    if(roster && roster.length){ const og=document.createElement('optgroup'); og.label='Contractors (Service Orders)';
+    if(roster && roster.length){ const og=document.createElement('optgroup'); og.label='Contractors (Contractor HQ)';
       roster.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(c=>og.appendChild(new Option(c.name+' · '+c.company, 'so|'+c.key+'|'+c.pslug))); s.appendChild(og); }
     s.addEventListener('change', async ()=>{ if(!s.value) return; s.disabled=true;
       try{ const cur=Object.assign({}, docs[d.id]||{}); if(s.value.indexOf('so|')===0){ cur.assignSo=s.value.slice(3); delete cur.assign; } else { cur.assign=s.value; delete cur.assignSo; }
