@@ -778,7 +778,7 @@ function noticeBand(d){ const b=band('Change notices','What Each System Is Waiti
   if(jon.length){ const sec=h('div','cs-cng'); sec.appendChild(h('h3',null,'Needs You')); jon.forEach(x=>row(x, sec)); b.appendChild(sec); }
   keys.forEach(k=>{ const w=by[k].filter(x=>nStat(x)==='wait'); if(!w.length) return; const sec=h('div','cs-cng'); sec.appendChild(h('h3',null,'Waiting on '+k)); w.forEach(x=>row(x, sec)); b.appendChild(sec); });
   if(done.length){ const sec=h('div','cs-cng'); sec.appendChild(h('h3',null,'Done')); done.slice().reverse().slice(0,12).forEach(x=>row(x, sec)); b.appendChild(sec); }
-  b.appendChild(h('p','cs-foot','Kept in the Change Notices table on the MISMO Connections Map and brought in with each refresh.'));
+  b.appendChild(h('p','cs-foot','Kept in GitHub (GitMISMO/mismo-connections, CHANGE-NOTICES.md), where every system’s Claude can reach them, and brought in with each refresh.'));
   return b; }
 function todoBand(d){ const b=band('Road to rock solid','What’s Left to Make Each System Rock Solid','What’s open now, who it’s waiting on, and the four safety nets every system gets. Things that aren’t due for months, like key renewals, wait in Coming Up Later and don’t count until they’re close.');
   const wrap=h('div','cs-rs'); b.appendChild(wrap); P.rsWrap=wrap; paintTodos(d); return b; }

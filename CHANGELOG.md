@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 22** — Connected Systems: Change Notices now come from GitHub (GitMISMO/mismo-connections) so Perry's and Vanessa's systems can post and answer them too; the tab and Help say so.
 - **Nov 22** — Industry Events: the days-away countdown is a plain sky-blue box (no dark outline).
 - **Nov 22** — Industry Events: each card is balanced, with who's going and the counts together on the right (under the tags when the list is narrow).
 - **Nov 22** — Industry Events: on each event's card the counts sit under the tags, so the event's name has room.
