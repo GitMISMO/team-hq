@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261122c';
+var BUILD='20261122d';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -12296,7 +12296,7 @@ const NEW=[
 <li><b>Not done after all?</b> <b>Take It Back</b> returns the trip to you.</li>
 <li><b>Forgot?</b> A week after a trip's last expense, if it hasn't been sent, you get one reminder.</li>
 <li><b>Jonna and Vanessa</b> see the same bar on everyone's trips, with <b>Remind</b> (the person sees it on the trip and in their bell) and <b>Send for</b> them.</li>
-<li><b>Trips:</b> pick the trip from the drop-down in the expense (New Trip… to start one). A snapped or emailed receipt joins your trip that has an expense within 3 days of it. Trips start folded; tap one to open it. Trips already entered fold into <b>Entered in DataBasics</b>.</li>
+<li><b>Trips:</b> pick the trip from the drop-down in the expense (New Trip… to start one). An industry event you’re going to (listed as going on <b>Industry Events</b>) is in the drop-down too, under its own heading. A snapped or emailed receipt joins your trip that has an expense within 3 days of it. Trips start folded; tap one to open it. Trips already entered fold into <b>Entered in DataBasics</b>.</li>
 <li><b>Meal guidelines</b> (Nov 2026): breakfast $25, lunch $40, dinner $60, snacks $15, and no more than $140 a day for all meals. Anything $15 or more needs a receipt.</li>
 <li><b>Vanessa:</b> each trip under <b>Ready to Enter</b> has <b>Entered and Submitted</b>, which ticks every sent expense on it at once (with Undo).</li>
 <li><b>Mileage:</b> pick Mileage as the type and fill in <b>Miles Driven</b>. The amount is worked out at the IRS rate for the date, the miles go in the notes, and no receipt is needed.</li>
