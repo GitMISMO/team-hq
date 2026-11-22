@@ -5,6 +5,7 @@
    Jonna and Vanessa see everything that came in, including mail from someone who isn't on the team. */
 (function(){
 'use strict';
+if(window.__exp2 && window.__exp2.on) return;   /* the new Expenses (expenses.js) is running instead */
 if(window.__expIn && window.__expIn.destroy) window.__expIn.destroy();
 const S=window.__S, root=document.getElementById('app-expenses');
 if(!S || !root) return;

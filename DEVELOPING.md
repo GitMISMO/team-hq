@@ -52,6 +52,7 @@ prompt) lives only in the private `systemsmap` collection, never in this code.
 | `systems.js` | Connected Systems (the page; its content comes from the private record) |
 | `next.js` | The current Team HQ shell: My Dashboard, Inbox, My Tasks, Calendar, System Health and more |
 | `oofdates.js` | Out of Office key dates from Outlook automatic replies |
+| `expenses.js` | **The rebuilt Expenses, in testing:** one module for the whole Expenses page. Off unless opened with `?exp=new` (see Expenses Rebuild) |
 | `expinbox.js` | The expense@ inbox: emailed receipts become draft expenses |
 | `mileage.js` | Mileage in the expense editor: miles driven × the IRS rate for the date |
 | `exporg.js` | Expenses: receipts join the person's nearby trip, the trip drop-down, folded trips and the Entered fold |
@@ -148,6 +149,28 @@ five. The new one goes live only after it does everything on this list, checked 
   "First - Name - YYYY-MM-DD - $amount".
 - **Saving:** every save through the save relay, merged with anyone else's change; nothing is ever sent without the
   person pressing a button.
+
+**Where it stands (Nov 21, 2026).** `src/expenses.js` is built and every item above was checked in the Test Copy against
+the real trips (Jonna's, Vanessa's, Amy's and Perry's DC and Executive Women's Summit trips), seen as Jonna, Vanessa,
+Amy and Jonathan, and on the phone layout; Run Check passed. Its rules (policy, mileage, trips, export columns, receipt
+names) also have their own checks: `node tools/expenses-rules.test.mjs`. It is not live:
+
+- **Trying it:** open the Test Copy with `&exp=new` added, e.g. `?try=<version>&check=1&exp=new`. The tab remembers it
+  (`?exp=old` turns it off). Without `exp=new` everyone gets the original page and add-ons.
+- **How it fits in:** add-ons can't reach `index.html`'s own functions, only what it hands out (`__put`, `__drop`,
+  `__show`, `__att`, `__expApi`, `#panel`, `#sheet`, `#toast`). The original page clears the Expenses area before it
+  draws, so that moment draws the new page instead and drops what the original adds. When the base page opens its own
+  expense editor (its search, Claim Expenses on a trip), the new editor opens in its place. The four add-ons stand
+  aside when it is on (one line at the top of each), and the opening cover waits for it in the Expenses app.
+- **Changed on purpose:** mileage exports Receipt (Yes/No) as No (no receipt is needed); a mileage expense keeps its
+  miles in `miles` as well as the notes line; Export for DataBasics and Download the Receipts leave out what's already
+  entered unless "Include trips already entered" is ticked; the Report and Receipts beside a name do the same (all of
+  that person's when nothing is waiting); a receipt taken with no signal waits on the device and uploads itself; only
+  Jonna gets buttons on Jonna's own trips.
+- **Going live (Jonna's OK first):** set `LIVE=true` in `src/expenses.js`, build, try, publish. After it has run
+  live for a while: delete `expinbox.js`, `mileage.js`, `exporg.js`, `expdone.js` and their lines in `build.py`; take
+  the `exp=new` lines out of `bootscreen.js`; remove `vExpenses`, `expRow`, `editExp` and the receipt reading from
+  `index.html` (by hand, checked); update the Expenses help in `tour.js` and add the CHANGELOG line.
 
 ## What Team HQ Connects To
 

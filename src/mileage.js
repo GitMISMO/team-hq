@@ -6,6 +6,7 @@
    The editor itself is in index.html; this only adds to it, by finding its fields by their labels. */
 (function(){
 'use strict';
+if(window.__exp2 && window.__exp2.on) return;   /* the new Expenses (expenses.js) is running instead */
 if(window.__mileage && window.__mileage.destroy) window.__mileage.destroy();
 /* the IRS business standard mileage rate, newest first: [first day it applies, dollars a mile] */
 const RATES=[['2026-07-01',0.76],['2026-01-01',0.725],['2025-01-01',0.70],['2024-01-01',0.67]];

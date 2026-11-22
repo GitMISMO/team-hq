@@ -1022,7 +1022,10 @@ function map(d){ const F=frame(d); P.vb=F.vb; P.ey=F.ey; const svg=sv('svg',{vie
     P.edges.push(e); });
   d.systems.forEach(s=>{ const g=sv('g',{class:'cs-n'+(s.zone==='eng'?' eng':''), tabindex:0, role:'button', 'aria-label':s.name+', '+(s.status||''), transform:'translate('+(s.x-W/2)+','+(by[s.id].y-H/2)+')'},gN);
     g.style.setProperty('--pc', colorOf(d,s)); sv('rect',{class:'box',x:0,y:0,width:W,height:H,rx:9},g); sv('rect',{class:'bar',x:0,y:0,width:6,height:H,rx:3,fill:colorOf(d,s)},g);
-    const two=!!(s.statusNote || s.zone==='eng' || s.sub); const t=sv('text',{x:13,y:two?17:25},g); t.textContent=s.name.length>19 ? s.name.slice(0,18)+'…' : s.name;
+    /* a short status ("Pilot") sits beside the name when both fit on one line; a longer one goes underneath (Jonna, Nov 21, 2026) */
+    const beside=!!(s.statusNote && s.zone!=='eng' && 13+s.name.length*7.2+7+String(s.statusNote).length*6.1<=W-22);
+    const two=!beside && !!(s.statusNote || s.zone==='eng' || s.sub); const t=sv('text',{x:13,y:two?17:25},g); t.textContent=s.name.length>19 ? s.name.slice(0,18)+'…' : s.name;
+    if(beside){ const ts=sv('tspan',{class:'sub',dx:7},t); ts.textContent=s.statusNote; }
     if(two){ const t2=sv('text',{class:'sub',x:13,y:31},g); t2.textContent=s.statusNote || s.sub || (s.id==='robots'?'run on schedules':s.id==='flows'?'inside Microsoft 365':'used by every app'); }
     const k=stKey(s); sv('circle',{class:'sd '+k,cx:W-11,cy:11,r:4},g);
     if(P.edit && (s.confirm || d.connections.some(c=>c.confirm && (c.from===s.id || c.to===s.id)))){ sv('circle',{class:'cf',cx:W-11,cy:H-10,r:4},g); }

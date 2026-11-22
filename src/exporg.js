@@ -10,6 +10,7 @@
       of people to jump to, and each person's name folds their trips away. */
 (function(){
 'use strict';
+if(window.__exp2 && window.__exp2.on) return;   /* the new Expenses (expenses.js) is running instead */
 if(window.__expOrg && window.__expOrg.destroy) window.__expOrg.destroy();
 const S=window.__S, root=document.getElementById('app-expenses');
 if(!S || !root) return;
