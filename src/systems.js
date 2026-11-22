@@ -797,7 +797,7 @@ function todoBand(d){ const b=band('Road to rock solid','What’s Left to Make E
 /* Road to Rock Solid, redesigned November 8, 2026: open now by who it waits on, a safety-net grid, and a timeline for later */
 const SAFE=[['guide','Guide',/how-it-works guide/i],['tests','Auto tests',/automatic tests/i],['pub','Auto publishing',/automatic publishing/i],['log','Change log',/change log/i]];
 const LATER_DAYS=60;
-function dueOf(it){ if(it.due){ const x=new Date(it.due); if(!isNaN(x)) return x; } const m=/before ([A-Z][a-z]{2,8} \d{1,2}, \d{4})/.exec(it.t||''); if(m){ const x=new Date(m[1]); if(!isNaN(x)) return x; } return null; }
+function dueOf(it){ if(it.due){ const x=new Date(it.due); if(!isNaN(x)) return x; } const m=/before ([A-Z][a-z]{2,8} \d{1,2}, \d{4})/.exec(it.t||''); if(m){ const x=new Date(m[1]); if(!isNaN(x)) return x; } const m2=/before ([A-Z][a-z]{2,8}) (\d{4})/.exec(it.t||''); if(m2){ const x=new Date(m2[1]+' 1, '+m2[2]); if(!isNaN(x)) return x; } return null; }
 function laneOf(w){ return w==='You' ? 'You' : w==='claude' ? 'claude' : /^(MBA IT|Higher Logic)$/.test(w) ? 'MBA IT and Higher Logic' : w; }
 function paintTodos(d){ const wrap=P.rsWrap; if(!wrap) return; wrap.textContent=''; const by={}; d.systems.forEach(s=>by[s.id]=s); const R=appRank(d), ed=canEdit(), now=new Date();
   const T=d.todos.filter(g=>by[g.sys] && (g.items||[]).length); const all=[]; T.forEach(g=>g.items.forEach(it=>all.push({g, it, sys:g.sys})));

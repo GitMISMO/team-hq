@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 22** — Road to Rock Solid: a renewal dated by month and year only ("before Nov 2027") now waits in Coming Later like the others.
 - **Nov 22** — Change Notices: finished notices clear off the page 14 days after they're done (GitHub keeps the history); tightened the gap above the As Of line.
 - **Nov 22** — Change Notices: each Waiting On tile (and Need You, and Done) shows just those notices; select it again, or the big number, for all.
 - **Nov 22** — Connected Systems: in Requests for Perry, the counts (open, save relay, AWS, with a date) are buttons that show just those requests.
