@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261122m';
+var BUILD='20261122n';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4673,7 +4673,7 @@ MODS.push(function(){
 'use strict';
 if(window.__hqSystems && window.__hqSystems.destroy) window.__hqSystems.destroy();
 const S=window.__S; if(!S) return;
-const EDITORS=['jonna'];
+const EDITORS=['jonna','vanessa'];   /* Vanessa is Jonna's backup (Jonna, Nov 22, 2026), so Connected Systems can be kept current while Jonna is away */
 const NS='http://www.w3.org/2000/svg', W=148, H=40;
 const ZONES={apps:'MISMO apps', mba:'MBA & Microsoft 365', out:'Outside MISMO', eng:'Engine room'};
 const ST=['Live','Launching','Building'];
@@ -12389,7 +12389,7 @@ const NEW=[
 <p>The MISMO Connections Map is the source of truth. The page's content is kept in Team HQ's private data (not in its public code) and shows the date it's <b>as of</b>. To bring it up to date, ask Team HQ's Claude to <b>refresh Connected Systems</b>; it reads the Connections Map and saves the latest.</p>
 <h4>Change Notices</h4>
 <p>The <b>Change Notices</b> tab shows what each system is waiting on. When one system changes something another uses (a name, an address, a route, a data shape), its Claude posts a notice for every system that has to act, in GitHub (GitMISMO/mismo-connections), where every system’s Claude can reach it, including Perry’s and Vanessa’s. Each system’s Claude checks for its own at the start of every session and on its daily check, makes the matching change in its own system, and marks it Done (or Not Needed, with the reason). Only notices marked <b>Needs Jonna</b> come to you; they’re listed first. The tab is brought up to date with each refresh.</p>
-<h4>Edit Mode (Jonna)</h4>
+<h4>Edit Mode (Jonna, and Vanessa as Backup)</h4>
 <p>Click <b>Edit</b> at the top. Select a system to change its status, status note or details; <b>Add a System</b> or <b>Add a Connection</b>; drag a box to move it. Anything still to confirm shows an amber dot, only in Edit mode. <b>Set Aside</b> takes something off the map without deleting it, and <b>Set Aside (n)</b> brings it back. Every save updates the as-of date, and Undo is on the message that appears.</p>`}
 ];
 function addHelp(){ const HELP_SECS=window.__helpSecs; try{ if(Array.isArray(HELP_SECS)){
