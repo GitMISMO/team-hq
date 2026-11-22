@@ -606,8 +606,8 @@ function drawRail(){
   placeBoardBtn(calB);
   add(railLbl('Team'), firstClassic);
   /* Connected Systems sits at the end of the Team list, just above System Health (Jonna's call) */
-  /* Industry Events (Amy's idea, Nov 2026) sits just above Connected Systems */
-  if(window.__hqEvents) add(railBtn('events','Industry Events', ic('pin')));
+  /* Industry Events (Amy's idea, Nov 2026) sits right under Team Projects (Jonna's call, Nov 22, 2026) */
+  if(window.__hqEvents){ const tp=nav.querySelector('button[data-hq="rocks"]'); add(railBtn('events','Industry Events', ic('pin')), tp && tp.nextSibling ? tp.nextSibling : null); }
   if(window.__hqSystems) add(railBtn('systems','Connected Systems', ic('net')));
   markRail();
 }
