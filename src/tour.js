@@ -12,7 +12,7 @@ function h(t,c,x){ const e=document.createElement(t); if(c) e.className=c; if(x!
 function btn(c,x,f){ const b=h('button',c,x); b.type='button'; if(f) b.addEventListener('click', f); return b; }
 
 /* ---------- help for the page you're on ---------- */
-const NX={day:'dash', inbox:'inbox', mine:'mytasks', cal:'calendar', people:'views', systems:'systems'};
+const NX={day:'dash', inbox:'inbox', mine:'mytasks', cal:'calendar', people:'views', systems:'systems', events:'events'};
 const HQ={today:'today', rocks:'rocks', plans:'plans', dates:'dates', findtime:'findtime', agenda:'agenda', syncs:'syncs', expenses:'expenses', mine:'board'};
 function helpFor(){ const on=document.querySelector('.hq.rail .on[data-nx], .hq.rail [data-nx][aria-current], .hq.rail .on[data-hq], .hq.rail [data-hq][aria-current]');
   if(on && on.dataset.nx) return NX[on.dataset.nx] || 'start';
@@ -66,6 +66,22 @@ const NEW=[
  {after:'trouble', id:'health', t:'System Health', d:'Whether saving, storage and the email and calendar flows are working.', h:`
 <p><b>System Health</b> at the foot of the left menu checks every 5 minutes: <b>Saving</b>, <b>Storage</b> (how full the biggest files are), the <b>Email</b> flows, the <b>Outlook calendar</b> flows, the <b>Do It in Outlook</b> flow, and <b>errors on this page</b>. Its dot is green, amber or red, and a red bar appears across the top if something stops. The <b>Team Error Log</b> lists errors from anyone's screen in the last 7 days; <b>Copy Report</b> copies everything to send to whoever is fixing it.</p>
 <p><b>Recent Changes</b> lists who changed what on the team’s tasks, Team Projects, key dates, plans and agenda in the last 7 days, with Open to go to the item. Each of those items also shows its own <b>History</b> at the foot of its panel (the last 90 days). Changes appear within the hour of being saved. Expenses, Sync Ups and notes are never included.</p>
+`},
+ {after:'expenses', id:'events', t:'Industry Events', d:'The conferences, trade shows and dinners MISMO goes to: who’s going, speaking, promotion, graphics and contacts.', h:`
+<p><b>Industry Events</b> (under Team in the left menu, or add its tile with <b>+ Add a Tile</b>) is the list of other organizations’ events MISMO goes to or is thinking about. MISMO’s own Summits stay in Summit HQ. Everyone on the team can add and change events.</p>
+<h4>The Page</h4>
+<p>The boxes across the top show the next event we’re going to with a countdown, how many we’re going to, how many we’re still considering, speaking slots accepted, and what’s due in the next 30 days. Select a box to filter the list. Under them, filter by <b>Upcoming</b>, <b>Going</b>, <b>Considering</b>, <b>Speaking</b>, <b>Past</b>, <b>Not Going</b> or <b>Set Aside</b>, pick a person to see only their events, or search events, cities, people and contacts. Events are listed by month. On the right, <b>Coming Up</b> lists registration deadlines, speaking proposals due, promotion steps due and events starting in the next 60 days, and <b>Who’s Going Where</b> shows each person’s upcoming events.</p>
+<h4>An Event</h4>
+<p>Select an event (or <b>+ Add an Event</b>) to open it on the right. Nothing saves until you press <b>Save Changes</b>; if you close with changes not saved, it asks first. Its tabs:</p>
+<p><b>Details</b>: name, who hosts it, kind, our status (Considering, Going, Not Going), dates, the registration deadline, city and venue, the event’s website, our role (Attending, Speaking, Exhibiting, Sponsoring), costs, the hotel or room block, the media kit or speaker portal link, and notes. Dates can be typed (3/15/27) or picked from the calendar button.<br>
+<b>Who’s Going</b>: each person, their arrive and leave dates, and whether they’re registered and have a room. Once the event is set to Going, it shows as a trip choice in that person’s Expenses, so their receipts land on the right trip.<br>
+<b>Speaking</b>: each session or topic, the speaker, when the proposal is due, where it stands (Idea, Submitted, Accepted, Confirmed, Declined, Done), and the session’s date and time.<br>
+<b>Promotion</b>: the steps for telling people we’ll be there, each with a channel, due date, who and a link to the post. <b>Add the Usual Steps</b> adds five, dated from the event: MISMO Matters 30 days before, an announcement 21 days before, speaker graphics a week before, a post from the event, and a recap 3 days after. <b>Ask MISMO Media</b> opens MISMO Media’s request form in a new tab. Nothing is ever posted or sent from here.<br>
+<b>Graphics</b>: drop in the logos, speaker cards, banners and social posts the event gives us (up to 4 MB each). Each opens in a new tab.<br>
+<b>Contacts</b>: the people we meet or need to reach there, who met them, and whether to follow up.</p>
+<p><b>Set Aside</b> takes an event off the list without deleting it; bring it back from the <b>Set Aside</b> filter.</p>
+<h4>Where It’s Kept</h4>
+<p>In Team HQ’s own data (one record per event, collection <b>events</b>), saved through the save relay like everything else in Team HQ, with history. Graphics are kept in Team HQ’s file storage. Industry Events doesn’t connect to any other system yet; contacts reaching Member 360 and graphics reaching MISMO Media’s Image Library are on the Connections Map as requests.</p>
 `},
  {after:'health', id:'systems', t:'Connected Systems', d:'How MISMO’s systems fit together, what each one does, and what runs on its own.', h:`
 <p><b>Connected Systems</b> (under Team in the left menu, or add its tile with <b>+ Add a Tile</b>) is the map of every MISMO system and the work that moves between them. Point at a box to light up everything it touches; select it for what it does, where it lives, what it replaced, and what it sends and receives. The area buttons show one part of the operation. A moving dot means the work moves automatically; a <b>dashed line</b> means a person copies it.</p>
