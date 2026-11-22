@@ -317,7 +317,7 @@ function pick(){ const A=(M.list||[]); const f=P.filter;
   return U.filter(e=>e.status!=='Not Going').sort(byStart); }
 function drawList(){ const left=P.left; if(!left) return; left.textContent='';
   const all=pick(), L=all.filter(matches);
-  if(!(M.list||[]).some(e=>!e.gone)){ const em=h('div','ev-empty'); const tx=h('div'); tx.appendChild(h('b',null,'No industry events yet')); tx.appendChild(h('p',null,'Add the conferences, trade shows and dinners MISMO is going to or thinking about.')); em.appendChild(tx); em.appendChild(btn('ev-btn pri','+ Add an Event', openNew)); left.appendChild(em); return; }
+  if(!(M.list||[]).some(e=>!e.gone)){ const em=h('div','ev-empty'); const tx=h('div'); tx.appendChild(h('b',null,'No industry events yet')); tx.appendChild(h('p',null,'Use + Add an Event above for the conferences, trade shows and dinners MISMO is going to or thinking about.')); em.appendChild(tx); left.appendChild(em); return; } /* one Add an Event button: the one in the toolbar */
   if(!L.length){ /* nothing in this view: show the upcoming list instead of an empty space */
     const msg=h('p','ev-up', all.length ? 'Nothing matches “'+P.q+'”.' : 'Nothing here, so here’s everything coming up.'); left.appendChild(msg);
     if(all.length) return; const U=live().filter(upcoming).sort(byStart); if(!U.length) return; cards(left, U); return; }
