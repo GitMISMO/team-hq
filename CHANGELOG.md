@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 21** — Expenses: trips entered in DataBasics move to the Archive (button beside Add by Hand), grouped by month with search, a person and year filter, and Report and Receipts on each trip. Nothing is deleted; a trip comes back if any of it is un-entered.
 - **Nov 21** — Expenses rebuilt as one piece: the same page and buttons, tighter layout; a receipt taken with no signal waits on the phone and uploads itself; Export for DataBasics and Download the Receipts leave out trips already entered unless you tick to include them; mileage exports with Receipt: No.
 - **Nov 21** — Connected Systems: a short status such as Pilot sits beside the system's name on the map instead of under it.
 - **Nov 21** — Change History: each task, Team Project, key date and plan item shows who changed what and when at the foot of its panel, and System Health lists Recent Changes for the last 7 days (starting with the last two weeks; expenses, Sync Ups and notes aren't included).
