@@ -97,12 +97,13 @@ const css=h('style'); css.id='hq-events';
 css.textContent=`
 .ev{font-size:14.5px;line-height:1.5;color:var(--ink);max-width:1680px;margin:0 auto;padding:16px clamp(16px,2.4vw,32px) 28px;box-sizing:border-box}
 .ev h3{margin:0;font-size:15px;letter-spacing:-.01em}
-.ev-band{display:grid;grid-template-columns:minmax(0,1.6fr) repeat(4,minmax(0,1fr));gap:10px;padding:14px;border-radius:14px;color:#fff;background:radial-gradient(120% 140% at 100% 0%,rgba(116,191,235,.24),transparent 55%),linear-gradient(140deg,#06202f,#0d314c 55%,#14486e);box-shadow:0 14px 34px -22px rgba(6,32,47,.8)}
+.ev-band{display:grid;grid-template-columns:minmax(220px,1.8fr) repeat(4,minmax(0,1fr));gap:10px;padding:14px;border-radius:14px;color:#fff;background:radial-gradient(120% 140% at 100% 0%,rgba(116,191,235,.24),transparent 55%),linear-gradient(140deg,#06202f,#0d314c 55%,#14486e);box-shadow:0 14px 34px -22px rgba(6,32,47,.8)}
 .ev-fig{font:inherit;text-align:left;color:inherit;display:flex;flex-direction:column;justify-content:center;gap:2px;min-width:0;padding:10px 14px;border-radius:10px;background:rgba(255,255,255,.07);border:1px solid rgba(116,191,235,.22);cursor:pointer;transition:border-color .2s,background .2s}
 .ev-fig:hover,.ev-fig.on{border-color:#74bfeb;background:rgba(116,191,235,.16)}
 .ev-fig b{font-size:28px;font-weight:700;line-height:1.05;font-variant-numeric:tabular-nums}
-.ev-fig span{font-size:12px;font-weight:600;color:rgba(255,255,255,.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ev-fig.next b{font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev-fig span{font-size:12px;font-weight:600;color:rgba(255,255,255,.75);white-space:nowrap}
+.ev-fig.next span:not(.k):not(.cd){overflow:hidden;text-overflow:ellipsis}
+.ev-fig.next b{font-size:20px;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .ev-fig.next .k{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#74bfeb}
 .ev-fig.next .cd{display:inline-block;margin-top:4px;font-size:12px;font-weight:700;color:#0d314c;background:#74bfeb;border-radius:4px;padding:2px 8px;align-self:flex-start}
 .ev-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0 12px}
@@ -197,13 +198,20 @@ css.textContent=`
 .ev-row .ev-f>span{font-size:11px}
 .ev-row .rm{align-self:end;height:36px;width:36px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink-3);cursor:pointer;font-size:18px;line-height:1}
 .ev-row .rm:hover{color:var(--bad,#b42318);border-color:var(--bad,#b42318)}
-.ev-row.ppl{grid-template-columns:minmax(150px,1.3fr) minmax(130px,1fr) minmax(130px,1fr) auto auto minmax(120px,1.2fr) 36px}
-.ev-row.talk{grid-template-columns:minmax(180px,2fr) minmax(140px,1fr) minmax(130px,1fr) minmax(120px,1fr) minmax(130px,1fr) minmax(90px,.8fr) 36px}
-.ev-row.promo{grid-template-columns:auto minmax(180px,2fr) minmax(120px,1fr) minmax(130px,1fr) minmax(130px,1fr) minmax(140px,1.3fr) 36px}
-.ev-row.con{grid-template-columns:minmax(140px,1.2fr) minmax(140px,1.2fr) minmax(120px,1fr) minmax(170px,1.4fr) minmax(120px,1fr) minmax(120px,1fr) auto 36px}
-.ev-row .ckc{display:flex;align-items:center;height:36px}
+.ev-pb{container-type:inline-size}
+/* rows and the details grid fit the panel's own width: one line per row when there's room, two columns when there isn't */
+.ev-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.ev-row.ppl,.ev-row.talk,.ev-row.promo,.ev-row.con{grid-template-columns:repeat(2,minmax(0,1fr))}
+.ev-row .rm{justify-self:end}
+.ev-row .ckc{display:flex;align-items:center;height:36px;white-space:nowrap}
 .ev-row .note{grid-column:1/-1}
-@media(max-width:1200px){.ev-row.ppl,.ev-row.talk,.ev-row.promo,.ev-row.con{grid-template-columns:repeat(2,minmax(0,1fr))}.ev-row .rm{justify-self:end;grid-column:2}.ev-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@container (min-width:740px){
+  .ev-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .ev-row.ppl{grid-template-columns:minmax(130px,1.3fr) minmax(118px,1fr) minmax(118px,1fr) auto auto minmax(100px,1fr) 36px}
+  .ev-row.talk{grid-template-columns:minmax(150px,2fr) minmax(120px,1fr) minmax(118px,1fr) minmax(100px,1fr) minmax(118px,1fr) minmax(80px,.8fr) 36px}
+  .ev-row.promo{grid-template-columns:auto minmax(150px,2.6fr) minmax(110px,1fr) minmax(118px,1fr) minmax(100px,.9fr) minmax(100px,1fr) 36px}
+  .ev-row.con{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
 .ev-drop{border:2px dashed var(--border-strong);border-radius:10px;padding:18px;text-align:center;color:var(--ink-2);background:var(--surface);cursor:pointer;transition:border-color .2s,background .2s}
 .ev-drop.over{border-color:#74bfeb;background:var(--sky-wash,#e8f4fb)}
 .ev-drop b{color:var(--ink)}
@@ -257,7 +265,7 @@ function draw(){ const el=P.el; if(!el || !el.isConnected && el.childNodes.lengt
   const band=h('div','ev-band'); el.appendChild(band);
   const nextEv=Up.find(e=>e.status==='Going') || Up.find(e=>e.status==='Considering');
   const nf=btn('ev-fig next', null, ()=>{ if(nextEv) openPanel(nextEv.id); else openNew(); });
-  nf.appendChild(h('span','k', nextEv ? (nextEv.status==='Going' ? 'Next Event We’re Going To' : 'Next Event We’re Considering') : 'Next Event'));
+  nf.appendChild(h('span','k', nextEv && nextEv.status!=='Going' ? 'Next Event (Considering)' : 'Next Event'));
   nf.appendChild(h('b',null, nextEv ? nextEv.name : 'Nothing on the list yet'));
   nf.appendChild(h('span',null, nextEv ? [span(nextEv.start, nextEv.end), nextEv.city].filter(Boolean).join(' · ') : 'Add the first one to get started'));
   if(nextEv && nextEv.start){ const n=daysTo(nextEv.start); nf.appendChild(h('span','cd', n>0 ? n+' day'+(n===1?'':'s')+' away' : n===0 ? 'Starts today' : 'Happening now')); }
@@ -265,7 +273,7 @@ function draw(){ const el=P.el; if(!el || !el.isConnected && el.childNodes.lengt
   const going=Up.filter(e=>e.status==='Going'), cons=Up.filter(e=>e.status==='Considering');
   const talks=Up.reduce((a,e)=>a+e.talks.filter(t=>t.status==='Accepted'||t.status==='Confirmed').length, 0), talksAll=Up.reduce((a,e)=>a+e.talks.filter(t=>t.status!=='Declined').length, 0);
   const due=dueItems(L, 30);
-  [[going.length,'Events We’re Going To','going'],[cons.length,'Still Considering','considering'],[talks+(talksAll>talks?' of '+talksAll:''),'Speaking Slots Accepted','speaking'],[due.length,'Due in the Next 30 Days','due']].forEach(x=>{
+  [[going.length,'Going','going'],[cons.length,'Considering','considering'],[talks+(talksAll>talks?' of '+talksAll:''),'Speaking Slots','speaking'],[due.length,'Due in 30 Days','due']].forEach(x=>{
     const b=btn('ev-fig'+(P.filter===x[2]?' on':''), null, ()=>{ if(x[2]==='due'){ const d=el.querySelector('.ev-dues'); if(d) d.scrollIntoView({block:'start', behavior:'smooth'}); return; } P.filter=P.filter===x[2]?'up':x[2]; draw(); });
     b.appendChild(h('b',null,String(x[0]))); b.appendChild(h('span',null,x[1])); band.appendChild(b); });
   /* the filters */
