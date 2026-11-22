@@ -221,7 +221,7 @@ const SYS=[
   ['marketing-hq','MISMO Media','/marketing-hq/','#EB6834','MISMO Matters, Mic’d Up, LinkedIn and requests'],
   ['elections-hq','Leadership HQ','/elections-hq/','#22B8CF','MISMO’s leadership, the Board and the yearly elections'],
   ['cms','Certification Management System','/cms/','#F0607A','Certifications, renewals and assessors'],
-  ['so','Service Orders and Agreements','/service-orders/','#FB7185','Contractor agreements and e-signature'],
+  ['so','Contractor HQ','/contractor-hq/','#FB7185','Contractor service orders, agreements, hours and expenses'],
   ['sponsorship','Sponsorship Portal','/sponsorship/','#38BDF8','Sponsor packages, prospects and commitments'],
   ['hub','Initiative Hub','/initiative-hub/','#6B8CFF','Active workgroup initiatives by domain'],
   ['hub-requests','Work Requests','/initiative-hub/work-requests.html','#74BFEB','Requests coming in for the standards work'],
@@ -253,8 +253,8 @@ function discover(){ const a=access(); if(!a) return false; let seen={}; try{ se
     }).catch(()=>{ seen[k]={bad:1, at:Date.now()}; save(); const i=SYS.findIndex(z=>z.k===k && z.auto); if(i>=0){ SYS.splice(i,1); tell(); } }); });
   tell(); return true; }
 { let tries=0; const go=()=>{ if(discover() || ++tries>40) return; setTimeout(go, 1500); }; setTimeout(go, 1500); }
-const SHORT={'cms':'CMS','so':'Service Orders','iif-hq':'IIF Planning','hub-requests':'Work Requests','marketing-hq':'MISMO Media','mms':'MMS'};
-const FIGSRC={ 'Meeting Trackers':'meeting-trackers', 'Certification Management System':'cms', 'Member 360':'member-360', 'Financial System':'financials', 'Service Orders':'so', 'Sponsorship Portal':'sponsorship' };
+const SHORT={'cms':'CMS','so':'Contractor HQ','iif-hq':'IIF Planning','hub-requests':'Work Requests','marketing-hq':'MISMO Media','mms':'MMS'};
+const FIGSRC={ 'Meeting Trackers':'meeting-trackers', 'Certification Management System':'cms', 'Member 360':'member-360', 'Financial System':'financials', 'Service Orders':'so', 'Contractor HQ':'so', 'Sponsorship Portal':'sponsorship' };
 function access(){ try{ const x=window.ResourcesSession && window.ResourcesSession.current(); return (x && x.access) || null; }catch(e){ return null; } }
 function canOpen(k){ const a=access(); if(!a) return true; if(k==='so') return Object.keys(a).some(x=>/^so-/.test(x)); if(k==='scheduler') return true; return !!a[k]; }
 function figsFor(k){ return (S.figures||[]).filter(x=>FIGSRC[x.src]===k && String(x.v||'').trim()!==''); }
