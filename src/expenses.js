@@ -8,7 +8,7 @@
    The rules, in plain words, are in DEVELOPING.md under "Expenses Rebuild". */
 (function(){
 'use strict';
-const LIVE=false;                         /* true once Jonna OKs the new Expenses */
+const LIVE=true;                          /* on for everyone since Jonna's OK, Nov 21, 2026 (?exp=old turns it off for a tab) */
 const GATE='tools:team-hq:exp2';
 let on=LIVE;
 try{ const q=new URLSearchParams(location.search).get('exp');
