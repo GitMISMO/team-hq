@@ -185,9 +185,13 @@ The MISMO Connections Map (Jonna's Claude Doc) is the source of truth for every 
   person's own Outlook. **Deletes always go to Deleted Items.** Never widen this flow's filter.
 - **Done — Send to Vanessa:** marks a trip's expenses `done` and leaves Vanessa a nudge (`nudges`, kind `exp-ready`); when all are ticked entered, her nudge closes and the owner gets one (`exp-entered`). Week-old unsent trips get one `exp-remind`.
 - **expense@mismo.org:** each emailed receipt becomes a draft expense within about a minute; contractors'
-  receipts go to their Service Orders expenses while Jonna's or Vanessa's Team HQ is open.
+  receipts go to their Contractor HQ expenses while Jonna's or Vanessa's Team HQ is open.
 - **Scheduler:** reads Team HQ's staff list; writes a task per request onto the organizer's board.
-- **Service Orders:** reads the staff list and contractor expense receipts.
+- **Industry Events → MISMO Media:** the Ask MISMO Media button only opens MISMO Media's request form
+  (`https://resources.mismo.org/forms/request/`) in a new tab; nothing is sent or posted. Planned, not built: Member 360
+  reading the events' contacts as prospects, and MISMO Media's Image Library taking the events' graphics (both on the
+  Connections Map; their own Claudes build their sides, Team HQ never writes into them).
+- **Contractor HQ** (formerly Service Orders): reads the staff list and contractor expense receipts.
 - **Every system's tile:** headline numbers read from each system for its dashboard tile.
 - **Ask, Plan My Day and receipt reading** go through the relay's ask route; MISMO's API key stays in the relay.
 - **Connected Systems:** refreshed from the Connections Map when Jonna asks Team HQ's Claude to "refresh
