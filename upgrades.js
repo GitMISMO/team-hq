@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261122p';
+var BUILD='20261122q';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -5111,7 +5111,7 @@ html[data-theme="dark"] .cs-cv-det .bk:not(.sys) small{color:#5fd29a}
 .cs-cadcol li.cs-go:hover,.cs-cadcol li.cs-go:focus-visible{box-shadow:none;background:color-mix(in srgb,#74bfeb 14%,var(--surface-2));transform:translateX(2px)}
 .cs-gh{display:inline-block;margin-top:4px;font-size:11.5px;font-weight:700;color:var(--cs-hot);opacity:.75}
 .cs-go:hover .cs-gh{opacity:1}
-.cs-foot{color:var(--ink-3);font-size:12.5px;padding:16px 0 30px}
+.cs-foot{color:var(--ink-3);font-size:12.5px;padding:16px 0 30px}.cs-band>.cs-foot{padding:12px 0 0}
 .cs-empty{background:var(--surface);border:1px dashed var(--border);border-radius:14px;padding:28px;text-align:center;color:var(--ink-2)}
 /* edit mode */
 .cs-ebar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:color-mix(in srgb,#74bfeb 14%,var(--surface));border:1px solid color-mix(in srgb,#74bfeb 45%,var(--border));border-radius:12px;padding:9px 12px;margin:12px 0 0;font-size:13px}
@@ -5421,9 +5421,13 @@ function whoCls(w){ return w==='You' ? 'you' : (w==='claude' || /claude/i.test(w
 /* Change Notices (November 22, 2026): how the systems tell each other about a change, so Jonna isn't the go-between.
    Kept in the Connections Map's Change Notices table and brought in with each refresh (record field "notices"):
    [{n:'CN-001', posted, from, what, for, todo, status}]. One row per system that has to act. */
+/* finished notices clear off the page two weeks after they're done (the full history stays in GitHub) */
+const CN_KEEP_DAYS=14;
+function nDoneAt(x){ const m=/^(?:done|not needed)\D*?([A-Z][a-z]{2,8} \d{1,2}, \d{4})/i.exec(String(x.status||'')) || /([A-Z][a-z]{2,8} \d{1,2}, \d{4})/.exec(String(x.posted||'')); if(!m) return null; const t=new Date(m[1]); return isNaN(t) ? null : t; }
+function nStale(x){ const t=nDoneAt(x); return !!t && (Date.now()-t)/864e5 > CN_KEEP_DAYS; }
 function nStat(x){ const s=String(x.status||''); return /^done/i.test(s) ? 'done' : /^not needed/i.test(s) ? 'nn' : /needs jonna/i.test(s) ? 'jonna' : 'wait'; }
 function noticeBand(d){ const b=band('Change notices','What Each System Is Waiting On','When one system changes something another uses, it posts a notice for each system that has to act. Each system’s Claude checks for its own at the start of every session and on its daily check, does its part, and marks it done. Only the ones marked Needs Jonna come to you.');
-  const L=d.notices.slice(), open=L.filter(x=>nStat(x)==='wait'||nStat(x)==='jonna'), jon=L.filter(x=>nStat(x)==='jonna'), done=L.filter(x=>nStat(x)==='done'||nStat(x)==='nn');
+  const L=d.notices.slice(), open=L.filter(x=>nStat(x)==='wait'||nStat(x)==='jonna'), jon=L.filter(x=>nStat(x)==='jonna'), done=L.filter(x=>(nStat(x)==='done'||nStat(x)==='nn') && !nStale(x)), cleared=L.filter(x=>(nStat(x)==='done'||nStat(x)==='nn') && nStale(x)).length;
   const sm=h('div','cs-card cs-rsum2 cs-cn'); const st=h('div','st'); const big=h('div','big'); big.appendChild(h('b',null,String(open.length))); big.appendChild(h('span',null, open.length===1?'notice waiting':'notices waiting')); st.appendChild(big);
   const dn=btn('cs-cndone', done.length+' done', ()=>show('__done')); dn.title='Show the finished ones'; const pl=h('p'); pl.appendChild(dn); pl.append(' · '+(jon.length ? jon.length+' need you' : 'none need you')); st.appendChild(pl); sm.appendChild(st); dn.dataset.k='__done'; sm._dn=dn;
   const by={}; open.forEach(x=>{ const k=x.for||'Unassigned'; (by[k]=by[k]||[]).push(x); });
@@ -5444,7 +5448,7 @@ function noticeBand(d){ const b=band('Change notices','What Each System Is Waiti
   if(jon.length){ const sec=h('div','cs-cng'); sec.dataset.k='__jonna'; sec.appendChild(h('h3',null,'Needs You')); jon.forEach(x=>row(x, sec)); b.appendChild(sec); }
   keys.forEach(k=>{ const w=by[k].filter(x=>nStat(x)==='wait'); if(!w.length) return; const sec=h('div','cs-cng'); sec.dataset.k=k; sec.appendChild(h('h3',null,'Waiting on '+k)); w.forEach(x=>row(x, sec)); b.appendChild(sec); });
   if(done.length){ const sec=h('div','cs-cng'); sec.dataset.k='__done'; sec.appendChild(h('h3',null,'Done')); done.slice().reverse().slice(0,12).forEach(x=>row(x, sec)); b.appendChild(sec); }
-  b.appendChild(h('p','cs-foot','Kept in GitHub (GitMISMO/mismo-connections, CHANGE-NOTICES.md), where every system’s Claude can reach them, and brought in with each refresh.'));
+  b.appendChild(h('p','cs-foot','Kept in GitHub (GitMISMO/mismo-connections, CHANGE-NOTICES.md), where every system’s Claude can reach them, and brought in with each refresh. Finished notices clear off this page '+CN_KEEP_DAYS+' days after they’re done'+(cleared?' ('+cleared+' cleared so far)':'')+'; GitHub keeps the full history.'));
   return b; }
 function todoBand(d){ const b=band('Road to rock solid','What’s Left to Make Each System Rock Solid','What’s open now, who it’s waiting on, and the four safety nets every system gets. Things that aren’t due for months, like key renewals, wait in Coming Up Later and don’t count until they’re close.');
   const wrap=h('div','cs-rs'); b.appendChild(wrap); P.rsWrap=wrap; paintTodos(d); return b; }
