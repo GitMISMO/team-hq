@@ -9,6 +9,7 @@
    never send the same one twice. */
 (function(){
 'use strict';
+if(window.__exp2 && window.__exp2.on) return;   /* the new Expenses (expenses.js) is running instead */
 if(window.__expDone && window.__expDone.destroy) window.__expDone.destroy();
 const S=window.__S, root=document.getElementById('app-expenses');
 if(!S || !root) return;
