@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 22** — Industry Events moved to sit right under Team Projects in the left menu.
 - **Nov 22** — Help: the Expenses help says an industry event you're going to shows in the trip drop-down.
 - **Nov 22** — New: Industry Events (under Team, and as a dashboard tile). The conferences, trade shows and dinners MISMO goes to, by month, with who's going and their travel dates, speaking opportunities, promotion steps (plus Ask MISMO Media), graphics from the event and the contacts we meet. An event someone's going to shows as a trip choice in their Expenses.
 - **Nov 22** — Contractor HQ everywhere else too: the dashboard's Contractor HQ numbers tile, the Service Orders in the Queue figure and the links list use the new name and open resources.mismo.org/contractor-hq/ (saved dashboards keep their tile).
