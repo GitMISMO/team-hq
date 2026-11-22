@@ -1351,10 +1351,13 @@ if(S.tab==='expenses'){ try{ window.__show('expenses'); }catch(e){} }
    When it does, this editor opens in its place: the same expense (matched by name, date and amount), or a new one on that trip. */
 (function(){ const pb=$id('panel-b'), pt=$id('panel-t'); if(!pb || !pt) return;
   new MutationObserver(()=>{ if(pb.classList.contains('x2-ed')) return; const t=pt.textContent; if(t!=='Edit Expense' && t!=='Add an Expense') return;
-    const val=l=>{ const f=[...pb.querySelectorAll('.f')].find(x=>x.firstElementChild && x.firstElementChild.textContent.trim()===l); const c=f && f.querySelector('input,select'); return c ? String(c.value||'').trim() : ''; };
+    /* a label's own words, without the "From the Receipt" tag beside it */
+    const lab=f=>{ const sp=f.firstElementChild; return sp ? [...sp.childNodes].filter(n=>n.nodeType===3).map(n=>n.nodeValue).join('').trim() : ''; };
+    const val=l=>{ const f=[...pb.querySelectorAll('.f')].find(x=>lab(x)===l); const c=f && f.querySelector('input,select'); return c ? String(c.value||'').trim() : ''; };
     if(!pb.querySelector('.f')) return;
     if(t==='Add an Expense'){ edit(null, val('Trip Name')); return; }
     const nm=val('Expense Name'), d=val('Expense Date'), a=val('Expense Amount');
+    if(!nm && !d && !a) return;
     const x=E().find(z=>String(z.name||'').trim()===nm && String(z.date||'')===d && String(z.amt||'')===a); if(x) edit(x); }).observe(pb, {childList:true});
 })();
 /* the opening cover waits for this in the Expenses app; mark ready once the expenses file is in */
