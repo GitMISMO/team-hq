@@ -145,7 +145,11 @@ css.textContent=`
 .ev-side2{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
 .ev-avs{display:flex}.ev-avs .ev-av{margin-left:-6px;border:2px solid var(--surface)}.ev-avs .ev-av:first-child{margin-left:0}
 .ev-av{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;color:#fff;font-size:11px;font-weight:700;flex:none}
-.ev-cnt{display:flex;gap:4px 12px;flex-wrap:wrap;font-size:12px;color:var(--ink-3);white-space:nowrap}.ev-cnt b{color:var(--ink);font-variant-numeric:tabular-nums}
+.ev-cnt{display:grid;grid-template-columns:repeat(2,max-content);gap:3px 14px;font-size:12px;color:var(--ink-3);white-space:nowrap;justify-content:end}
+.ev-gn{font-size:11.5px;font-weight:700;color:var(--ink-2)}
+.ev-left{container-type:inline-size}
+.ev-card .ev-side2{min-width:170px;padding-left:14px;border-left:1px solid var(--border);align-self:stretch;justify-content:center}
+@container (max-width:600px){.ev-card{grid-template-columns:72px minmax(0,1fr)}.ev-card .ev-side2{grid-column:2;min-width:0;padding:8px 0 0;border-left:0;border-top:1px solid var(--border);flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}.ev-cnt{justify-content:start}}.ev-cnt b{color:var(--ink);font-variant-numeric:tabular-nums}
 .ev-box{border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:14px;display:flex;flex-direction:column;gap:8px}
 .ev-box+.ev-box{margin-top:12px}
 .ev-box .hint{font-size:12.5px;color:var(--ink-3);margin:0}
@@ -159,7 +163,7 @@ css.textContent=`
 .ev-empty{border:1px dashed var(--border-strong);border-radius:12px;padding:22px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:var(--surface)}
 .ev-empty b{font-size:16px}.ev-empty p{margin:2px 0 0;color:var(--ink-2)}
 @media(max-width:1100px){.ev-band{grid-template-columns:repeat(2,minmax(0,1fr))}.ev-fig.next{grid-column:1/-1}.ev-cols{grid-template-columns:minmax(0,1fr)}}
-@media(max-width:620px){.ev-card{grid-template-columns:54px minmax(0,1fr)}.ev-side2{grid-column:1/-1;flex-direction:row;justify-content:space-between;align-items:center}}
+
 
 /* the right-hand panel: three quarters of the screen, full width on a phone */
 .ev-scrim{position:fixed;inset:0;background:rgba(6,32,47,.38);z-index:9400;animation:evFade .2s ease}
@@ -341,10 +345,11 @@ function card(e){ const c=btn('ev-card'+(e.status==='Not Going'||e.gone?' dim':'
   if(e.regBy && e.status!=='Not Going'){ const n=daysTo(e.regBy); if(n!=null && n>=0 && n<=30) tg.appendChild(h('span','ev-tag considering','Register by '+fmt(e.regBy))); }
   m.appendChild(tg); c.appendChild(m);
   const s2=h('div','ev-side2'); const av=h('div','ev-avs'); e.people.filter(p=>p.who).slice(0,6).forEach(p=>av.appendChild(avatar(p.who))); if(av.childNodes.length) s2.appendChild(av);
-  /* the counts sit under the tags, so the name keeps the room */
+  /* the right side: who's going and the counts, stacked; under the tags when the list is narrow */
+  const n0=e.people.filter(p=>p.who).length; if(n0) s2.appendChild(h('small','ev-gn', n0+' going'));
   const cn=h('div','ev-cnt'); const pr=e.promo.length; const add=(n,l)=>{ if(!n && n!==0) return; const s=h('span'); s.appendChild(h('b',null,String(n))); s.append(' '+l); cn.appendChild(s); };
   if(e.talks.length) add(e.talks.length, e.talks.length===1?'talk':'talks'); if(pr) add(e.promo.filter(p=>p.done).length+'/'+pr, 'promoted'); if(e.graphics.length) add(e.graphics.length, e.graphics.length===1?'graphic':'graphics'); if(e.contacts.length) add(e.contacts.length, e.contacts.length===1?'contact':'contacts');
-  if(cn.childNodes.length) m.appendChild(cn); if(s2.childNodes.length) c.appendChild(s2);
+  if(cn.childNodes.length) s2.appendChild(cn); if(s2.childNodes.length) c.appendChild(s2);
   return c; }
 
 /* ---------- the right-hand panel: one event, every part of it, with one Save ---------- */
