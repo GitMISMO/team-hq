@@ -56,6 +56,7 @@ prompt) lives only in the private `systemsmap` collection, never in this code.
 | `mileage.js` | Mileage in the expense editor: miles driven × the IRS rate for the date |
 | `exporg.js` | Expenses: receipts join the person's nearby trip, the trip drop-down, folded trips and the Entered fold |
 | `expdone.js` | Expenses: Done — Send to Vanessa per trip, her Ready to Enter list, entered and reminder notes |
+| `history.js` | Change History: a History section on each item's panel and Recent Changes in System Health, read from `data/history.json` |
 | `tour.js` | The guided tour and page help |
 | `design.js` | The design layer: readable muted text, focus ring, reduced motion |
 
@@ -110,6 +111,7 @@ real page and delete the test page.
 - Collections in `team-hq-data` include the team's tasks, projects, plans and dates, plus `comments`,
   `templates`, `rules`, `syncs` and `syncitems`, `expinbox` (emailed receipts), `errors` (the team error log) and
   `systemsmap` (Connected Systems: `current` and `requests`).
+- **Change History:** the `Team HQ Change History` job in `team-hq-data` (`tools/history.mjs`, every hour) reads each save and keeps 90 days of who changed what on tasks, Team Projects, key dates, plans, plan items and agenda items in `data/history.json`. Expenses, Sync Ups and notes are never read. Like Recently Deleted (`tools/trash.mjs`), it only writes its own file.
 - Team HQ reads other systems' headline numbers for their dashboard tiles through the relay, and each system's
   own tiles are drawn Team HQ style.
 
