@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261122n';
+var BUILD='20261122o';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -5188,7 +5188,9 @@ html[data-theme="dark"] .cs-cv-det .bk:not(.sys) small{color:#5fd29a}
 .cs-rsum2 .cs-lks .l{font:inherit;text-align:left;cursor:pointer;color:inherit;transition:border-color .15s,box-shadow .15s,transform .15s}.cs-rsum2 .cs-lks .l:hover{border-color:var(--cs-sky);transform:translateY(-1px)}
 .cs-rsum2 .cs-lks .l.on{box-shadow:inset 0 0 0 2px var(--cs-sky);border-color:var(--cs-sky)}.cs-rsum2 .cs-lks .l.you.on{box-shadow:inset 0 0 0 2px #74bfeb}
 .cs-fil{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;color:var(--ink-2)}.cs-none2{padding:14px 16px;font-size:13px;color:var(--ink-3)}
-.cs-rqsum{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12.5px;color:var(--ink-2)}.cs-rqsum b{font-size:15px;color:var(--ink)}
+.cs-rqsum{display:flex;flex-wrap:wrap;gap:6px 8px;font-size:12.5px;color:var(--ink-2)}.cs-rqsum b{font-size:15px;color:var(--ink);margin-right:2px}
+.cs-rqf1{font:inherit;font-size:12.5px;color:var(--ink-2);background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 10px;cursor:pointer;white-space:nowrap}.cs-rqf1:hover:not(:disabled){border-color:var(--cs-sky)}.cs-rqf1.on{background:var(--navy,#0d314c);border-color:var(--navy,#0d314c);color:#fff}.cs-rqf1.on b{color:#fff}.cs-rqf1:disabled{opacity:.55;cursor:default}
+:root[data-theme="dark"] .cs-rqf1.on{background:#74bfeb;border-color:#74bfeb;color:#06202f}:root[data-theme="dark"] .cs-rqf1.on b{color:#06202f}
 .cs-rqbox{column-count:2;column-gap:0;column-rule:1px solid var(--border);padding:4px 0}
 .cs-rqg{break-inside:avoid;padding:8px 14px 10px;border-bottom:1px solid color-mix(in srgb,var(--border) 70%,transparent)}
 .cs-rqg .gh{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}.cs-rqg .gh .cs-rtag{font-size:12.5px;font-weight:800;color:var(--ink);text-transform:uppercase;letter-spacing:.04em}
@@ -5548,7 +5550,12 @@ function reqSection(d, wrap, by, tag){ const Q=(M.req && Array.isArray(M.req.ite
     f.appendChild(btn('cs-btn pri','Add', ()=>{ const tt=t.value.trim(); if(!tt){ t.focus(); return; } const nx=clone(M.req||{items:[]}); nx.items=nx.items||[]; nx.items.push({id:'rq'+Date.now().toString(36), area:ar.value, sys:sy.value, t:tt, d:dd.value.trim(), by:me(), on:todayISO()}); P.rqAdd=false; saveReq(nx,'Request added for Perry'); })); sec.appendChild(f); setTimeout(()=>t.focus(),0); }
   const fmt=iso=>iso ? longDate(iso) : '', sfmt=iso=>{ const x=new Date(iso+'T12:00'); return isNaN(x) ? iso : x.toLocaleDateString('en-US',{month:'short',day:'numeric'}); };
   const L0=Q.filter(x=>showDone || !x.done); const open=Q.filter(x=>!x.done), dated=open.filter(x=>x.due).sort((a,b)=>a.due.localeCompare(b.due));
-  const sum=h('div','cs-rqsum'); [[open.length,'open'],[open.filter(x=>x.area==='relay').length,'save relay'],[open.filter(x=>x.area==='aws').length,'AWS'],[dated.length,'with a date'+(dated.length?', first '+sfmt(dated[0].due):'')]].forEach(([n,t])=>{ const k=h('span'); k.appendChild(h('b',null,String(n))); k.append(' '+t); sum.appendChild(k); }); sec.appendChild(sum);
+  /* each count is a filter for the list under it (select it again for all); "open" shows every open request */
+  const RQF={relay:x=>x.area==='relay', aws:x=>x.area==='aws', dated:x=>!!x.due};
+  const sum=h('div','cs-rqsum'); [[open.length,'open',null],[open.filter(RQF.relay).length,'save relay','relay'],[open.filter(RQF.aws).length,'AWS','aws'],[dated.length,'with a date'+(dated.length?', first '+sfmt(dated[0].due):''),'dated']].forEach(([n,t,f])=>{
+    const k=btn('cs-rqf1'+((P.rqF||null)===f?' on':''), null, ()=>{ P.rqF=(f && P.rqF!==f) ? f : null; paintTodos(M.data); }); k.appendChild(h('b',null,String(n))); k.append(' '+t);
+    k.setAttribute('aria-pressed', String((P.rqF||null)===f)); k.title=f ? (P.rqF===f ? 'Show every request' : 'Show only these') : 'Show every open request'; if(!n && f) k.disabled=true; sum.appendChild(k); }); sec.appendChild(sum);
+  if(P.rqF && RQF[P.rqF]) { const keep=RQF[P.rqF]; for(let i=L0.length-1;i>=0;i--) if(!keep(L0[i]) || L0[i].done) L0.splice(i,1); }
   /* one group per system, the most urgent first; each request is one line, details on click */
   const G={}; L0.forEach(x=>{ (G[x.sys]=G[x.sys]||[]).push(x); }); const key=L=>{ const o=L.filter(x=>!x.done); const dd=o.filter(x=>x.due).map(x=>x.due).sort()[0]; return (dd||'9999')+'|'+String(100-o.length).padStart(3,'0'); };
   const box=h('div','cs-card cs-rqbox');
