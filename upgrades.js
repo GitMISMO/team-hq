@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261122a';
+var BUILD='20261122c';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -5983,6 +5983,519 @@ start();
 })();
 
 });
+/* ===== events.js ===== */
+MODS.push(function(){
+/* Industry Events (November 22, 2026)
+   Amy's idea (Nov 6, 2026): one place for the industry events MISMO goes to — other organizations'
+   conferences, trade shows and dinners, not MISMO's own Summits (Summit HQ has those).
+   - Each event: where and when, our status and role, who's going and their travel dates, speaking
+     opportunities, the promotion steps, the graphics the event gives us, and the people we meet there.
+   - Kept in Team HQ's data (collection "events", one record per event). Everyone on the team can add
+     and change events. Every editor has an explicit Save; nothing saves while you type.
+   - Removing an event sets it aside (it can be brought back); nothing is deleted.
+   - Graphics are uploaded right on the event (Team HQ's own file storage) and open in a new tab.
+   - Nothing here ever sends an email or posts anything. "Ask MISMO Media" only opens MISMO Media's
+     request form in a new tab.
+   - An event someone is going to shows up as a trip choice in their Expenses (window.__hqEvents.tripsFor). */
+(function(){
+'use strict';
+if(window.__hqEvents && window.__hqEvents.destroy) window.__hqEvents.destroy();
+const S=window.__S; if(!S) return;
+const COLL='events';
+const REQUEST_FORM='https://resources.mismo.org/forms/request/';
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONL=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const KINDS=['Conference','Trade Show','Webinar','Meeting or Dinner','Other'];
+const STATUS=['Considering','Going','Not Going'];
+const ROLES=['Attending','Speaking','Exhibiting','Sponsoring'];
+const TALK=['Idea','Submitted','Accepted','Confirmed','Declined','Done'];
+const CHAN=['LinkedIn','MISMO Matters','Website','Email','Event App','Other'];
+const GUSE=['Logo','Speaker Card','Banner','Social Post','Booth','Other'];
+const PAL=['#2477b8','#2bb673','#9b8cf0','#e8833a','#22b8cf','#e86f5a','#f2b134','#5aa9e6','#1baf7a','#d6336c'];
+const M={list:null, sub:false, listeners:[]};
+const P={el:null, filter:'up', q:'', who:'', panel:null};
+
+/* ---------- small helpers ---------- */
+function h(t,c,x){ const e=document.createElement(t); if(c) e.className=c; if(x!=null) e.textContent=x; return e; }
+function btn(c,x,f){ const b=h('button',c,x); b.type='button'; if(f) b.addEventListener('click', f); return b; }
+const me=()=>S.me||'';
+const clone=o=>JSON.parse(JSON.stringify(o));
+const uid=p=>(p||'e')+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const today=()=>{ const d=new Date(); d.setHours(0,0,0,0); return d; };
+const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const pd=s=>{ const m=/^(\d{4})-(\d\d)-(\d\d)/.exec(s||''); return m ? new Date(+m[1], m[2]-1, +m[3]) : null; };
+const addD=(d,n)=>{ const x=new Date(d); x.setDate(x.getDate()+n); return x; };
+const daysTo=s=>{ const d=pd(s); return d ? Math.round((d-today())/864e5) : null; };
+const fmt=s=>{ const d=pd(s); return d ? MON[d.getMonth()]+' '+d.getDate() : ''; };
+const fmtY=s=>{ const d=pd(s); return d ? MON[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear() : ''; };
+function span(a,b){ const A=pd(a), B=pd(b); if(!A) return ''; if(!B || +A===+B) return fmtY(a);
+  if(A.getFullYear()!==B.getFullYear()) return fmtY(a)+' – '+fmtY(b);
+  if(A.getMonth()===B.getMonth()) return MON[A.getMonth()]+' '+A.getDate()+'–'+B.getDate()+', '+A.getFullYear();
+  return fmt(a)+' – '+fmt(b)+', '+A.getFullYear(); }
+const when=n=>n==null?'':n<0?(n===-1?'Yesterday':-n+' days ago'):n===0?'Today':n===1?'Tomorrow':'In '+n+' days';
+/* typed dates: 9/30/26, 9/30/2026, 2026-09-30, Sep 30 2026, Sep 30 (the next one) */
+function parseDate(s){ s=String(s||'').trim(); if(!s) return '';
+  let m=/^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s); if(m) return ok(+m[1], +m[2], +m[3]);
+  m=/^(\d{1,2})[\/.\-](\d{1,2})(?:[\/.\-](\d{2,4}))?$/.exec(s); if(m){ let y=m[3]?+m[3]:null; if(y!=null && y<100) y+=2000; return ok(y, +m[1], +m[2]); }
+  m=/^([A-Za-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?(?:\s+(\d{2,4}))?$/.exec(s);
+  if(m){ const mo=MON.findIndex(x=>x.toLowerCase()===m[1].slice(0,3).toLowerCase()); if(mo<0) return null; let y=m[3]?+m[3]:null; if(y!=null && y<100) y+=2000; return ok(y, mo+1, +m[2]); }
+  return null;
+  function ok(y, mo, d){ if(mo<1||mo>12||d<1||d>31) return null; if(y==null){ const t=today(); y=t.getFullYear(); if(new Date(y, mo-1, d)<addD(t,-30)) y++; }
+    const x=new Date(y, mo-1, d); return x.getMonth()===mo-1 ? iso(x) : null; } }
+function person(id){ return (S.people||[]).find(p=>p.id===id) || null; }
+function pname(id){ const p=person(id); return p ? p.name : (id||''); }
+function first(id){ return pname(id).split(' ')[0]; }
+function initials(id){ const n=pname(id).split(/\s+/).filter(Boolean); return ((n[0]||'?')[0]+((n[1]||'')[0]||'')).toUpperCase(); }
+function pcolor(id){ const p=person(id); const i=p && p.color!=null ? +p.color : [...String(id)].reduce((a,c)=>a+c.charCodeAt(0),0); return PAL[i%PAL.length]; }
+function avatar(id, sz){ const a=h('span','ev-av', initials(id)); a.style.background=pcolor(id); if(sz){ a.style.width=a.style.height=sz+'px'; a.style.fontSize=Math.round(sz*.4)+'px'; } a.title=pname(id); return a; }
+function team(){ return (S.people||[]).slice().sort((a,b)=>(a.ord||0)-(b.ord||0)); }
+function toast(msg, undo){ const t=window.__nxToast; if(t) t(msg, undo); }
+const safeUrl=u=>{ u=String(u||'').trim(); if(!u) return ''; if(!/^https?:\/\//i.test(u)) u='https://'+u; try{ const x=new URL(u); return /^https?:$/.test(x.protocol) ? x.href : ''; }catch(e){ return ''; } };
+
+/* ---------- the data: one record per event ---------- */
+function start(){ if(M.sub || !S.db || !S.db.collection) return; M.sub=true;
+  try{ S.db.collection(COLL).onSnapshot(snap=>{ const L=[]; (snap && snap.docs ? snap.docs : []).forEach(d=>{ let v=null; try{ v=JSON.parse(JSON.stringify(d.data()||{})); }catch(e){} if(v && v.name){ v.id=v.id||d.id; fix(v); L.push(v); } });
+      M.list=L; notify(); }, e=>{ console.error('Industry Events', e); if(!M.list){ M.list=[]; notify(); } }); }catch(e){ console.error(e); M.list=M.list||[]; } }
+function fix(v){ ['people','talks','promo','graphics','contacts','roles'].forEach(k=>{ if(!Array.isArray(v[k])) v[k]=[]; }); if(STATUS.indexOf(v.status)<0) v.status='Considering'; return v; }
+function save(ev, msg, undoTo){ ev=fix(clone(ev)); ev.by=me(); ev.at=Date.now(); if(!ev.created){ ev.created=ev.at; ev.createdBy=me(); }
+  const L=(M.list||[]).filter(x=>x.id!==ev.id); L.push(ev); M.list=L; notify();
+  return Promise.resolve().then(()=>S.db.collection(COLL).doc(ev.id).set(ev)).then(()=>{ if(msg) toast(msg, undoTo ? ()=>save(undoTo, 'Put back the way it was.') : null); return true; },
+    e=>{ console.error(e); toast('That didn’t save. Try again in a moment.'); return false; }); }
+let drawWait=null;
+function notify(){ M.listeners.forEach(f=>{ try{ f(); }catch(e){ console.error(e); } });
+  if(P.el && P.el.isConnected){ clearTimeout(drawWait); drawWait=setTimeout(draw, 30); } }
+const live=()=>(M.list||[]).filter(e=>!e.gone);
+const endOf=e=>e.end||e.start||'';
+const upcoming=e=>{ const n=daysTo(endOf(e)); return n==null || n>=0; };
+const byStart=(a,b)=>(a.start||'9999').localeCompare(b.start||'9999') || a.name.localeCompare(b.name);
+
+/* what's due: registration deadlines, speaking proposals, promotion steps, and the events themselves */
+function dueItems(L, days){ const out=[]; const add=(d, t, ev, k)=>{ const n=daysTo(d); if(n==null || n<-3 || n>days) return; out.push({d, n, t, ev, k}); };
+  L.forEach(ev=>{ if(ev.status==='Not Going') return;
+    if(ev.regBy) add(ev.regBy, 'Register for '+ev.name, ev, 'reg');
+    ev.talks.forEach(t=>{ if(t.due && (t.status==='Idea' || !t.status)) add(t.due, 'Speaking proposal due: '+(t.title||ev.name), ev, 'talk'); });
+    ev.promo.forEach(p=>{ if(p.due && !p.done) add(p.due, (p.t||'Promotion step')+' · '+ev.name, ev, 'promo'); });
+    if(ev.status==='Going' && ev.start) add(ev.start, ev.name+' starts', ev, 'start'); });
+  return out.sort((a,b)=>a.d.localeCompare(b.d)); }
+
+/* ---------- the styles (Team HQ's colors, light and dark; squared corners, no pills) ---------- */
+const css=h('style'); css.id='hq-events';
+css.textContent=`
+.ev{font-size:14.5px;line-height:1.5;color:var(--ink);max-width:1680px;margin:0 auto;padding:16px clamp(16px,2.4vw,32px) 28px;box-sizing:border-box}
+.ev h3{margin:0;font-size:15px;letter-spacing:-.01em}
+.ev-band{display:grid;grid-template-columns:minmax(220px,1.8fr) repeat(4,minmax(0,1fr));gap:10px;padding:14px;border-radius:14px;color:#fff;background:radial-gradient(120% 140% at 100% 0%,rgba(116,191,235,.24),transparent 55%),linear-gradient(140deg,#06202f,#0d314c 55%,#14486e);box-shadow:0 14px 34px -22px rgba(6,32,47,.8)}
+.ev-fig{font:inherit;text-align:left;color:inherit;display:flex;flex-direction:column;justify-content:center;gap:2px;min-width:0;padding:10px 14px;border-radius:10px;background:rgba(255,255,255,.07);border:1px solid rgba(116,191,235,.22);cursor:pointer;transition:border-color .2s,background .2s}
+.ev-fig:hover,.ev-fig.on{border-color:#74bfeb;background:rgba(116,191,235,.16)}
+.ev-fig b{font-size:28px;font-weight:700;line-height:1.05;font-variant-numeric:tabular-nums}
+.ev-fig span{font-size:12px;font-weight:600;color:rgba(255,255,255,.75);white-space:nowrap}
+.ev-fig.next span:not(.k):not(.cd){overflow:hidden;text-overflow:ellipsis}
+.ev-fig.next b{font-size:20px;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ev-fig.next .k{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#74bfeb}
+.ev-fig.next .cd{display:inline-block;margin-top:4px;font-size:12px;font-weight:700;color:#0d314c;background:#74bfeb;border-radius:4px;padding:2px 8px;align-self:flex-start}
+.ev-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0 12px}
+.ev-seg{display:inline-flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:var(--surface)}
+.ev-seg button{font:inherit;font-size:12.5px;font-weight:700;border:0;border-right:1px solid var(--border);background:transparent;color:var(--ink-2);padding:0 12px;height:32px;cursor:pointer;white-space:nowrap}
+.ev-seg button:last-child{border-right:0}.ev-seg button.on{background:var(--navy,#0d314c);color:#fff}
+:root[data-theme="dark"] .ev-seg button.on{background:#74bfeb;color:#06202f}
+.ev-bar input[type=search],.ev-bar select{font:inherit;font-size:13px;height:32px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);padding:0 10px}
+.ev-bar input[type=search]{flex:1 1 200px;min-width:160px}
+.ev-btn{display:inline-flex;align-items:center;gap:6px;height:32px;border:1px solid var(--border);background:var(--surface);color:var(--ink);font:inherit;font-size:12.5px;font-weight:700;padding:0 12px;border-radius:6px;cursor:pointer;white-space:nowrap;min-width:max-content;text-decoration:none}
+.ev-btn:hover{border-color:var(--border-strong)}
+.ev-btn.pri{background:var(--navy,#0d314c);border-color:var(--navy,#0d314c);color:#fff}.ev-btn.pri:hover{background:var(--navy-mid,#14486e)}
+:root[data-theme="dark"] .ev-btn.pri{background:#74bfeb;border-color:#74bfeb;color:#06202f}
+.ev-btn.warn{color:var(--bad,#b42318)}
+.ev-btn:disabled{opacity:.5;cursor:default}
+.ev-cols{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+.ev-mon{font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin:14px 0 6px}
+.ev-mon:first-child{margin-top:0}
+.ev-list{display:flex;flex-direction:column;gap:8px}
+.ev-card{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:14px;align-items:center;padding:12px 14px;border:1px solid var(--border);border-left:4px solid var(--ea,#74bfeb);border-radius:10px;background:var(--surface);cursor:pointer;text-align:left;font:inherit;color:inherit;width:100%;transition:box-shadow .2s,transform .2s}
+.ev-card:hover,.ev-card:focus-visible{box-shadow:0 12px 26px -18px rgba(6,32,47,.55);transform:translateY(-1px);outline:none}
+.ev-card.dim{opacity:.6}
+.ev-date{display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;background:var(--surface-2);padding:6px 4px;line-height:1.1}
+.ev-date small{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ea,#2477b8)}
+.ev-date b{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.ev-date em{font-style:normal;font-size:11px;color:var(--ink-3)}
+.ev-main{min-width:0;display:flex;flex-direction:column;gap:4px}
+.ev-main .nm{font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev-main .sub{font-size:13px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev-tags{display:flex;gap:6px;flex-wrap:wrap}
+.ev-tag{display:inline-flex;align-items:center;font-size:11.5px;font-weight:700;padding:2px 7px;border-radius:4px;background:var(--surface-2);color:var(--ink-2);white-space:nowrap}
+.ev-tag.going{background:var(--good-soft,#e3f6ec);color:var(--good,#067647)}
+.ev-tag.considering{background:var(--warn-soft,#fef0c7);color:var(--warn,#93370d)}
+.ev-tag.notgoing{background:var(--surface-3);color:var(--ink-3)}
+.ev-tag.role{background:var(--sky-wash,#e8f4fb);color:var(--navy-mid,#14486e)}
+:root[data-theme="dark"] .ev-tag.role{color:#a9d8f3}
+.ev-side2{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.ev-avs{display:flex}.ev-avs .ev-av{margin-left:-6px;border:2px solid var(--surface)}.ev-avs .ev-av:first-child{margin-left:0}
+.ev-av{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;color:#fff;font-size:11px;font-weight:700;flex:none}
+.ev-cnt{display:flex;gap:10px;font-size:12px;color:var(--ink-3);white-space:nowrap}.ev-cnt b{color:var(--ink);font-variant-numeric:tabular-nums}
+.ev-box{border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:14px;display:flex;flex-direction:column;gap:8px}
+.ev-box+.ev-box{margin-top:12px}
+.ev-box .hint{font-size:12.5px;color:var(--ink-3);margin:0}
+.ev-due{display:grid;grid-template-columns:62px minmax(0,1fr);gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--border);cursor:pointer;font:inherit;text-align:left;background:none;border-left:0;border-right:0;border-bottom:0;color:inherit;width:100%}
+.ev-due:first-of-type{border-top:0}
+.ev-due .dd{font-size:12px;font-weight:700;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.ev-due .dd.late{color:var(--bad,#b42318)}.ev-due .dd.soon{color:var(--warn,#93370d)}
+.ev-due .tx{font-size:13px;min-width:0}.ev-due .tx small{display:block;color:var(--ink-3);font-size:11.5px}
+.ev-who{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--border)}
+.ev-who:first-of-type{border-top:0}.ev-who .tx{font-size:13px;min-width:0}.ev-who .tx b{display:block}.ev-who .tx span{color:var(--ink-3);font-size:12px}
+.ev-empty{border:1px dashed var(--border-strong);border-radius:12px;padding:22px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:var(--surface)}
+.ev-empty b{font-size:16px}.ev-empty p{margin:2px 0 0;color:var(--ink-2)}
+@media(max-width:1100px){.ev-band{grid-template-columns:repeat(2,minmax(0,1fr))}.ev-fig.next{grid-column:1/-1}.ev-cols{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:620px){.ev-card{grid-template-columns:54px minmax(0,1fr)}.ev-side2{grid-column:1/-1;flex-direction:row;justify-content:space-between;align-items:center}}
+
+/* the right-hand panel: three quarters of the screen, full width on a phone */
+.ev-scrim{position:fixed;inset:0;background:rgba(6,32,47,.38);z-index:9400;animation:evFade .2s ease}
+.ev-pn{position:fixed;top:0;right:0;bottom:0;width:75vw;max-width:100vw;z-index:9401;background:var(--ground,var(--surface));color:var(--ink);display:flex;flex-direction:column;box-shadow:-24px 0 60px -30px rgba(6,32,47,.7);animation:evIn .25s cubic-bezier(.2,.7,.2,1);font-size:14.5px}
+@media(max-width:900px){.ev-pn{width:100vw}}
+@keyframes evIn{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
+@keyframes evFade{from{opacity:0}to{opacity:1}}
+.ev-ph{padding:18px 22px 0;background:linear-gradient(140deg,#06202f,#0d314c 60%,#14486e);color:#fff;border-bottom:3px solid var(--ea,#74bfeb)}
+.ev-ph .top{display:flex;align-items:flex-start;gap:12px}
+.ev-ph .tt{flex:1;min-width:0}.ev-ph .tt small{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#74bfeb}
+.ev-ph h2{margin:2px 0 4px;font-size:22px;line-height:1.2;color:#fff}
+.ev-ph .meta{font-size:13px;color:#bfe2f6}
+.ev-x{flex:none;width:34px;height:34px;border-radius:50%;border:1px solid rgba(116,191,235,.45);background:transparent;color:#fff;font-size:20px;line-height:1;cursor:pointer}.ev-x:hover{background:rgba(116,191,235,.2)}
+.ev-tabs{display:flex;gap:2px;margin-top:14px;overflow-x:auto;scrollbar-width:none}
+.ev-tabs button{font:inherit;font-size:13px;font-weight:700;color:#bfe2f6;background:transparent;border:0;border-radius:6px 6px 0 0;padding:8px 14px;cursor:pointer;white-space:nowrap}
+.ev-tabs button.on{background:var(--ground,var(--surface));color:var(--ink)}
+.ev-tabs button i{font-style:normal;font-weight:600;opacity:.75;margin-left:5px;font-variant-numeric:tabular-nums}
+.ev-pb{flex:1;overflow:auto;padding:18px 22px 24px}
+.ev-pf{display:flex;align-items:center;gap:8px;padding:12px 22px;border-top:1px solid var(--border);background:var(--surface)}
+.ev-pf .sp{flex:1}.ev-pf .msg{font-size:12.5px;color:var(--ink-3)}.ev-pf .msg.dirty{color:var(--warn,#93370d);font-weight:700}
+.ev-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 14px}
+.ev-f{display:flex;flex-direction:column;gap:4px;min-width:0}.ev-f.w2{grid-column:span 2}.ev-f.w4{grid-column:1/-1}
+.ev-f>span{font-size:12px;font-weight:700;color:var(--ink-2)}
+.ev-f input,.ev-f select,.ev-f textarea,.ev-row input,.ev-row select{font:inherit;font-size:13.5px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);padding:0 10px;height:36px;min-width:0;width:100%;box-sizing:border-box}
+.ev-f textarea{height:auto;min-height:70px;padding:8px 10px;resize:vertical}
+.ev-dt{display:flex;gap:4px}.ev-dt input[type=text]{flex:1}
+.ev-dt .cal{flex:none;width:36px;height:36px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink-2);cursor:pointer;position:relative;padding:0;display:inline-flex;align-items:center;justify-content:center}
+.ev-dt .cal svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8}
+.ev-dt .cal input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;border:0;padding:0}
+.ev-dt input.bad{border-color:var(--bad,#b42318)}
+.ev-chks{display:flex;gap:14px;flex-wrap:wrap;align-items:center;min-height:36px}
+.ev-chk{display:inline-flex;align-items:center;gap:7px;font-size:13.5px;cursor:pointer;line-height:1}
+.ev-chk input{width:16px;height:16px;margin:0;flex:none}
+.ev-sec{margin:20px 0 8px;display:flex;align-items:center;gap:10px}.ev-sec:first-child{margin-top:0}
+.ev-sec h3{flex:1}.ev-sec .hint{font-size:12.5px;color:var(--ink-3)}
+.ev-rows{display:flex;flex-direction:column;gap:8px}
+.ev-row{display:grid;gap:8px;align-items:end;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface)}
+.ev-row .ev-f>span{font-size:11px}
+.ev-row .rm{align-self:end;height:36px;width:36px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink-3);cursor:pointer;font-size:18px;line-height:1}
+.ev-row .rm:hover{color:var(--bad,#b42318);border-color:var(--bad,#b42318)}
+.ev-pb{container-type:inline-size}
+/* rows and the details grid fit the panel's own width: one line per row when there's room, two columns when there isn't */
+.ev-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.ev-row.ppl,.ev-row.talk,.ev-row.promo,.ev-row.con{grid-template-columns:repeat(2,minmax(0,1fr))}
+.ev-row .rm{justify-self:end}
+.ev-row .ckc{display:flex;align-items:center;height:36px;white-space:nowrap}
+.ev-row .note{grid-column:1/-1}
+@container (min-width:740px){
+  .ev-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .ev-row.ppl{grid-template-columns:minmax(130px,1.3fr) minmax(118px,1fr) minmax(118px,1fr) auto auto minmax(100px,1fr) 36px}
+  .ev-row.talk{grid-template-columns:minmax(150px,2fr) minmax(120px,1fr) minmax(118px,1fr) minmax(100px,1fr) minmax(118px,1fr) minmax(80px,.8fr) 36px}
+  .ev-row.promo{grid-template-columns:auto minmax(150px,2.6fr) minmax(110px,1fr) minmax(118px,1fr) minmax(100px,.9fr) minmax(100px,1fr) 36px}
+  .ev-row.con{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+.ev-drop{border:2px dashed var(--border-strong);border-radius:10px;padding:18px;text-align:center;color:var(--ink-2);background:var(--surface);cursor:pointer;transition:border-color .2s,background .2s}
+.ev-drop.over{border-color:#74bfeb;background:var(--sky-wash,#e8f4fb)}
+.ev-drop b{color:var(--ink)}
+.ev-gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:10px}
+.ev-g{border:1px solid var(--border);border-radius:8px;background:var(--surface);overflow:hidden;display:flex;flex-direction:column}
+.ev-g .th{height:120px;background:var(--surface-2) center/contain no-repeat;display:flex;align-items:center;justify-content:center;color:var(--ink-3);font-size:12px;font-weight:700;cursor:pointer;border:0;width:100%;font-family:inherit}
+.ev-g .bd{padding:8px;display:flex;flex-direction:column;gap:6px}
+.ev-g .bd input,.ev-g .bd select{font:inherit;font-size:12.5px;height:30px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);padding:0 8px;min-width:0}
+.ev-g .ac{display:flex;gap:6px}.ev-g .ac .ev-btn{height:28px;font-size:12px;padding:0 9px}
+.ev-up{font-size:12.5px;color:var(--ink-3);margin-top:6px}
+/* the dashboard tile */
+.ev-tile{display:flex;flex-direction:column;gap:8px;min-height:0}
+.ev-tile .nx{display:flex;flex-direction:column;gap:2px}
+.ev-tile .nx b{font-size:17px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev-tile .nx span{font-size:12.5px;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev-tile .cd{font-size:30px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.ev-tile .cd small{font-size:13px;font-weight:600;opacity:.8;margin-left:4px}
+.ev-tile .ls{display:flex;flex-direction:column;gap:4px;min-height:0;overflow:hidden}
+.ev-tile .ls div{display:grid;grid-template-columns:52px minmax(0,1fr);gap:8px;font-size:12.5px}
+.ev-tile .ls div b{font-variant-numeric:tabular-nums}
+.ev-tile .ls div span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+`;
+document.head.appendChild(css);
+
+/* ---------- a typeable date with the calendar on a button beside it ---------- */
+function dateField(val){ const w=h('div','ev-dt'); const t=h('input'); t.type='text'; t.placeholder='e.g. 3/15/27'; t.value=val ? fmtNum(val) : ''; t.dataset.iso=val||'';
+  const cb=h('label','cal'); cb.title='Pick from a calendar'; cb.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';
+  const pk=h('input'); pk.type='date'; pk.tabIndex=-1; pk.value=val||''; pk.setAttribute('aria-label','Pick a date'); cb.appendChild(pk);
+  pk.addEventListener('click', e=>{ try{ pk.showPicker && pk.showPicker(); }catch(x){} });
+  pk.addEventListener('change', ()=>{ t.value=pk.value ? fmtNum(pk.value) : ''; t.dataset.iso=pk.value||''; t.classList.remove('bad'); t.dispatchEvent(new Event('input', {bubbles:true})); });
+  t.addEventListener('blur', ()=>{ const v=parseDate(t.value); if(v===null){ t.classList.add('bad'); t.title='Type a date like 3/15/27'; return; } t.classList.remove('bad'); t.title=''; t.dataset.iso=v; t.value=v ? fmtNum(v) : ''; pk.value=v; });
+  w.appendChild(t); w.appendChild(cb);
+  w.get=()=>{ const v=parseDate(t.value); return v===null ? (t.dataset.iso||'') : v; };
+  w.input=t; return w; }
+function fmtNum(s){ const d=pd(s); return d ? (d.getMonth()+1)+'/'+d.getDate()+'/'+String(d.getFullYear()).slice(2) : ''; }
+/* a plain input sits in a <label>; anything holding its own labels (dates, tick boxes) sits in a <div> so labels never nest */
+function field(parent, label, el, cls){ const plain=/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName); const f=h(plain?'label':'div','ev-f'+(cls?' '+cls:'')); const sp=h('span',null,label); f.appendChild(sp);
+  if(!plain){ const fi=el.querySelector && el.querySelector('input[type=text]'); if(fi && label.trim()) fi.setAttribute('aria-label', label); }
+  f.appendChild(el); parent.appendChild(f); return el; }
+function inp(type, val, ph){ const i=h('input'); i.type=type; if(val!=null) i.value=val; if(ph) i.placeholder=ph; return i; }
+function sel(opts, val, blank){ const s=h('select'); if(blank!=null) s.appendChild(new Option(blank, '')); opts.forEach(o=>{ const v=typeof o==='string'?o:o.v, t=typeof o==='string'?o:o.t; s.appendChild(new Option(t, v)); }); s.value=val||''; return s; }
+const teamOpts=()=>team().map(p=>({v:p.id, t:p.name}));
+function chk(label, on){ const l=h('label','ev-chk'); const c=h('input'); c.type='checkbox'; c.checked=!!on; l.appendChild(c); l.appendChild(document.createTextNode(label)); l.box=c; return l; }
+
+/* ---------- the page ---------- */
+function page(){ start(); const el=h('div','ev'); P.el=el; draw(); return el; }
+function draw(){ const el=P.el; if(!el || !el.isConnected && el.childNodes.length) return; el.textContent='';
+  if(M.list==null){ el.appendChild(h('div','ev-box','Getting Industry Events…')); return; }
+  const L=live(), Up=L.filter(upcoming).sort(byStart);
+  /* the figure boxes */
+  const band=h('div','ev-band'); el.appendChild(band);
+  const nextEv=Up.find(e=>e.status==='Going') || Up.find(e=>e.status==='Considering');
+  const nf=btn('ev-fig next', null, ()=>{ if(nextEv) openPanel(nextEv.id); else openNew(); });
+  nf.appendChild(h('span','k', nextEv && nextEv.status!=='Going' ? 'Next Event (Considering)' : 'Next Event'));
+  nf.appendChild(h('b',null, nextEv ? nextEv.name : 'Nothing on the list yet'));
+  nf.appendChild(h('span',null, nextEv ? [span(nextEv.start, nextEv.end), nextEv.city].filter(Boolean).join(' · ') : 'Add the first one to get started'));
+  if(nextEv && nextEv.start){ const n=daysTo(nextEv.start); nf.appendChild(h('span','cd', n>0 ? n+' day'+(n===1?'':'s')+' away' : n===0 ? 'Starts today' : 'Happening now')); }
+  band.appendChild(nf);
+  const going=Up.filter(e=>e.status==='Going'), cons=Up.filter(e=>e.status==='Considering');
+  const talks=Up.reduce((a,e)=>a+e.talks.filter(t=>t.status==='Accepted'||t.status==='Confirmed').length, 0), talksAll=Up.reduce((a,e)=>a+e.talks.filter(t=>t.status!=='Declined').length, 0);
+  const due=dueItems(L, 30);
+  [[going.length,'Going','going'],[cons.length,'Considering','considering'],[talks+(talksAll>talks?' of '+talksAll:''),'Speaking Slots','speaking'],[due.length,'Due in 30 Days','due']].forEach(x=>{
+    const b=btn('ev-fig'+(P.filter===x[2]?' on':''), null, ()=>{ if(x[2]==='due'){ const d=el.querySelector('.ev-dues'); if(d) d.scrollIntoView({block:'start', behavior:'smooth'}); return; } P.filter=P.filter===x[2]?'up':x[2]; draw(); });
+    b.appendChild(h('b',null,String(x[0]))); b.appendChild(h('span',null,x[1])); band.appendChild(b); });
+  /* the filters */
+  const bar=h('div','ev-bar'); el.appendChild(bar);
+  const seg=h('div','ev-seg'); [['up','Upcoming'],['going','Going'],['considering','Considering'],['speaking','Speaking'],['past','Past'],['no','Not Going'],['aside','Set Aside']].forEach(f=>{ const b=btn(P.filter===f[0]?'on':'', f[1], ()=>{ P.filter=f[0]; draw(); }); seg.appendChild(b); }); bar.appendChild(seg);
+  const who=sel([{v:'', t:'Everyone'}].concat(teamOpts()), P.who); who.setAttribute('aria-label','Who’s going'); who.addEventListener('change', ()=>{ P.who=who.value; draw(); }); bar.appendChild(who);
+  const q=h('input'); q.type='search'; q.placeholder='Search events, cities, people, contacts…'; q.value=P.q; q.addEventListener('input', ()=>{ P.q=q.value; clearTimeout(q._t); q._t=setTimeout(()=>{ drawList(); }, 150); }); bar.appendChild(q);
+  bar.appendChild(btn('ev-btn pri', '+ Add an Event', openNew));
+  const cols=h('div','ev-cols'); el.appendChild(cols);
+  const left=h('div','ev-left'); cols.appendChild(left); P.left=left;
+  const right=h('div','ev-right'); cols.appendChild(right);
+  drawList();
+  /* what's due */
+  const db=h('div','ev-box ev-dues'); db.appendChild(h('h3',null,'Coming Up'));
+  const D=dueItems(L, 60);
+  if(D.length) D.slice(0,12).forEach(x=>{ const r=btn('ev-due', null, ()=>openPanel(x.ev.id, x.k==='talk'?'talks':x.k==='promo'?'promo':'details')); const dd=h('span','dd'+(x.n<0?' late':x.n<=7?' soon':''), x.n<0 ? 'Past due' : x.n===0 ? 'Today' : fmt(x.d)); r.appendChild(dd);
+    const tx=h('span','tx', x.t); tx.appendChild(h('small',null, when(x.n))); r.appendChild(tx); db.appendChild(r); });
+  else { const nx=Up[0]; db.appendChild(h('p','hint', nx ? 'Nothing due in the next 60 days. Next on the list: '+nx.name+(nx.start?' ('+fmtY(nx.start)+')':'')+'.' : 'Registration deadlines, speaking proposals and promotion steps show here as they come up.')); }
+  right.appendChild(db);
+  /* who's going where */
+  const wb=h('div','ev-box'); wb.appendChild(h('h3',null,'Who’s Going Where'));
+  const rows=team().map(p=>({p, L:going.filter(e=>e.people.some(x=>x.who===p.id))})).filter(r=>r.L.length);
+  if(rows.length) rows.forEach(r=>{ const w=h('div','ev-who'); w.appendChild(avatar(r.p.id)); const tx=h('div','tx'); tx.appendChild(h('b',null,r.p.name)); tx.appendChild(h('span',null, r.L.slice(0,3).map(e=>e.name+(e.start?' ('+fmt(e.start)+')':'')).join(' · ')+(r.L.length>3?' · +'+(r.L.length-3)+' more':''))); w.appendChild(tx); wb.appendChild(w); });
+  else wb.appendChild(h('p','hint','Add people to an event you’re going to and they show here, with the event in their Expenses trips.'));
+  right.appendChild(wb);
+  const mb=h('div','ev-box'); mb.appendChild(h('h3',null,'Promoting an Event')); mb.appendChild(h('p','hint','Each event has a Promotion list. To have the Strategic Growth team make a post or graphic, send a request to MISMO Media.'));
+  const ra=h('a','ev-btn', 'Ask MISMO Media'); ra.href=REQUEST_FORM; ra.target='_blank'; ra.rel='noopener'; mb.appendChild(ra); right.appendChild(mb);
+}
+function matches(e){ const q=P.q.trim().toLowerCase(); if(P.who && !e.people.some(p=>p.who===P.who) && !e.talks.some(t=>t.who===P.who)) return false; if(!q) return true;
+  const hay=[e.name, e.host, e.city, e.venue, e.kind, e.notes].concat(e.people.map(p=>pname(p.who))).concat(e.contacts.map(c=>[c.name,c.company,c.title].join(' '))).concat(e.talks.map(t=>t.title)).join(' ').toLowerCase();
+  return q.split(/\s+/).every(w=>hay.indexOf(w)>=0); }
+function pick(){ const A=(M.list||[]); const f=P.filter;
+  const L= f==='aside' ? A.filter(e=>e.gone) : A.filter(e=>!e.gone);
+  if(f==='past') return L.filter(e=>!upcoming(e) && e.status!=='Not Going').sort((a,b)=>byStart(b,a));
+  if(f==='no') return L.filter(e=>e.status==='Not Going').sort(byStart);
+  if(f==='aside') return L.sort(byStart);
+  const U=L.filter(upcoming);
+  if(f==='going') return U.filter(e=>e.status==='Going').sort(byStart);
+  if(f==='considering') return U.filter(e=>e.status==='Considering').sort(byStart);
+  if(f==='speaking') return U.filter(e=>e.talks.some(t=>t.status!=='Declined')||e.roles.indexOf('Speaking')>=0).sort(byStart);
+  return U.filter(e=>e.status!=='Not Going').sort(byStart); }
+function drawList(){ const left=P.left; if(!left) return; left.textContent='';
+  const all=pick(), L=all.filter(matches);
+  if(!(M.list||[]).some(e=>!e.gone)){ const em=h('div','ev-empty'); const tx=h('div'); tx.appendChild(h('b',null,'No industry events yet')); tx.appendChild(h('p',null,'Add the conferences, trade shows and dinners MISMO is going to or thinking about.')); em.appendChild(tx); em.appendChild(btn('ev-btn pri','+ Add an Event', openNew)); left.appendChild(em); return; }
+  if(!L.length){ /* nothing in this view: show the upcoming list instead of an empty space */
+    const msg=h('p','ev-up', all.length ? 'Nothing matches “'+P.q+'”.' : 'Nothing here, so here’s everything coming up.'); left.appendChild(msg);
+    if(all.length) return; const U=live().filter(upcoming).sort(byStart); if(!U.length) return; cards(left, U); return; }
+  cards(left, L); }
+function cards(left, L){
+  /* grouped by month */
+  const groups=[]; L.forEach(e=>{ const d=pd(e.start); const mk=d ? MONL[d.getMonth()]+' '+d.getFullYear() : 'Dates to Be Set'; let g=groups.find(x=>x.k===mk); if(!g){ g={k:mk, L:[]}; groups.push(g); } g.L.push(e); });
+  left.textContent=''; if(P.q || P.who){ const n=h('p','ev-up', L.length+' event'+(L.length===1?'':'s')+(P.who?' with '+first(P.who):'')+(P.q?' matching “'+P.q+'”':'')); left.appendChild(n); }
+  groups.forEach(g=>{ left.appendChild(h('div','ev-mon', g.k)); const ls=h('div','ev-list'); g.L.forEach(e=>ls.appendChild(card(e))); left.appendChild(ls); }); }
+function accent(e){ return e.status==='Going' ? '#2bb673' : e.status==='Considering' ? '#f2b134' : '#98a2b3'; }
+function card(e){ const c=btn('ev-card'+(e.status==='Not Going'||e.gone?' dim':'')); c.style.setProperty('--ea', accent(e)); c.addEventListener('click', ()=>openPanel(e.id));
+  const d=pd(e.start), d2=pd(e.end); const db=h('div','ev-date');
+  if(d){ db.appendChild(h('small',null,MON[d.getMonth()])); db.appendChild(h('b',null, String(d.getDate())+(d2 && +d2!==+d && d2.getMonth()===d.getMonth() ? '–'+d2.getDate() : ''))); db.appendChild(h('em',null, d2 && d2.getMonth()!==d.getMonth() ? 'to '+fmt(e.end) : WD[d.getDay()])); }
+  else { db.appendChild(h('small',null,'Date')); db.appendChild(h('b',null,'?')); }
+  c.appendChild(db);
+  const m=h('div','ev-main'); m.appendChild(h('div','nm', e.name));
+  const sub=[e.host, [e.city, e.venue].filter(Boolean).join(' · '), e.kind && e.kind!=='Conference' ? e.kind : ''].filter(Boolean).join(' · '); if(sub) m.appendChild(h('div','sub', sub));
+  const tg=h('div','ev-tags'); tg.appendChild(h('span','ev-tag '+e.status.toLowerCase().replace(/\s+/g,''), e.gone ? 'Set Aside' : e.status)); e.roles.filter(r=>r!=='Attending').forEach(r=>tg.appendChild(h('span','ev-tag role', r)));
+  if(e.regBy && e.status!=='Not Going'){ const n=daysTo(e.regBy); if(n!=null && n>=0 && n<=30) tg.appendChild(h('span','ev-tag considering','Register by '+fmt(e.regBy))); }
+  m.appendChild(tg); c.appendChild(m);
+  const s2=h('div','ev-side2'); const av=h('div','ev-avs'); e.people.filter(p=>p.who).slice(0,6).forEach(p=>av.appendChild(avatar(p.who))); if(av.childNodes.length) s2.appendChild(av);
+  const cn=h('div','ev-cnt'); const pr=e.promo.length; const add=(n,l)=>{ if(!n && n!==0) return; const s=h('span'); s.appendChild(h('b',null,String(n))); s.append(' '+l); cn.appendChild(s); };
+  if(e.talks.length) add(e.talks.length, e.talks.length===1?'talk':'talks'); if(pr) add(e.promo.filter(p=>p.done).length+'/'+pr, 'promoted'); if(e.graphics.length) add(e.graphics.length, e.graphics.length===1?'graphic':'graphics'); if(e.contacts.length) add(e.contacts.length, e.contacts.length===1?'contact':'contacts');
+  if(cn.childNodes.length) s2.appendChild(cn); if(s2.childNodes.length) c.appendChild(s2);
+  return c; }
+
+/* ---------- the right-hand panel: one event, every part of it, with one Save ---------- */
+const TABS=[['details','Details'],['people','Who’s Going'],['talks','Speaking'],['promo','Promotion'],['graphics','Graphics'],['contacts','Contacts']];
+function openNew(){ const ev=fix({id:uid('ev'), name:'', status:'Considering', kind:'Conference', roles:['Attending']}); openPanel(null, 'details', ev); }
+function openPanel(id, tab, fresh){ closePanel();
+  const src=fresh || (M.list||[]).find(e=>e.id===id); if(!src) return;
+  const st={orig:fresh ? null : clone(src), ev:clone(src), tab:tab||'details', dirty:false, isNew:!!fresh};
+  const scrim=h('div','ev-scrim'); const pn=h('div','ev-pn'); pn.setAttribute('role','dialog'); pn.setAttribute('aria-modal','true');
+  pn.style.setProperty('--ea', accent(src));
+  st.scrim=scrim; st.pn=pn; P.panel=st;
+  scrim.addEventListener('click', ()=>tryClose());
+  document.body.appendChild(scrim); document.body.appendChild(pn);
+  paintPanel(); setTimeout(()=>{ const f=pn.querySelector('.ev-pb input'); if(f && st.isNew) f.focus(); }, 60); }
+function tryClose(){ const st=P.panel; if(!st) return; if(st.dirty && !confirmLeave()) return; closePanel(); }
+function confirmLeave(){ return window.confirm('You have changes that aren’t saved. Close without saving them?'); }
+function closePanel(){ const st=P.panel; if(!st) return; st.scrim.remove(); st.pn.remove(); P.panel=null; }
+const onKey=e=>{ if(e.key==='Escape' && P.panel){ e.stopPropagation(); tryClose(); } };
+document.addEventListener('keydown', onKey, true);
+function markDirty(){ const st=P.panel; if(!st) return; st.dirty=true; const m=st.pn.querySelector('.ev-pf .msg'); if(m){ m.textContent='Changes not saved yet'; m.className='msg dirty'; } }
+function paintPanel(){ const st=P.panel; if(!st) return; const ev=st.ev, pn=st.pn; pn.textContent='';
+  const ph=h('div','ev-ph'); const top=h('div','top'); const tt=h('div','tt');
+  tt.appendChild(h('small',null, st.isNew ? 'New Industry Event' : (ev.gone ? 'Set Aside · ' : '')+(ev.kind||'Industry Event')));
+  tt.appendChild(h('h2',null, ev.name || 'Name the Event'));
+  tt.appendChild(h('div','meta', [span(ev.start, ev.end), [ev.city, ev.venue].filter(Boolean).join(' · '), ev.status].filter(Boolean).join('  ·  ') || 'Add the dates and where it is'));
+  top.appendChild(tt); const x=btn('ev-x', '×', tryClose); x.setAttribute('aria-label','Close'); top.appendChild(x); ph.appendChild(top);
+  const tabs=h('div','ev-tabs'); TABS.forEach(t=>{ const n={people:ev.people.length, talks:ev.talks.length, promo:ev.promo.length, graphics:ev.graphics.length, contacts:ev.contacts.length}[t[0]];
+    const b=btn(st.tab===t[0]?'on':'', t[1], ()=>{ collect(); st.tab=t[0]; paintPanel(); }); if(n) b.appendChild(h('i',null,String(n))); tabs.appendChild(b); }); ph.appendChild(tabs);
+  pn.appendChild(ph);
+  const body=h('div','ev-pb'); pn.appendChild(body); st.body=body; st.get=null;
+  ({details:pDetails, people:pPeople, talks:pTalks, promo:pPromo, graphics:pGraphics, contacts:pContacts}[st.tab]||pDetails)(body, ev);
+  body.addEventListener('input', markDirty); body.addEventListener('change', markDirty);
+  const pf=h('div','ev-pf');
+  const sv=btn('ev-btn pri', st.isNew ? 'Save the Event' : 'Save Changes', doSave); pf.appendChild(sv);
+  pf.appendChild(btn('ev-btn', st.dirty ? 'Discard Changes' : 'Close', ()=>{ if(st.dirty){ if(!window.confirm('Throw away the changes you haven’t saved?')) return; } closePanel(); }));
+  pf.appendChild(h('span','msg'+(st.dirty?' dirty':''), st.dirty ? 'Changes not saved yet' : st.isNew ? 'Nothing is saved until you press Save' : ev.at ? 'Last saved '+new Date(ev.at).toLocaleDateString('en-US',{month:'short', day:'numeric'})+(ev.by?' by '+first(ev.by):'') : ''));
+  pf.appendChild(h('span','sp'));
+  if(!st.isNew) pf.appendChild(ev.gone ? btn('ev-btn', 'Bring Back', ()=>{ const prev=clone(st.orig); const nx=clone(st.orig); delete nx.gone; save(nx, 'It’s back on the list.', prev); closePanel(); })
+    : btn('ev-btn warn', 'Set Aside', ()=>{ if(!window.confirm('Set “'+ev.name+'” aside? It comes off the list, and you can bring it back from Set Aside.')) return; const prev=clone(st.orig); const nx=clone(st.orig); nx.gone=Date.now(); save(nx, 'Set aside.', prev); closePanel(); }));
+  pn.appendChild(pf); }
+function collect(){ const st=P.panel; if(st && st.get){ try{ st.get(st.ev); }catch(e){ console.error(e); } } }
+function doSave(){ const st=P.panel; if(!st) return; collect(); const ev=st.ev;
+  ev.name=String(ev.name||'').trim(); if(!ev.name){ st.tab='details'; paintPanel(); toast('Give the event a name first.'); const f=st.pn.querySelector('.ev-pb input'); if(f) f.focus(); return; }
+  if(ev.start && ev.end && ev.end<ev.start){ st.tab='details'; paintPanel(); toast('The end date is before the start date.'); return; }
+  ev.people=ev.people.filter(p=>p.who); ev.talks=ev.talks.filter(t=>t.title||t.who); ev.promo=ev.promo.filter(p=>p.t); ev.contacts=ev.contacts.filter(c=>c.name||c.company||c.email);
+  const prev=st.orig; save(ev, st.isNew ? '“'+ev.name+'” is on the list.' : 'Saved.', prev).then(ok=>{ if(!ok) return; st.orig=clone(ev); st.ev=clone(ev); st.dirty=false; st.isNew=false; paintPanel(); }); }
+
+/* Details */
+function pDetails(b, ev){ const g=h('div','ev-grid'); b.appendChild(g);
+  const nm=field(g, 'Event Name', inp('text', ev.name, 'e.g. MBA Annual Convention & Expo 2027'), 'w2');
+  const host=field(g, 'Hosted By', inp('text', ev.host, 'e.g. MBA'));
+  const kind=field(g, 'Kind of Event', sel(KINDS, ev.kind||'Conference'));
+  const status=field(g, 'Our Status', sel(STATUS, ev.status));
+  const s=field(g, 'Starts', dateField(ev.start)); const e=field(g, 'Ends', dateField(ev.end));
+  const reg=field(g, 'Register By', dateField(ev.regBy));
+  const city=field(g, 'City', inp('text', ev.city, 'e.g. Philadelphia, PA')); const venue=field(g, 'Venue', inp('text', ev.venue, 'e.g. Pennsylvania Convention Center'));
+  const url=field(g, 'Event Website', inp('url', ev.url, 'https://'), 'w2');
+  const rw=h('div','ev-chks'); const R={}; ROLES.forEach(r=>{ const c=chk(r, ev.roles.indexOf(r)>=0); R[r]=c.box; rw.appendChild(c); }); field(g, 'Our Role', rw, 'w2');
+  const cost=field(g, 'Registration Cost (Each)', inp('number', ev.cost, '0.00')); cost.step='0.01'; cost.min='0'; cost.inputMode='decimal';
+  const scost=field(g, 'Booth or Sponsorship Cost', inp('number', ev.scost, '0.00')); scost.step='0.01'; scost.min='0'; scost.inputMode='decimal';
+  const hotel=field(g, 'Hotel or Room Block', inp('text', ev.hotel, 'Hotel name, block code or rate'), 'w2');
+  const kit=field(g, 'Media Kit or Speaker Portal Link', inp('url', ev.kit, 'https://'), 'w2');
+  const notes=field(g, 'Notes', h('textarea'), 'w4'); notes.value=ev.notes||''; notes.placeholder='Anything else the team should know';
+  const lk=h('div','ev-chks'); [['Event Website',ev.url],['Media Kit',ev.kit]].forEach(x=>{ const u=safeUrl(x[1]); if(!u) return; const a=h('a','ev-btn', 'Open '+x[0]+' ↗'); a.href=u; a.target='_blank'; a.rel='noopener'; lk.appendChild(a); }); if(lk.childNodes.length) b.appendChild(lk), lk.style.marginTop='12px';
+  P.panel.get=ev2=>{ ev2.name=nm.value.trim(); ev2.host=host.value.trim(); ev2.kind=kind.value; ev2.status=status.value; ev2.start=s.get(); ev2.end=e.get()||''; ev2.regBy=reg.get();
+    ev2.city=city.value.trim(); ev2.venue=venue.value.trim(); ev2.url=url.value.trim(); ev2.roles=ROLES.filter(r=>R[r].checked);
+    ev2.cost=cost.value; ev2.scost=scost.value; ev2.hotel=hotel.value.trim(); ev2.kit=kit.value.trim(); ev2.notes=notes.value; };
+  s.input.addEventListener('blur', ()=>{ if(!e.input.value && s.get()){ e.input.value=fmtNum(s.get()); e.input.dataset.iso=s.get(); } }); }
+
+/* rows: each part of an event is a list of rows, edited in place and saved with the event */
+function rowsSec(b, title, hint, addLabel, list, make, blank){ const hd=h('div','ev-sec'); hd.appendChild(h('h3',null,title)); if(hint) hd.appendChild(h('span','hint',hint)); b.appendChild(hd);
+  const box=h('div','ev-rows'); b.appendChild(box); const getters=[];
+  const put=(item)=>{ const r=make(item); const rm=btn('rm','×', ()=>{ const i=getters.indexOf(r.get); if(i>=0) getters.splice(i,1); r.el.remove(); markDirty(); }); rm.title='Remove'; rm.setAttribute('aria-label','Remove'); r.el.insertBefore(rm, r.note||null); box.appendChild(r.el); getters.push(r.get); return r; };
+  list.forEach(put);
+  const ab=btn('ev-btn', '+ '+addLabel, ()=>{ const r=put(blank()); markDirty(); const f=r.el.querySelector('input,select'); if(f) f.focus(); }); ab.style.marginTop='8px'; b.appendChild(ab);
+  return ()=>getters.map(g=>g()); }
+function pPeople(b, ev){
+  const get=rowsSec(b, 'Who’s Going', 'Their travel dates, and whether they’re registered and have a room. The event shows as a trip in their Expenses.', 'Add a Person', ev.people, p=>{ const r=h('div','ev-row ppl');
+    const who=field(r, 'Person', sel(teamOpts(), p.who, 'Pick a Person')); const a=field(r, 'Arrives', dateField(p.from||ev.start)); const l=field(r, 'Leaves', dateField(p.to||ev.end||ev.start));
+    const c1=h('div','ckc'); const rg=chk('Registered', p.reg); c1.appendChild(rg); field(r, ' ', c1); const c2=h('div','ckc'); const ht=chk('Room Booked', p.room); c2.appendChild(ht); field(r, ' ', c2);
+    const nt=field(r, 'Note', inp('text', p.note, 'e.g. speaking Tuesday'));
+    return {el:r, get:()=>({who:who.value, from:a.get(), to:l.get(), reg:rg.box.checked, room:ht.box.checked, note:nt.value.trim()})}; }, ()=>({who:'', from:ev.start||'', to:ev.end||ev.start||''}));
+  P.panel.get=ev2=>{ ev2.people=get(); }; }
+function pTalks(b, ev){
+  const get=rowsSec(b, 'Speaking Opportunities', 'Calls for speakers, panels and sessions, and where each one stands.', 'Add a Speaking Opportunity', ev.talks, t=>{ const r=h('div','ev-row talk');
+    const ti=field(r, 'Session or Topic', inp('text', t.title, 'e.g. Panel: AI in the Mortgage Process')); const who=field(r, 'Speaker', sel(teamOpts(), t.who, 'Pick a Person'));
+    const due=field(r, 'Proposal Due', dateField(t.due)); const s=field(r, 'Status', sel(TALK, t.status||'Idea')); const d=field(r, 'Session Date', dateField(t.date)); const tm=field(r, 'Time', inp('text', t.time, 'e.g. 10:30 AM'));
+    const nt=h('label','ev-f note'); nt.appendChild(h('span',null,'Note')); const ni=inp('text', t.note, 'Co-speakers, the room, what to send them'); nt.appendChild(ni); r.appendChild(nt);
+    return {el:r, note:nt, get:()=>({id:t.id||uid('t'), title:ti.value.trim(), who:who.value, due:due.get(), status:s.value, date:d.get(), time:tm.value.trim(), note:ni.value.trim()})}; }, ()=>({id:uid('t'), status:'Idea'}));
+  P.panel.get=ev2=>{ ev2.talks=get(); }; }
+function usualSteps(ev){ const s=pd(ev.start), e=pd(ev.end)||s; const d=(x,n)=>x ? iso(addD(x,n)) : '';
+  return [{t:'List It in MISMO Matters (Where We’ll Be)', ch:'MISMO Matters', due:d(s,-30)},{t:'Announce We’ll Be There', ch:'LinkedIn', due:d(s,-21)},{t:'Share Our Speaker Graphics', ch:'LinkedIn', due:d(s,-7)},{t:'Post From the Event', ch:'LinkedIn', due:d(s,0)},{t:'Recap After the Event', ch:'LinkedIn', due:d(e,3)}].map(x=>Object.assign({id:uid('p'), done:false}, x)); }
+function pPromo(b, ev){
+  const top=h('div','ev-chks'); const ra=h('a','ev-btn', 'Ask MISMO Media ↗'); ra.href=REQUEST_FORM; ra.target='_blank'; ra.rel='noopener'; ra.title='Opens MISMO Media’s request form in a new tab';
+  const us=btn('ev-btn', 'Add the Usual Steps', ()=>{ collect(); const have=new Set(P.panel.ev.promo.map(p=>p.t)); const add=usualSteps(P.panel.ev).filter(p=>!have.has(p.t)); if(!add.length){ toast('The usual steps are already on the list.'); return; } P.panel.ev.promo=P.panel.ev.promo.concat(add); markDirty(); paintPanel(); });
+  top.appendChild(us); top.appendChild(ra); b.appendChild(top); top.style.marginBottom='12px';
+  const get=rowsSec(b, 'Promotion', 'How we’re telling people we’ll be there, and what’s done.', 'Add a Step', ev.promo, p=>{ const r=h('div','ev-row promo');
+    const c=h('div','ckc'); const dn=chk('Done', p.done); c.appendChild(dn); field(r, ' ', c);
+    const t=field(r, 'Step', inp('text', p.t, 'e.g. Announce we’ll be there')); const ch=field(r, 'Channel', sel(CHAN, p.ch||'LinkedIn')); const due=field(r, 'Due', dateField(p.due));
+    const who=field(r, 'Who', sel(teamOpts(), p.who, 'Anyone')); const lk=field(r, 'Link to the Post', inp('url', p.link, 'https://'));
+    return {el:r, get:()=>({id:p.id||uid('p'), done:dn.box.checked, t:t.value.trim(), ch:ch.value, due:due.get(), who:who.value, link:lk.value.trim()})}; }, ()=>({id:uid('p'), ch:'LinkedIn', done:false}));
+  P.panel.get=ev2=>{ ev2.promo=get(); }; }
+function pContacts(b, ev){
+  const get=rowsSec(b, 'Contacts', 'People we meet or need to reach at this event.', 'Add a Contact', ev.contacts, c=>{ const r=h('div','ev-row con');
+    const n=field(r, 'Name', inp('text', c.name)); const co=field(r, 'Company', inp('text', c.company)); const ti=field(r, 'Title', inp('text', c.title)); const em=field(r, 'Email', inp('email', c.email));
+    const ph=field(r, 'Phone', inp('tel', c.phone)); const by=field(r, 'Met By', sel(teamOpts(), c.by, 'Pick a Person'));
+    const cc=h('div','ckc'); const fu=chk('Follow Up', c.follow); cc.appendChild(fu); field(r, ' ', cc);
+    const nt=h('label','ev-f note'); nt.appendChild(h('span',null,'Note')); const ni=inp('text', c.note, 'What you talked about, what they asked for'); nt.appendChild(ni); r.appendChild(nt);
+    return {el:r, note:nt, get:()=>({id:c.id||uid('c'), name:n.value.trim(), company:co.value.trim(), title:ti.value.trim(), email:em.value.trim(), phone:ph.value.trim(), by:by.value, follow:fu.box.checked, note:ni.value.trim()})}; }, ()=>({id:uid('c'), by:me()}));
+  P.panel.get=ev2=>{ ev2.contacts=get(); }; }
+
+/* Graphics: uploaded right here; each opens in a new tab */
+const thumbs={};
+function pGraphics(b, ev){ const st=P.panel;
+  const hd=h('div','ev-sec'); hd.appendChild(h('h3',null,'Graphics From the Event')); hd.appendChild(h('span','hint','Logos, speaker cards, banners and social posts the event gives us.')); b.appendChild(hd);
+  const dz=h('div','ev-drop'); dz.tabIndex=0; dz.setAttribute('role','button'); const fi=h('input'); fi.type='file'; fi.multiple=true; fi.accept='image/*,application/pdf,.zip,.ppt,.pptx,.ai,.eps,.svg'; fi.hidden=true;
+  dz.appendChild(h('b',null,'Drop graphics here')); dz.appendChild(document.createTextNode(' or click to choose files'));
+  const up=h('div','ev-up'); b.appendChild(dz); b.appendChild(fi); b.appendChild(up);
+  dz.addEventListener('click', ()=>fi.click()); dz.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fi.click(); } });
+  ['dragenter','dragover'].forEach(k=>dz.addEventListener(k, e=>{ e.preventDefault(); dz.classList.add('over'); }));
+  ['dragleave','drop'].forEach(k=>dz.addEventListener(k, e=>{ e.preventDefault(); dz.classList.remove('over'); }));
+  dz.addEventListener('drop', e=>{ const F=[...((e.dataTransfer && e.dataTransfer.files)||[])]; if(F.length) upload(F); });
+  fi.addEventListener('change', ()=>{ const F=[...fi.files]; fi.value=''; if(F.length) upload(F); });
+  const gal=h('div','ev-gal'); b.appendChild(gal); const getters=[];
+  function put(g){ const c=h('div','ev-g'); const th=btn('th', /\.pdf$/i.test(g.name) ? 'PDF' : (g.name.split('.').pop()||'File').toUpperCase(), ()=>view(g)); th.title='Open '+g.name+' in a new tab'; c.appendChild(th);
+    if(/^image\//.test(g.type||'') || /\.(png|jpe?g|gif|webp|svg)$/i.test(g.name)) thumb(g, th);
+    const bd=h('div','bd'); const nm=inp('text', g.label||g.name); nm.setAttribute('aria-label','Name'); const us=sel(GUSE, g.use||'Other'); us.setAttribute('aria-label','What it’s for');
+    bd.appendChild(nm); bd.appendChild(us); const ac=h('div','ac'); ac.appendChild(btn('ev-btn', 'Open ↗', ()=>view(g)));
+    ac.appendChild(btn('ev-btn warn', 'Remove', ()=>{ const i=getters.indexOf(get); if(i>=0) getters.splice(i,1); c.remove(); markDirty(); })); bd.appendChild(ac); c.appendChild(bd); gal.appendChild(c);
+    const get=()=>Object.assign({}, g, {label:nm.value.trim()||g.name, use:us.value}); getters.push(get); }
+  ev.graphics.forEach(put);
+  async function upload(F){ if(!window.__att || !window.__att.upload){ toast('Uploading isn’t available here.'); return; }
+    let n=0; for(const f of F){ if(f.size>4*1024*1024){ toast(f.name+' is over 4 MB. Make it smaller, or ask the event for a smaller copy.'); continue; }
+      up.textContent='Uploading '+f.name+'…';
+      try{ const a=await window.__att.upload(f, 'events'); const g=Object.assign(a, {use:/logo/i.test(f.name)?'Logo':/speaker/i.test(f.name)?'Speaker Card':/banner/i.test(f.name)?'Banner':'Other', label:f.name.replace(/\.[^.]+$/,'')}); put(g); n++; markDirty(); }
+      catch(e){ console.error(e); toast('Couldn’t upload '+f.name+'. '+((e && e.message)||'Try again.')); } }
+    up.textContent=n ? n+' file'+(n===1?'':'s')+' added. Press Save Changes to keep '+(n===1?'it':'them')+' on the event.' : ''; }
+  st.get=ev2=>{ ev2.graphics=getters.map(g=>g()); }; }
+function view(g){ try{ if(window.__att && window.__att.view) window.__att.view(g); }catch(e){ toast('Couldn’t open that file.'); } }
+async function thumb(g, el){ try{ let u=thumbs[g.id]; if(!u){ const api=window.__expApi; if(!api || !api.attBlob) return; const bl=await api.attBlob(g.id); u=URL.createObjectURL(bl); thumbs[g.id]=u; }
+  el.style.backgroundImage='url("'+u+'")'; el.textContent=''; }catch(e){} }
+
+/* ---------- the dashboard tile ---------- */
+function tile(el, size){ start(); const box=h('div','ev-tile'); el.appendChild(box);
+  if(M.list==null){ box.appendChild(h('div','st-sub','Getting Industry Events…')); return; }
+  const Up=live().filter(upcoming).filter(e=>e.status!=='Not Going').sort(byStart); const nx=Up.find(e=>e.status==='Going') || Up[0];
+  if(!nx){ box.appendChild(h('div','st-sub','No industry events yet. Open it to add the first one.')); return; }
+  const n=daysTo(nx.start); const cd=h('div','cd', n==null ? '—' : n>0 ? String(n) : n===0 ? 'Today' : 'Now'); if(n!=null && n>0) cd.appendChild(h('small',null, n===1?'day':'days')); box.appendChild(cd);
+  const t=h('div','nx'); t.appendChild(h('b',null,nx.name)); t.appendChild(h('span',null,[span(nx.start,nx.end), nx.city, nx.status==='Going' ? (nx.people.length ? nx.people.length+' going' : 'Going') : 'Considering'].filter(Boolean).join(' · '))); box.appendChild(t);
+  const tall=size==='t'||size==='b', wide=size==='w'||size==='b';
+  if(tall || wide){ const ls=h('div','ls'); Up.filter(e=>e!==nx).slice(0, size==='b'?6:tall?4:2).forEach(e=>{ const r=h('div'); r.appendChild(h('b',null, e.start ? fmt(e.start) : 'TBD')); r.appendChild(h('span',null, e.name+(e.status==='Considering'?' (considering)':''))); ls.appendChild(r); }); if(ls.childNodes.length) box.appendChild(ls); }
+  const due=dueItems(live(), 30).length; box.appendChild(h('div','st-next', (due ? due+' thing'+(due===1?'':'s')+' due in the next 30 days' : Up.length+' upcoming event'+(Up.length===1?'':'s'))+' · open the list')); }
+
+/* ---------- for Expenses: the events a person is going to, as trips ---------- */
+function tripsFor(who){ return live().filter(e=>e.status==='Going' && e.people.some(p=>p.who===who)).filter(e=>{ const n=daysTo(endOf(e)); return n==null || n>=-60; })
+  .sort(byStart).map(e=>{ const p=e.people.find(x=>x.who===who)||{}; return {trip:e.name, from:p.from||e.start||'', to:p.to||e.end||e.start||''}; }); }
+
+window.__hqEvents={ version:'1.0', page, tile, start, tripsFor, open:openPanel,
+  get list(){ return M.list; },
+  onChange(f){ M.listeners.push(f); return ()=>{ M.listeners=M.listeners.filter(x=>x!==f); }; },
+  redraw: draw,
+  _parseDate: parseDate,
+  destroy(){ css.remove(); document.removeEventListener('keydown', onKey, true); closePanel(); M.listeners=[]; } };
+start();
+})();
+
+});
 /* ===== next.js ===== */
 MODS.push(function(){
 /* Team HQ, reimagined (take two) — modeled on Linear for the structure and Sunsama for the day.
@@ -6003,7 +6516,7 @@ if(!ui.modes || typeof ui.modes!=='object') ui.modes={}; if(!ui.groups || typeof
 if(!Array.isArray(ui.tpeople)) ui.tpeople=[];
 if(['home','work','team','time'].indexOf(ui.view)>=0 || !ui.view) ui.view='day';
 /* a link straight to a page: resources.mismo.org/team-hq/?page=systems */
-let DEEP=''; try{ const pg=new URLSearchParams(location.search).get('page'); if(pg && ['systems'].indexOf(pg)>=0) DEEP=pg; }catch(e){}
+let DEEP=''; try{ const pg=new URLSearchParams(location.search).get('page'); if(pg && ['systems','events'].indexOf(pg)>=0) DEEP=pg; }catch(e){}
 /* the new Team HQ is the only Team HQ now — no classic switch */
 ui.on=true;
 const save=()=>{ try{ localStorage.setItem(KEY, JSON.stringify({on:ui.on, view:ui.view, modes:ui.modes, groups:ui.groups, who:ui.who, proj:ui.proj, showDone:ui.showDone, tpeople:ui.tpeople, fold:ui.fold, ibf:ui.ibf})); }catch(e){} };
@@ -6032,6 +6545,7 @@ const I={
   read:'<path d="M3 10l9-6 9 6v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3.5 10.5L12 16l8.5-5.5"/>', unread:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/><circle cx="19" cy="5" r="3" fill="currentColor"/>',
   folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11v5M9.5 13.5L12 16l2.5-2.5"/>',
   trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
+  pin:'<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
   net:'<rect x="2.5" y="3.5" width="7" height="5" rx="1.2"/><rect x="14.5" y="3.5" width="7" height="5" rx="1.2"/><rect x="8.5" y="15.5" width="7" height="5" rx="1.2"/><path d="M9.5 6h5M6 8.5c0 4 6 3 6 7M18 8.5c0 4-6 3-6 7"/>' };
 const ic=(k,c)=>'<svg class="'+(c||'')+'" viewBox="0 0 24 24" aria-hidden="true">'+I[k]+'</svg>';
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -6549,7 +7063,7 @@ function statusOf(p){
 
 /* ---------- the views ---------- */
 const VIEWS={
-  day:{t:'My Dashboard', i:'home'}, inbox:{t:'Inbox', i:'inbox'}, mine:{t:'My Tasks', i:'mine'}, cal:{t:'Calendar', i:'cal'}, systems:{t:'Connected Systems', i:'net', team:true} };
+  day:{t:'My Dashboard', i:'home'}, inbox:{t:'Inbox', i:'inbox'}, mine:{t:'My Tasks', i:'mine'}, cal:{t:'Calendar', i:'cal'}, events:{t:'Industry Events', i:'pin', team:true}, systems:{t:'Connected Systems', i:'net', team:true} };
 function viewKind(v){ v=v||ui.view; if(v.indexOf('p:')===0) return 'project'; if(v.indexOf('u:')===0) return 'person'; if(v.indexOf('c:')===0) return 'classic'; return v; }
 function myOpen(){ return S.tasks.filter(t=>isOpen(t) && doers(t).indexOf(me())>=0); }
 function myAsks(){ return (S.asks||[]).filter(a=>a.state!=='Built' && a.state!=='Not Doing' && (me()==='jonna' || a.by===me())); }
@@ -6592,6 +7106,8 @@ function drawRail(){
   placeBoardBtn(calB);
   add(railLbl('Team'), firstClassic);
   /* Connected Systems sits at the end of the Team list, just above System Health (Jonna's call) */
+  /* Industry Events (Amy's idea, Nov 2026) sits just above Connected Systems */
+  if(window.__hqEvents) add(railBtn('events','Industry Events', ic('pin')));
   if(window.__hqSystems) add(railBtn('systems','Connected Systems', ic('net')));
   markRail();
 }
@@ -6668,6 +7184,7 @@ function paint(){
     else if(k==='week') vWeek();
     else if(k==='people') vPeople();
     else if(k==='systems') vSystems();
+    else if(k==='events') vEvents();
     else vDash();
   }catch(e){ console.error(e); body.appendChild(h('p','nx-empty','Something went wrong drawing this view.')); }
   body.scrollTop=sy; const sl2=body.querySelector('.nx-sl, .nx-dl'); if(sl2) sl2.scrollTop=sly;
@@ -6680,6 +7197,10 @@ function vSystems(){ const CS=window.__hqSystems; if(!CS){ header('Connected Sys
   const ctl=[]; if(CS.canEdit()){ const eb=btn('nx-mini'+(CS.editing?' pri':''), CS.editing?'Done Editing':'Edit', ()=>{ CS.setEdit(!CS.editing); paint(); }); eb.innerHTML=ic('gear')+'<span>'+(CS.editing?'Done Editing':'Edit')+'</span>'; ctl.push(eb); }
   header('Connected Systems', ic('net'), 'How MISMO’s systems fit together', ctl);
   const pg=h('div','nx-cs'); pg.appendChild(CS.page()); body.appendChild(pg); }
+/* ---------- Industry Events (events.js draws the page; the events are kept in Team HQ's data) ---------- */
+function vEvents(){ const EV=window.__hqEvents; if(!EV){ header('Industry Events', ic('pin')); body.appendChild(h('p','nx-empty','Industry Events didn’t load. Refresh the page.')); return; }
+  header('Industry Events', ic('pin'), 'The conferences and shows MISMO goes to');
+  const pg=h('div','nx-ev'); pg.appendChild(EV.page()); body.appendChild(pg); }
 function header(title, icon, sub, controls){
   const l=h('div','nx-hl');
   if(icon){ const i=h('span','nx-hi'); i.innerHTML=icon; l.appendChild(i); }
@@ -7246,6 +7767,7 @@ const TILES={
   wins:{n:'Team Wins', g:'Team', k:'#3CCB7F', d:'What the team finished lately'},
   findtime:{n:'Find a Time', g:'Team', k:'#5AA9E6', d:'Who’s free now, and the next time you’re all free'},
   board:{n:'My Board', g:'Team', k:'#74BFEB', d:'Your own board — free-form, notebook or rows'},
+  events:{n:'Industry Events', g:'Team', k:'#E8833A', d:'The next industry event, who’s going and what’s due'},
   systems:{n:'Connected Systems', g:'Team', k:'#74BFEB', d:'How MISMO’s systems connect, what each one does, and what’s live'}
 };
 function dashDefault(){
@@ -7736,6 +8258,7 @@ function tile(cfg, i, L){
       if(more.length){ const ls=h('div','nx-kl2 nx-ftmore'); ls.appendChild(h('small','nx-ftml','Also free')); more.forEach(z=>{ const d0=new Date(z.t); const r=h('div','kr'); r.appendChild(h('b',null, WD[d0.getDay()]+' '+MON[d0.getMonth()]+' '+d0.getDate())); r.appendChild(h('span',null, tmL(z.t)+' – '+tmL(z.e))); r.addEventListener('click', e=>{ e.stopPropagation(); if(!dashEdit) ftDialog(cfg, L); }); ls.appendChild(r); }); el.appendChild(ls); } }
     el.appendChild(h('div','st-next', free+' of '+ids.length+' free now · tap for more times'));
     meta.go=()=>ftDialog(cfg, L); }
+  else if(cfg.t==='events'){ if(window.__hqEvents) window.__hqEvents.tile(el, SZ); else el.appendChild(h('div','st-sub','Open it to see the events.')); meta.go=()=>open('events'); }
   else if(cfg.t==='systems'){ if(window.__hqSystems) window.__hqSystems.tile(el, SZ); else el.appendChild(h('div','st-sub','Open it to see the map.')); meta.go=()=>open('systems'); }
   else if(cfg.t==='sys'){ meta.draw(el, top, SZ); }
   if(cfg.t!=='sys' && lvlOf(cfg)==='hi' && !tall){ el.classList.add('lv-hi'); el.querySelectorAll('.nx-kl2:not(.nx-ftmore),.nx-tl2,.nx-gaps,.mic-steps').forEach(z=>z.remove()); }
@@ -7963,7 +8486,7 @@ function openCatalog(){
   const close=()=>ov.remove();
   const sec=(t)=>box.appendChild(h('div','nx-sec',t));
   const card=(name, desc, k, symHtml, fn, on)=>{ const b=btn('nx-cti'+(on?' on':'')); b.style.setProperty('--k',k); const i=h('span','ci'); i.innerHTML=symHtml; b.appendChild(i); const t=h('span','tx'); t.appendChild(h('b',null,name)); t.appendChild(h('small',null,desc)); b.appendChild(t); b.appendChild(h('em',null,on?'On':'Add')); b.addEventListener('click', ()=>{ fn(); b.classList.add('on'); b.querySelector('em').textContent='Added'; }); return b; };
-  ['Your Day','Team'].forEach(g=>{ sec(g); const gr=h('div','nx-ctg'); Object.keys(TILES).filter(k=>TILES[k].g===g).forEach(k=>{ const on=dashEdit.some(z=>z.t===k); gr.appendChild(card(TILES[k].n, TILES[k].d, TILES[k].k, ic(k==='email'?'mail':k==='people'||k==='team'?'ppl':k==='day'||k==='load'?'cal':k==='tasks'?'mine':k==='board'?'all':k==='asks'?'inbox':k==='findtime'?'search':k==='systems'?'net':'week'), ()=>{ if(!dashEdit.some(z=>z.t===k)) dashEdit.push({t:k}); paint(); }, on)); }); box.appendChild(gr); });
+  ['Your Day','Team'].forEach(g=>{ sec(g); const gr=h('div','nx-ctg'); Object.keys(TILES).filter(k=>TILES[k].g===g).forEach(k=>{ const on=dashEdit.some(z=>z.t===k); gr.appendChild(card(TILES[k].n, TILES[k].d, TILES[k].k, ic(k==='email'?'mail':k==='people'||k==='team'?'ppl':k==='day'||k==='load'?'cal':k==='tasks'?'mine':k==='board'?'all':k==='asks'?'inbox':k==='findtime'?'search':k==='systems'?'net':k==='events'?'pin':'week'), ()=>{ if(!dashEdit.some(z=>z.t===k)) dashEdit.push({t:k}); paint(); }, on)); }); box.appendChild(gr); });
   sec('MISMO Systems'); const gs=h('div','nx-ctg'); (x?x.SYS:[]).filter(z=>x.canOpen(z.k)).sort((a,b)=>a.n.localeCompare(b.n)).forEach(z=>{ let n=dashEdit.filter(q=>q.t==='sys' && q.s===z.k).length; const cb=card(z.n, (z.auto ? 'New · ' : '')+z.d, z.c, x.symbol(z.k), ()=>{ const nt={t:'sys', s:z.k}; dashEdit.push(nt); paint(); if(n>0){ close(); setTimeout(()=>tileEditor(nt, dashEdit.length-1, dashEdit, true), 60); } }, false); const ci=cb.querySelector('.ci'); const badge=h('i','cnt'); const setB=()=>{ badge.textContent=n?String(n):''; badge.title=n?n+' on your dashboard':''; badge.hidden=!n; }; setB(); ci.appendChild(badge); cb.addEventListener('click', ()=>{ n++; setB(); cb.classList.remove('on'); cb.querySelector('em').textContent='Add'; }); gs.appendChild(cb); }); box.appendChild(gs);
   const ft=h('div','hqx-ft'); const d=btn('btn','Done', close); ft.appendChild(d); box.appendChild(ft);
   ov.appendChild(box); ov.addEventListener('click', e=>{ if(e.target===ov) close(); }); document.body.appendChild(ov);
@@ -7971,7 +8494,7 @@ function openCatalog(){
 /* new numbers from a system: redraw the dashboard once they've stopped arriving, not for every one */
 /* an app newly found on resources.mismo.org: show it in the menus straight away */
 window.addEventListener('hq:sys', ()=>{ if(!ui.on || dashEdit || busy() || !shell || shell.hidden) return; drawRail(); });
-window.addEventListener('hq:bset', ()=>{ if(!ui.on || dashEdit || busy() || !shell || shell.hidden) return; drawRail(); if(viewKind()!=='systems') paint(); });
+window.addEventListener('hq:bset', ()=>{ if(!ui.on || dashEdit || busy() || !shell || shell.hidden) return; drawRail(); if(viewKind()!=='systems' && viewKind()!=='events') paint(); });
 let countsT=null; window.addEventListener('hq:counts', ()=>{ clearTimeout(countsT); countsT=setTimeout(refreshSysTiles, 600); });
 function refreshSysTiles(){ if(!ui.on || viewKind()!=='day' || tdrag || !shell || shell.hidden) return; const grid=body.querySelector('.nx-tiles'); if(!grid) return;
   const L=dashEdit || dashLayout();
@@ -8178,7 +8701,7 @@ function openMenuSheet(){
   const grp=(t)=>menuEl.appendChild(h('div','nx-ml',t));
   const item=(label, fn, iconHtml)=>{ const b=btn('nx-mi', null, ()=>{ closeMenus(); fn(); }); b.innerHTML=(iconHtml||'')+'<span>'+label+'</span>'; menuEl.appendChild(b); };
   grp('You'); Object.keys(VIEWS).filter(k=>!VIEWS[k].team).forEach(k=>item(VIEWS[k].t, ()=>open(k), ic(VIEWS[k].i)));
-  grp('Team Pages'); [...document.querySelectorAll('.hq.rail nav button[data-hq]')].forEach(b=>{ const s=b.querySelector('svg'); item(b.textContent.trim(), ()=>openClassic(b.dataset.hq), s?s.outerHTML:''); }); /* team views (Connected Systems) after the other team pages, as on the left menu */ Object.keys(VIEWS).filter(k=>VIEWS[k].team && (k!=='systems' || window.__hqSystems)).forEach(k=>item(VIEWS[k].t, ()=>open(k), ic(VIEWS[k].i)));
+  grp('Team Pages'); [...document.querySelectorAll('.hq.rail nav button[data-hq]')].forEach(b=>{ const s=b.querySelector('svg'); item(b.textContent.trim(), ()=>openClassic(b.dataset.hq), s?s.outerHTML:''); }); /* team views (Connected Systems) after the other team pages, as on the left menu */ Object.keys(VIEWS).filter(k=>VIEWS[k].team && (k!=='systems' || window.__hqSystems) && (k!=='events' || window.__hqEvents)).forEach(k=>item(VIEWS[k].t, ()=>open(k), ic(VIEWS[k].i)));
   { const hb=document.getElementById('help-btn'); if(hb){ const s=hb.querySelector('svg'); item('Help', ()=>{ hideApp(); ui.view='c:help'; save(); pushView(ui.view); hb.click(); markRail(); }, s?s.outerHTML:''); } }
   document.body.appendChild(menuEl);
   { const mine=menuEl; setTimeout(()=>document.addEventListener('click', function off(e){ if(menuEl!==mine){ document.removeEventListener('click', off); return; } if(mine && !mine.contains(e.target) && !e.target.closest('.nx-tbm')){ closeMenus(); document.removeEventListener('click', off); } }), 0); }
@@ -8199,7 +8722,7 @@ function hsh(str){ let x=0; for(let i=0;i<str.length;i++){ x=((x<<5)-x+str.charC
 const sig=()=>[S.tasks.length, hsh(S.tasks.map(t=>[t.id,t.at,t.s,t.due,t.w,t.r,t.o,(t.d||[]).join(','),t.p,t.t,(t.notes||'').length,(t.sub||[]).map(z=>z.done?1:0).join(''),(t.wait||[]).join(','),t.rep||'',(t.fol||[]).join(','),t.repNext||''].join('|')).join('~')), (S.asks||[]).length, (S.asks||[]).map(a=>a.state).join(''), (S.nudges||[]).filter(n=>!n.done).length, S.rocks.length+'/'+S.rocks.map(r=>(Array.isArray(r.upd)&&r.upd[0]&&r.upd[0].at)||0).join(','), (window.__hqx&&window.__hqx.sig?window.__hqx.sig():''), (ui.view==='mine'?syncSig():''), Object.keys((window.__cal&&window.__cal.CAL&&window.__cal.CAL.by)||{}).length, (window.__cal&&window.__cal.CAL&&window.__cal.CAL.at)||0].join(':');
 function busy(){ if(drag || tdrag!=null || menuEl || document.documentElement.classList.contains('nx-boxing') || document.querySelector('.hqx-ov')) return true; const a=document.activeElement; return !!(a && (a.tagName==='INPUT' || a.tagName==='SELECT' || a.tagName==='TEXTAREA') && (shell && shell.contains(a))); }
 /* Connected Systems keeps itself current, so task and inbox changes elsewhere don't rebuild it (and move the reader) */
-const live=setInterval(()=>{ if(!ui.on || document.hidden) return; const s=sig(); if(s===lastSig) return; if(busy()) return; lastSig=s; drawRail(); if(viewKind()!=='systems') paint(); }, 1200);
+const live=setInterval(()=>{ if(!ui.on || document.hidden) return; const s=sig(); if(s===lastSig) return; if(busy()) return; lastSig=s; drawRail(); if(viewKind()!=='systems' && viewKind()!=='events') paint(); }, 1200);
 const clock=setInterval(()=>{ if(!ui.on || document.hidden || busy()) return; drawRail(); if(shell && !shell.hidden && (viewKind()==='day' || viewKind()==='person')) paint(); }, 60e3);
 /* if the classic page redraws its rail, put our items back */
 const railMo=new MutationObserver(()=>{ if(!ui.on) return; const nav=navEl(); if(nav && railNodes.length && !nav.contains(railNodes[0])) drawRail(); });
@@ -10089,6 +10612,10 @@ function edit(e0, tripName){
       const L=X.tripsOf(E(), who), names=L.map(t=>t.trip);
       if(L.length){ const og=document.createElement('optgroup'); og.label=(who===me() ? 'Your' : first(who)+'’s')+' trips';
         L.forEach(t=>og.appendChild(new Option(t.trip+(X.span(t.first,t.last) ? '  ·  '+X.span(t.first,t.last) : '')+(t.state==='entered' ? '  ·  entered' : ''), t.trip))); tsel.appendChild(og); }
+      /* industry events this person is going to (Industry Events), not yet a trip of theirs */
+      let IE=[]; try{ IE=window.__hqEvents ? window.__hqEvents.tripsFor(who).filter(t=>names.indexOf(t.trip)<0) : []; }catch(x){ IE=[]; }
+      if(IE.length){ const og2=document.createElement('optgroup'); og2.label='Industry Events '+(who===me() ? 'you’re' : first(who)+'’s')+' going to';
+        IE.forEach(t=>{ og2.appendChild(new Option(t.trip+(t.from ? '  ·  '+X.span(X.day(t.from), X.day(t.to||t.from)) : ''), t.trip)); names.push(t.trip); }); tsel.appendChild(og2); }
       if(v && names.indexOf(v)<0) tsel.appendChild(new Option(v, v));
       tsel.appendChild(new Option('New Trip…', NEW)); tsel.value=v||''; tnew.hidden=true; }
     tsel.addEventListener('change', ()=>{ touched.trip=1; tag('trip', false);
@@ -11745,7 +12272,7 @@ function h(t,c,x){ const e=document.createElement(t); if(c) e.className=c; if(x!
 function btn(c,x,f){ const b=h('button',c,x); b.type='button'; if(f) b.addEventListener('click', f); return b; }
 
 /* ---------- help for the page you're on ---------- */
-const NX={day:'dash', inbox:'inbox', mine:'mytasks', cal:'calendar', people:'views', systems:'systems'};
+const NX={day:'dash', inbox:'inbox', mine:'mytasks', cal:'calendar', people:'views', systems:'systems', events:'events'};
 const HQ={today:'today', rocks:'rocks', plans:'plans', dates:'dates', findtime:'findtime', agenda:'agenda', syncs:'syncs', expenses:'expenses', mine:'board'};
 function helpFor(){ const on=document.querySelector('.hq.rail .on[data-nx], .hq.rail [data-nx][aria-current], .hq.rail .on[data-hq], .hq.rail [data-hq][aria-current]');
   if(on && on.dataset.nx) return NX[on.dataset.nx] || 'start';
@@ -11799,6 +12326,22 @@ const NEW=[
  {after:'trouble', id:'health', t:'System Health', d:'Whether saving, storage and the email and calendar flows are working.', h:`
 <p><b>System Health</b> at the foot of the left menu checks every 5 minutes: <b>Saving</b>, <b>Storage</b> (how full the biggest files are), the <b>Email</b> flows, the <b>Outlook calendar</b> flows, the <b>Do It in Outlook</b> flow, and <b>errors on this page</b>. Its dot is green, amber or red, and a red bar appears across the top if something stops. The <b>Team Error Log</b> lists errors from anyone's screen in the last 7 days; <b>Copy Report</b> copies everything to send to whoever is fixing it.</p>
 <p><b>Recent Changes</b> lists who changed what on the team’s tasks, Team Projects, key dates, plans and agenda in the last 7 days, with Open to go to the item. Each of those items also shows its own <b>History</b> at the foot of its panel (the last 90 days). Changes appear within the hour of being saved. Expenses, Sync Ups and notes are never included.</p>
+`},
+ {after:'expenses', id:'events', t:'Industry Events', d:'The conferences, trade shows and dinners MISMO goes to: who’s going, speaking, promotion, graphics and contacts.', h:`
+<p><b>Industry Events</b> (under Team in the left menu, or add its tile with <b>+ Add a Tile</b>) is the list of other organizations’ events MISMO goes to or is thinking about. MISMO’s own Summits stay in Summit HQ. Everyone on the team can add and change events.</p>
+<h4>The Page</h4>
+<p>The boxes across the top show the next event we’re going to with a countdown, how many we’re going to, how many we’re still considering, speaking slots accepted, and what’s due in the next 30 days. Select a box to filter the list. Under them, filter by <b>Upcoming</b>, <b>Going</b>, <b>Considering</b>, <b>Speaking</b>, <b>Past</b>, <b>Not Going</b> or <b>Set Aside</b>, pick a person to see only their events, or search events, cities, people and contacts. Events are listed by month. On the right, <b>Coming Up</b> lists registration deadlines, speaking proposals due, promotion steps due and events starting in the next 60 days, and <b>Who’s Going Where</b> shows each person’s upcoming events.</p>
+<h4>An Event</h4>
+<p>Select an event (or <b>+ Add an Event</b>) to open it on the right. Nothing saves until you press <b>Save Changes</b>; if you close with changes not saved, it asks first. Its tabs:</p>
+<p><b>Details</b>: name, who hosts it, kind, our status (Considering, Going, Not Going), dates, the registration deadline, city and venue, the event’s website, our role (Attending, Speaking, Exhibiting, Sponsoring), costs, the hotel or room block, the media kit or speaker portal link, and notes. Dates can be typed (3/15/27) or picked from the calendar button.<br>
+<b>Who’s Going</b>: each person, their arrive and leave dates, and whether they’re registered and have a room. Once the event is set to Going, it shows as a trip choice in that person’s Expenses, so their receipts land on the right trip.<br>
+<b>Speaking</b>: each session or topic, the speaker, when the proposal is due, where it stands (Idea, Submitted, Accepted, Confirmed, Declined, Done), and the session’s date and time.<br>
+<b>Promotion</b>: the steps for telling people we’ll be there, each with a channel, due date, who and a link to the post. <b>Add the Usual Steps</b> adds five, dated from the event: MISMO Matters 30 days before, an announcement 21 days before, speaker graphics a week before, a post from the event, and a recap 3 days after. <b>Ask MISMO Media</b> opens MISMO Media’s request form in a new tab. Nothing is ever posted or sent from here.<br>
+<b>Graphics</b>: drop in the logos, speaker cards, banners and social posts the event gives us (up to 4 MB each). Each opens in a new tab.<br>
+<b>Contacts</b>: the people we meet or need to reach there, who met them, and whether to follow up.</p>
+<p><b>Set Aside</b> takes an event off the list without deleting it; bring it back from the <b>Set Aside</b> filter.</p>
+<h4>Where It’s Kept</h4>
+<p>In Team HQ’s own data (one record per event, collection <b>events</b>), saved through the save relay like everything else in Team HQ, with history. Graphics are kept in Team HQ’s file storage. Industry Events doesn’t connect to any other system yet; contacts reaching Member 360 and graphics reaching MISMO Media’s Image Library are on the Connections Map as requests.</p>
 `},
  {after:'health', id:'systems', t:'Connected Systems', d:'How MISMO’s systems fit together, what each one does, and what runs on its own.', h:`
 <p><b>Connected Systems</b> (under Team in the left menu, or add its tile with <b>+ Add a Tile</b>) is the map of every MISMO system and the work that moves between them. Point at a box to light up everything it touches; select it for what it does, where it lives, what it replaced, and what it sends and receives. The area buttons show one part of the operation. A moving dot means the work moves automatically; a <b>dashed line</b> means a person copies it.</p>
