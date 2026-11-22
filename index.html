@@ -4088,7 +4088,6 @@ function asksForMe(id){ return id===ASK_OWNER ? openAsks() : openAsks().filter(a
    and `state` is how the flow knows what still needs doing. Nothing in this
    page talks to Outlook directly — Team HQ writes rows, the flow does the rest. */
 const BLK_MINS = [15,30,45,60,90,120];
-function blockWho(b){ return b.who || ''; }
 function blocksOn(who, iso){
   return (S.blocks||[]).filter(b=> b.who===who && b.date===iso && b.state!=='remove')
     .sort((a,b)=> String(a.start||'').localeCompare(String(b.start||'')));
@@ -4431,21 +4430,6 @@ function holidayOn(d){
   return null;
 }
 /* every holiday that touches a month, for the calendar grid */
-function holidaysTouching(y, m){
-  const first=new Date(y,m,1), last=new Date(y,m+1,0);
-  first.setHours(0,0,0,0); last.setHours(0,0,0,0);
-  const seen={}, out=[];
-  [y-1,y,y+1].forEach(yy=>{
-    if(!HOL_CACHE[yy]) HOL_CACHE[yy]=holidaysIn(yy);
-    HOL_CACHE[yy].forEach(h=>{
-      const b=h.e||h.d;
-      if(b<first || h.d>last) return;
-      const k=h.t+'|'+isoOf(h.d);
-      if(!seen[k]){ seen[k]=1; out.push(h); }
-    });
-  });
-  return out;
-}
 
 function workdaysLeft(){
   const t=today(), end=new Date(t.getFullYear(),11,31); end.setHours(0,0,0,0);
@@ -4730,7 +4714,6 @@ function occOf(x, iso){
   c.e = recSpan(x.rec, iso, c._on) || '';
   return c;
 }
-function hasOcc(x, iso){ return !!(x.rec && x.rec.over && x.rec.over[iso]); }
 /* an occurrence that was moved: which of its usual days now lands on `iso` */
 function movedTo(x, iso){
   const ov=(x.rec&&x.rec.over)||{};
@@ -4976,22 +4959,7 @@ function snapOf(col, id){
   const r=(S[KEYOF[col]]||[]).find(x=>x.id===id);
   return r ? JSON.stringify(r) : null;
 }
-function movedUnderYou(col, id, opened){
-  if(opened==null) return false;                 /* new, or it was already gone */
-  const now = snapOf(col, id);
-  return now!=null && now!==opened;
-}
 /* what actually differs, in words, so the warning is useful rather than vague */
-function whatChanged(col, id, opened, labels){
-  let was={}, now={};
-  try{ was=JSON.parse(opened)||{}; }catch(e){}
-  const cur=(S[KEYOF[col]]||[]).find(x=>x.id===id); now=cur||{};
-  const out=[];
-  Object.keys(labels).forEach(k=>{
-    if(JSON.stringify(was[k]) !== JSON.stringify(now[k])) out.push(labels[k]);
-  });
-  return out;
-}
 /* November 5, 2026: saving now keeps whatever somebody else changed and adds yours (see put),
    so this only asks when both of you changed the same field to different things. */
 function clashesOf(col, mine, opened){
@@ -5401,10 +5369,6 @@ function similar(a,b){
    for the whole team until somebody puts it back. The decision is kept on the
    team project (for a shared part) or on the task (for a look-alike pair), so it
    travels with the thing it is about. */
-function ovlKey(o){
-  return o.kind==='ws' ? 'ws:'+o.rock+'||'+o.ws
-    : 'dup:'+[o.tasks[0].id, o.tasks[1].id].sort().join('|');
-}
 function ovlAside(o){
   if(o.kind==='ws'){ const r=rock(o.rock); return !!(r && (r.okws||[]).indexOf(o.ws)>=0); }
   const a=o.tasks[0], c=o.tasks[1];
@@ -5731,25 +5695,6 @@ function newTask(preset){
     rail:0, ord:(S.tasks.length+1)*10, at:Date.now()}, preset||{}));
 }
 /* one line, Enter, done — no panel */
-function quickAdd(presetRock){
-  const w=el('div','quickadd');
-  w.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>';
-  const i=inp('text','','Add a task and press Enter\u2026');
-  const h=el('span','hint','Enter to add \u00B7 Shift+Enter to open it');
-  w.appendChild(i); w.appendChild(h);
-  i.addEventListener('keydown', async e=>{
-    if(e.key!=='Enter') return;
-    const v=i.value.trim(); if(!v) return;
-    e.preventDefault();
-    const t={t:v, o:S.me||'', d:[], r:presetRock||'', w:'', s:'Not Started', p:'Normal', due:'', notes:'',
-             rail:0, ord:(S.tasks.length+1)*10, at:Date.now(), by:S.me||''};
-    i.value='';
-    if(e.shiftKey){ editTask(t); return; }
-    await put('tasks', t);
-    toast('Added. Click it to fill in the rest.');
-  });
-  return w;
-}
 
 /* ============ task renderers ============ */
 function taskRow(t){
@@ -5803,7 +5748,6 @@ function taskSticky(t){
   wireDrag(c, t, ()=> editTask(t));
   return c;
 }
-function taskNode(t){ return S.view==='cards'? taskCard(t) : S.view==='stickies'? taskSticky(t) : taskRow(t); }
 
 /* accountable avatar, then anyone else hands-on */
 function whoPair(t){
@@ -5827,34 +5771,6 @@ function whoPair(t){
    panels still move by their headers. */
 function wireDrag(node, t, onClick){
   node.addEventListener('click', ()=>{ if(onClick) onClick(); });
-}
-function wireDragOld(node, t, onClick){
-  let moved=false;
-  node.addEventListener('click', ()=>{ if(!moved && onClick) onClick(); moved=false; });
-  dragHandle(node, {
-    ghostFrom: ()=> node,
-    hitTest: (under)=>{ const x = under.closest && under.closest('[data-tid]');
-      return (x && x!==node) ? x : null; },
-    onStart: ()=>{ moved=true; node.classList.add('dragging'); },
-    onEnd: (dragged)=>{ node.classList.remove('dragging');
-      if(dragged) setTimeout(()=>{ moved=false; }, 60); else moved=false; },
-    onDrop: async (target)=>{
-      const to = S.tasks.find(x=>x.id===target.dataset.tid);
-      if(!to || to.id===t.id) return;
-      /* drop onto another task: take its place in the order */
-      const list = S.tasks.slice().sort((a,b)=>(a.ord||0)-(b.ord||0));
-      const from = list.findIndex(x=>x.id===t.id);
-      const at   = list.findIndex(x=>x.id===to.id);
-      if(from<0 || at<0) return;
-      const it = list.splice(from,1)[0];
-      list.splice(at,0,it);
-      const changed=[];
-      list.forEach((x,i)=>{ const o=i*10; if(x.ord!==o){ x.ord=o; changed.push(x); } });
-      sortAll(); renderAll();
-      for(const x of changed.slice(0,40)) await put('tasks', x);
-      toast('Moved.');
-    }
-  });
 }
 
 /* value/name select for things that are not people */
@@ -5887,19 +5803,6 @@ function fold(root, title, count, open, build){
 }
 function emptyBox(title, line){
   const e=el('div','empty'); e.appendChild(el('b',null,title)); e.appendChild(document.createTextNode(line)); return e;
-}
-function viewSwitch(){
-  const w=el('div','seg');
-  [['rows','Rows','M4 6h16M4 12h16M4 18h16'],
-   ['cards','Cards','M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z'],
-   ['stickies','Sticky Notes','M5 4h14v10l-5 5H5z M19 14h-5v5']].forEach(([k,n,d])=>{
-    const b=el('button'); b.type='button'; b.setAttribute('aria-pressed', S.view===k?'true':'false');
-    b.innerHTML='<svg viewBox="0 0 24 24"><path d="'+d+'"/></svg>';
-    b.appendChild(el('span',null,n));
-    b.addEventListener('click', ()=>{ S.view=k; saveMine(); renderAll(); });
-    w.appendChild(b);
-  });
-  return w;
 }
 function taskHolder(list, laneCls, view){
   const v0=S.view; if(view) S.view=view;
@@ -6305,64 +6208,6 @@ function rockCard(r, dupWs, root){
 
 /* Everything that used to drop down below the card now opens in the right rail,
    so the row of cards never reflows under you while you read one. */
-function rockPanelOld(r, dupWs){
-  const head = (()=>{ const m=S.tasks.filter(t=>t.r===r.id);
-    return r.status+(r.lead? ' \u00b7 lead '+pname(r.lead):'')+' \u00b7 '+m.filter(t=>t.s==='Done').length+' of '+m.length+' done'; })();
-  panel(r.name, head, body=>{
-    /* worked out inside build, so stepping back here after finishing a task
-       shows the list as it is now, not as it was when you opened it */
-    const mine = S.tasks.filter(t=>t.r===r.id);
-    const all = mine.length, dn = mine.filter(t=>t.s==='Done').length;
-    if(r.desc) body.appendChild(rtView(r.desc,'rkd'));
-
-    const pb=el('div','pbar'); pb.style.margin='14px 0 2px';
-    const bi=el('i'); bi.style.width=(all? Math.round(dn/all*100):0)+'%'; pb.appendChild(bi);
-    body.appendChild(pb);
-
-    body.appendChild(el('h3','sect-t','The Parts'));
-    const ws=el('div','ws');
-    (r.ws||[]).forEach(w=>{
-      const ts = mine.filter(t=>t.w===w && t.s!=='Done');
-      const done = mine.filter(t=>t.w===w && t.s==='Done').length;
-      const who = Array.from(new Set(ts.map(t=>t.o))).filter(Boolean);
-      const row=el('button','wsr'+(dupWs && dupWs[r.id+'||'+w]?' dup':'')); row.type='button';
-      const wn=el('span','wn'); wn.appendChild(document.createTextNode(w));
-      const sm=el('small');
-      sm.textContent = ts.length? ts.length+(ts.length===1?' open task':' open tasks')+(done?' \u00b7 '+done+' done':'')
-                     : (done? done+' done, nothing open' : 'nothing here yet');
-      wn.appendChild(sm); row.appendChild(wn);
-      const wr=el('span','wr');
-      if(who.length>1) wr.appendChild(el('span','chip ch-warn', who.length+' people'));
-      const avs=el('span','avs'); who.slice(0,4).forEach(id=>avs.appendChild(avatar(id,'xs'))); wr.appendChild(avs);
-      row.appendChild(wr);
-      row.addEventListener('click', ()=> wsPanel(r, w));
-      ws.appendChild(row);
-    });
-    /* tasks on this project that are not in any of its parts would otherwise never show */
-    const loose = mine.filter(t=> (r.ws||[]).indexOf(t.w)<0);
-    if(loose.length){
-      const lo=loose.filter(t=>t.s!=='Done'), ld=loose.length-lo.length;
-      const row=el('button','wsr'); row.type='button';
-      const wn=el('span','wn'); wn.appendChild(document.createTextNode('Not in a Part'));
-      wn.appendChild(el('small',null, (lo.length? lo.length+(lo.length===1?' open task':' open tasks') : 'nothing open')+(ld? ' \u00b7 '+ld+' done' : '')));
-      row.appendChild(wn); row.addEventListener('click', ()=> wsPanel(r, null)); ws.appendChild(row);
-    }
-    if(!(r.ws||[]).length && !loose.length) ws.appendChild(emptyBox('No parts yet.','Edit this team project to add the parts people divide up.'));
-    body.appendChild(ws);
-    const dn2=mine.filter(t=>t.s==='Done');
-    if(dn2.length) body.appendChild(doneFold(dn2, true));
-
-    const acts=el('div','rowacts');
-    /* The lead is answerable for this one; this is how they put somebody else
-       on the actual work without giving up being accountable for it. */
-    const wh=el('button','btn ghost','Who Is Doing What'); wh.type='button';
-    wh.title='Put someone on a task here without giving up being accountable for it';
-    wh.addEventListener('click', ()=> assignPanel(r.id)); acts.appendChild(wh);
-    const ed=el('button','btn','Edit This Team Project'); ed.type='button';
-    ed.addEventListener('click', ()=> editRock(r)); acts.appendChild(ed);
-    body.appendChild(acts);
-  });
-}
 
 function wsPanel(r, w){
   panel(r.name, w, b=>{
@@ -11626,32 +11471,6 @@ function sySpace(s){
 }
 
 /* what each person in the space has on the team board, so the sync starts from the same page */
-function syBoards(s){
-  const people=(s.members||[]).map(syPersonOf).filter(Boolean);
-  const open=p=> S.tasks.filter(t=> t.s!=='Done' && (t.o===p.id || isDoing(t,p.id)))
-    .sort((a,b)=> String(a.due||'9999').localeCompare(String(b.due||'9999')));
-  const total=people.reduce((n,p)=>n+open(p).length,0);
-  const d=el('details','syfold');
-  d.open=!!S.openSyncs[s.id+':boards'];
-  d.addEventListener('toggle', ()=>{ S.openSyncs[s.id+':boards']=d.open; });
-  const sm=el('summary');
-  sm.innerHTML='<svg class="caret" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
-  sm.appendChild(el('span',null,'On Everyone\u2019s Board')); sm.appendChild(el('span','cnt', String(total)));
-  d.appendChild(sm);
-  const b=el('div','syboards');
-  if(!people.length) b.appendChild(el('div','empty','Nobody in this space has open tasks on the team board.'));
-  people.forEach(p=>{
-    const col=el('div','syboard');
-    const hd=el('div','syboardh'); hd.appendChild(avatar(p.id,'xs')); hd.appendChild(el('b',null,p.name.split(' ')[0]+'\u2019s Tasks'));
-    const list=open(p); hd.appendChild(el('span','cnt', String(list.length)));
-    col.appendChild(hd);
-    if(!list.length) col.appendChild(el('div','syempty','Nothing open.'));
-    else { const rr=el('div','rows'); list.forEach(t=> rr.appendChild(taskRow(t))); col.appendChild(rr); }
-    b.appendChild(col);
-  });
-  d.appendChild(b);
-  return d;
-}
 function syList(s, L){
   const box=el('div','sylist'); box.dataset.list=L.id; box.dataset.sid=L.id;
   const cards=syItems(s.id).filter(c=>c.list===L.id);
@@ -11945,45 +11764,6 @@ function syCardPanel(cid){
   });
 }
 
-function syListPanel(sid, lid){
-  const s0=syOf(sid); if(!s0) return;
-  const isNew=!lid;
-  syPanel('list', lid||'new', isNew? 'Add a List' : 'List Settings', s0.name||'', body=>{
-    const s=syOf(sid); if(!s) return;
-    const L=(s.lists||[]).find(x=>x.id===lid) || {id:uid('ls'), name:''};
-    const g=el('div','fields');
-    const fN=field(g,'List Name', inp('text', L.name||'', 'e.g. Jonathan’s To Dos, Winter Summit, Parked for Later'), 'w4');
-    body.appendChild(g);
-    const acts=el('div','rowacts');
-    if(!isNew){
-      const lists=s.lists||[], i=lists.findIndex(x=>x.id===lid);
-      /* lists are reordered by dragging their grip on the space itself (Oct 12) */
-      const del=el('button','btn danger','Delete the List'); del.type='button';
-      const n=syItems(sid).filter(c=>c.list===lid).length;
-      del.disabled = lists.length<=1;
-      del.title = lists.length<=1 ? 'A space keeps at least one list' : '';
-      del.addEventListener('click', ()=>{
-        if(!del.dataset.c){ del.dataset.c='1'; del.textContent= n? 'Click Again — Its '+n+' Cards Move to '+(lists.find(x=>x.id!==lid)||{}).name : 'Click Again to Delete'; return; }
-        const to=lists.find(x=>x.id!==lid);
-        syItems(sid).filter(c=>c.list===lid).forEach(c=> sySaveItem(c, {list:to.id, ord:syNextOrd(sid,to.id)}));
-        syPut('syncs', Object.assign({}, s, {lists:lists.filter(x=>x.id!==lid)})); closePanel();
-      });
-      acts.appendChild(del);
-    }
-    acts.appendChild(el('span','spacer'));
-    const cancel=el('button','btn ghost','Cancel'); cancel.type='button'; cancel.addEventListener('click', closePanel);
-    const ok=el('button','btn', isNew? 'Add the List' : 'Save'); ok.type='button';
-    ok.addEventListener('click', ()=>{
-      const v=fN.value.trim(); if(!v){ fN.focus(); toast('Give the list a name.'); return; }
-      const lists=(s.lists||[]).slice(); const i=lists.findIndex(x=>x.id===L.id);
-      if(i>=0) lists[i]=Object.assign({}, lists[i], {name:v}); else lists.push({id:L.id, name:v});
-      S.openSyncs[sid]=true;
-      syPut('syncs', Object.assign({}, s, {lists:lists})); closePanel();
-    });
-    fN.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); ok.click(); } });
-    acts.appendChild(cancel); acts.appendChild(ok); body.appendChild(acts);
-  });
-}
 
 /* a week's sync: what was said, what was decided, and who is doing what next */
 function syLogPanel(sid, gid){
@@ -15078,7 +14858,6 @@ function mtRepaint(){
   const band=document.getElementById('mtband'); if(band) mtFeed(band);
   document.querySelectorAll('.mtpanel').forEach(p=> mtFeed(p, {panel:1, week:p.dataset.view==='week'}));
 }
-function mtBand(){ const h=el('div','mtband'); h.id='mtband'; mtFeed(h); return h; }
 function mtPanel(w, b){
   const bar=el('div','mtbar');
   bar.appendChild(btnRow([{v:'today',n:'Today'},{v:'week',n:'This Week'}], w.mtv||'today', 'tiny', v=>{ w.mtv=v; saveMine(); vMine($('#app-mine')); }));
@@ -15185,7 +14964,6 @@ function noteWallPanel(w, b){
   b.appendChild(g);
 }
 const STICKY_NAMES={y:'Yellow',b:'Blue',g:'Green',p:'Pink',o:'Orange'};
-function stickySize(tx){ tx.style.height='auto'; tx.style.height=Math.max(72, tx.scrollHeight)+'px'; }
 function noteSticky(n){
   const c=el('div','sticky '+(n.col||'y')); c.dataset.nid=n.id||''; if(n.id) c.dataset.sid=n.id;
   c.appendChild(dgrip('Drag to move this post-it'));
