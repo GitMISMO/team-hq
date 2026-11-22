@@ -9538,7 +9538,7 @@ async function upload(f){
 }
 let flushing=false;
 async function flushQueue(){
-  if(flushing || !navigator.onLine || TEST || !me()) return; flushing=true;
+  if(flushing || !navigator.onLine || !me()) return; flushing=true;
   try{ let items=[]; try{ items=await Q.all(); }catch(e){ return; }
     for(const it of items){
       const x=E().find(z=>z.rcptPending===it.key);
@@ -9570,11 +9570,11 @@ async function snap(files){
     try{ up=await upload(f); }catch(err){ say((err && err.message) || 'That receipt wouldn’t upload. Try a smaller photo.'); continue; }
     const read=!up.rcptPending && canRead(c, f.type);
     const e=Object.assign({trip:'', who:me(), by:me(), cat:'', date:'', name:'', receipt:1, rcptAmt:'', amt:'', submitted:0, notes:'', at:Date.now(), reading:read ? Date.now() : 0}, up);
-    save(e); made.push({id:e.id, blob:f, read});
+    save(e); made.push({id:e.id, blob:f, read, queued:!!up.rcptPending});
   }
   if(!made.length) return;
   if(made.some(m=>!m.read)){ const w=made.filter(m=>!m.read).length;
-    if(made.every(m=>!m.read)) say(!navigator.onLine ? (w===1 ? 'Saved on this phone. It uploads and fills in when you have a signal.' : w+' receipts saved on this phone. They upload when you have a signal.')
+    if(made.every(m=>!m.read)) say(made.some(m=>m.queued) ? (w===1 ? 'Saved on this phone. It uploads and fills in when you have a signal.' : w+' receipts saved on this phone. They upload when you have a signal.')
       : (w===1 ? 'Receipt saved. The details are filled in when it’s processed.' : w+' receipts saved. The details are filled in when they’re processed.')); }
   const toRead=made.filter(m=>m.read); if(!toRead.length) return;
   say(toRead.length===1 ? 'Receipt saved. Reading it now…' : toRead.length+' receipts saved. Reading them now…');
@@ -9705,7 +9705,7 @@ function personBox(r, who, rows, heading){
     const dl=h('span','x2-pdl');
     dl.appendChild(btn('btn ghost sm','Report', ()=>exportFor(who, false), 'Download '+first(who)+'’s expenses that aren’t entered yet, in the DataBasics template'));
     dl.appendChild(btn('btn ghost sm','Receipts', ()=>receiptsFor(who, false), 'Download '+first(who)+'’s receipts for expenses that aren’t entered yet'));
-    hd.appendChild(dl); hd.appendChild(h('span','amt money', X.money(open.reduce((a,x)=>a+X.num(x.amt),0))));
+    hd.appendChild(dl); hd.appendChild(open.length ? h('span','amt money', X.money(open.reduce((a,x)=>a+X.num(x.amt),0))) : h('span','x2-alldone','All Entered'));
     const t=()=>{ UI.pfold[who]=!folded; draw(); };
     hd.addEventListener('click', t); hd.addEventListener('keydown', e=>{ if((e.key==='Enter'||e.key===' ') && e.target===hd){ e.preventDefault(); t(); } });
     wrap.appendChild(hd);
@@ -9733,7 +9733,7 @@ const STATE_CHIP=(T, who)=>{
   const fin=X.selfFin(who), mine=who===me();
   if(T.state==='entered') return ['ch-dn','Entered'];
   if(X.entersOwn(who)) return ['ch-ns','To Enter'];
-  if(T.state==='adding') return ['ch-ns', mine ? 'Not Sent Yet' : 'Still Adding'];
+  if(T.state==='adding') return ['ch-ns', mine ? (fin ? 'Not Finalized' : 'Not Sent Yet') : 'Still Adding'];
   if(T.state==='sent') return ['ch-ip', fin ? 'Finalized' : mine ? 'With '+pn(who) : 'Ready to Enter'];
   return ['ch-soon', T.fresh.length+' Added Since'];
 };
@@ -9801,7 +9801,7 @@ const asked=T=>(S.nudges||[]).filter(z=>z.kind==='exp-remind-by' && !z.done && z
 function doneBar(box, T){
   const who=T.who, mine=who===me(), fin=X.selfFin(who), go=goLabel(who);
   if(T.state==='entered' || T.state==='none' || X.entersOwn(who)) return;
-  if(!mine && !seesAll()) return;
+  if(!mine && (!seesAll() || fin)) return;   /* Jonna finalizes her own: no one else gets buttons on her trips */
   const ask=asked(T), bar=h('div','tripdone x2-done ed-'+T.state), txt=h('span','ed-t');
   const sendBtn=(label, ghost)=>btn('btn sm'+(ghost?' ghost':' ed-go'), label, ()=>send(X.tripOf(E(), who, T.trip)));
   if(T.state==='adding'){
@@ -10003,7 +10003,7 @@ function edit(e0, tripName){
     const tripVal=()=>tsel.value===NEW ? tnew.value.trim() : tsel.value;
     function fillTrips(v){ const who=(fWho && fWho.value) || e.who || me(); tsel.textContent='';
       tsel.appendChild(new Option('No trip yet', ''));
-      const L=X.tripsOf(E(), who, e.id), names=L.map(t=>t.trip);
+      const L=X.tripsOf(E(), who), names=L.map(t=>t.trip);
       if(L.length){ const og=document.createElement('optgroup'); og.label=(who===me() ? 'Your' : first(who)+'’s')+' trips';
         L.forEach(t=>og.appendChild(new Option(t.trip+(X.span(t.first,t.last) ? '  ·  '+X.span(t.first,t.last) : '')+(t.state==='entered' ? '  ·  entered' : ''), t.trip))); tsel.appendChild(og); }
       if(v && names.indexOf(v)<0) tsel.appendChild(new Option(v, v));
@@ -10414,7 +10414,8 @@ function sweep(){
 
 /* ================= look ================= */
 const css=h('style'); css.id='x2-css'; css.textContent=`
-#app-expenses.x2 > * + *{margin-top:14px}
+#app-expenses.x2{gap:12px}
+.x2 .x2-snap{margin:0}
 .x2 .x2-snap{display:flex;align-items:center;justify-content:center;min-height:110px;border:2px dashed var(--sky);background:var(--sky-wash);border-radius:8px}
 .x2 .x2-snap .ph{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}
 .x2 .x2-snap .ph span{font-size:16px;font-weight:700;color:var(--ink)}.x2 .x2-snap .ph small{font-size:12.5px;color:var(--ink-2);max-width:440px}
@@ -10436,10 +10437,10 @@ const css=h('style'); css.id='x2-css'; css.textContent=`
 .x2-jump{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.x2-jl{font-size:12.5px;font-weight:700;color:var(--ink-3);margin-right:4px}
 .x2-jb{font:inherit;font-size:13.5px;font-weight:600;border:1px solid var(--border-strong);background:var(--surface);color:var(--ink);border-radius:5px;padding:6px 10px;cursor:pointer;display:inline-flex;align-items:baseline;gap:6px;min-height:34px}
 .x2-jb small{font-weight:600;font-size:11.5px;color:var(--warn)}.x2-jb:hover{border-color:var(--navy)}
-.x2-pers{display:flex;flex-direction:column;gap:10px}
-.x2-ph{display:flex;align-items:center;gap:10px;margin:8px 0 0;padding:0 2px 6px;border-bottom:2px solid var(--navy);cursor:pointer}
+.x2-pers{display:flex;flex-direction:column;gap:8px}
+.x2-ph{display:flex;align-items:center;gap:10px;margin:6px 0 0;padding:0 2px 6px;border-bottom:2px solid var(--navy);cursor:pointer}
 :root[data-theme="dark"] .x2-ph{border-bottom-color:var(--sky)}
-.x2-ph b{font-size:16px}.x2-ph small{font-size:12.5px;color:var(--ink-3)}.x2-ph .amt{font-weight:700;white-space:nowrap}.x2-pdl{display:inline-flex;gap:6px;margin-left:auto}
+.x2-ph b{font-size:16px}.x2-ph small{font-size:12.5px;color:var(--ink-3)}.x2-ph .amt{font-weight:700;white-space:nowrap}.x2-pdl{display:inline-flex;gap:6px;margin-left:auto}.x2-alldone{font-size:12.5px;font-weight:600;color:var(--good);white-space:nowrap}
 .x2-chev{display:inline-block;width:14px;color:var(--ink-3);font-size:12px;flex:0 0 auto}
 .x2-trip{border-radius:6px}.x2-trip.x2-hit{box-shadow:0 0 0 3px var(--sky)}
 .x2 .x2-th{width:100%;font:inherit;text-align:left;border:0;cursor:pointer;color:var(--ink)}
@@ -10497,6 +10498,16 @@ Object.defineProperty(root, 'textContent', {configurable:true, get(){ return TC.
 ['appendChild','insertBefore','append','prepend','replaceChildren'].forEach(m=>{ const o=root[m]; root[m]=function(){ if(swallow && !mineNow) return arguments[0]; return o.apply(this, arguments); }; });
 Object.assign(window.__exp2, {X, draw, edit, snap, send, sweep, tick:()=>tick(true), flushQueue, readyTrips, exportFor, receiptsFor, pickWho, placeTrip:e=>X.placeTrip(E(), e), docs:()=>docs, UI});
 if(S.tab==='expenses'){ try{ window.__show('expenses'); }catch(e){} }
+/* The base page can still open its own expense editor (its search, and the link to claim expenses for a trip).
+   When it does, this editor opens in its place: the same expense (matched by name, date and amount), or a new one on that trip. */
+(function(){ const pb=$id('panel-b'), pt=$id('panel-t'); if(!pb || !pt) return;
+  new MutationObserver(()=>{ if(pb.classList.contains('x2-ed')) return; const t=pt.textContent; if(t!=='Edit Expense' && t!=='Add an Expense') return;
+    const val=l=>{ const f=[...pb.querySelectorAll('.f')].find(x=>x.firstElementChild && x.firstElementChild.textContent.trim()===l); const c=f && f.querySelector('input,select'); return c ? String(c.value||'').trim() : ''; };
+    if(!pb.querySelector('.f')) return;
+    if(t==='Add an Expense'){ edit(null, val('Trip Name')); return; }
+    const nm=val('Expense Name'), d=val('Expense Date'), a=val('Expense Amount');
+    const x=E().find(z=>String(z.name||'').trim()===nm && String(z.date||'')===d && String(z.amt||'')===a); if(x) edit(x); }).observe(pb, {childList:true});
+})();
 /* the opening cover waits for this in the Expenses app; mark ready once the expenses file is in */
 (function waitReady(n){ if(window.__exp2.ready) return; if(fileLoaded() && S.tab==='expenses' && !root.hidden){ draw(); return; } if(fileLoaded() && S.tab!=='expenses'){ window.__exp2.ready=true; return; } if(n<300) setTimeout(()=>waitReady(n+1), 100); })(0);
 setTimeout(sweep, 8000); setInterval(()=>{ try{ sweep(); }catch(e){ console.error(e); } }, 60000);
