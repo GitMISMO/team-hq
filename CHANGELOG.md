@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 22** — Industry Events: an example event (tagged Example) shows how an event looks; an example is never offered as a trip in Expenses. Set it aside when it's no longer needed.
 - **Nov 22** — Industry Events: one + Add an Event button (in the toolbar); the empty list no longer has a second one.
 - **Nov 22** — Connected Systems: a Change Notices tab shows what each system is waiting on from another system's change, with anything that needs Jonna listed first.
 - **Nov 22** — Industry Events moved to sit right under Team Projects in the left menu.

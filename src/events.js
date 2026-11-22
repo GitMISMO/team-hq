@@ -138,6 +138,8 @@ css.textContent=`
 .ev-tag.going{background:var(--good-soft,#e3f6ec);color:var(--good,#067647)}
 .ev-tag.considering{background:var(--warn-soft,#fef0c7);color:var(--warn,#93370d)}
 .ev-tag.notgoing{background:var(--surface-3);color:var(--ink-3)}
+.ev-tag.ex{background:#efedff;color:#5b3fd1}
+:root[data-theme="dark"] .ev-tag.ex{background:rgba(155,140,240,.2);color:#c9bfff}
 .ev-tag.role{background:var(--sky-wash,#e8f4fb);color:var(--navy-mid,#14486e)}
 :root[data-theme="dark"] .ev-tag.role{color:#a9d8f3}
 .ev-side2{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
@@ -335,7 +337,7 @@ function card(e){ const c=btn('ev-card'+(e.status==='Not Going'||e.gone?' dim':'
   c.appendChild(db);
   const m=h('div','ev-main'); m.appendChild(h('div','nm', e.name));
   const sub=[e.host, [e.city, e.venue].filter(Boolean).join(' · '), e.kind && e.kind!=='Conference' ? e.kind : ''].filter(Boolean).join(' · '); if(sub) m.appendChild(h('div','sub', sub));
-  const tg=h('div','ev-tags'); tg.appendChild(h('span','ev-tag '+e.status.toLowerCase().replace(/\s+/g,''), e.gone ? 'Set Aside' : e.status)); e.roles.filter(r=>r!=='Attending').forEach(r=>tg.appendChild(h('span','ev-tag role', r)));
+  const tg=h('div','ev-tags'); if(e.example) tg.appendChild(h('span','ev-tag ex','Example')); tg.appendChild(h('span','ev-tag '+e.status.toLowerCase().replace(/\s+/g,''), e.gone ? 'Set Aside' : e.status)); e.roles.filter(r=>r!=='Attending').forEach(r=>tg.appendChild(h('span','ev-tag role', r)));
   if(e.regBy && e.status!=='Not Going'){ const n=daysTo(e.regBy); if(n!=null && n>=0 && n<=30) tg.appendChild(h('span','ev-tag considering','Register by '+fmt(e.regBy))); }
   m.appendChild(tg); c.appendChild(m);
   const s2=h('div','ev-side2'); const av=h('div','ev-avs'); e.people.filter(p=>p.who).slice(0,6).forEach(p=>av.appendChild(avatar(p.who))); if(av.childNodes.length) s2.appendChild(av);
@@ -364,7 +366,7 @@ document.addEventListener('keydown', onKey, true);
 function markDirty(){ const st=P.panel; if(!st) return; st.dirty=true; const m=st.pn.querySelector('.ev-pf .msg'); if(m){ m.textContent='Changes not saved yet'; m.className='msg dirty'; } }
 function paintPanel(){ const st=P.panel; if(!st) return; const ev=st.ev, pn=st.pn; pn.textContent='';
   const ph=h('div','ev-ph'); const top=h('div','top'); const tt=h('div','tt');
-  tt.appendChild(h('small',null, st.isNew ? 'New Industry Event' : (ev.gone ? 'Set Aside · ' : '')+(ev.kind||'Industry Event')));
+  tt.appendChild(h('small',null, st.isNew ? 'New Industry Event' : (ev.example ? 'Example · ' : '')+(ev.gone ? 'Set Aside · ' : '')+(ev.kind||'Industry Event')));
   tt.appendChild(h('h2',null, ev.name || 'Name the Event'));
   tt.appendChild(h('div','meta', [span(ev.start, ev.end), [ev.city, ev.venue].filter(Boolean).join(' · '), ev.status].filter(Boolean).join('  ·  ') || 'Add the dates and where it is'));
   top.appendChild(tt); const x=btn('ev-x', '×', tryClose); x.setAttribute('aria-label','Close'); top.appendChild(x); ph.appendChild(top);
@@ -496,7 +498,7 @@ function tile(el, size){ start(); const box=h('div','ev-tile'); el.appendChild(b
   const due=dueItems(live(), 30).length; box.appendChild(h('div','st-next', (due ? due+' thing'+(due===1?'':'s')+' due in the next 30 days' : Up.length+' upcoming event'+(Up.length===1?'':'s'))+' · open the list')); }
 
 /* ---------- for Expenses: the events a person is going to, as trips ---------- */
-function tripsFor(who){ return live().filter(e=>e.status==='Going' && e.people.some(p=>p.who===who)).filter(e=>{ const n=daysTo(endOf(e)); return n==null || n>=-60; })
+function tripsFor(who){ return live().filter(e=>!e.example && e.status==='Going' && e.people.some(p=>p.who===who)).filter(e=>{ const n=daysTo(endOf(e)); return n==null || n>=-60; })
   .sort(byStart).map(e=>{ const p=e.people.find(x=>x.who===who)||{}; return {trip:e.name, from:p.from||e.start||'', to:p.to||e.end||e.start||''}; }); }
 
 window.__hqEvents={ version:'1.0', page, tile, start, tripsFor, open:openPanel,
