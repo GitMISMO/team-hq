@@ -766,7 +766,7 @@ function noticeBand(d){ const b=band('Change notices','What Each System Is Waiti
   const sm=h('div','cs-card cs-rsum2 cs-cn'); const st=h('div','st'); const big=h('div','big'); big.appendChild(h('b',null,String(open.length))); big.appendChild(h('span',null, open.length===1?'notice waiting':'notices waiting')); st.appendChild(big);
   st.appendChild(h('p',null, done.length+' done · '+(jon.length ? jon.length+' need you' : 'none need you'))); sm.appendChild(st);
   const by={}; open.forEach(x=>{ const k=x.for||'Unassigned'; (by[k]=by[k]||[]).push(x); });
-  const keys=Object.keys(by).sort((a,b)=>a.localeCompare(b)); const lk=h('div','cs-lks'); lk.style.setProperty('--n', String(Math.max(2, Math.min(6, keys.length+(jon.length?1:0)))));
+  const keys=Object.keys(by).sort((a,b)=>a.localeCompare(b)); const lk=h('div','cs-lks'); { const nT=Math.max(2, Math.min(6, keys.length+(jon.length?1:0))); lk.style.setProperty('--n', String(nT)); lk.style.setProperty('--n2', String(Math.min(nT,4))); } /* every tile on one row where it fits, so there's no empty space beside them */
   if(jon.length){ const r=h('div','l you'); r.appendChild(h('b',null,String(jon.length))); r.appendChild(h('span',null,'Need you')); lk.appendChild(r); }
   keys.forEach(k=>{ const r=h('div','l'); r.appendChild(h('b',null,String(by[k].length))); r.appendChild(h('span',null,'Waiting on '+k)); lk.appendChild(r); });
   if(!keys.length){ const r=h('div','l ok'); r.appendChild(h('b',null,'0')); r.appendChild(h('span',null,'Nothing waiting')); lk.appendChild(r); }
