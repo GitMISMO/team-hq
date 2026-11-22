@@ -15,7 +15,7 @@
 'use strict';
 if(window.__hqSystems && window.__hqSystems.destroy) window.__hqSystems.destroy();
 const S=window.__S; if(!S) return;
-const EDITORS=['jonna'];
+const EDITORS=['jonna','vanessa'];   /* Vanessa is Jonna's backup (Jonna, Nov 22, 2026), so Connected Systems can be kept current while Jonna is away */
 const NS='http://www.w3.org/2000/svg', W=148, H=40;
 const ZONES={apps:'MISMO apps', mba:'MBA & Microsoft 365', out:'Outside MISMO', eng:'Engine room'};
 const ST=['Live','Launching','Building'];
