@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 22** — Connected Systems: a Change Notices tab shows what each system is waiting on from another system's change, with anything that needs Jonna listed first.
 - **Nov 22** — Industry Events moved to sit right under Team Projects in the left menu.
 - **Nov 22** — Help: the Expenses help says an industry event you're going to shows in the trip drop-down.
 - **Nov 22** — New: Industry Events (under Team, and as a dashboard tile). The conferences, trade shows and dinners MISMO goes to, by month, with who's going and their travel dates, speaking opportunities, promotion steps (plus Ask MISMO Media), graphics from the event and the contacts we meet. An event someone's going to shows as a trip choice in their Expenses.

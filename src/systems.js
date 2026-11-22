@@ -227,6 +227,12 @@ html[data-theme="dark"] .cs-n .box{fill:color-mix(in srgb,var(--pc,#9fb3c4) 18%,
 .cs-pb>p{margin:0;font-size:14px}
 .cs-tag{display:inline-flex;align-items:center;gap:5px;font-family:inherit;font-weight:700;font-size:10.5px;line-height:1.3;letter-spacing:.05em;text-transform:uppercase;border-radius:3px;padding:2px 6px;white-space:nowrap;vertical-align:middle}
 .cs-tag:before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.cs-cn .cs-lks .l{cursor:default}
+.cs-cng{margin-top:16px;display:flex;flex-direction:column;gap:8px}.cs-cng h3{font-size:15px;margin:0 0 2px}
+.cs-cnr{padding:12px 16px;border-radius:10px;border-left:4px solid #74bfeb}.cs-cnr.jon{border-left-color:#f2b134}
+.cs-cnr .t{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.cs-cnr .t b{font-size:13px;font-variant-numeric:tabular-nums}.cs-cnr .t span{font-weight:700}.cs-cnr .t small{margin-left:auto;color:var(--ink-3);font-size:12px}
+.cs-cnr p{margin:6px 0 0;font-size:13.5px}.cs-cnr p.d{color:var(--ink-2)}.cs-cnr p.s{color:var(--ink-3);font-size:12.5px}
+.cs-tag.prog{color:#9a6700;background:rgba(242,177,52,.16)}.cs-tag.ok{color:#2b8a3e;background:rgba(47,191,113,.14)}.cs-tag.warn{color:#b54708;background:rgba(232,131,58,.16)}.cs-tag.mute{color:var(--ink-3);background:var(--surface-2)}
 .cs-ph .cs-tag{background:rgba(255,255,255,.95)}
 .cs-live{color:#0f7b5c;background:color-mix(in srgb,#0f7b5c 14%,transparent)}
 .cs-soon{color:#9a6510;background:color-mix(in srgb,#e0a83c 22%,transparent)}
@@ -712,6 +718,7 @@ function draw0(){ const root=P.el; if(!root) return; root.textContent=''; root.c
     const sb=h('div','cs-card cs-sb'); bj.appendChild(sb); stories(d, sb); root.appendChild(bj); addSec('Follow the Work', bj); }
   /* the road to rock solid */
   if(Array.isArray(d.todos) && d.todos.length){ const br=todoBand(d); root.appendChild(br); addSec('To Rock Solid', br); }
+  if(Array.isArray(d.notices) && d.notices.length){ const bn=noticeBand(d); root.appendChild(bn); addSec('Change Notices', bn); }
   if(d.keyperson && Array.isArray(d.keyperson.people) && d.keyperson.people.length){ const bk=peopleBand(d); root.appendChild(bk); addSec(d.keyperson.nav||'Coverage', bk); }
   else if(d.keyperson && Array.isArray(d.keyperson.groups) && d.keyperson.groups.length){ const bk=keyBand(d); root.appendChild(bk); addSec('Depends on Jonna', bk); }
   /* protection */
@@ -736,6 +743,7 @@ function draw0(){ const root=P.el; if(!root) return; root.textContent=''; root.c
   const tabs=secs.slice(1); if(!tabs.some(x=>x[0]===P.secTab)) P.secTab=tabs.length ? tabs[0][0] : null;
   const cnt={'Follow the Work':journeys(d).length, 'What Changed':swaps(d).length, 'On Its Own':c.jobs, 'Security':d.protection.filter(l=>/in place/i.test(l.status||'')).length+'/'+d.protection.length};
   { const T=(d.todos||[]).reduce((n,g)=>n+(g.items||[]).filter(it=>!it.done && !(dueOf(it) && (dueOf(it)-new Date())/864e5>LATER_DAYS)).length,0)+((M.req&&M.req.items)||[]).filter(x=>!x.done).length; cnt['To Rock Solid']=T; }
+  if(Array.isArray(d.notices)) cnt['Change Notices']=d.notices.filter(x=>nStat(x)==='wait'||nStat(x)==='jonna').length;
   if(d.keyperson && d.keyperson.people) cnt[d.keyperson.nav||'Coverage']=d.keyperson.people.filter(x=>(x.items||[]).length).length;
   const show=(label, scroll)=>{ P.secTab=label; tabs.forEach(([l, el])=>{ el.hidden= l!==label; }); [...nav.children].forEach(b=>{ const on=b.dataset.tab===label; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
     if(scroll){ const el=(tabs.find(x=>x[0]===label)||[])[1]; if(el) requestAnimationFrame(()=>el.scrollIntoView({block:'start', behavior:reduce()?'auto':'smooth'})); } };
@@ -749,6 +757,29 @@ function draw0(){ const root=P.el; if(!root) return; root.textContent=''; root.c
 const FIRST=['m360','team','orders','cms'];
 function whoLabel(w, sy){ return w==='claude' ? (sy ? sy.name+'’s Claude' : 'Its Claude') : w; }
 function whoCls(w){ return w==='You' ? 'you' : (w==='claude' || /claude/i.test(w)) ? '' : 'ext'; }
+/* Change Notices (November 22, 2026): how the systems tell each other about a change, so Jonna isn't the go-between.
+   Kept in the Connections Map's Change Notices table and brought in with each refresh (record field "notices"):
+   [{n:'CN-001', posted, from, what, for, todo, status}]. One row per system that has to act. */
+function nStat(x){ const s=String(x.status||''); return /^done/i.test(s) ? 'done' : /^not needed/i.test(s) ? 'nn' : /needs jonna/i.test(s) ? 'jonna' : 'wait'; }
+function noticeBand(d){ const b=band('Change notices','What Each System Is Waiting On','When one system changes something another uses, it posts a notice for each system that has to act. Each system’s Claude checks for its own at the start of every session and on its daily check, does its part, and marks it done. Only the ones marked Needs Jonna come to you.');
+  const L=d.notices.slice(), open=L.filter(x=>nStat(x)==='wait'||nStat(x)==='jonna'), jon=L.filter(x=>nStat(x)==='jonna'), done=L.filter(x=>nStat(x)==='done'||nStat(x)==='nn');
+  const sm=h('div','cs-card cs-rsum2 cs-cn'); const st=h('div','st'); const big=h('div','big'); big.appendChild(h('b',null,String(open.length))); big.appendChild(h('span',null, open.length===1?'notice waiting':'notices waiting')); st.appendChild(big);
+  st.appendChild(h('p',null, done.length+' done · '+(jon.length ? jon.length+' need you' : 'none need you'))); sm.appendChild(st);
+  const by={}; open.forEach(x=>{ const k=x.for||'Unassigned'; (by[k]=by[k]||[]).push(x); });
+  const keys=Object.keys(by).sort((a,b)=>a.localeCompare(b)); const lk=h('div','cs-lks'); lk.style.setProperty('--n', String(Math.max(2, Math.min(6, keys.length+(jon.length?1:0)))));
+  if(jon.length){ const r=h('div','l you'); r.appendChild(h('b',null,String(jon.length))); r.appendChild(h('span',null,'Need you')); lk.appendChild(r); }
+  keys.forEach(k=>{ const r=h('div','l'); r.appendChild(h('b',null,String(by[k].length))); r.appendChild(h('span',null,'Waiting on '+k)); lk.appendChild(r); });
+  if(!keys.length){ const r=h('div','l ok'); r.appendChild(h('b',null,'0')); r.appendChild(h('span',null,'Nothing waiting')); lk.appendChild(r); }
+  sm.appendChild(lk); b.appendChild(sm);
+  const row=(x, list)=>{ const r=h('div','cs-card cs-cnr'+(nStat(x)==='jonna'?' jon':'')); const top=h('div','t'); top.appendChild(h('b',null,x.n||'')); top.appendChild(h('span',null,(x.from||'')+' → '+(x.for||''))); const k=nStat(x);
+    const tg=h('span','cs-tag '+(k==='done'?'ok':k==='jonna'?'warn':k==='nn'?'mute':'prog'), k==='done'?'Done':k==='nn'?'Not Needed':k==='jonna'?'Needs Jonna':'Waiting'); top.appendChild(tg); if(x.posted) top.appendChild(h('small',null,x.posted)); r.appendChild(top);
+    r.appendChild(h('p','w', x.what||'')); if(x.todo) { const td=h('p','d'); td.appendChild(h('b',null,'To do: ')); td.append(x.todo); r.appendChild(td); }
+    if(k!=='wait' && x.status && !/^(waiting|done|not needed|needs jonna)$/i.test(String(x.status).trim())) r.appendChild(h('p','s', x.status)); list.appendChild(r); };
+  if(jon.length){ const sec=h('div','cs-cng'); sec.appendChild(h('h3',null,'Needs You')); jon.forEach(x=>row(x, sec)); b.appendChild(sec); }
+  keys.forEach(k=>{ const w=by[k].filter(x=>nStat(x)==='wait'); if(!w.length) return; const sec=h('div','cs-cng'); sec.appendChild(h('h3',null,'Waiting on '+k)); w.forEach(x=>row(x, sec)); b.appendChild(sec); });
+  if(done.length){ const sec=h('div','cs-cng'); sec.appendChild(h('h3',null,'Done')); done.slice().reverse().slice(0,12).forEach(x=>row(x, sec)); b.appendChild(sec); }
+  b.appendChild(h('p','cs-foot','Kept in the Change Notices table on the MISMO Connections Map and brought in with each refresh.'));
+  return b; }
 function todoBand(d){ const b=band('Road to rock solid','What’s Left to Make Each System Rock Solid','What’s open now, who it’s waiting on, and the four safety nets every system gets. Things that aren’t due for months, like key renewals, wait in Coming Up Later and don’t count until they’re close.');
   const wrap=h('div','cs-rs'); b.appendChild(wrap); P.rsWrap=wrap; paintTodos(d); return b; }
 /* Road to Rock Solid, redesigned November 8, 2026: open now by who it waits on, a safety-net grid, and a timeline for later */
