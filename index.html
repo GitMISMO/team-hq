@@ -3774,7 +3774,7 @@ const SEED_LINKS = [
   {n:'Summit HQ',              u:'https://resources.mismo.org/summit-hq/',              d:'Summit planning, schedule and run of show', c:0},
   {n:'Sponsorship Portal',     u:'https://resources.mismo.org/sponsorship/',            d:'Sponsor packages and commitments', c:2},
   {n:'Initiative Hub',         u:'https://resources.mismo.org/initiative-hub/',         d:'Active workgroup initiatives by domain', c:1},
-  {n:'Service Orders',         u:'https://resources.mismo.org/service-orders/',         d:'Contractor agreements and e-signature', c:0},
+  {n:'Contractor HQ',          u:'https://resources.mismo.org/contractor-hq/',          d:'Contractor agreements and e-signature', c:0},
   {n:'Meeting Trackers',       u:'https://resources.mismo.org/meeting-trackers/',       d:'Workgroup meetings, schedules and attendance', c:5, nw:1},
   {n:'QR Code Manager',        u:'https://resources.mismo.org/qr/',                     d:'Codes, tracking and expiry', c:6},
   {n:'Sponsorship Prospectus', u:'https://resources.mismo.org/Sponsorship-Prospectus/', d:'The 2027 summit sponsorship prospectus', c:5, doc:1},
@@ -3797,7 +3797,7 @@ const FIG_FMT = ['Plain Number','Dollars','Percent'];
 const SEED_FIGURES = [
   {id:'fig-cash', n:'Gross Cash',               src:'Financial System', u:'https://claude.ai/artifact/QFAJwn9Nv4ExGNCPnVYUEX', f:'Dollars',      v:'', asof:'', note:'The cash position off the Statement of Activities.'},
   {id:'fig-cms',  n:'CMS Certified',            src:'Certification',    u:'',                                                   f:'Plain Number', v:'', asof:'', note:'How many are certified right now.'},
-  {id:'fig-soq',  n:'Service Orders in the Queue', src:'Service Orders', u:'https://resources.mismo.org/service-orders/',       f:'Plain Number', v:'', asof:'', note:'Agreements waiting on a signature or a countersignature.'},
+  {id:'fig-soq',  n:'Service Orders in the Queue', src:'Contractor HQ', u:'https://resources.mismo.org/contractor-hq/',        f:'Plain Number', v:'', asof:'', note:'Agreements waiting on a signature or a countersignature.'},
   /* The real list and the full month-by-month series are read out of the CMS and kept in
      the database. This is only what a board falls back to before that read happens. */
   {id:'fig-cms-new', n:'New Certifications', src:'Certification Management System',
@@ -7580,7 +7580,7 @@ const WTYPES = {
   calendar:  {n:'The Month',           d:'Key Dates on a calendar, with who is away each day.'},
   asks:      {n:'What People Have Asked For', d:'Panels, numbers and changes the team has asked for, and where each one stands.'},
   sponsors:  {n:'Sponsorship Portal', d:'Prospects from the Sponsorship Portal \u2014 tick the numbers, lists and breakdowns you want.', multi:1},
-  sonums:    {n:'Service Orders and Agreements', d:'Service orders from Service Orders and Agreements \u2014 tick the numbers, lists and breakdowns you want.', multi:1},
+  sonums:    {n:'Contractor HQ', d:'Service orders from Contractor HQ \u2014 tick the numbers, lists and breakdowns you want.', multi:1},
   mtnums:    {n:'Meeting Trackers', d:'Workgroup meetings and attendance from Meeting Trackers \u2014 tick the numbers, lists and breakdowns you want.', multi:1},
   finnums:   {n:'Financial System', d:'Cash, budget, receivables and summit results from the Financial System. Coming soon: tick what you want now.', multi:1},
   cmsnums:   {n:'CMS', d:'Certifications, renewals and certification money from the CMS. Coming soon: tick what you want now.', multi:1},
@@ -15869,7 +15869,7 @@ function mtParts(){
 }
 
 
-/* ---------- Service Orders and Agreements ----------
+/* ---------- Contractor HQ (Service Orders and Agreements until 22 Nov 2026) ----------
    Each contracting company keeps its orders in its own private repository
    (so-phoenix-data and so on), read through the relay's file route at
    orders/<short>.json. Team HQ only reads them, and only the companies the person
@@ -16074,15 +16074,15 @@ const SYS = {
       if(!MT.sched){ mtLoad(); return ['Loading from Meeting Trackers…','']; } return null; },
     unit:'meeting', foot:'Times are Eastern.',
     open:'Open Meeting Trackers', link:()=> '/meeting-trackers/'},
-  sonums: {name:'Service Orders and Agreements', from:'Service Orders and Agreements', parts:soParts, data:()=>soData(),
+  sonums: {name:'Contractor HQ', from:'Contractor HQ', parts:soParts, data:()=>soData(),
     def:['say','total','waiting','executed','L:waiting'],
     groups:[{k:'s', n:'Summary'}, {k:'n', n:'Numbers'}, {k:'nst', n:'Orders by Status'}, {k:'nco', n:'Maximum Fees by Company'}, {k:'l', n:'Lists'}, {k:'b', n:'Breakdowns'}],
-    has:()=> !!SO.orders, wait:()=>{ if(!soOn()) return ['Service Orders numbers show on resources.mismo.org.','They come from Service Orders and Agreements, which this copy of Team HQ cannot reach.'];
-      if(SO.failed==='access') return ['You don\u2019t have access to Service Orders.','Ask for it in the admin panel and these numbers show here.'];
-      if(SO.failed==='error' && !SO.orders) return ['Service Orders could not be read just now.','Team HQ will try again in a few minutes.'];
-      if(!SO.orders){ soLoad(); return ['Loading from Service Orders\u2026','']; } return null; },
+    has:()=> !!SO.orders, wait:()=>{ if(!soOn()) return ['Service Orders numbers show on resources.mismo.org.','They come from Contractor HQ, which this copy of Team HQ cannot reach.'];
+      if(SO.failed==='access') return ['You don\u2019t have access to Contractor HQ.','Ask for it in the admin panel and these numbers show here.'];
+      if(SO.failed==='error' && !SO.orders) return ['Contractor HQ could not be read just now.','Team HQ will try again in a few minutes.'];
+      if(!SO.orders){ soLoad(); return ['Loading from Contractor HQ\u2026','']; } return null; },
     unit:'order',
-    open:'Open Service Orders', link:()=> '/service-orders/'},
+    open:'Open Contractor HQ', link:()=> '/contractor-hq/'},
   finnums: {name:'Financial System', from:'the Financial System', soon:'Financial System', parts:()=>SOON_PARTS.finnums, def:[],
     groups:[{k:'s', n:'Summary'}, {k:'n', n:'The Year'}, {k:'ar', n:'Receivables'}, {k:'fc', n:'Next Year’s Budget'}, {k:'sum', n:'Summits'}, {k:'l', n:'Lists'}, {k:'b', n:'Breakdowns'}],
     open:'Open the Financial System', link:()=> 'https://claude.ai/artifact/QFAJwn9Nv4ExGNCPnVYUEX'},
