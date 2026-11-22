@@ -52,7 +52,7 @@ prompt) lives only in the private `systemsmap` collection, never in this code.
 | `systems.js` | Connected Systems (the page; its content comes from the private record) |
 | `next.js` | The current Team HQ shell: My Dashboard, Inbox, My Tasks, Calendar, System Health and more |
 | `oofdates.js` | Out of Office key dates from Outlook automatic replies |
-| `expenses.js` | **The rebuilt Expenses, in testing:** one module for the whole Expenses page. Off unless opened with `?exp=new` (see Expenses Rebuild) |
+| `expenses.js` | Expenses: the whole page, editor, mileage, policy, trips, expense@ inbox, sending, Ready to Enter, downloads (live Nov 21, 2026; `?exp=old` turns it off for a tab) |
 | `expinbox.js` | The expense@ inbox: emailed receipts become draft expenses |
 | `mileage.js` | Mileage in the expense editor: miles driven × the IRS rate for the date |
 | `exporg.js` | Expenses: receipts join the person's nearby trip, the trip drop-down, folded trips and the Entered fold |
@@ -153,7 +153,7 @@ five. The new one goes live only after it does everything on this list, checked 
 **Where it stands (Nov 21, 2026).** `src/expenses.js` is built and every item above was checked in the Test Copy against
 the real trips (Jonna's, Vanessa's, Amy's and Perry's DC and Executive Women's Summit trips), seen as Jonna, Vanessa,
 Amy and Jonathan, and on the phone layout; Run Check passed. Its rules (policy, mileage, trips, export columns, receipt
-names) also have their own checks: `node tools/expenses-rules.test.mjs`. It is not live:
+names) also have their own checks: `node tools/expenses-rules.test.mjs`. It went live the same day:
 
 - **Trying it:** open the Test Copy with `&exp=new` added, e.g. `?try=<version>&check=1&exp=new`. The tab remembers it
   (`?exp=old` turns it off). Without `exp=new` everyone gets the original page and add-ons.
@@ -167,7 +167,7 @@ names) also have their own checks: `node tools/expenses-rules.test.mjs`. It is n
   entered unless "Include trips already entered" is ticked; the Report and Receipts beside a name do the same (all of
   that person's when nothing is waiting); a receipt taken with no signal waits on the device and uploads itself; only
   Jonna gets buttons on Jonna's own trips.
-- **Going live (Jonna's OK first):** set `LIVE=true` in `src/expenses.js`, build, try, publish. After it has run
+- **Live since Nov 21, 2026 (Jonna's OK):** `LIVE=true`; `?exp=old` turns it off for a tab and brings back the original page and add-ons. After it has run
   live for a while: delete `expinbox.js`, `mileage.js`, `exporg.js`, `expdone.js` and their lines in `build.py`; take
   the `exp=new` lines out of `bootscreen.js`; remove `vExpenses`, `expRow`, `editExp` and the receipt reading from
   `index.html` (by hand, checked); update the Expenses help in `tour.js` and add the CHANGELOG line.

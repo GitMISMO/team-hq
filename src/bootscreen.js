@@ -21,8 +21,8 @@
 (function(){
   var D=document, H=D.documentElement, t0=Date.now(), KEY='tools:team-hq:boot2.ms', done=false;
   var appx=/[?&]app=expenses/.test(location.search) || H.classList.contains('app-exp');
-  /* the new Expenses (expenses.js, on with ?exp=new until it goes live): the cover stays up until it has drawn your expenses */
-  var x2want=false; try{ x2want=/[?&]exp=new/.test(location.search) || (sessionStorage.getItem('tools:team-hq:exp2')==='1' && !/[?&]exp=old/.test(location.search)); }catch(e){}
+  /* the new Expenses (expenses.js): the cover stays up until it has drawn your expenses */
+  var x2want=!/[?&]exp=old/.test(location.search);
   var est=4; try{ var v=+localStorage.getItem(KEY); if(v>1500 && v<15000) est=Math.max(3, Math.min(8, Math.round(v/1000))); }catch(e){}
   /* never cover the sign-in page */
   function signin(){ if(window.__S && window.__S.ready) return false; var pw=D.querySelector('input[type=password]'); return !!(pw && pw.offsetParent!==null); }
