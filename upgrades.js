@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261122o';
+var BUILD='20261122p';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4885,7 +4885,8 @@ html[data-theme="dark"] .cs-n .box{fill:color-mix(in srgb,var(--pc,#9fb3c4) 18%,
 .cs-pb>p{margin:0;font-size:14px}
 .cs-tag{display:inline-flex;align-items:center;gap:5px;font-family:inherit;font-weight:700;font-size:10.5px;line-height:1.3;letter-spacing:.05em;text-transform:uppercase;border-radius:3px;padding:2px 6px;white-space:nowrap;vertical-align:middle}
 .cs-tag:before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
-.cs-cn .cs-lks .l{cursor:default}
+.cs-cn .cs-lks .l{cursor:pointer}.cs-cn .big.cs-cnall{cursor:pointer}.cs-cng[hidden]{display:none}
+.cs-cndone{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}.cs-cndone.on{font-weight:700;color:var(--ink)}
 .cs-cng{margin-top:16px;display:flex;flex-direction:column;gap:8px}.cs-cng h3{font-size:15px;margin:0 0 2px}
 .cs-cnr{padding:12px 16px;border-radius:10px;border-left:4px solid #74bfeb}.cs-cnr.jon{border-left-color:#f2b134}
 .cs-cnr .t{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.cs-cnr .t b{font-size:13px;font-variant-numeric:tabular-nums}.cs-cnr .t span{font-weight:700}.cs-cnr .t small{margin-left:auto;color:var(--ink-3);font-size:12px}
@@ -5424,20 +5425,25 @@ function nStat(x){ const s=String(x.status||''); return /^done/i.test(s) ? 'done
 function noticeBand(d){ const b=band('Change notices','What Each System Is Waiting On','When one system changes something another uses, it posts a notice for each system that has to act. Each system’s Claude checks for its own at the start of every session and on its daily check, does its part, and marks it done. Only the ones marked Needs Jonna come to you.');
   const L=d.notices.slice(), open=L.filter(x=>nStat(x)==='wait'||nStat(x)==='jonna'), jon=L.filter(x=>nStat(x)==='jonna'), done=L.filter(x=>nStat(x)==='done'||nStat(x)==='nn');
   const sm=h('div','cs-card cs-rsum2 cs-cn'); const st=h('div','st'); const big=h('div','big'); big.appendChild(h('b',null,String(open.length))); big.appendChild(h('span',null, open.length===1?'notice waiting':'notices waiting')); st.appendChild(big);
-  st.appendChild(h('p',null, done.length+' done · '+(jon.length ? jon.length+' need you' : 'none need you'))); sm.appendChild(st);
+  const dn=btn('cs-cndone', done.length+' done', ()=>show('__done')); dn.title='Show the finished ones'; const pl=h('p'); pl.appendChild(dn); pl.append(' · '+(jon.length ? jon.length+' need you' : 'none need you')); st.appendChild(pl); sm.appendChild(st); dn.dataset.k='__done'; sm._dn=dn;
   const by={}; open.forEach(x=>{ const k=x.for||'Unassigned'; (by[k]=by[k]||[]).push(x); });
   const keys=Object.keys(by).sort((a,b)=>a.localeCompare(b)); const lk=h('div','cs-lks'); { const nT=Math.max(2, Math.min(6, keys.length+(jon.length?1:0))); lk.style.setProperty('--n', String(nT)); lk.style.setProperty('--n2', String(Math.min(nT,4))); } /* every tile on one row where it fits, so there's no empty space beside them */
-  if(jon.length){ const r=h('div','l you'); r.appendChild(h('b',null,String(jon.length))); r.appendChild(h('span',null,'Need you')); lk.appendChild(r); }
-  keys.forEach(k=>{ const r=h('div','l'); r.appendChild(h('b',null,String(by[k].length))); r.appendChild(h('span',null,'Waiting on '+k)); lk.appendChild(r); });
+  /* each tile shows just the notices it counts (select it again, or the big number, for all) */
+  const tiles=sm._dn ? [sm._dn] : [], show=k=>{ const on=k && b._f!==k ? k : null; b._f=on; tiles.forEach(t=>{ t.classList.toggle('on', t.dataset.k===on); t.setAttribute('aria-pressed', String(t.dataset.k===on)); });
+    [...b.querySelectorAll('.cs-cng')].forEach(g=>{ g.hidden = !!on && g.dataset.k!==on; }); const first=[...b.querySelectorAll('.cs-cng')].find(g=>!g.hidden); if(on && first) requestAnimationFrame(()=>first.scrollIntoView({block:'start', behavior:reduce()?'auto':'smooth'})); };
+  const tile=(k, n, label, cls)=>{ const r=btn('l'+(cls?' '+cls:''), null, ()=>show(k)); r.dataset.k=k; r.title='Show just these'; r.setAttribute('aria-pressed','false'); r.appendChild(h('b',null,String(n))); r.appendChild(h('span',null,label)); tiles.push(r); lk.appendChild(r); };
+  big.classList.add('cs-cnall'); big.title='Show every notice'; big.addEventListener('click', ()=>show(null)); big.tabIndex=0; big.setAttribute('role','button'); big.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); show(null); } });
+  if(jon.length) tile('__jonna', jon.length, 'Need you', 'you');
+  keys.forEach(k=>tile(k, by[k].length, 'Waiting on '+k));
   if(!keys.length){ const r=h('div','l ok'); r.appendChild(h('b',null,'0')); r.appendChild(h('span',null,'Nothing waiting')); lk.appendChild(r); }
   sm.appendChild(lk); b.appendChild(sm);
   const row=(x, list)=>{ const r=h('div','cs-card cs-cnr'+(nStat(x)==='jonna'?' jon':'')); const top=h('div','t'); top.appendChild(h('b',null,x.n||'')); top.appendChild(h('span',null,(x.from||'')+' → '+(x.for||''))); const k=nStat(x);
     const tg=h('span','cs-tag '+(k==='done'?'ok':k==='jonna'?'warn':k==='nn'?'mute':'prog'), k==='done'?'Done':k==='nn'?'Not Needed':k==='jonna'?'Needs Jonna':'Waiting'); top.appendChild(tg); if(x.posted) top.appendChild(h('small',null,x.posted)); r.appendChild(top);
     r.appendChild(h('p','w', x.what||'')); if(x.todo) { const td=h('p','d'); td.appendChild(h('b',null,'To do: ')); td.append(x.todo); r.appendChild(td); }
     if(k!=='wait' && x.status && !/^(waiting|done|not needed|needs jonna)$/i.test(String(x.status).trim())) r.appendChild(h('p','s', x.status)); list.appendChild(r); };
-  if(jon.length){ const sec=h('div','cs-cng'); sec.appendChild(h('h3',null,'Needs You')); jon.forEach(x=>row(x, sec)); b.appendChild(sec); }
-  keys.forEach(k=>{ const w=by[k].filter(x=>nStat(x)==='wait'); if(!w.length) return; const sec=h('div','cs-cng'); sec.appendChild(h('h3',null,'Waiting on '+k)); w.forEach(x=>row(x, sec)); b.appendChild(sec); });
-  if(done.length){ const sec=h('div','cs-cng'); sec.appendChild(h('h3',null,'Done')); done.slice().reverse().slice(0,12).forEach(x=>row(x, sec)); b.appendChild(sec); }
+  if(jon.length){ const sec=h('div','cs-cng'); sec.dataset.k='__jonna'; sec.appendChild(h('h3',null,'Needs You')); jon.forEach(x=>row(x, sec)); b.appendChild(sec); }
+  keys.forEach(k=>{ const w=by[k].filter(x=>nStat(x)==='wait'); if(!w.length) return; const sec=h('div','cs-cng'); sec.dataset.k=k; sec.appendChild(h('h3',null,'Waiting on '+k)); w.forEach(x=>row(x, sec)); b.appendChild(sec); });
+  if(done.length){ const sec=h('div','cs-cng'); sec.dataset.k='__done'; sec.appendChild(h('h3',null,'Done')); done.slice().reverse().slice(0,12).forEach(x=>row(x, sec)); b.appendChild(sec); }
   b.appendChild(h('p','cs-foot','Kept in GitHub (GitMISMO/mismo-connections, CHANGE-NOTICES.md), where every system’s Claude can reach them, and brought in with each refresh.'));
   return b; }
 function todoBand(d){ const b=band('Road to rock solid','What’s Left to Make Each System Rock Solid','What’s open now, who it’s waiting on, and the four safety nets every system gets. Things that aren’t due for months, like key renewals, wait in Coming Up Later and don’t count until they’re close.');
