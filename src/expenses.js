@@ -1058,7 +1058,7 @@ function edit(e0, tripName){
    expinbox file. Team HQ turns each into a draft expense for the person who sent it, reads it the same way a snapped
    receipt is read, and the person reviews it. A receipt that is the email itself (Uber, airlines) is kept as a PDF.
    Jonna and Vanessa see emails from someone Team HQ can't match, and pick whose they are; a contractor's receipt goes to
-   their own expenses in the Service Orders portal. */
+   their own expenses in Contractor HQ (formerly Service Orders). */
 const ADDR='expense@mismo.org';
 let docs={}, lastRead=0, ibusy=false;
 const local=a=>String(a||'').toLowerCase().trim().split('@')[0];
@@ -1164,7 +1164,7 @@ async function importOne(id, d, who){
   const fin=Object.assign({}, cur, {claim:null, done:Date.now(), doneBy:me(), who, exp:made}); delete fin.text;
   await setDoc(id, fin);
 }
-/* contractors who claim expenses (Can Claim Expenses in the Service Orders portal): their receipts go there */
+/* contractors who claim expenses (Can Claim Expenses in Contractor HQ): their receipts go there */
 const SO_COS=[{key:'so-phoenix',slug:'phoenixteam'},{key:'so-actualize',slug:'actualize'},{key:'so-trex',slug:'trex'},{key:'so-falcon',slug:'falcon'},{key:'so-trudigital',slug:'trudigital'}];
 let roster=null, rosterAt=0;
 const relayBase=()=>{ const R=window.__hqRelay; return (R && R.config && R.config.RELAY_URL) || ''; };
@@ -1309,7 +1309,7 @@ function inboxBox(r){
     li.appendChild(h('span','s', (d.subject||'(no subject)')+(n ? ' · '+n+(n===1?' receipt':' receipts') : ' · the email is the receipt')+(atOf(d) ? ' · '+X.short(atOf(d)) : '')));
     const s=h('select','asg'); s.setAttribute('aria-label','Whose expense is this?'); s.appendChild(new Option('Whose is it?',''));
     (S.people||[]).forEach(p=>s.appendChild(new Option(p.name, p.id)));
-    if(roster && roster.length){ const og=document.createElement('optgroup'); og.label='Contractors (Service Orders)';
+    if(roster && roster.length){ const og=document.createElement('optgroup'); og.label='Contractors (Contractor HQ)';
       roster.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(c=>og.appendChild(new Option(c.name+' · '+c.company, 'so|'+c.key+'|'+c.pslug))); s.appendChild(og); }
     s.addEventListener('change', async ()=>{ if(!s.value) return; s.disabled=true;
       try{ const cur=Object.assign({}, docs[d.id]||{}); if(s.value.indexOf('so|')===0){ cur.assignSo=s.value.slice(3); delete cur.assign; } else { cur.assign=s.value; delete cur.assignSo; }
