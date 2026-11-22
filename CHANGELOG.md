@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 22** — Change Notices: each Waiting On tile (and Need You, and Done) shows just those notices; select it again, or the big number, for all.
 - **Nov 22** — Connected Systems: in Requests for Perry, the counts (open, save relay, AWS, with a date) are buttons that show just those requests.
 - **Nov 22** — Connected Systems: Vanessa can update it too (Edit and refreshes), as Jonna's backup while she's away.
 - **Nov 22** — Connected Systems: Change Notices now come from GitHub (GitMISMO/mismo-connections) so Perry's and Vanessa's systems can post and answer them too; the tab and Help say so.
