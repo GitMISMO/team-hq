@@ -123,12 +123,12 @@ css.textContent=`
 .ev-mon{font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin:14px 0 6px}
 .ev-mon:first-child{margin-top:0}
 .ev-list{display:flex;flex-direction:column;gap:8px}
-.ev-card{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:14px;align-items:center;padding:12px 14px;border:1px solid var(--border);border-left:4px solid var(--ea,#74bfeb);border-radius:10px;background:var(--surface);cursor:pointer;text-align:left;font:inherit;color:inherit;width:100%;transition:box-shadow .2s,transform .2s}
+.ev-card{display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:14px;align-items:center;padding:12px 14px;border:1px solid var(--border);border-left:4px solid var(--ea,#74bfeb);border-radius:10px;background:var(--surface);cursor:pointer;text-align:left;font:inherit;color:inherit;width:100%;transition:box-shadow .2s,transform .2s}
 .ev-card:hover,.ev-card:focus-visible{box-shadow:0 12px 26px -18px rgba(6,32,47,.55);transform:translateY(-1px);outline:none}
 .ev-card.dim{opacity:.6}
 .ev-date{display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;background:var(--surface-2);padding:6px 4px;line-height:1.1}
 .ev-date small{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ea,#2477b8)}
-.ev-date b{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.ev-date b{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}.ev-date b.rg{font-size:18px}
 .ev-date em{font-style:normal;font-size:11px;color:var(--ink-3)}
 .ev-main{min-width:0;display:flex;flex-direction:column;gap:4px}
 .ev-main .nm{font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -145,7 +145,7 @@ css.textContent=`
 .ev-side2{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
 .ev-avs{display:flex}.ev-avs .ev-av{margin-left:-6px;border:2px solid var(--surface)}.ev-avs .ev-av:first-child{margin-left:0}
 .ev-av{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;color:#fff;font-size:11px;font-weight:700;flex:none}
-.ev-cnt{display:flex;gap:10px;font-size:12px;color:var(--ink-3);white-space:nowrap}.ev-cnt b{color:var(--ink);font-variant-numeric:tabular-nums}
+.ev-cnt{display:flex;gap:4px 12px;flex-wrap:wrap;font-size:12px;color:var(--ink-3);white-space:nowrap}.ev-cnt b{color:var(--ink);font-variant-numeric:tabular-nums}
 .ev-box{border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:14px;display:flex;flex-direction:column;gap:8px}
 .ev-box+.ev-box{margin-top:12px}
 .ev-box .hint{font-size:12.5px;color:var(--ink-3);margin:0}
@@ -332,7 +332,7 @@ function cards(left, L){
 function accent(e){ return e.status==='Going' ? '#2bb673' : e.status==='Considering' ? '#f2b134' : '#98a2b3'; }
 function card(e){ const c=btn('ev-card'+(e.status==='Not Going'||e.gone?' dim':'')); c.style.setProperty('--ea', accent(e)); c.addEventListener('click', ()=>openPanel(e.id));
   const d=pd(e.start), d2=pd(e.end); const db=h('div','ev-date');
-  if(d){ db.appendChild(h('small',null,MON[d.getMonth()])); db.appendChild(h('b',null, String(d.getDate())+(d2 && +d2!==+d && d2.getMonth()===d.getMonth() ? '–'+d2.getDate() : ''))); db.appendChild(h('em',null, d2 && d2.getMonth()!==d.getMonth() ? 'to '+fmt(e.end) : WD[d.getDay()])); }
+  if(d){ db.appendChild(h('small',null,MON[d.getMonth()])); { const rg=d2 && +d2!==+d && d2.getMonth()===d.getMonth(); db.appendChild(h('b', rg?'rg':null, String(d.getDate())+(rg ? '–'+d2.getDate() : ''))); } db.appendChild(h('em',null, d2 && d2.getMonth()!==d.getMonth() ? 'to '+fmt(e.end) : WD[d.getDay()])); }
   else { db.appendChild(h('small',null,'Date')); db.appendChild(h('b',null,'?')); }
   c.appendChild(db);
   const m=h('div','ev-main'); m.appendChild(h('div','nm', e.name));
@@ -341,9 +341,10 @@ function card(e){ const c=btn('ev-card'+(e.status==='Not Going'||e.gone?' dim':'
   if(e.regBy && e.status!=='Not Going'){ const n=daysTo(e.regBy); if(n!=null && n>=0 && n<=30) tg.appendChild(h('span','ev-tag considering','Register by '+fmt(e.regBy))); }
   m.appendChild(tg); c.appendChild(m);
   const s2=h('div','ev-side2'); const av=h('div','ev-avs'); e.people.filter(p=>p.who).slice(0,6).forEach(p=>av.appendChild(avatar(p.who))); if(av.childNodes.length) s2.appendChild(av);
+  /* the counts sit under the tags, so the name keeps the room */
   const cn=h('div','ev-cnt'); const pr=e.promo.length; const add=(n,l)=>{ if(!n && n!==0) return; const s=h('span'); s.appendChild(h('b',null,String(n))); s.append(' '+l); cn.appendChild(s); };
   if(e.talks.length) add(e.talks.length, e.talks.length===1?'talk':'talks'); if(pr) add(e.promo.filter(p=>p.done).length+'/'+pr, 'promoted'); if(e.graphics.length) add(e.graphics.length, e.graphics.length===1?'graphic':'graphics'); if(e.contacts.length) add(e.contacts.length, e.contacts.length===1?'contact':'contacts');
-  if(cn.childNodes.length) s2.appendChild(cn); if(s2.childNodes.length) c.appendChild(s2);
+  if(cn.childNodes.length) m.appendChild(cn); if(s2.childNodes.length) c.appendChild(s2);
   return c; }
 
 /* ---------- the right-hand panel: one event, every part of it, with one Save ---------- */
