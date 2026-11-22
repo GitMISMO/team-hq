@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 22** — Industry Events: the days-away countdown is a plain sky-blue box (no dark outline).
 - **Nov 22** — Industry Events: each card is balanced, with who's going and the counts together on the right (under the tags when the list is narrow).
 - **Nov 22** — Industry Events: on each event's card the counts sit under the tags, so the event's name has room.
 - **Nov 22** — Industry Events: an example event (tagged Example) shows how an event looks; an example is never offered as a trip in Expenses. Set it aside when it's no longer needed.
