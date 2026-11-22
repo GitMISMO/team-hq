@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261122d';
+var BUILD='20261122e';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -7106,8 +7106,8 @@ function drawRail(){
   placeBoardBtn(calB);
   add(railLbl('Team'), firstClassic);
   /* Connected Systems sits at the end of the Team list, just above System Health (Jonna's call) */
-  /* Industry Events (Amy's idea, Nov 2026) sits just above Connected Systems */
-  if(window.__hqEvents) add(railBtn('events','Industry Events', ic('pin')));
+  /* Industry Events (Amy's idea, Nov 2026) sits right under Team Projects (Jonna's call, Nov 22, 2026) */
+  if(window.__hqEvents){ const tp=nav.querySelector('button[data-hq="rocks"]'); add(railBtn('events','Industry Events', ic('pin')), tp && tp.nextSibling ? tp.nextSibling : null); }
   if(window.__hqSystems) add(railBtn('systems','Connected Systems', ic('net')));
   markRail();
 }
@@ -12328,7 +12328,7 @@ const NEW=[
 <p><b>Recent Changes</b> lists who changed what on the team’s tasks, Team Projects, key dates, plans and agenda in the last 7 days, with Open to go to the item. Each of those items also shows its own <b>History</b> at the foot of its panel (the last 90 days). Changes appear within the hour of being saved. Expenses, Sync Ups and notes are never included.</p>
 `},
  {after:'expenses', id:'events', t:'Industry Events', d:'The conferences, trade shows and dinners MISMO goes to: who’s going, speaking, promotion, graphics and contacts.', h:`
-<p><b>Industry Events</b> (under Team in the left menu, or add its tile with <b>+ Add a Tile</b>) is the list of other organizations’ events MISMO goes to or is thinking about. MISMO’s own Summits stay in Summit HQ. Everyone on the team can add and change events.</p>
+<p><b>Industry Events</b> (under Team Projects in the left menu, or add its tile with <b>+ Add a Tile</b>) is the list of other organizations’ events MISMO goes to or is thinking about. MISMO’s own Summits stay in Summit HQ. Everyone on the team can add and change events.</p>
 <h4>The Page</h4>
 <p>The boxes across the top show the next event we’re going to with a countdown, how many we’re going to, how many we’re still considering, speaking slots accepted, and what’s due in the next 30 days. Select a box to filter the list. Under them, filter by <b>Upcoming</b>, <b>Going</b>, <b>Considering</b>, <b>Speaking</b>, <b>Past</b>, <b>Not Going</b> or <b>Set Aside</b>, pick a person to see only their events, or search events, cities, people and contacts. Events are listed by month. On the right, <b>Coming Up</b> lists registration deadlines, speaking proposals due, promotion steps due and events starting in the next 60 days, and <b>Who’s Going Where</b> shows each person’s upcoming events.</p>
 <h4>An Event</h4>
