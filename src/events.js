@@ -105,7 +105,8 @@ css.textContent=`
 .ev-fig.next span:not(.k):not(.cd){overflow:hidden;text-overflow:ellipsis}
 .ev-fig.next b{font-size:20px;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .ev-fig.next .k{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#74bfeb}
-.ev-fig.next .cd{display:inline-block;margin-top:4px;font-size:12px;font-weight:700;color:#0d314c;background:#74bfeb;border-radius:4px;padding:2px 8px;align-self:flex-start}
+.ev-fig.next .cd{display:inline-block;margin-top:4px;font-size:12px;font-weight:700;color:#0d314c;background:#74bfeb;border-radius:4px;padding:2px 8px;align-self:flex-start;border:0;box-shadow:none}
+.ev-fig span{border:0;box-shadow:none}
 .ev-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0 12px}
 .ev-seg{display:inline-flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:var(--surface)}
 .ev-seg button{font:inherit;font-size:12.5px;font-weight:700;border:0;border-right:1px solid var(--border);background:transparent;color:var(--ink-2);padding:0 12px;height:32px;cursor:pointer;white-space:nowrap}
