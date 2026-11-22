@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 22** — Industry Events: one + Add an Event button (in the toolbar); the empty list no longer has a second one.
 - **Nov 22** — Connected Systems: a Change Notices tab shows what each system is waiting on from another system's change, with anything that needs Jonna listed first.
 - **Nov 22** — Industry Events moved to sit right under Team Projects in the left menu.
 - **Nov 22** — Help: the Expenses help says an industry event you're going to shows in the trip drop-down.
