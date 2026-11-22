@@ -115,6 +115,40 @@ real page and delete the test page.
 - Team HQ reads other systems' headline numbers for their dashboard tiles through the relay, and each system's
   own tiles are drawn Team HQ style.
 
+## Expenses Rebuild (started Nov 21, 2026)
+
+Expenses is drawn by the original page (`vExpenses` in `index.html`) with four add-ons on top (`expinbox.js`,
+`mileage.js`, `exporg.js`, `expdone.js`). It is being rebuilt as one module, `src/expenses.js`, that replaces all
+five. The new one goes live only after it does everything on this list, checked in the Test Copy against real trips:
+
+- **Who sees what:** each person sees only their own expenses; Jonna and Vanessa see everyone's, grouped by person,
+  then trip. On a phone, Jonna and Vanessa see only their own; everyone's stays on the desktop.
+- **Phone app:** Expenses opens straight to its own page (Add to Home Screen works the same on iPhone and Android);
+  the opening cover stays up until Expenses is ready; works offline and saves when the signal is back.
+- **The editor:** Expense Name, Type (DataBasics categories), Date, Amount, Receipt Amount, Notes, the receipt
+  photo or PDF, and the trip drop-down (works on iPhones). Mileage asks for miles driven and works out the amount at
+  the IRS rate for the date (0.76 from Jul 1, 2026; 0.725 from Jan 1, 2026; 0.70 in 2025; 0.67 in 2024), writes
+  the miles into the notes, and needs no receipt.
+- **MBA travel policy** (`/topics/mba-travel-expense-policy` in Jonna's notes): breakfast $25, lunch $40, dinner $60,
+  snacks $15, $140 a day for all meals; a receipt for anything $15 or more (mileage excepted). Flag, never block.
+- **Trips:** an expense with no trip offers one-tap buttons for the person's open trips (closest dates first), then
+  New Trip; a snapped or emailed receipt joins the person's trip with an expense within 3 days; Name This Trip for a
+  group with no name; trips start folded; entered trips fold into one line per person; Jonna and Vanessa get the
+  Jump To row and can fold each person.
+- **Emailed receipts (expense@):** each email becomes a draft expense for the sender, filled in from a photo, a PDF
+  or the email body (kept as a PDF); a re-sent email updates instead of duplicating; Jonna or Vanessa can pick whose
+  it is; contractors' receipts go to their Service Orders expenses instead.
+- **Sending a trip:** Done — Send to Vanessa on each trip (Jonathan's say Done — Send to Jonna; Jonna's say
+  Finalize); Remind and Send For for Jonna and Vanessa; Take It Back; one reminder a week after a trip's last
+  expense; expenses added later reopen the trip.
+- **Ready to Enter:** Vanessa's list (Jonna's for her own and Jonathan's), oldest first; Entered and Submitted per
+  trip marks all its sent expenses entered at once, with Undo; the owner is told when it's entered.
+- **Downloads:** Export for DataBasics (CSV in the DataBasics template's columns) and Download the Receipts, each
+  asking whose (one person or everyone), plus Report and Receipts beside each person's name; receipt files named
+  "First - Name - YYYY-MM-DD - $amount".
+- **Saving:** every save through the save relay, merged with anyone else's change; nothing is ever sent without the
+  person pressing a button.
+
 ## What Team HQ Connects To
 
 The MISMO Connections Map (Jonna's Claude Doc) is the source of truth for every hand-off. Team HQ's part:
