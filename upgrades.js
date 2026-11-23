@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261123b';
+var BUILD='20261123c';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -6570,6 +6570,9 @@ function pGraphics(b, ev){ const st=P.panel;
   async function upload(F){ if(!window.__att || !window.__att.upload){ toast('Uploading isn’t available here.'); return; }
     let n=0; for(const f of F){ if(f.size>4*1024*1024){ toast(f.name+' is over 4 MB. Make it smaller, or ask the event for a smaller copy.'); continue; }
       up.textContent='Uploading '+f.name+'…';
+      /* MISMO Media reads these (CN-011): it accepts only file ids under receipts/ or attachments/ ('events' isn't a
+         storage folder, so they land under receipts/). Keep the graphics fields as they are (add, never rename); if they
+         ever move to another folder, post a Change Notice for MISMO Media first. */
       try{ const a=await window.__att.upload(f, 'events'); const g=Object.assign(a, {use:/logo/i.test(f.name)?'Logo':/speaker/i.test(f.name)?'Speaker Card':/banner/i.test(f.name)?'Banner':'Other', label:f.name.replace(/\.[^.]+$/,'')}); put(g); n++; markDirty(); }
       catch(e){ console.error(e); toast('Couldn’t upload '+f.name+'. '+((e && e.message)||'Try again.')); } }
     up.textContent=n ? n+' file'+(n===1?'':'s')+' added. Press Save Changes to keep '+(n===1?'it':'them')+' on the event.' : ''; }
@@ -12470,7 +12473,7 @@ const NEW=[
 <b>Contacts</b>: the people we meet or need to reach there, who met them, and whether to follow up.</p>
 <p><b>Set Aside</b> takes an event off the list without deleting it; bring it back from the <b>Set Aside</b> filter.</p>
 <h4>Where It’s Kept</h4>
-<p>In Team HQ’s own data (one record per event, collection <b>events</b>), saved through the save relay like everything else in Team HQ, with history. Graphics are kept in Team HQ’s file storage. Industry Events doesn’t connect to any other system yet; contacts reaching Member 360 and graphics reaching MISMO Media’s Image Library are on the Connections Map as requests.</p>
+<p>In Team HQ’s own data (one record per event, collection <b>events</b>), saved through the save relay like everything else in Team HQ, with history. Graphics are kept in Team HQ’s file storage. <b>MISMO Media</b> reads each event’s graphics (with the signed-in person’s own sign-in) and keeps a copy in its Image Library; it only reads, and never changes anything in Team HQ. Contacts reaching Member 360 are on the Connections Map as a request.</p>
 `},
  {after:'health', id:'systems', t:'Connected Systems', d:'How MISMO’s systems fit together, what each one does, and what runs on its own.', h:`
 <p><b>Connected Systems</b> (under Team in the left menu, or add its tile with <b>+ Add a Tile</b>) is the map of every MISMO system and the work that moves between them. Point at a box to light up everything it touches; select it for what it does, where it lives, what it replaced, and what it sends and receives. The area buttons show one part of the operation. A moving dot means the work moves automatically; a <b>dashed line</b> means a person copies it.</p>
