@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 22** — Industry Events: removed the dark line across the top of the "days away" chip (a shared Team HQ style was drawing it).
 - **Nov 22** — Industry Events: the Coming Up column now lines up with the first event card, not the month label above it.
 - **Nov 22** — Road to Rock Solid: a renewal dated by month and year only ("before Nov 2027") now waits in Coming Later like the others.
 - **Nov 22** — Change Notices: finished notices clear off the page 14 days after they're done (GitHub keeps the history); tightened the gap above the As Of line.
