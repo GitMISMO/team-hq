@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 22** — Leadership HQ's tile now opens resources.mismo.org/leadership-hq/ (its key stays elections-hq; the old address forwards).
 - **Nov 22** — Industry Events: a filter with nothing in it (Past, Not Going, Set Aside…) now says so, instead of quietly showing everything coming up.
 - **Nov 22** — Industry Events: removed the dark line across the top of the "days away" chip (a shared Team HQ style was drawing it).
 - **Nov 22** — Industry Events: the Coming Up column now lines up with the first event card, not the month label above it.

@@ -219,7 +219,7 @@ const SYS=[
   ['financials','MISMO Money','/financials/','#3CCB7F','Budget, forecast, reconciliation and board reporting'],
   ['iif-hq','IIF Planning HQ','/iif-hq/','#9ACD32','Lenders, invoices and payments for the IIF'],
   ['marketing-hq','MISMO Media','/marketing-hq/','#EB6834','MISMO Matters, Mic’d Up, LinkedIn and requests'],
-  ['elections-hq','Leadership HQ','/elections-hq/','#22B8CF','MISMO’s leadership, the Board and the yearly elections'],
+  ['elections-hq','Leadership HQ','/leadership-hq/','#22B8CF','MISMO’s leadership, the Board and the yearly elections'],
   ['cms','Certification Management System','/cms/','#F0607A','Certifications, renewals and assessors'],
   ['so','Contractor HQ','/contractor-hq/','#FB7185','Contractor service orders, agreements, hours and expenses'],
   ['sponsorship','Sponsorship Portal','/sponsorship/','#38BDF8','Sponsor packages, prospects and commitments'],
