@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261122u';
+var BUILD='20261122v';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -758,7 +758,7 @@ const SYS=[
   ['financials','MISMO Money','/financials/','#3CCB7F','Budget, forecast, reconciliation and board reporting'],
   ['iif-hq','IIF Planning HQ','/iif-hq/','#9ACD32','Lenders, invoices and payments for the IIF'],
   ['marketing-hq','MISMO Media','/marketing-hq/','#EB6834','MISMO Matters, Mic’d Up, LinkedIn and requests'],
-  ['elections-hq','Leadership HQ','/elections-hq/','#22B8CF','MISMO’s leadership, the Board and the yearly elections'],
+  ['elections-hq','Leadership HQ','/leadership-hq/','#22B8CF','MISMO’s leadership, the Board and the yearly elections'],
   ['cms','Certification Management System','/cms/','#F0607A','Certifications, renewals and assessors'],
   ['so','Contractor HQ','/contractor-hq/','#FB7185','Contractor service orders, agreements, hours and expenses'],
   ['sponsorship','Sponsorship Portal','/sponsorship/','#38BDF8','Sponsor packages, prospects and commitments'],
@@ -2473,7 +2473,7 @@ const SYS=[
   ['financials','MISMO Money','/financials/','#16A34A','Planning','Budget, forecast, reconciliation and board reporting'],
   ['iif-hq','IIF Planning HQ','/iif-hq/','#4D7C0F','Planning','Lenders, invoices and payments for the IIF'],
   ['marketing-hq','MISMO Media','/marketing-hq/','#EB6834','Planning','MISMO Matters, Mic’d Up, LinkedIn and requests'],
-  ['elections-hq','Leadership HQ','/elections-hq/','#0E7490','Planning','MISMO’s leadership, the Board and the yearly elections'],
+  ['elections-hq','Leadership HQ','/leadership-hq/','#0E7490','Planning','MISMO’s leadership, the Board and the yearly elections'],
   ['cms','Certification Management System','/cms/','#BE123C','Certification','Certifications, renewals and assessors'],
   ['so','Contractor HQ','/contractor-hq/','#E11D48','Certification','Contractor service orders, agreements, hours and expenses'],
   ['sponsorship','Sponsorship Portal','/sponsorship/','#0EA5E9','Sponsorship','Sponsor packages, prospects and commitments'],
