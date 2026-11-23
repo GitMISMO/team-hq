@@ -701,6 +701,24 @@ function vSystems(){ const CS=window.__hqSystems; if(!CS){ header('Connected Sys
 function vEvents(){ const EV=window.__hqEvents; if(!EV){ header('Industry Events', ic('pin')); body.appendChild(h('p','nx-empty','Industry Events didn’t load. Refresh the page.')); return; }
   header('Industry Events', ic('pin'), 'The conferences and shows MISMO goes to');
   const pg=h('div','nx-ev'); pg.appendChild(EV.page()); body.appendChild(pg); }
+function notesText(html){
+  try{
+    const doc=new DOMParser().parseFromString('<body>'+String(html||'')+'</body>','text/html'); let out='';
+    const BLOCK=/^(DIV|P|UL|OL|LI|H[1-6]|TABLE|TR|BLOCKQUOTE|PRE)$/;
+    const walk=n=>{ n.childNodes.forEach(c=>{
+      if(c.nodeType===3){ out+=c.nodeValue.replace(/\u00a0/g,' ').replace(/[ \t]*\n[ \t]*/g,' '); return; }
+      if(c.nodeType!==1) return; const tg=c.tagName;
+      if(tg==='BR'){ out+='\n'; return; }
+      if(BLOCK.test(tg) && out && !/\n$/.test(out)) out+='\n';
+      if(tg==='LI') out+='• ';
+      walk(c);
+      if(tg==='A'){ const hr=c.getAttribute('href')||''; if(/^https?:/i.test(hr) && c.textContent.trim()!==hr) out+=' ('+hr+')'; }
+      if(BLOCK.test(tg) && !/\n$/.test(out)) out+='\n';
+    }); };
+    walk(doc.body);
+    return out.replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+  }catch(e){ return String(html||'').replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,''); }
+}
 function header(title, icon, sub, controls){
   const l=h('div','nx-hl');
   if(icon){ const i=h('span','nx-hi'); i.innerHTML=icon; l.appendChild(i); }
@@ -895,9 +913,11 @@ function drawPeek(){
   const pri=h('div','nx-pk-row'); [['Normal','Normal'],['High','High Priority']].forEach(([k,l])=>pri.appendChild(btn('nx-chip'+((t.p||'Normal')===k?' on':''), l, ()=>{ if((t.p||'Normal')!==k) change(t, {p:k}, (k==='High'?'High priority: ':'Normal priority: ')+t.t); })));
   fld('Priority', pri);
   /* notes */
-  const usesBr=/<br\s*\/?>/i.test(t.notes||''); const shown=(t.notes||'').replace(/<br\s*\/?>/gi,'\n');
+  /* notes written in the classic editor (or brought in from Smartsheet) are formatted: show them as plain lines, bullets kept,
+     and save them back the same way the classic editor reads them (lines as <br>), so neither view shows the other's code (Nov 23, 2026) */
+  const usesHtml=/<\/?(br|div|p|ul|ol|li|span|b|strong|i|em|a|u)\b[^>]*>|&nbsp;|&amp;/i.test(t.notes||''); const shown=usesHtml ? notesText(t.notes) : (t.notes||'');
   const no=h('textarea','nx-pk-notes'); no.value=shown; no.placeholder='Add notes, links, next steps…'; no.setAttribute('aria-label','Notes');
-  no.addEventListener('blur', ()=>{ if(no.value!==shown) change(t, {notes: usesBr ? no.value.replace(/\n/g,'<br>') : no.value}, 'Saved the notes'); });
+  no.addEventListener('blur', ()=>{ if(no.value!==shown) change(t, {notes: usesHtml ? no.value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') : no.value}, 'Saved the notes'); });
   fld('Notes', no);
   peekEl.appendChild(moreBlock(t));
   peekEl.appendChild(commentsBlock(t));
