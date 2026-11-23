@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261122r';
+var BUILD='20261122u';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -6140,7 +6140,7 @@ css.textContent=`
 .ev-fig.next span:not(.k):not(.cd){overflow:hidden;text-overflow:ellipsis}
 .ev-fig.next b{font-size:20px;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .ev-fig.next .k{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#74bfeb}
-.ev-fig.next .cd{display:inline-block;margin-top:4px;font-size:12px;font-weight:700;color:#0d314c;background:#74bfeb;border-radius:4px;padding:2px 8px;align-self:flex-start;border:0;box-shadow:none}
+.ev-fig.next .cd{display:inline-block;margin-top:4px;font-size:12px;font-weight:700;color:#0d314c;background:#74bfeb;border-radius:4px;padding:2px 8px;align-self:flex-start;border:0;box-shadow:none}.ev-fig.next .cd::before,.ev-fig.next .cd::after{content:none;display:none}
 .ev-fig span{border:0;box-shadow:none}
 .ev-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0 12px}
 .ev-seg{display:inline-flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:var(--surface)}
@@ -6157,6 +6157,7 @@ css.textContent=`
 .ev-btn:disabled{opacity:.5;cursor:default}
 .ev-cols{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
 .ev-mon{font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin:14px 0 6px}
+.ev-left>.ev-mon:first-child{margin-top:0;line-height:17px}.ev-empty.ev-none{padding:16px 18px;border-radius:8px}.ev-empty.ev-none p{margin:4px 0 0}.ev-cols:has(.ev-left>.ev-mon:first-child)>.ev-right{margin-top:23px}
 .ev-mon:first-child{margin-top:0}
 .ev-list{display:flex;flex-direction:column;gap:8px}
 .ev-card{display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:14px;align-items:center;padding:12px 14px;border:1px solid var(--border);border-left:4px solid var(--ea,#74bfeb);border-radius:10px;background:var(--surface);cursor:pointer;text-align:left;font:inherit;color:inherit;width:100%;transition:box-shadow .2s,transform .2s}
@@ -6198,7 +6199,7 @@ css.textContent=`
 .ev-who:first-of-type{border-top:0}.ev-who .tx{font-size:13px;min-width:0}.ev-who .tx b{display:block}.ev-who .tx span{color:var(--ink-3);font-size:12px}
 .ev-empty{border:1px dashed var(--border-strong);border-radius:12px;padding:22px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:var(--surface)}
 .ev-empty b{font-size:16px}.ev-empty p{margin:2px 0 0;color:var(--ink-2)}
-@media(max-width:1100px){.ev-band{grid-template-columns:repeat(2,minmax(0,1fr))}.ev-fig.next{grid-column:1/-1}.ev-cols{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:1100px){.ev-band{grid-template-columns:repeat(2,minmax(0,1fr))}.ev-fig.next{grid-column:1/-1}.ev-cols{grid-template-columns:minmax(0,1fr)}.ev-cols>.ev-right{margin-top:0!important}}
 
 
 /* the right-hand panel: three quarters of the screen, full width on a phone */
@@ -6361,8 +6362,8 @@ function drawList(){ const left=P.left; if(!left) return; left.textContent='';
   const all=pick(), L=all.filter(matches);
   if(!(M.list||[]).some(e=>!e.gone)){ const em=h('div','ev-empty'); const tx=h('div'); tx.appendChild(h('b',null,'No industry events yet')); tx.appendChild(h('p',null,'Use + Add an Event above for the conferences, trade shows and dinners MISMO is going to or thinking about.')); em.appendChild(tx); left.appendChild(em); return; } /* one Add an Event button: the one in the toolbar */
   if(!L.length){ /* nothing in this view: show the upcoming list instead of an empty space */
-    const msg=h('p','ev-up', all.length ? 'Nothing matches “'+P.q+'”.' : 'Nothing here, so here’s everything coming up.'); left.appendChild(msg);
-    if(all.length) return; const U=live().filter(upcoming).sort(byStart); if(!U.length) return; cards(left, U); return; }
+    const E={up:['Nothing coming up','Use + Add an Event for the next conference, trade show or dinner.'], going:['No upcoming events marked Going','Open an event and set it to Going once MISMO decides to attend.'], considering:['Nothing being considered','Events marked Considering show here until they’re decided.'], speaking:['No upcoming talks','Events where MISMO is speaking, or has a talk proposed, show here.'], past:['No past events yet','An event moves here the day after it ends.'], no:['Nothing marked Not Going','Events MISMO decides to skip show here, so the decision isn’t lost.'], aside:['Nothing set aside','Set Aside keeps an event out of the lists without deleting it.']}[P.filter] || ['Nothing here',''];
+    const em=h('div','ev-empty ev-none'); const tx=h('div'); tx.appendChild(h('b',null, all.length ? 'Nothing matches “'+(P.q||first(P.who))+'”' : E[0])); tx.appendChild(h('p',null, all.length ? 'Try another word, or Everyone in the people list.' : E[1])); em.appendChild(tx); left.appendChild(em); return; }
   cards(left, L); }
 function cards(left, L){
   /* grouped by month */
