@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 23** — Task notes written in the classic editor or brought in from Smartsheet show as plain lines (bullets kept) in the task panel, not as HTML code.
 - **Nov 23** — The installed Team HQ and Expenses apps turn sideways with the phone (the Expenses app was held upright).
 - **Nov 23** — Phones, full review: the bell's list fits the screen; the Everything menu lists Team Pages in the left menu's order (Industry Events under Team Projects); number tiles, filter buttons, the My Tasks toolbar, Industry Events' filters (Past, Not Going, Set Aside were out of reach), Find a Time's lengths, My Board's quick buttons and the Team Projects people row wrap instead of running off the edge; On Your Plate titles get two lines; the Calendar shows three days at a time. Sideways phones now get the phone layout, with a short top bar and a one-line bottom bar so the page keeps the height.
 - **Nov 22** — Leadership HQ's tile now opens resources.mismo.org/leadership-hq/ (its key stays elections-hq; the old address forwards).
