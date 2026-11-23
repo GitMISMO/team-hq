@@ -596,7 +596,7 @@ const css2=document.createElement('style'); css2.id='hqx-css2'; css2.textContent
 .hqx-load i{width:18px;height:18px;border-radius:50%;border:2.5px solid var(--border);border-top-color:var(--c1);animation:hqxSpin .8s linear infinite}
 @keyframes hqxSpin{to{transform:rotate(360deg)}}
 html.hqx-sys-on body{overflow:hidden}
-@media(max-width:640px){.hqx-pane{width:100%;top:0}.hqx-ph{padding-top:calc(10px + env(safe-area-inset-top,0px))}.hqx-ph .hqx-pb:not(.ghost){display:none}.hqx-ph .hqx-pb.ghost{padding:0 9px}}
+@media (max-width:640px),(max-height:500px) and (max-width:1000px){.hqx-pane{width:100%;top:0}.hqx-ph{padding-top:calc(10px + env(safe-area-inset-top,0px))}.hqx-ph .hqx-pb:not(.ghost){display:none}.hqx-ph .hqx-pb.ghost{padding:0 9px}}
 `;
 document.head.appendChild(css2);
 

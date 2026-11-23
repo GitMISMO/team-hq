@@ -212,7 +212,7 @@ const css=h('style'); css.id='td-css'; css.textContent=`
 .td-pa span{display:inline-flex;align-items:center;height:26px;padding:0 9px;border:1px solid var(--border);border-radius:5px;background:var(--surface);font-size:11.5px;font-weight:700;color:var(--c1);cursor:pointer;white-space:nowrap}
 .td-pa span:hover,.td-pa span:focus-visible{border-color:var(--c1);background:var(--sky-wash);outline:none}
 .td-mp{display:inline-block;margin-left:6px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--c1)}
-@media(max-width:640px){.td-card{flex-basis:72%}.td-row{grid-template-columns:110px 1fr}}
+@media (max-width:640px),(max-height:500px) and (max-width:1000px){.td-card{flex-basis:72%}.td-row{grid-template-columns:110px 1fr}}
 `;
 document.head.appendChild(css);
 

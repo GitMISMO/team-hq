@@ -54,7 +54,7 @@ document.addEventListener('keydown', onKey);
 /* ---------- styles ---------- */
 const css=h('style'); css.id='mob-css'; css.textContent=`
 .mob-bar,.mob-sheet{display:none}
-@media (max-width:640px){
+@media (max-width:640px),(max-height:500px) and (max-width:1000px){
   body,body.railmini,body:not(.railmini){padding-left:0!important;padding-bottom:calc(66px + env(safe-area-inset-bottom,0px))}
   .hq.rail,.railscrim,.railmini-btn{display:none!important}
   .hqtop,body.railmini .hqtop,body:not(.railmini) .hqtop{margin-left:0!important;width:100%!important;padding:0 10px!important}
@@ -178,8 +178,57 @@ const css=h('style'); css.id='mob-css'; css.textContent=`
   .mt-pr{grid-template-columns:1fr}
   .mt-pn.big{grid-template-columns:1fr}
   .mt-steps{grid-template-columns:1fr}
+  /* full phone review (November 23, 2026): nothing cut off at the right edge */
+  .tiles,.tiles.one{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;margin:0;padding:0}
+  .tiles > .tile{flex:none;min-width:0}
+  .tiles > .tile:last-child:nth-child(odd){grid-column:1/-1}
+  .filterbar{flex-wrap:wrap!important;overflow:visible}
+  .filterbar > *{flex:0 1 auto}
+  .cs-nav{flex-wrap:wrap}
+  .cs-sbtabs{flex-wrap:wrap!important;overflow:visible!important}
+  .ev-seg{display:flex!important;flex-wrap:wrap;gap:6px;border:0!important;overflow:visible!important;background:none!important;width:100%}
+  .ev-seg button{flex:1 1 auto;border:1px solid var(--border)!important;border-radius:6px;background:var(--surface)}
+  .nx-hr{flex-wrap:wrap!important;overflow:visible!important}
+  .nx-hr > *{flex:1 1 auto}
+  .nx-need{grid-template-columns:50px minmax(0,1fr)!important}
+  .nx-need b{white-space:normal!important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.3}
+  .hb-bar{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible!important}
+  .hb-bar > *{min-width:0;justify-content:flex-start}
+  .hb-bar > *:last-child:nth-child(odd){grid-column:1/-1}
+  .pv2-who{flex-wrap:wrap!important;overflow:visible!important}
+  .cs-chipset{display:flex!important;flex-wrap:wrap!important;overflow:visible!important}
+  .nx-cg{grid-template-columns:40px repeat(5,minmax(104px,1fr))!important;min-width:560px!important}
   /* app sheets and modals fit the screen */
   .modal,.sheetbox,.sheet-box{max-width:100vw!important}
+}
+/* phone turned sideways (November 23, 2026): the phone layout, with the bars made short so the page gets the height */
+@media (max-height:500px) and (max-width:1000px){
+  :root{--hq-h:44px!important}
+  header.hqtop{height:44px!important;min-height:44px!important}
+  header.hqtop .logoplate{padding:3px 8px!important}
+  header.hqtop .logoplate svg{width:80px!important}
+  header.hqtop .mastrule{height:20px!important}
+  .nx{bottom:calc(42px + env(safe-area-inset-bottom,0px))!important}
+  html.nx-on body{padding-bottom:calc(44px + env(safe-area-inset-bottom,0px))!important}
+  html.nx-on .nx-tabbar{padding:2px 6px calc(2px + env(safe-area-inset-bottom,0px))!important}
+  .nx-tb{flex-direction:row!important;justify-content:center;gap:7px!important;padding:8px 4px!important;font-size:12px!important}
+  .nx-tb svg{width:18px!important;height:18px!important}
+  .nx-tb .nx-badge{top:1px!important;left:calc(50% + 2px)!important}
+  .nx-head{padding:5px 12px!important;gap:6px 10px!important}
+  .nx-ht{flex-direction:row!important;align-items:baseline;gap:10px}
+  .nx-ht h1{font-size:17px!important}
+  .nx-hi svg{width:18px;height:18px}
+  .nx-qa{height:36px!important}
+  .mob-b{flex-direction:row;gap:7px;min-height:38px;font-size:12px}
+  .mob-b svg{width:18px;height:18px}
+  body,body.railmini,body:not(.railmini){padding-bottom:calc(46px + env(safe-area-inset-bottom,0px))}
+  main{padding-top:10px!important;padding-bottom:calc(60px + env(safe-area-inset-bottom,0px))!important}
+  .view > .vhead,.view > .pv2 > .vhead{flex-direction:row!important;flex-wrap:wrap;align-items:center!important;gap:8px 12px!important}
+  .view > .vhead h1{font-size:20px}
+  .view > .vhead .rowflex > *{flex:0 1 auto}
+  .mob-box{max-height:88vh;padding-bottom:calc(52px + env(safe-area-inset-bottom,0px))}
+  .mob-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .nx-bl{max-height:calc(100vh - 70px)!important}
 }
 `;
 document.head.appendChild(css);

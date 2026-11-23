@@ -994,7 +994,7 @@ html[data-season="december"] .santa{display:block}
 .whoami:hover{background:rgba(255,255,255,.2)}
 .whoami .av{width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
   font-size:10.5px;font-weight:700;color:#fff;flex:0 0 auto}
-@media(max-width:640px){.whoami span.nm{display:none}.whoami{padding:4px}}
+@media (max-width:640px),(max-height:500px) and (max-width:1000px){.whoami span.nm{display:none}.whoami{padding:4px}}
 
 /* ---------- rail ---------- */
 .hq.rail{position:fixed;left:0;top:calc(var(--hq-h) + env(safe-area-inset-top,0px));bottom:0;width:var(--rail-w);z-index:95;
@@ -2518,7 +2518,7 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed var(--border-strong)
 .pgx .modal-acts{justify-content:flex-start}
 .pgxfoot{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .pgxfoot .pgxacts{justify-content:flex-end}
-@media(max-width:640px){ .pgxfoot{margin-left:0;width:100%} .pgxfoot .pgxacts{justify-content:flex-start} }
+@media (max-width:640px),(max-height:500px) and (max-width:1000px){ .pgxfoot{margin-left:0;width:100%} .pgxfoot .pgxacts{justify-content:flex-start} }
 @media(max-width:900px){
   .pgx .modal-acts{position:sticky;bottom:-18px;z-index:3;background:var(--surface);border-top:1px solid var(--border);
     margin:16px -20px -18px;padding:10px 20px calc(12px + env(safe-area-inset-bottom,0px));gap:8px}
