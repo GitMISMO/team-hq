@@ -114,7 +114,7 @@ real page and delete the test page.
   `templates`, `rules`, `syncs` and `syncitems`, `expinbox` (emailed receipts), `errors` (the team error log) and
   `systemsmap` (Connected Systems: `current` and `requests`; `current.notices` holds the Change Notices from
   GitMISMO/mismo-connections CHANGE-NOTICES.md, one row per system that has to act, brought in with each refresh) and `events` (Industry Events, one record per event,
-  graphics in Team HQ's file storage under `events`).
+  graphics in Team HQ's file storage; they land under `receipts/`, since `events` isn't a storage folder).
 - **Change History:** the `Team HQ Change History` job in `team-hq-data` (`tools/history.mjs`, every hour) reads each save and keeps 90 days of who changed what on tasks, Team Projects, key dates, plans, plan items and agenda items in `data/history.json`. Expenses, Sync Ups and notes are never read. Like Recently Deleted (`tools/trash.mjs`), it only writes its own file.
 - Team HQ reads other systems' headline numbers for their dashboard tiles through the relay, and each system's
   own tiles are drawn Team HQ style.
@@ -189,9 +189,16 @@ The MISMO Connections Map (Jonna's Claude Doc) is the source of truth for every 
   receipts go to their Contractor HQ expenses while Jonna's or Vanessa's Team HQ is open.
 - **Scheduler:** reads Team HQ's staff list; writes a task per request onto the organizer's board.
 - **Industry Events → MISMO Media:** the Ask MISMO Media button only opens MISMO Media's request form
-  (`https://resources.mismo.org/forms/request/`) in a new tab; nothing is sent or posted. Planned, not built: Member 360
-  reading the events' contacts as prospects, and MISMO Media's Image Library taking the events' graphics (both on the
-  Connections Map; their own Claudes build their sides, Team HQ never writes into them).
+  (`https://resources.mismo.org/forms/request/`) in a new tab; nothing is sent or posted.
+- **Industry Events graphics → MISMO Media's Image Library (CN-011, Nov 23, 2026):** MISMO Media reads, with the
+  signed-in person's own sign-in, `team-hq/data/events` (each event's id, name, start and `graphics`: id, name, label,
+  use, type, size) and each graphic's file through `team-hq/file/<id>`, and keeps a SharePoint copy. It never writes
+  to Team HQ. It accepts only file ids under `receipts/` or `attachments/` (event graphics land under `receipts/`).
+  **Keep the graphics shape: add fields only, never rename. If event graphics ever move to another file folder, post
+  a Change Notice for MISMO Media first.** The graphics only come in while someone who can read Team HQ has MISMO
+  Media open (Perry, Amy, Kelly and Vanessa all use Team HQ, so any of them will do).
+- **Planned, not built:** Member 360 reading the events' contacts as prospects (on the Connections Map; Member 360's
+  Claude builds its side, Team HQ never writes into it).
 - **Contractor HQ** (formerly Service Orders): reads the staff list and contractor expense receipts.
 - **Every system's tile:** headline numbers read from each system for its dashboard tile.
 - **Ask, Plan My Day and receipt reading** go through the relay's ask route; MISMO's API key stays in the relay.

@@ -81,7 +81,7 @@ const NEW=[
 <b>Contacts</b>: the people we meet or need to reach there, who met them, and whether to follow up.</p>
 <p><b>Set Aside</b> takes an event off the list without deleting it; bring it back from the <b>Set Aside</b> filter.</p>
 <h4>Where It’s Kept</h4>
-<p>In Team HQ’s own data (one record per event, collection <b>events</b>), saved through the save relay like everything else in Team HQ, with history. Graphics are kept in Team HQ’s file storage. Industry Events doesn’t connect to any other system yet; contacts reaching Member 360 and graphics reaching MISMO Media’s Image Library are on the Connections Map as requests.</p>
+<p>In Team HQ’s own data (one record per event, collection <b>events</b>), saved through the save relay like everything else in Team HQ, with history. Graphics are kept in Team HQ’s file storage. <b>MISMO Media</b> reads each event’s graphics (with the signed-in person’s own sign-in) and keeps a copy in its Image Library; it only reads, and never changes anything in Team HQ. Contacts reaching Member 360 are on the Connections Map as a request.</p>
 `},
  {after:'health', id:'systems', t:'Connected Systems', d:'How MISMO’s systems fit together, what each one does, and what runs on its own.', h:`
 <p><b>Connected Systems</b> (under Team in the left menu, or add its tile with <b>+ Add a Tile</b>) is the map of every MISMO system and the work that moves between them. Point at a box to light up everything it touches; select it for what it does, where it lives, what it replaced, and what it sends and receives. The area buttons show one part of the operation. A moving dot means the work moves automatically; a <b>dashed line</b> means a person copies it.</p>

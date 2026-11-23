@@ -486,6 +486,9 @@ function pGraphics(b, ev){ const st=P.panel;
   async function upload(F){ if(!window.__att || !window.__att.upload){ toast('Uploading isn’t available here.'); return; }
     let n=0; for(const f of F){ if(f.size>4*1024*1024){ toast(f.name+' is over 4 MB. Make it smaller, or ask the event for a smaller copy.'); continue; }
       up.textContent='Uploading '+f.name+'…';
+      /* MISMO Media reads these (CN-011): it accepts only file ids under receipts/ or attachments/ ('events' isn't a
+         storage folder, so they land under receipts/). Keep the graphics fields as they are (add, never rename); if they
+         ever move to another folder, post a Change Notice for MISMO Media first. */
       try{ const a=await window.__att.upload(f, 'events'); const g=Object.assign(a, {use:/logo/i.test(f.name)?'Logo':/speaker/i.test(f.name)?'Speaker Card':/banner/i.test(f.name)?'Banner':'Other', label:f.name.replace(/\.[^.]+$/,'')}); put(g); n++; markDirty(); }
       catch(e){ console.error(e); toast('Couldn’t upload '+f.name+'. '+((e && e.message)||'Try again.')); } }
     up.textContent=n ? n+' file'+(n===1?'':'s')+' added. Press Save Changes to keep '+(n===1?'it':'them')+' on the event.' : ''; }
