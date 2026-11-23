@@ -180,7 +180,7 @@ const P=id=>(S.people||[]).find(p=>p.id===id)||null;
 const pnm=id=>{ const p=P(id); return p ? p.name : (id||'Someone'); };
 const first=id=>{ const p=P(id); return p ? String(p.name||'').split(' ')[0] : 'Someone'; };
 const seesAll=()=>X.SEE_ALL.indexOf(me())>=0;
-const isPhone=()=>document.documentElement.classList.contains('app-exp') || !!(window.matchMedia && matchMedia('(max-width:640px)').matches);
+const isPhone=()=>document.documentElement.classList.contains('app-exp') || !!(window.matchMedia && matchMedia('(max-width:640px),(max-height:500px) and (max-width:1000px)').matches);
 const plain=v=>{ try{ return String(rtText(v||'')).replace(/\s+/g,' ').trim(); }catch(e){ return String(v||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim(); } };
 const say=m=>{ try{ toast(m); }catch(e){} };
 const sayUndo=(m, fn)=>{ try{ undoToast(m, fn); }catch(e){ say(m); } };
@@ -1402,7 +1402,7 @@ const css=h('style'); css.id='x2-css'; css.textContent=`
 .x2-alist{display:flex;flex-direction:column;gap:8px}.x2-amh{display:flex;align-items:baseline;gap:10px;margin:8px 0 0;padding:0 2px 5px;border-bottom:2px solid var(--navy)}
 :root[data-theme="dark"] .x2-amh{border-bottom-color:var(--sky)}.x2-amh b{font-size:15px}.x2-amh small{font-size:12.5px;color:var(--ink-3)}.x2-amh .amt{margin-left:auto;font-weight:700}
 .x2-atools{display:inline-flex;gap:6px;margin-left:auto}.x2-atrip .x2-th .amt{margin-left:0}
-@media (max-width:640px){.x2-asum{margin-left:0;flex-basis:100%}.x2-atools{margin-left:0}}
+@media (max-width:640px),(max-height:500px) and (max-width:1000px){.x2-asum{margin-left:0;flex-basis:100%}.x2-atools{margin-left:0}}
 .x2-in{padding:12px 14px;border:1px solid var(--border);border-left:3px solid var(--sky);border-radius:6px;background:var(--surface)}
 .x2-inh{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}.x2-inh b{font-size:14.5px}.x2-inh small{font-size:12.5px;color:var(--ink-2)}
 .x2-in ul{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:5px}
@@ -1421,7 +1421,7 @@ const css=h('style'); css.id='x2-css'; css.textContent=`
 .x2-ed .x2-mih{font-size:12px;color:var(--ink-2);margin-top:4px;line-height:1.35}.x2-ed .x2-ro{font-size:13.5px;padding:7px 0;color:var(--ink)}
 .x2-ed .rcpt.over{border-color:var(--c1)}
 @media (max-width:900px){.x2-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.x2-tiles .exptile:last-child{grid-column:1/-1}}
-@media (max-width:640px){
+@media (max-width:640px),(max-height:500px) and (max-width:1000px){
   .x2 .x2-snap{min-height:150px}.x2-ph{flex-wrap:wrap}.x2-pdl{margin-left:0}
   .x2-rr{grid-template-columns:minmax(0,1fr) auto}.x2-rt{grid-column:1/-1;white-space:normal}.x2-re{grid-column:1/-1;justify-self:start}.x2-rq{grid-column:1/-1}
   .x2 .x2-th .amt{margin-left:auto}.x2-in li{grid-template-columns:1fr}

@@ -381,7 +381,7 @@ html[data-theme="dark"] .cs .cs-ph .cs-build{color:#456179}
 .cs-rp-row.cs-go{cursor:pointer}.cs-rp-row.cs-go:hover,.cs-rp-row.cs-go:focus-visible{transform:translateY(-2px);box-shadow:0 10px 24px -14px color-mix(in srgb,var(--pc) 70%,transparent);border-color:color-mix(in srgb,var(--pc) 45%,var(--border))}
 .cs-rp-row:hover .arw .ln{stroke-dashoffset:-16}.cs-rp-row:hover .arw .hd{transform:translateX(3px)}
 @media(max-width:1100px){.cs-rp-grid{grid-template-columns:minmax(0,1fr)}.cs-rp-row.span{grid-column:auto}}
-@media(max-width:640px){.cs-rp-sum{grid-template-columns:minmax(0,1fr);gap:14px;padding:16px}.cs-rp-sum .big{border-right:0;padding-right:0;display:flex;align-items:baseline;gap:10px}.cs-rp-sum .big b{font-size:44px}.cs-rp-sum .big span{max-width:none}
+@media (max-width:640px),(max-height:500px) and (max-width:1000px){.cs-rp-sum{grid-template-columns:minmax(0,1fr);gap:14px;padding:16px}.cs-rp-sum .big{border-right:0;padding-right:0;display:flex;align-items:baseline;gap:10px}.cs-rp-sum .big b{font-size:44px}.cs-rp-sum .big span{max-width:none}
  .cs-rp-keys{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px}.cs-rp-keys::-webkit-scrollbar{display:none}.cs-rp-k{flex:none}
  .cs-rp-row{grid-template-columns:minmax(0,1fr)}.cs-rp-row .was{padding:12px 14px 4px}.cs-rp-row .arw{height:26px;justify-items:start;padding-left:22px}.cs-rp-row .arw svg{transform:rotate(90deg);width:22px}.cs-rp-row .now{border-left:0;border-top:1px solid color-mix(in srgb,var(--pc) 22%,transparent);padding:12px 18px 14px 14px}}
 /* Coverage (Nov 8, 2026) */
@@ -493,7 +493,7 @@ html[data-theme="dark"] .cs-cv-det .bk:not(.sys) small{color:#5fd29a}
 .cs-sysh .lf.done{color:#2fbf71}
 .cs-sysh .cv{width:14px;height:14px;transition:transform .2s;stroke:var(--ink-3);fill:none;stroke-width:2}
 .cs-sys.open .cs-sysh .cv{transform:rotate(180deg)}
-@media(max-width:640px){.cs-sysh{grid-template-columns:10px minmax(0,1fr) 54px 16px}.cs-sysh .pg{display:none}}
+@media (max-width:640px),(max-height:500px) and (max-width:1000px){.cs-sysh{grid-template-columns:10px minmax(0,1fr) 54px 16px}.cs-sysh .pg{display:none}}
 .cs-tl2{display:grid;gap:6px;padding:0 16px 14px 38px}
 .cs-ti{border:1px solid var(--border);border-radius:10px;background:var(--surface-2);overflow:hidden}
 .cs-tih{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px}

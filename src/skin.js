@@ -97,7 +97,7 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed color-mix(in srgb,va
 .boardbar .btn,.boardbar button{white-space:nowrap;min-width:max-content}
 
 /* ===== phones ===== */
-@media (max-width:640px){
+@media (max-width:640px),(max-height:500px) and (max-width:1000px){
   main{padding-inline:12px}
   .view > .vhead h1,.view > .pv2 > .vhead h1{font-size:23px}
   .headline{padding:14px}
@@ -109,7 +109,7 @@ body.moving-panel .widget:not(.dragging){outline:1px dashed color-mix(in srgb,va
 }
 
 /* ===== Expenses: phone-first ===== */
-@media (max-width:640px){
+@media (max-width:640px),(max-height:500px) and (max-width:1000px){
   #app-expenses > .vhead p{display:none}
   #app-expenses .snapzone{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:150px;padding:20px;border-radius:12px;border:2px dashed var(--sky);background:var(--sky-wash)}
   #app-expenses .snapzone svg{width:38px;height:38px}
