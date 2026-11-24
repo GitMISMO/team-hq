@@ -3161,6 +3161,15 @@ html{scrollbar-color:var(--border-strong) var(--ground)}
   --rt-hy:#6b5a12;--rt-hg:#1f5236;--rt-hb:#1d4a73;--rt-hp:#6a2a48;--rt-hy-strong:#d9b72a}}
 .rt-c-blue{color:var(--rt-blue)}.rt-c-green{color:var(--rt-green)}.rt-c-orange{color:var(--rt-orange)}.rt-c-red{color:var(--rt-red)}.rt-c-purple{color:var(--rt-purple)}.rt-c-gray{color:var(--rt-gray)}
 .rt-h-yellow{background:var(--rt-hy)}.rt-h-green{background:var(--rt-hg)}.rt-h-blue{background:var(--rt-hb)}.rt-h-pink{background:var(--rt-hp)}
+/* font and size in notes and post-its (Nov 24, 2026) */
+.rt-f-hand{font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.3em;line-height:1.25}.rt-f-serif{font-family:Georgia,'Times New Roman',serif}.rt-f-round{font-family:'Arial Rounded MT Bold','Nunito','Segoe UI',system-ui,sans-serif}
+.rt-s-sm{font-size:.85em}.rt-s-lg{font-size:1.25em;line-height:1.3}.rt-s-xl{font-size:1.6em;line-height:1.25}.rt-s-xxl{font-size:2.1em;line-height:1.15}
+.sticky.rtpopen{transform:none!important;transition:none!important}
+.rtfl{display:grid;grid-template-columns:1fr 1fr;gap:2px;min-width:200px}
+.rtfo{display:block;width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;font-size:13px;padding:5px 8px;border-radius:4px;cursor:pointer}
+.rtfo:hover{background:var(--surface-2,rgba(0,0,0,.06))}
+.rtfo{line-height:1.25}.rtfo.rt-s-sm{font-size:11.5px}.rtfo.rt-s-lg{font-size:14.5px}.rtfo.rt-s-xl{font-size:16px}.rtfo.rt-s-xxl{font-size:17.5px}.rtfo.rt-f-hand{font-size:17px}
+.rtFt{font-weight:600;font-size:13px;letter-spacing:-.02em}.rtSz{font-weight:700;font-size:14px}.rtSz small{font-size:10px;font-weight:700}
 [class*="rt-h-"]{color:var(--ink);border-radius:2px;padding:0 1px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
 .rts.rt-cs-blue{color:var(--rt-blue)}.rts.rt-cs-green{color:var(--rt-green)}.rts.rt-cs-orange{color:var(--rt-orange)}.rts.rt-cs-red{color:var(--rt-red)}.rts.rt-cs-purple{color:var(--rt-purple)}.rts.rt-cs-gray{color:var(--rt-gray)}
 .rts.rt-hs-yellow{background:var(--rt-hy)}.rts.rt-hs-green{background:var(--rt-hg)}.rts.rt-hs-blue{background:var(--rt-hb)}.rts.rt-hs-pink{background:var(--rt-hp)}
@@ -9611,6 +9620,8 @@ function rtUrl(u){
   return '';
 }
 function rtIsHTML(v){ return RT_RX.test(String(v||'')); }
+const RT_FONTS=[{k:'',n:'Standard'},{k:'hand',n:'Handwritten'},{k:'serif',n:'Classic Serif'},{k:'round',n:'Rounded'}];
+const RT_SIZES=[{k:'sm',n:'Small'},{k:'',n:'Normal'},{k:'lg',n:'Large'},{k:'xl',n:'Larger'},{k:'xxl',n:'Largest'}];
 function rtClean(html){
   const doc=new DOMParser().parseFromString('<div>'+String(html||'')+'</div>', 'text/html');
   const root=doc.body.firstChild; if(!root) return '';
@@ -9622,7 +9633,7 @@ function rtClean(html){
       if(RT_DROP[t] || /:/.test(c.tagName)){ if(/:/.test(c.tagName) && !RT_DROP[t]){ walk(c); while(c.firstChild) n.insertBefore(c.firstChild, c); } c.remove(); return; }
       walk(c);
       if(!RT_TAGS[t]){ while(c.firstChild) n.insertBefore(c.firstChild, c); c.remove(); return; }
-      const keepCls=(c.getAttribute('class')||'').split(/\s+/).filter(x=>/^rt-[ch]-[a-z]+$/.test(x)||x==='rt-t');
+      const keepCls=(c.getAttribute('class')||'').split(/\s+/).filter(x=>/^rt-[chfs]-[a-z]+$/.test(x)||x==='rt-t');
       const span=(t==='TD'||t==='TH')? [c.getAttribute('colspan'), c.getAttribute('rowspan')] : null;
       const href=t==='A'? rtUrl(c.getAttribute('href')) : '';
       [...c.attributes].forEach(a=> c.removeAttribute(a.name));
@@ -9749,13 +9760,17 @@ function rtEditor(val, ph, rows){
   sep();
   /* a small menu under a button */
   let pop=null;
-  const shut=()=>{ if(pop){ pop.remove(); pop=null; RT_POP=null; } };
+  const shut=()=>{ if(pop){ pop.remove(); pop=null; RT_POP=null; } const sk=bar.closest('.sticky'); sk && sk.classList.remove('rtpopen'); };
   const menu=(btn, build)=>{ if(pop && pop._for===btn){ shut(); return; } shut(); keep();
     pop=el('div','rtpop'); pop._for=btn; build(pop);
     pop.addEventListener('mousedown', e=>{ if(!/INPUT/.test(e.target.tagName)) e.preventDefault(); });
     bar.appendChild(pop); RT_POP={el:pop, shut:shut};
     const r=btn.getBoundingClientRect(), rb=bar.getBoundingClientRect();
-    pop.style.left=Math.max(0, Math.min(r.left-rb.left, rb.width-pop.offsetWidth))+'px'; pop.style.top=(r.bottom-rb.top+4)+'px'; };
+    pop.style.left=Math.max(0, Math.min(r.left-rb.left, rb.width-pop.offsetWidth))+'px'; pop.style.top=(r.bottom-rb.top+4)+'px';
+    /* on a post-it the menu floats over the page, so the board's edge never cuts it off (Nov 24, 2026) */
+    if(bar.closest('.sticky')){ bar.closest('.sticky').classList.add('rtpopen'); const r=btn.getBoundingClientRect(); pop.style.position='fixed'; const w=pop.offsetWidth, ht=pop.offsetHeight;
+      pop.style.left=Math.max(6, Math.min(r.left, innerWidth-w-6))+'px';
+      pop.style.top=((r.bottom+4+ht>innerHeight-6 && r.top-4-ht>6)? r.top-4-ht : r.bottom+4)+'px'; } };
   const swatches=(kind, list, none)=> p=>{
     p.appendChild(el('div','rtpt', kind==='c'? 'Text Color' : 'Highlight'));
     const g=el('div','rtsw');
@@ -9767,6 +9782,28 @@ function rtEditor(val, ph, rows){
   };
   B('<span class="rtA">A</span><i class="rtbarc"></i>','Text Color', b=> menu(b, swatches('c', RT_COLORS, 'Automatic')), 'rtc');
   B('<span class="rtH">ab</span><i class="rtbarh"></i>','Highlight', b=> menu(b, swatches('h', RT_MARKS, 'No Highlight')), 'rtc');
+  sep();
+  /* font and size, the way Word does it (Nov 24, 2026): pick words first, or with nothing picked the whole note
+     changes. Applied with a stand-in, then swapped for a named class, like the colors. */
+  const typeface=(kind, k)=>{ back();
+    const sl=getSelection(); if(sl.rangeCount && sl.getRangeAt(0).collapsed && ed.textContent.trim()){ const rg=document.createRange(); rg.selectNodeContents(ed); sl.removeAllRanges(); sl.addRange(rg); }
+    const pre=kind==='f'? 'rt-f-' : 'rt-s-', prop=kind==='f'? 'fontFamily' : 'fontSize';
+    try{ document.execCommand('styleWithCSS', false, true); }catch(x){}
+    document.execCommand(kind==='f'? 'fontName' : 'fontSize', false, kind==='f'? 'rtstandin' : '7');
+    const hit=n=> kind==='f' ? /rtstandin/i.test(n.style.fontFamily||n.getAttribute('face')||'') : (/xxx-large/i.test(n.style.fontSize||'') || n.getAttribute('size')==='7');
+    ed.querySelectorAll('[style],font').forEach(n=>{ if(!hit(n)) return;
+      let t=n; if(n.tagName==='FONT'){ t=document.createElement('span'); while(n.firstChild) t.appendChild(n.firstChild); n.replaceWith(t); } else { t.style[prop]=''; if(!t.getAttribute('style')) t.removeAttribute('style'); }
+      t.querySelectorAll('[class*="'+pre+'"]').forEach(x=>[...x.classList].forEach(c=>{ if(c.indexOf(pre)===0) x.classList.remove(c); }));
+      [...t.classList].forEach(c=>{ if(c.indexOf(pre)===0) t.classList.remove(c); });
+      if(k) t.classList.add(pre+k);
+      if(t.tagName==='SPAN' && !t.className && !t.getAttribute('style')){ while(t.firstChild) t.parentNode.insertBefore(t.firstChild, t); t.remove(); } });
+    try{ document.execCommand('styleWithCSS', false, false); }catch(x){}
+    keep(); fire(); };
+  const typeMenu=(kind, title, list)=> p=>{ p.appendChild(el('div','rtpt', title)); const g=el('div','rtfl');
+    list.forEach(o=>{ const b=el('button','rtfo'+(o.k? ' '+(kind==='f'?'rt-f-':'rt-s-')+o.k : '')); b.type='button'; b.textContent=o.n; b.addEventListener('click', ()=>{ shut(); typeface(kind, o.k); }); g.appendChild(b); });
+    p.appendChild(g); };
+  B('<span class="rtFt">Aa</span>','Font', b=> menu(b, typeMenu('f','Font', RT_FONTS)), 'rtc');
+  B('<span class="rtSz">A<small>A</small></span>','Text Size', b=> menu(b, typeMenu('s','Text Size', RT_SIZES)), 'rtc');
   sep();
   /* tables */
   const cell=()=>{ const s=getSelection(); const n=s.anchorNode && (s.anchorNode.nodeType===1? s.anchorNode : s.anchorNode.parentElement); const c=n && n.closest && n.closest('td,th'); return c && ed.contains(c)? c : null; };
@@ -9844,7 +9881,7 @@ function rtEditor(val, ph, rows){
     setTimeout(()=> (a || selTxt? iU : iT).focus(), 0);
   });
   B(ICON.clear,'Clear Formatting', ()=>{ back(); document.execCommand('removeFormat');
-    const s=getSelection(); if(s.rangeCount){ ed.querySelectorAll('[class*="rt-c-"],[class*="rt-h-"]').forEach(n=>{ if(s.containsNode(n, true)){ [...n.classList].forEach(c=>{ if(/^rt-[ch]-/.test(c)) n.classList.remove(c); }); } }); }
+    const s=getSelection(); if(s.rangeCount){ [...ed.querySelectorAll('[class*="rt-c-"],[class*="rt-h-"],[class*="rt-f-"],[class*="rt-s-"]')].filter(n=> s.containsNode(n, true)).forEach(n=>{ { [...n.classList].forEach(c=>{ if(/^rt-[chfs]-/.test(c)) n.classList.remove(c); }); if(n.tagName==='SPAN' && !n.className){ while(n.firstChild) n.parentNode.insertBefore(n.firstChild, n); n.remove(); } } }); }
     keep(); fire(); });
 
   /* which buttons are on where the cursor is */
@@ -10848,7 +10885,7 @@ async function planReport(p){
     +'table{width:100%;border-collapse:collapse;font-size:13px}th{background:#e9f1f8;text-align:left;padding:6px 8px;border-bottom:2px solid #0d314c}td{padding:6px 8px;border-bottom:1px solid #d5e2ed;vertical-align:top}td.n{text-align:right;font-variant-numeric:tabular-nums}'
     +'.bar{height:7px;background:#e9f1f8;border-radius:4px;overflow:hidden;min-width:80px}.bar i{display:block;height:100%;background:#0f7b5c}'
     +'.c{display:inline-block;padding:0 7px;border-radius:3px;font-size:11.5px;font-weight:600}.ok{background:#e2f2ec;color:#0f7b5c}.bad{background:#f9e6e4;color:#b3372c}.ip{background:#e4f2fb;color:#2477b8}.ns{background:#e9f1f8;color:#456179}.na{background:#f6fafd;color:#7794aa}'
-    +'.sum{margin:12px 0}.sum ul,.sum ol{margin:4px 0;padding-left:24px}.sum table{width:auto;margin:6px 0}.sum td{border:1px solid #d5e2ed}.rt-h-yellow{background:#fff1a1}.rt-h-green{background:#cdf1d9}.rt-h-blue{background:#d3e8fb}.rt-h-pink{background:#fbd5e5}.rt-c-blue{color:#1f62a8}.rt-c-green{color:#1d7344}.rt-c-orange{color:#b25209}.rt-c-red{color:#b42318}.rt-c-purple{color:#6b3fa0}.rt-c-gray{color:#5b6b78}'
+    +'.sum{margin:12px 0}.sum ul,.sum ol{margin:4px 0;padding-left:24px}.sum table{width:auto;margin:6px 0}.sum td{border:1px solid #d5e2ed}.rt-h-yellow{background:#fff1a1}.rt-h-green{background:#cdf1d9}.rt-h-blue{background:#d3e8fb}.rt-h-pink{background:#fbd5e5}.rt-c-blue{color:#1f62a8}.rt-c-green{color:#1d7344}.rt-c-orange{color:#b25209}.rt-c-red{color:#b42318}.rt-c-purple{color:#6b3fa0}.rt-c-gray{color:#5b6b78}.rt-s-sm{font-size:.85em}.rt-s-lg{font-size:1.25em}.rt-s-xl{font-size:1.6em}.rt-s-xxl{font-size:2.1em}.rt-f-hand{font-family:Caveat,\'Segoe Print\',cursive;font-size:1.3em}.rt-f-serif{font-family:Georgia,serif}.rt-f-round{font-family:\'Arial Rounded MT Bold\',sans-serif}'
     +'.m{color:#7794aa}footer{margin-top:36px;color:#7794aa;font-size:12px}</style></head><body>'
     +'<svg width="0" height="0" style="position:absolute">'+logo+'</svg>'
     +'<svg class="w" viewBox="0 0 708 108" role="img" aria-label="MISMO"><use href="#mismo-logo"/></svg>'
