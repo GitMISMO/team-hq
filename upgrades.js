@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261124c';
+var BUILD='20261124d';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
