@@ -115,7 +115,7 @@ window.__HQ_BUILD=BUILD;
     '#hh-btn{position:relative}#hh-btn .hh-dot{position:absolute;left:21px;top:6px;width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.35);box-shadow:0 0 0 2px var(--navy,#0d314c)}'+
     '#hh-btn .hh-dot.ok{background:#72C08E}#hh-btn .hh-dot.warn{background:#E0A83C}#hh-btn .hh-dot.bad{background:#F08579}body.railmini #hh-btn .hh-dot{left:24px;top:7px}'+
     '#hh-bar{position:fixed;top:calc(64px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:9980;display:flex;align-items:center;gap:12px;max-width:min(760px,calc(100vw - 32px));background:#FBE8E6;color:#7A1913;border:1px solid #A32219;border-radius:8px;padding:9px 10px 9px 14px;font:500 13px/1.4 "IBM Plex Sans",system-ui,sans-serif;box-shadow:0 6px 20px rgba(13,49,76,.16)}'+
-    '#hh-bar[hidden]{display:none}#hh-bar .hh-go{flex:none;background:#A32219;color:#fff;border:0;border-radius:5px;padding:6px 11px;font:inherit;font-weight:600;cursor:pointer}#hh-bar .hh-x{flex:none;background:none;border:0;color:inherit;font-size:20px;line-height:1;padding:0 4px;cursor:pointer}'+
+    '#hh-bar[hidden]{display:none}@media (max-width:640px),(max-height:500px) and (max-width:1000px){#hh-bar{left:8px;right:8px;transform:none;max-width:none;flex-wrap:wrap;gap:8px 10px}#hh-bar>span{flex:1 1 100%}#hh-bar .hh-x{margin-left:auto}}#hh-bar .hh-go{flex:none;background:#A32219;color:#fff;border:0;border-radius:5px;padding:6px 11px;font:inherit;font-weight:600;cursor:pointer}#hh-bar .hh-x{flex:none;background:none;border:0;color:inherit;font-size:20px;line-height:1;padding:0 4px;cursor:pointer}'+
     '.hh-in{padding:14px 18px 18px}.hh-sum{display:flex;align-items:center;gap:10px;margin:0 0 12px;font-size:13.5px}.hh-big{width:12px;height:12px;border-radius:50%;flex:none}'+
     '.hh-big.ok,.hh-row.ok::before{background:var(--good,#0F7B5C)}.hh-big.warn,.hh-row.warn::before{background:#A2701A}.hh-big.bad,.hh-row.bad::before{background:#A32219}.hh-big.off,.hh-row.off::before{background:var(--ink-3,#71777F)}'+
     '.hh-grid{columns:3 230px;column-gap:8px}.hh-row{break-inside:avoid;margin:0 0 8px;position:relative;border:1px solid var(--border,#DFDCD5);border-radius:6px;padding:9px 11px 9px 22px;background:var(--surface,#fff)}'+
@@ -197,7 +197,9 @@ window.__HQ_BUILD=BUILD;
     var bad=last.rows.filter(function(r){ return r.level==='bad'; }), sig=bad.map(function(r){ return r.key+':'+r.line; }).join('|'), gone='';
     try{ gone=sessionStorage.getItem('hq:health-dismissed')||''; }catch(e){}
     if(!hbar){ hbar=h('div'); hbar.id='hh-bar'; hbar.setAttribute('role','alert'); hbar.hidden=true; document.body.appendChild(hbar); }
-    if(!bad.length || sig===gone) hbar.hidden=true;
+    /* offline, every check looks broken: the small Offline note is the only notice then (Nov 23, 2026) */
+    var offNow=!navigator.onLine || !!(window.__hqRelay && window.__hqRelay.status && window.__hqRelay.status.offline);
+    if(!bad.length || sig===gone || offNow) hbar.hidden=true;
     else { hbar.innerHTML='<span><b>'+esc(bad[0].title)+':</b> '+esc(bad[0].line)+(bad.length>1?' (and '+(bad.length-1)+' more)':'')+'</span><button type="button" class="hh-go">Details</button><button type="button" class="hh-x" aria-label="Hide until something else changes">&times;</button>';
       hbar.querySelector('.hh-go').onclick=openHealth; hbar.querySelector('.hh-x').onclick=function(){ try{ sessionStorage.setItem('hq:health-dismissed', sig); }catch(e){} hbar.hidden=true; }; hbar.hidden=false; }
     if(hov && hov.isConnected) drawHealth(); }
@@ -260,13 +262,28 @@ window.__HQ_BUILD=BUILD;
      sw.js keeps a copy of Team HQ on the device so it opens with no signal; changes made offline wait
      on the device and save when the signal is back. A bar says so while offline. */
   try{ if('serviceWorker' in navigator && location.protocol==='https:' && !TEST) navigator.serviceWorker.register('/team-hq/sw.js', {scope:'/team-hq/'}).catch(function(e){ rec('Logged error', 'Offline copy could not be set up: '+(e && e.message || e)); }); }catch(e){}
-  var offBar=null;
+  /* One small, quiet note while offline (Nov 23, 2026): it opens with the full sentence for a few seconds, then
+     shrinks to a small square tag in the corner ("Offline · 2 waiting") that stays out of the way. Tap it to read
+     the sentence again. It goes away by itself when the signal is back. */
+  var offBar=null, offWas=false, offShrink=0;
   function paintOff(){ var R=window.__hqRelay, off=!navigator.onLine || !!(R && R.status && R.status.offline);
-    if(!offBar){ if(!off || !document.body) return; offBar=h('div','hq-off'); offBar.setAttribute('role','status'); document.body.appendChild(offBar); }
+    if(!offBar){ if(!off || !document.body) return; offBar=h('button','hq-off'); offBar.type='button'; offBar.setAttribute('aria-live','polite');
+      offBar.addEventListener('click', function(){ openOff(); }); document.body.appendChild(offBar); }
     var n=0; try{ var F=(R && R.files)||{}; Object.keys(F).forEach(function(k){ n+=(F[k].pending||[]).length; }); }catch(e){}
     offBar.hidden=!off;
-    offBar.textContent= off ? 'You\u2019re offline. '+(n ? n+' change'+(n>1?'s are':' is')+' kept on this device and will save' : 'Anything you change is kept on this device and saves')+' when you\u2019re back online.' : ''; }
-  css.textContent+='.hq-off{position:fixed;left:50%;transform:translateX(-50%);top:calc(64px + env(safe-area-inset-top,0px));z-index:9985;max-width:calc(100vw - 24px);background:#FBF0DC;color:#6b4a0f;border:1px solid #A2701A;border-radius:8px;padding:8px 12px;font:600 13px/1.4 system-ui,sans-serif;box-shadow:0 6px 18px rgba(13,49,76,.14)}.hq-off[hidden]{display:none}';
+    if(!off){ offWas=false; offBar.classList.remove('open'); return; }
+    offBar.innerHTML='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2l20 20M8.5 8.6A6 6 0 0 0 5 17h11M18.4 13.5A4 4 0 0 0 15 8h-.5"/></svg>'
+      +'<b>Offline</b><span class="s">'+(n ? ' · '+n+' waiting' : '')+'</span>'
+      +'<span class="l">'+(n ? n+' change'+(n>1?'s are':' is')+' kept on this device and will save' : 'Anything you change is kept on this device and saves')+' when you’re back online.</span>';
+    offBar.setAttribute('aria-label','Offline. '+(n ? n+' change'+(n>1?'s':'')+' waiting to save.' : '')+' Changes are kept on this device and save when you’re back online.');
+    if(!offWas){ offWas=true; openOff(); } }
+  function openOff(){ if(!offBar) return; offBar.classList.add('open'); clearTimeout(offShrink); offShrink=setTimeout(function(){ offBar && offBar.classList.remove('open'); }, 5000); }
+  window.__hqOffPaint=paintOff;
+  css.textContent+='.hq-off{position:fixed;left:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:9985;display:flex;align-items:center;gap:6px;max-width:calc(100vw - 24px);background:#FBF0DC;color:#6b4a0f;border:1px solid #D9B46A;border-radius:6px;padding:5px 9px;font:600 12px/1.35 system-ui,sans-serif;box-shadow:0 2px 8px rgba(13,49,76,.10);cursor:pointer;text-align:left}'
+    +'.hq-off[hidden]{display:none}.hq-off b{font-weight:700}.hq-off .s{font-weight:600}.hq-off .l{display:none;font-weight:500}'
+    +'.hq-off.open{padding:8px 11px;max-width:min(360px,calc(100vw - 24px))}.hq-off.open .s{display:none}.hq-off.open .l{display:inline}.hq-off.open b::after{content:":"}'
+    +'html.nx-on .hq-off{bottom:calc(72px + env(safe-area-inset-bottom,0px))}@media (max-height:500px) and (max-width:1000px){html.nx-on .hq-off{bottom:calc(52px + env(safe-area-inset-bottom,0px))}}'
+    +'@media (min-width:1001px){.hq-off{left:auto;right:16px;bottom:16px}}';
   window.addEventListener('online', paintOff); window.addEventListener('offline', paintOff); setInterval(paintOff, 10000);
 
   /* ---------- the Test Copy: banner, and the check that opens every page and tile ---------- */
