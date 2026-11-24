@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 24** — Post-its: clearing one while typing in it now takes it off right away (it used to stay until you clicked somewhere else).
 - **Nov 24** — Post-its and notes: Font (Standard, Handwritten, Classic Serif, Rounded) and Text Size (Small to Largest) on the formatting bar, the way Word does it. Pick words first, or with nothing picked the whole note changes.
 - **Nov 24** — Fixed: My Board could open blank, covered by one line of text, for anyone with a note on their board (Amy saw it). A note's text was being drawn as a full-screen page.
 - **Nov 24** — Phones: My Board is listed under You in the Everything menu (with My Tasks and Calendar), not among the Team Pages.
