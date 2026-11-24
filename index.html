@@ -15069,6 +15069,10 @@ function noteSticky(n){
     }
     clearTimeout(armed);
     const kept=JSON.parse(JSON.stringify(Object.assign({}, n, {t:tx.value})));
+    /* the page holds off redrawing while a post-it is being typed in, so leave it first and take it off at once (Nov 24, 2026) */
+    delete STICKY_DRAFT[n.id]; c.classList.remove('editing');
+    if(c.contains(document.activeElement)) document.activeElement.blur();
+    (c.closest('.nbloose') || c).remove();
     await drop('notes', n.id);
     undoToast('Post-it cleared.', async ()=>{ await put('notes', kept); });
   });
