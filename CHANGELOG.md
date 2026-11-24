@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 24** — Fixed: My Board could open blank, covered by one line of text, for anyone with a note on their board (Amy saw it). A note's text was being drawn as a full-screen page.
 - **Nov 24** — Phones: My Board is listed under You in the Everything menu (with My Tasks and Calendar), not among the Team Pages.
 - **Nov 23** — Offline: one small note instead of two big warnings. It shows the full sentence for a few seconds, then shrinks to a small "Offline · 1 waiting" tag in the corner (tap it to read it again), and goes away when the signal is back. The red "Not saved yet — no connection" warning no longer appears.
 - **Nov 23** — Connected Systems: a Failures tab lists GitHub jobs that failed and what was done about each, newest first, with the ones that need Jonna listed first and counted at the top of the page; Help says so.
