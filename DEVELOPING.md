@@ -50,7 +50,7 @@ prompt) lives only in the private `systemsmap` collection, never in this code.
 | `mobile.js` | Phone layout and bottom tab bar |
 | `syncs.js` | Sync Ups |
 | `systems.js` | Connected Systems (the page; its content comes from the private record), including the Change Notices and Failures tabs |
-| `events.js` | Industry Events: the page, the event panel, its dashboard tile, and `tripsFor` for the Expenses trip list (Nov 22, 2026) |
+| `events.js` | Industry Events: the page, the event panel, its dashboard tile, and `tripsFor` for the Expenses trip list (Nov 22, 2026). Each event's own tasks (`tasks`: id, t, who, due, done) and each contact's `role` were added Nov 24, 2026 (CN-023) |
 | `next.js` | The current Team HQ shell: My Dashboard, Inbox, My Tasks, Calendar, System Health and more |
 | `oofdates.js` | Out of Office key dates from Outlook automatic replies |
 | `expenses.js` | Expenses: the whole page, editor, mileage, policy, trips, expense@ inbox, sending, Ready to Enter, downloads (live Nov 21, 2026; `?exp=old` turns it off for a tab) |
@@ -199,7 +199,10 @@ The MISMO Connections Map (Jonna's Claude Doc) is the source of truth for every 
   **Keep the graphics shape: add fields only, never rename. If event graphics ever move to another file folder, post
   a Change Notice for MISMO Media first.** The graphics only come in while someone who can read Team HQ has MISMO
   Media open (Perry, Amy, Kelly and Vanessa all use Team HQ, so any of them will do).
-- **Planned, not built:** Member 360 reading the events' contacts as prospects (on the Connections Map; Member 360's
+- **Planned, not built (CN-023):** a panel on an event whose people fill in from Member 360 (name, title, company,
+  email, member or not). Waits for Member 360 to say how a person may be looked up: read only, with the signed-in
+  person's own access through the save relay; never Member 360's flows or keys.
+- **Planned, not built:** Member 360 reading the events' contacts (now with each contact's `role`) as prospects (on the Connections Map; Member 360's
   Claude builds its side, Team HQ never writes into it).
 - **Contractor HQ** (formerly Service Orders): reads the staff list and contractor expense receipts.
 - **Every system's tile:** headline numbers read from each system for its dashboard tile.

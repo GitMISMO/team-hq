@@ -9,7 +9,10 @@
    - Graphics are uploaded right on the event (Team HQ's own file storage) and open in a new tab.
    - Nothing here ever sends an email or posts anything. "Ask MISMO Media" only opens MISMO Media's
      request form in a new tab.
-   - An event someone is going to shows up as a trip choice in their Expenses (window.__hqEvents.tripsFor). */
+   - An event someone is going to shows up as a trip choice in their Expenses (window.__hqEvents.tripsFor).
+   - CN-023 (Nov 24, 2026): a Tasks tab (the event's own built-in dates listed, plus the team's own tasks: what, owner,
+     due date, done; open ones show in Coming Up), and a Role on each contact (pick one or type your own).
+     Panels filled in from Member 360 wait for Member 360 to say how a person may be looked up. */
 (function(){
 'use strict';
 if(window.__hqEvents && window.__hqEvents.destroy) window.__hqEvents.destroy();
@@ -25,6 +28,7 @@ const ROLES=['Attending','Speaking','Exhibiting','Sponsoring'];
 const TALK=['Idea','Submitted','Accepted','Confirmed','Declined','Done'];
 const CHAN=['LinkedIn','MISMO Matters','Website','Email','Event App','Other'];
 const GUSE=['Logo','Speaker Card','Banner','Social Post','Booth','Other'];
+const CROLE=['Speaker','Panelist','Moderator','Organizer','Sponsor Contact','Exhibitor','Attendee','Other'];
 const PAL=['#2477b8','#2bb673','#9b8cf0','#e8833a','#22b8cf','#e86f5a','#f2b134','#5aa9e6','#1baf7a','#d6336c'];
 const M={list:null, sub:false, listeners:[]};
 const P={el:null, filter:'up', q:'', who:'', panel:null};
@@ -70,7 +74,7 @@ const safeUrl=u=>{ u=String(u||'').trim(); if(!u) return ''; if(!/^https?:\/\//i
 function start(){ if(M.sub || !S.db || !S.db.collection) return; M.sub=true;
   try{ S.db.collection(COLL).onSnapshot(snap=>{ const L=[]; (snap && snap.docs ? snap.docs : []).forEach(d=>{ let v=null; try{ v=JSON.parse(JSON.stringify(d.data()||{})); }catch(e){} if(v && v.name){ v.id=v.id||d.id; fix(v); L.push(v); } });
       M.list=L; notify(); }, e=>{ console.error('Industry Events', e); if(!M.list){ M.list=[]; notify(); } }); }catch(e){ console.error(e); M.list=M.list||[]; } }
-function fix(v){ ['people','talks','promo','graphics','contacts','roles'].forEach(k=>{ if(!Array.isArray(v[k])) v[k]=[]; }); if(STATUS.indexOf(v.status)<0) v.status='Considering'; return v; }
+function fix(v){ ['people','talks','promo','graphics','contacts','roles','tasks'].forEach(k=>{ if(!Array.isArray(v[k])) v[k]=[]; }); if(STATUS.indexOf(v.status)<0) v.status='Considering'; return v; }
 function save(ev, msg, undoTo){ ev=fix(clone(ev)); ev.by=me(); ev.at=Date.now(); if(!ev.created){ ev.created=ev.at; ev.createdBy=me(); }
   const L=(M.list||[]).filter(x=>x.id!==ev.id); L.push(ev); M.list=L; notify();
   return Promise.resolve().then(()=>S.db.collection(COLL).doc(ev.id).set(ev)).then(()=>{ if(msg) toast(msg, undoTo ? ()=>save(undoTo, 'Put back the way it was.') : null); return true; },
@@ -89,6 +93,7 @@ function dueItems(L, days){ const out=[]; const add=(d, t, ev, k)=>{ const n=day
     if(ev.regBy) add(ev.regBy, 'Register for '+ev.name, ev, 'reg');
     ev.talks.forEach(t=>{ if(t.due && (t.status==='Idea' || !t.status)) add(t.due, 'Speaking proposal due: '+(t.title||ev.name), ev, 'talk'); });
     ev.promo.forEach(p=>{ if(p.due && !p.done) add(p.due, (p.t||'Promotion step')+' · '+ev.name, ev, 'promo'); });
+    ev.tasks.forEach(t=>{ if(t.due && !t.done) add(t.due, (t.t||'Task')+' · '+ev.name+(t.who?' ('+first(t.who)+')':''), ev, 'task'); });
     if(ev.status==='Going' && ev.start) add(ev.start, ev.name+' starts', ev, 'start'); });
   return out.sort((a,b)=>a.d.localeCompare(b.d)); }
 
@@ -209,7 +214,7 @@ css.textContent=`
 .ev-pb{container-type:inline-size}
 /* rows and the details grid fit the panel's own width: one line per row when there's room, two columns when there isn't */
 .ev-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-.ev-row.ppl,.ev-row.talk,.ev-row.promo,.ev-row.con{grid-template-columns:repeat(2,minmax(0,1fr))}
+.ev-row.ppl,.ev-row.talk,.ev-row.promo,.ev-row.con,.ev-row.task{grid-template-columns:repeat(2,minmax(0,1fr))}
 .ev-row .rm{justify-self:end}
 .ev-row .ckc{display:flex;align-items:center;height:36px;white-space:nowrap}
 .ev-row .note{grid-column:1/-1}
@@ -218,8 +223,11 @@ css.textContent=`
   .ev-row.ppl{grid-template-columns:minmax(130px,1.3fr) minmax(118px,1fr) minmax(118px,1fr) auto auto minmax(100px,1fr) 36px}
   .ev-row.talk{grid-template-columns:minmax(150px,2fr) minmax(120px,1fr) minmax(118px,1fr) minmax(100px,1fr) minmax(118px,1fr) minmax(80px,.8fr) 36px}
   .ev-row.promo{grid-template-columns:auto minmax(150px,2.6fr) minmax(110px,1fr) minmax(118px,1fr) minmax(100px,.9fr) minmax(100px,1fr) 36px}
-  .ev-row.con{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .ev-row.con{grid-template-columns:repeat(5,minmax(0,1fr)) 36px}.ev-row.con .rm{grid-column:6;grid-row:1}
+  .ev-row.task{grid-template-columns:auto minmax(180px,2.6fr) minmax(120px,1fr) minmax(118px,1fr) 36px}
 }
+.ev-bi{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:8px;background:var(--surface);padding:4px 12px}
+.ev-bi .ev-due.done .tx{color:var(--ink-3);text-decoration:line-through}
 .ev-drop{border:2px dashed var(--border-strong);border-radius:10px;padding:18px;text-align:center;color:var(--ink-2);background:var(--surface);cursor:pointer;transition:border-color .2s,background .2s}
 .ev-drop.over{border-color:#74bfeb;background:var(--sky-wash,#e8f4fb)}
 .ev-drop b{color:var(--ink)}
@@ -297,7 +305,7 @@ function draw(){ const el=P.el; if(!el || !el.isConnected && el.childNodes.lengt
   /* what's due */
   const db=h('div','ev-box ev-dues'); db.appendChild(h('h3',null,'Coming Up'));
   const D=dueItems(L, 60);
-  if(D.length) D.slice(0,12).forEach(x=>{ const r=btn('ev-due', null, ()=>openPanel(x.ev.id, x.k==='talk'?'talks':x.k==='promo'?'promo':'details')); const dd=h('span','dd'+(x.n<0?' late':x.n<=7?' soon':''), x.n<0 ? 'Past due' : x.n===0 ? 'Today' : fmt(x.d)); r.appendChild(dd);
+  if(D.length) D.slice(0,12).forEach(x=>{ const r=btn('ev-due', null, ()=>openPanel(x.ev.id, x.k==='talk'?'talks':x.k==='promo'?'promo':x.k==='task'?'tasks':'details')); const dd=h('span','dd'+(x.n<0?' late':x.n<=7?' soon':''), x.n<0 ? 'Past due' : x.n===0 ? 'Today' : fmt(x.d)); r.appendChild(dd);
     const tx=h('span','tx', x.t); tx.appendChild(h('small',null, when(x.n))); r.appendChild(tx); db.appendChild(r); });
   else { const nx=Up[0]; db.appendChild(h('p','hint', nx ? 'Nothing due in the next 60 days. Next on the list: '+nx.name+(nx.start?' ('+fmtY(nx.start)+')':'')+'.' : 'Registration deadlines, speaking proposals and promotion steps show here as they come up.')); }
   right.appendChild(db);
@@ -311,7 +319,7 @@ function draw(){ const el=P.el; if(!el || !el.isConnected && el.childNodes.lengt
   const ra=h('a','ev-btn', 'Ask MISMO Media'); ra.href=REQUEST_FORM; ra.target='_blank'; ra.rel='noopener'; mb.appendChild(ra); right.appendChild(mb);
 }
 function matches(e){ const q=P.q.trim().toLowerCase(); if(P.who && !e.people.some(p=>p.who===P.who) && !e.talks.some(t=>t.who===P.who)) return false; if(!q) return true;
-  const hay=[e.name, e.host, e.city, e.venue, e.kind, e.notes].concat(e.people.map(p=>pname(p.who))).concat(e.contacts.map(c=>[c.name,c.company,c.title].join(' '))).concat(e.talks.map(t=>t.title)).join(' ').toLowerCase();
+  const hay=[e.name, e.host, e.city, e.venue, e.kind, e.notes].concat(e.people.map(p=>pname(p.who))).concat(e.contacts.map(c=>[c.name,c.company,c.title,c.role].join(' '))).concat(e.talks.map(t=>t.title)).concat(e.tasks.map(t=>t.t)).join(' ').toLowerCase();
   return q.split(/\s+/).every(w=>hay.indexOf(w)>=0); }
 function pick(){ const A=(M.list||[]); const f=P.filter;
   const L= f==='aside' ? A.filter(e=>e.gone) : A.filter(e=>!e.gone);
@@ -350,12 +358,12 @@ function card(e){ const c=btn('ev-card'+(e.status==='Not Going'||e.gone?' dim':'
   /* the right side: who's going and the counts, stacked; under the tags when the list is narrow */
   const n0=e.people.filter(p=>p.who).length; if(n0) s2.appendChild(h('small','ev-gn', n0+' going'));
   const cn=h('div','ev-cnt'); const pr=e.promo.length; const add=(n,l)=>{ if(!n && n!==0) return; const s=h('span'); s.appendChild(h('b',null,String(n))); s.append(' '+l); cn.appendChild(s); };
-  if(e.talks.length) add(e.talks.length, e.talks.length===1?'talk':'talks'); if(pr) add(e.promo.filter(p=>p.done).length+'/'+pr, 'promoted'); if(e.graphics.length) add(e.graphics.length, e.graphics.length===1?'graphic':'graphics'); if(e.contacts.length) add(e.contacts.length, e.contacts.length===1?'contact':'contacts');
+  if(e.talks.length) add(e.talks.length, e.talks.length===1?'talk':'talks'); if(pr) add(e.promo.filter(p=>p.done).length+'/'+pr, 'promoted'); if(e.graphics.length) add(e.graphics.length, e.graphics.length===1?'graphic':'graphics'); if(e.tasks.length) add(e.tasks.filter(t=>t.done).length+'/'+e.tasks.length, 'tasks done'); if(e.contacts.length) add(e.contacts.length, e.contacts.length===1?'contact':'contacts');
   if(cn.childNodes.length) s2.appendChild(cn); if(s2.childNodes.length) c.appendChild(s2);
   return c; }
 
 /* ---------- the right-hand panel: one event, every part of it, with one Save ---------- */
-const TABS=[['details','Details'],['people','Who’s Going'],['talks','Speaking'],['promo','Promotion'],['graphics','Graphics'],['contacts','Contacts']];
+const TABS=[['details','Details'],['people','Who’s Going'],['talks','Speaking'],['promo','Promotion'],['tasks','Tasks'],['graphics','Graphics'],['contacts','Contacts']];
 function openNew(){ const ev=fix({id:uid('ev'), name:'', status:'Considering', kind:'Conference', roles:['Attending']}); openPanel(null, 'details', ev); }
 function openPanel(id, tab, fresh){ closePanel();
   const src=fresh || (M.list||[]).find(e=>e.id===id); if(!src) return;
@@ -378,11 +386,11 @@ function paintPanel(){ const st=P.panel; if(!st) return; const ev=st.ev, pn=st.p
   tt.appendChild(h('h2',null, ev.name || 'Name the Event'));
   tt.appendChild(h('div','meta', [span(ev.start, ev.end), [ev.city, ev.venue].filter(Boolean).join(' · '), ev.status].filter(Boolean).join('  ·  ') || 'Add the dates and where it is'));
   top.appendChild(tt); const x=btn('ev-x', '×', tryClose); x.setAttribute('aria-label','Close'); top.appendChild(x); ph.appendChild(top);
-  const tabs=h('div','ev-tabs'); TABS.forEach(t=>{ const n={people:ev.people.length, talks:ev.talks.length, promo:ev.promo.length, graphics:ev.graphics.length, contacts:ev.contacts.length}[t[0]];
+  const tabs=h('div','ev-tabs'); TABS.forEach(t=>{ const n={people:ev.people.length, talks:ev.talks.length, promo:ev.promo.length, tasks:ev.tasks.filter(x=>!x.done).length, graphics:ev.graphics.length, contacts:ev.contacts.length}[t[0]];
     const b=btn(st.tab===t[0]?'on':'', t[1], ()=>{ collect(); st.tab=t[0]; paintPanel(); }); if(n) b.appendChild(h('i',null,String(n))); tabs.appendChild(b); }); ph.appendChild(tabs);
   pn.appendChild(ph);
   const body=h('div','ev-pb'); pn.appendChild(body); st.body=body; st.get=null;
-  ({details:pDetails, people:pPeople, talks:pTalks, promo:pPromo, graphics:pGraphics, contacts:pContacts}[st.tab]||pDetails)(body, ev);
+  ({details:pDetails, people:pPeople, talks:pTalks, promo:pPromo, tasks:pTasks, graphics:pGraphics, contacts:pContacts}[st.tab]||pDetails)(body, ev);
   body.addEventListener('input', markDirty); body.addEventListener('change', markDirty);
   const pf=h('div','ev-pf');
   const sv=btn('ev-btn pri', st.isNew ? 'Save the Event' : 'Save Changes', doSave); pf.appendChild(sv);
@@ -396,7 +404,7 @@ function collect(){ const st=P.panel; if(st && st.get){ try{ st.get(st.ev); }cat
 function doSave(){ const st=P.panel; if(!st) return; collect(); const ev=st.ev;
   ev.name=String(ev.name||'').trim(); if(!ev.name){ st.tab='details'; paintPanel(); toast('Give the event a name first.'); const f=st.pn.querySelector('.ev-pb input'); if(f) f.focus(); return; }
   if(ev.start && ev.end && ev.end<ev.start){ st.tab='details'; paintPanel(); toast('The end date is before the start date.'); return; }
-  ev.people=ev.people.filter(p=>p.who); ev.talks=ev.talks.filter(t=>t.title||t.who); ev.promo=ev.promo.filter(p=>p.t); ev.contacts=ev.contacts.filter(c=>c.name||c.company||c.email);
+  ev.people=ev.people.filter(p=>p.who); ev.talks=ev.talks.filter(t=>t.title||t.who); ev.promo=ev.promo.filter(p=>p.t); ev.contacts=ev.contacts.filter(c=>c.name||c.company||c.email); ev.tasks=ev.tasks.filter(t=>t.t);
   const prev=st.orig; save(ev, st.isNew ? '“'+ev.name+'” is on the list.' : 'Saved.', prev).then(ok=>{ if(!ok) return; st.orig=clone(ev); st.ev=clone(ev); st.dirty=false; st.isNew=false; paintPanel(); }); }
 
 /* Details */
@@ -455,13 +463,33 @@ function pPromo(b, ev){
     return {el:r, get:()=>({id:p.id||uid('p'), done:dn.box.checked, t:t.value.trim(), ch:ch.value, due:due.get(), who:who.value, link:lk.value.trim()})}; }, ()=>({id:uid('p'), ch:'LinkedIn', done:false}));
   P.panel.get=ev2=>{ ev2.promo=get(); }; }
 function pContacts(b, ev){
+  const dl=h('datalist'); dl.id='ev-crole-list'; CROLE.forEach(x=>dl.appendChild(new Option(x))); b.appendChild(dl);
   const get=rowsSec(b, 'Contacts', 'People we meet or need to reach at this event.', 'Add a Contact', ev.contacts, c=>{ const r=h('div','ev-row con');
-    const n=field(r, 'Name', inp('text', c.name)); const co=field(r, 'Company', inp('text', c.company)); const ti=field(r, 'Title', inp('text', c.title)); const em=field(r, 'Email', inp('email', c.email));
+    const n=field(r, 'Name', inp('text', c.name)); const ro=field(r, 'Role', inp('text', c.role, 'Pick or type')); ro.setAttribute('list', dl.id); ro.autocomplete='off'; const co=field(r, 'Company', inp('text', c.company)); const ti=field(r, 'Title', inp('text', c.title)); const em=field(r, 'Email', inp('email', c.email));
     const ph=field(r, 'Phone', inp('tel', c.phone)); const by=field(r, 'Met By', sel(teamOpts(), c.by, 'Pick a Person'));
     const cc=h('div','ckc'); const fu=chk('Follow Up', c.follow); cc.appendChild(fu); field(r, ' ', cc);
     const nt=h('label','ev-f note'); nt.appendChild(h('span',null,'Note')); const ni=inp('text', c.note, 'What you talked about, what they asked for'); nt.appendChild(ni); r.appendChild(nt);
-    return {el:r, note:nt, get:()=>({id:c.id||uid('c'), name:n.value.trim(), company:co.value.trim(), title:ti.value.trim(), email:em.value.trim(), phone:ph.value.trim(), by:by.value, follow:fu.box.checked, note:ni.value.trim()})}; }, ()=>({id:uid('c'), by:me()}));
+    return {el:r, note:nt, get:()=>({id:c.id||uid('c'), name:n.value.trim(), company:co.value.trim(), title:ti.value.trim(), email:em.value.trim(), role:ro.value.trim(), phone:ph.value.trim(), by:by.value, follow:fu.box.checked, note:ni.value.trim()})}; }, ()=>({id:uid('c'), by:me()}));
   P.panel.get=ev2=>{ ev2.contacts=get(); }; }
+
+/* Tasks (CN-023): the event's built-in dates, listed (each changes on its own tab), and the team's own tasks */
+function builtIns(ev){ const L=[];
+  if(ev.regBy) L.push({d:ev.regBy, t:'Register for the event', tab:'details'});
+  ev.talks.forEach(t=>{ if(t.due) L.push({d:t.due, t:'Speaking proposal due: '+(t.title||'a session'), tab:'talks', done:!!t.status && t.status!=='Idea'}); });
+  ev.promo.forEach(p=>{ if(p.t) L.push({d:p.due||'', t:p.t, tab:'promo', done:!!p.done, who:p.who}); });
+  return L.sort((a,b)=>(a.d||'9999').localeCompare(b.d||'9999')); }
+function pTasks(b, ev){
+  const B=builtIns(ev);
+  if(B.length){ const hd=h('div','ev-sec'); hd.appendChild(h('h3',null,'From the Event')); hd.appendChild(h('span','hint','Registration, speaking proposals and promotion steps. Change these on their own tabs.')); b.appendChild(hd);
+    const bx=h('div','ev-bi'); B.forEach(x=>{ const r=btn('ev-due'+(x.done?' done':''), null, ()=>{ collect(); P.panel.tab=x.tab; paintPanel(); }); const n=daysTo(x.d);
+      r.appendChild(h('span','dd'+(!x.done && n!=null && n<0?' late':!x.done && n!=null && n<=7?' soon':''), x.done ? 'Done' : x.d ? fmt(x.d) : 'No date'));
+      const tx=h('span','tx', x.t); tx.appendChild(h('small',null, [x.who ? first(x.who) : '', x.done || !x.d ? '' : when(n)].filter(Boolean).join(' · '))); r.appendChild(tx); bx.appendChild(r); });
+    b.appendChild(bx); }
+  const get=rowsSec(b, 'Our Own Tasks', 'Anything else to do for this event. Open ones with a due date show in Coming Up.', 'Add a Task', ev.tasks, t=>{ const r=h('div','ev-row task');
+    const c=h('div','ckc'); const dn=chk('Done', t.done); c.appendChild(dn); field(r, ' ', c);
+    const w=field(r, 'Task', inp('text', t.t, 'e.g. Order booth carpet')); const who=field(r, 'Owner', sel(teamOpts(), t.who, 'Anyone')); const due=field(r, 'Due', dateField(t.due));
+    return {el:r, get:()=>({id:t.id||uid('k'), t:w.value.trim(), who:who.value, due:due.get(), done:dn.box.checked})}; }, ()=>({id:uid('k'), who:me(), done:false}));
+  P.panel.get=ev2=>{ ev2.tasks=get(); }; }
 
 /* Graphics: uploaded right here; each opens in a new tab */
 const thumbs={};
@@ -512,7 +540,7 @@ function tile(el, size){ start(); const box=h('div','ev-tile'); el.appendChild(b
 function tripsFor(who){ return live().filter(e=>!e.example && e.status==='Going' && e.people.some(p=>p.who===who)).filter(e=>{ const n=daysTo(endOf(e)); return n==null || n>=-60; })
   .sort(byStart).map(e=>{ const p=e.people.find(x=>x.who===who)||{}; return {trip:e.name, from:p.from||e.start||'', to:p.to||e.end||e.start||''}; }); }
 
-window.__hqEvents={ version:'1.0', page, tile, start, tripsFor, open:openPanel,
+window.__hqEvents={ version:'1.1', page, tile, start, tripsFor, open:openPanel,
   get list(){ return M.list; },
   onChange(f){ M.listeners.push(f); return ()=>{ M.listeners=M.listeners.filter(x=>x!==f); }; },
   redraw: draw,
