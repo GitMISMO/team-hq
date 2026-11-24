@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261124e';
+var BUILD='20261124f';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -6161,7 +6161,11 @@ MODS.push(function(){
    - An event someone is going to shows up as a trip choice in their Expenses (window.__hqEvents.tripsFor).
    - CN-023 (Nov 24, 2026): a Tasks tab (the event's own built-in dates listed, plus the team's own tasks: what, owner,
      due date, done; open ones show in Coming Up), and a Role on each contact (pick one or type your own).
-     Panels filled in from Member 360 wait for Member 360 to say how a person may be looked up. */
+     CN-024 (Nov 24, 2026): a Panels tab. Each panel (title, date, time, note) lists its people (name, role on the panel,
+     title, company, email, member or not); "Find in Member 360" fills them in from Member 360's people list
+     (member-360/data/peoplelist), read only with the signed-in person's own sign-in. The record key (k) and Aptify
+     Company ID (cid) stay with the panelist so it can be matched again. Never writes to Member 360 or uses its flows
+     or keys. With no Member 360 access (401, 403) or no list yet (404), the details are typed in. */
 (function(){
 'use strict';
 if(window.__hqEvents && window.__hqEvents.destroy) window.__hqEvents.destroy();
@@ -6177,6 +6181,7 @@ const ROLES=['Attending','Speaking','Exhibiting','Sponsoring'];
 const TALK=['Idea','Submitted','Accepted','Confirmed','Declined','Done'];
 const CHAN=['LinkedIn','MISMO Matters','Website','Email','Event App','Other'];
 const GUSE=['Logo','Speaker Card','Banner','Social Post','Booth','Other'];
+const PROLE=['Panelist','Moderator','Keynote','Speaker','Other'];
 const CROLE=['Speaker','Panelist','Moderator','Organizer','Sponsor Contact','Exhibitor','Attendee','Other'];
 const PAL=['#2477b8','#2bb673','#9b8cf0','#e8833a','#22b8cf','#e86f5a','#f2b134','#5aa9e6','#1baf7a','#d6336c'];
 const M={list:null, sub:false, listeners:[]};
@@ -6223,7 +6228,7 @@ const safeUrl=u=>{ u=String(u||'').trim(); if(!u) return ''; if(!/^https?:\/\//i
 function start(){ if(M.sub || !S.db || !S.db.collection) return; M.sub=true;
   try{ S.db.collection(COLL).onSnapshot(snap=>{ const L=[]; (snap && snap.docs ? snap.docs : []).forEach(d=>{ let v=null; try{ v=JSON.parse(JSON.stringify(d.data()||{})); }catch(e){} if(v && v.name){ v.id=v.id||d.id; fix(v); L.push(v); } });
       M.list=L; notify(); }, e=>{ console.error('Industry Events', e); if(!M.list){ M.list=[]; notify(); } }); }catch(e){ console.error(e); M.list=M.list||[]; } }
-function fix(v){ ['people','talks','promo','graphics','contacts','roles','tasks'].forEach(k=>{ if(!Array.isArray(v[k])) v[k]=[]; }); if(STATUS.indexOf(v.status)<0) v.status='Considering'; return v; }
+function fix(v){ ['people','talks','promo','graphics','contacts','roles','tasks','panels'].forEach(k=>{ if(!Array.isArray(v[k])) v[k]=[]; }); v.panels.forEach(p=>{ if(!Array.isArray(p.people)) p.people=[]; }); if(STATUS.indexOf(v.status)<0) v.status='Considering'; return v; }
 function save(ev, msg, undoTo){ ev=fix(clone(ev)); ev.by=me(); ev.at=Date.now(); if(!ev.created){ ev.created=ev.at; ev.createdBy=me(); }
   const L=(M.list||[]).filter(x=>x.id!==ev.id); L.push(ev); M.list=L; notify();
   return Promise.resolve().then(()=>S.db.collection(COLL).doc(ev.id).set(ev)).then(()=>{ if(msg) toast(msg, undoTo ? ()=>save(undoTo, 'Put back the way it was.') : null); return true; },
@@ -6374,7 +6379,31 @@ css.textContent=`
   .ev-row.promo{grid-template-columns:auto minmax(150px,2.6fr) minmax(110px,1fr) minmax(118px,1fr) minmax(100px,.9fr) minmax(100px,1fr) 36px}
   .ev-row.con{grid-template-columns:repeat(5,minmax(0,1fr)) 36px}.ev-row.con .rm{grid-column:6;grid-row:1}
   .ev-row.task{grid-template-columns:auto minmax(180px,2.6fr) minmax(120px,1fr) minmax(118px,1fr) 36px}
+  .ev-pan .hd{grid-template-columns:minmax(200px,2.4fr) minmax(118px,1fr) minmax(90px,.8fr) minmax(160px,1.6fr) auto}
+  .ev-pan .hd .ev-f.w2{grid-column:auto}
+  .ev-row.pp{grid-template-columns:minmax(0,1.2fr) minmax(0,.9fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr) auto 36px}
+  .ev-row.pp .rm{grid-column:7;grid-row:2}
 }
+.ev-pan{border:1px solid var(--border);border-radius:10px;background:var(--surface-2);padding:12px;display:flex;flex-direction:column;gap:10px}
+.ev-pan+.ev-pan{margin-top:12px}
+.ev-pan .hd{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:end}
+.ev-pan .hd .ev-f.w2{grid-column:1/-1}
+.ev-pan .ev-f input{font:inherit;font-size:13.5px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);padding:0 10px;height:36px;min-width:0;width:100%;box-sizing:border-box}
+.ev-pan .ac{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ev-row.pp{grid-template-columns:repeat(2,minmax(0,1fr))}
+.ev-row.pp .fd{grid-column:1/-1;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ev-find{position:relative;flex:1 1 260px;min-width:0}
+.ev-find input{font:inherit;font-size:13.5px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);padding:0 10px;height:34px;width:100%;box-sizing:border-box}
+.ev-res{position:absolute;left:0;right:0;top:100%;margin-top:2px;z-index:5;background:var(--surface);border:1px solid var(--border-strong);border-radius:8px;box-shadow:0 14px 30px -18px rgba(6,32,47,.6);max-height:300px;overflow:auto;display:none}
+.ev-res.open{display:block}
+.ev-res button{display:block;width:100%;text-align:left;font:inherit;font-size:13px;background:none;border:0;border-top:1px solid var(--border);padding:7px 10px;cursor:pointer;color:var(--ink)}
+.ev-res button:first-child{border-top:0}.ev-res button.on,.ev-res button:hover{background:var(--sky-wash,#e8f4fb)}
+:root[data-theme="dark"] .ev-res button.on,:root[data-theme="dark"] .ev-res button:hover{background:rgba(116,191,235,.16)}
+.ev-res button small{display:block;color:var(--ink-3);font-size:11.5px}
+.ev-res p{margin:0;padding:8px 10px;font-size:12.5px;color:var(--ink-3)}
+.ev-m360{font-size:12px;color:var(--ink-3)}
+.ev-lk{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;padding:2px 7px;border-radius:4px;background:var(--good-soft,#e3f6ec);color:var(--good,#067647)}
+.ev-lk button{border:0;background:none;color:inherit;font:inherit;cursor:pointer;padding:0 2px}
 .ev-bi{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:8px;background:var(--surface);padding:4px 12px}
 .ev-bi .ev-due.done .tx{color:var(--ink-3);text-decoration:line-through}
 .ev-drop{border:2px dashed var(--border-strong);border-radius:10px;padding:18px;text-align:center;color:var(--ink-2);background:var(--surface);cursor:pointer;transition:border-color .2s,background .2s}
@@ -6468,7 +6497,7 @@ function draw(){ const el=P.el; if(!el || !el.isConnected && el.childNodes.lengt
   const ra=h('a','ev-btn', 'Ask MISMO Media'); ra.href=REQUEST_FORM; ra.target='_blank'; ra.rel='noopener'; mb.appendChild(ra); right.appendChild(mb);
 }
 function matches(e){ const q=P.q.trim().toLowerCase(); if(P.who && !e.people.some(p=>p.who===P.who) && !e.talks.some(t=>t.who===P.who)) return false; if(!q) return true;
-  const hay=[e.name, e.host, e.city, e.venue, e.kind, e.notes].concat(e.people.map(p=>pname(p.who))).concat(e.contacts.map(c=>[c.name,c.company,c.title,c.role].join(' '))).concat(e.talks.map(t=>t.title)).concat(e.tasks.map(t=>t.t)).join(' ').toLowerCase();
+  const hay=[e.name, e.host, e.city, e.venue, e.kind, e.notes].concat(e.people.map(p=>pname(p.who))).concat(e.contacts.map(c=>[c.name,c.company,c.title,c.role].join(' '))).concat(e.talks.map(t=>t.title)).concat(e.tasks.map(t=>t.t)).concat(e.panels.map(p=>[p.title].concat(p.people.map(x=>[x.name,x.company,x.title].join(' '))).join(' '))).join(' ').toLowerCase();
   return q.split(/\s+/).every(w=>hay.indexOf(w)>=0); }
 function pick(){ const A=(M.list||[]); const f=P.filter;
   const L= f==='aside' ? A.filter(e=>e.gone) : A.filter(e=>!e.gone);
@@ -6507,12 +6536,12 @@ function card(e){ const c=btn('ev-card'+(e.status==='Not Going'||e.gone?' dim':'
   /* the right side: who's going and the counts, stacked; under the tags when the list is narrow */
   const n0=e.people.filter(p=>p.who).length; if(n0) s2.appendChild(h('small','ev-gn', n0+' going'));
   const cn=h('div','ev-cnt'); const pr=e.promo.length; const add=(n,l)=>{ if(!n && n!==0) return; const s=h('span'); s.appendChild(h('b',null,String(n))); s.append(' '+l); cn.appendChild(s); };
-  if(e.talks.length) add(e.talks.length, e.talks.length===1?'talk':'talks'); if(pr) add(e.promo.filter(p=>p.done).length+'/'+pr, 'promoted'); if(e.graphics.length) add(e.graphics.length, e.graphics.length===1?'graphic':'graphics'); if(e.tasks.length) add(e.tasks.filter(t=>t.done).length+'/'+e.tasks.length, 'tasks done'); if(e.contacts.length) add(e.contacts.length, e.contacts.length===1?'contact':'contacts');
+  if(e.talks.length) add(e.talks.length, e.talks.length===1?'talk':'talks'); if(pr) add(e.promo.filter(p=>p.done).length+'/'+pr, 'promoted'); if(e.graphics.length) add(e.graphics.length, e.graphics.length===1?'graphic':'graphics'); if(e.tasks.length) add(e.tasks.filter(t=>t.done).length+'/'+e.tasks.length, 'tasks done'); if(e.panels.length) add(e.panels.length, e.panels.length===1?'panel':'panels'); if(e.contacts.length) add(e.contacts.length, e.contacts.length===1?'contact':'contacts');
   if(cn.childNodes.length) s2.appendChild(cn); if(s2.childNodes.length) c.appendChild(s2);
   return c; }
 
 /* ---------- the right-hand panel: one event, every part of it, with one Save ---------- */
-const TABS=[['details','Details'],['people','Who’s Going'],['talks','Speaking'],['promo','Promotion'],['tasks','Tasks'],['graphics','Graphics'],['contacts','Contacts']];
+const TABS=[['details','Details'],['people','Who’s Going'],['talks','Speaking'],['panels','Panels'],['promo','Promotion'],['tasks','Tasks'],['graphics','Graphics'],['contacts','Contacts']];
 function openNew(){ const ev=fix({id:uid('ev'), name:'', status:'Considering', kind:'Conference', roles:['Attending']}); openPanel(null, 'details', ev); }
 function openPanel(id, tab, fresh){ closePanel();
   const src=fresh || (M.list||[]).find(e=>e.id===id); if(!src) return;
@@ -6526,7 +6555,7 @@ function openPanel(id, tab, fresh){ closePanel();
 function tryClose(){ const st=P.panel; if(!st) return; if(st.dirty && !confirmLeave()) return; closePanel(); }
 function confirmLeave(){ return window.confirm('You have changes that aren’t saved. Close without saving them?'); }
 function closePanel(){ const st=P.panel; if(!st) return; st.scrim.remove(); st.pn.remove(); P.panel=null; }
-const onKey=e=>{ if(e.key==='Escape' && P.panel){ e.stopPropagation(); tryClose(); } };
+const onKey=e=>{ if(e.key==='Escape' && P.panel){ const r=P.panel.pn.querySelector('.ev-res.open'); if(r){ e.stopPropagation(); r.classList.remove('open'); return; } e.stopPropagation(); tryClose(); } };
 document.addEventListener('keydown', onKey, true);
 function markDirty(){ const st=P.panel; if(!st) return; st.dirty=true; const m=st.pn.querySelector('.ev-pf .msg'); if(m){ m.textContent='Changes not saved yet'; m.className='msg dirty'; } }
 function paintPanel(){ const st=P.panel; if(!st) return; const ev=st.ev, pn=st.pn; pn.textContent='';
@@ -6535,11 +6564,11 @@ function paintPanel(){ const st=P.panel; if(!st) return; const ev=st.ev, pn=st.p
   tt.appendChild(h('h2',null, ev.name || 'Name the Event'));
   tt.appendChild(h('div','meta', [span(ev.start, ev.end), [ev.city, ev.venue].filter(Boolean).join(' · '), ev.status].filter(Boolean).join('  ·  ') || 'Add the dates and where it is'));
   top.appendChild(tt); const x=btn('ev-x', '×', tryClose); x.setAttribute('aria-label','Close'); top.appendChild(x); ph.appendChild(top);
-  const tabs=h('div','ev-tabs'); TABS.forEach(t=>{ const n={people:ev.people.length, talks:ev.talks.length, promo:ev.promo.length, tasks:ev.tasks.filter(x=>!x.done).length, graphics:ev.graphics.length, contacts:ev.contacts.length}[t[0]];
+  const tabs=h('div','ev-tabs'); TABS.forEach(t=>{ const n={people:ev.people.length, talks:ev.talks.length, panels:ev.panels.length, promo:ev.promo.length, tasks:ev.tasks.filter(x=>!x.done).length, graphics:ev.graphics.length, contacts:ev.contacts.length}[t[0]];
     const b=btn(st.tab===t[0]?'on':'', t[1], ()=>{ collect(); st.tab=t[0]; paintPanel(); }); if(n) b.appendChild(h('i',null,String(n))); tabs.appendChild(b); }); ph.appendChild(tabs);
   pn.appendChild(ph);
   const body=h('div','ev-pb'); pn.appendChild(body); st.body=body; st.get=null;
-  ({details:pDetails, people:pPeople, talks:pTalks, promo:pPromo, tasks:pTasks, graphics:pGraphics, contacts:pContacts}[st.tab]||pDetails)(body, ev);
+  ({details:pDetails, people:pPeople, talks:pTalks, panels:pPanels, promo:pPromo, tasks:pTasks, graphics:pGraphics, contacts:pContacts}[st.tab]||pDetails)(body, ev);
   body.addEventListener('input', markDirty); body.addEventListener('change', markDirty);
   const pf=h('div','ev-pf');
   const sv=btn('ev-btn pri', st.isNew ? 'Save the Event' : 'Save Changes', doSave); pf.appendChild(sv);
@@ -6554,6 +6583,7 @@ function doSave(){ const st=P.panel; if(!st) return; collect(); const ev=st.ev;
   ev.name=String(ev.name||'').trim(); if(!ev.name){ st.tab='details'; paintPanel(); toast('Give the event a name first.'); const f=st.pn.querySelector('.ev-pb input'); if(f) f.focus(); return; }
   if(ev.start && ev.end && ev.end<ev.start){ st.tab='details'; paintPanel(); toast('The end date is before the start date.'); return; }
   ev.people=ev.people.filter(p=>p.who); ev.talks=ev.talks.filter(t=>t.title||t.who); ev.promo=ev.promo.filter(p=>p.t); ev.contacts=ev.contacts.filter(c=>c.name||c.company||c.email); ev.tasks=ev.tasks.filter(t=>t.t);
+  ev.panels=ev.panels.map(p=>Object.assign(p, {people:(p.people||[]).filter(x=>x.name||x.email)})).filter(p=>p.title||p.people.length);
   const prev=st.orig; save(ev, st.isNew ? '“'+ev.name+'” is on the list.' : 'Saved.', prev).then(ok=>{ if(!ok) return; st.orig=clone(ev); st.ev=clone(ev); st.dirty=false; st.isNew=false; paintPanel(); }); }
 
 /* Details */
@@ -6640,6 +6670,80 @@ function pTasks(b, ev){
     return {el:r, get:()=>({id:t.id||uid('k'), t:w.value.trim(), who:who.value, due:due.get(), done:dn.box.checked})}; }, ()=>({id:uid('k'), who:me(), done:false}));
   P.panel.get=ev2=>{ ev2.tasks=get(); }; }
 
+/* Panels (CN-024): who is on each panel, filled in from Member 360's people list.
+   Member 360 keeps member-360/data/peoplelist for this (read only here): {updated, companies:[{k, n, cid, m, l, p:[[name, title, email]]}]}.
+   Read with the signed-in person's own sign-in; never written to, and none of Member 360's flows or keys are used.
+   401, 403 (no Member 360 access) or 404 (not written yet): the details are typed in instead. */
+const PL={state:'', list:null, at:0, wait:null};
+function peopleList(){
+  if(PL.state==='ok' && Date.now()-PL.at<30*60e3) return Promise.resolve(PL.list);
+  if(PL.state==='none') return Promise.resolve(null);
+  if(PL.wait) return PL.wait;
+  const R=window.__hqRelay, RS=window.ResourcesSession, tok=RS && RS.token && RS.token(), base=R && R.config && R.config.RELAY_URL;
+  if(!base || !tok){ PL.state='none'; return Promise.resolve(null); }
+  PL.state='loading';
+  PL.wait=fetch(base+'/member-360/data/peoplelist', {method:'GET', cache:'no-store', headers:{'Authorization':'Bearer '+tok}})
+    .then(r=>{ if(r.status===401 || r.status===403 || r.status===404){ PL.state='none'; return null; }
+      if(!r.ok){ PL.state='error'; return null; }
+      return r.json().then(b=>{ const d=b && b.data; const L=[];
+        ((d && d.companies)||[]).forEach(c=>{ if(!c) return; (c.p||[]).forEach(x=>{ if(!Array.isArray(x) || !x[0]) return;
+          const o={name:String(x[0]||''), title:String(x[1]||''), email:String(x[2]||''), company:String(c.n||''), member:c.m===1, level:String(c.l||''), k:c.k==null?'':String(c.k), cid:c.cid==null?'':String(c.cid)};
+          o.hay=[o.name, o.company, o.email, o.title].join(' ').toLowerCase(); L.push(o); }); });
+        PL.list=L; PL.at=Date.now(); PL.state='ok'; return L; }); })
+    .catch(e=>{ console.error('Member 360 people list', e); PL.state='error'; return null; })
+    .then(L=>{ PL.wait=null; return L; });
+  return PL.wait; }
+function findPeople(q){ const W=String(q||'').toLowerCase().trim().split(/\s+/).filter(Boolean); if(!W.length || !PL.list) return [];
+  const out=[]; for(const o of PL.list){ if(W.every(w=>o.hay.indexOf(w)>=0)){ out.push(o); if(out.length>200) break; } }
+  const n=W.join(' '); return out.sort((a,b)=>(b.name.toLowerCase().startsWith(n)-a.name.toLowerCase().startsWith(n)) || a.name.localeCompare(b.name)).slice(0,8); }
+function m360Note(){ return PL.state==='none' ? 'Member 360 isn’t available, so type the details in.' : PL.state==='error' ? 'Couldn’t reach Member 360 just now, so type the details in.' : PL.state==='loading' ? 'Getting Member 360’s people list…' : ''; }
+function pPanels(b, ev){ const st=P.panel;
+  const hd=h('div','ev-sec'); hd.appendChild(h('h3',null,'Panels')); hd.appendChild(h('span','hint','Who is on each panel. Find someone in Member 360 to fill in their details, or type them in.')); b.appendChild(hd);
+  const note=h('p','ev-m360', m360Note()); b.appendChild(note);
+  const dl=h('datalist'); dl.id='ev-prole-list'; PROLE.forEach(x=>dl.appendChild(new Option(x))); b.appendChild(dl);
+  const pg=[];
+  const redo=fn=>{ collect(); fn(st.ev); st.dirty=true; paintPanel(); };
+  ev.panels.forEach((pa, pi)=>{ const box=h('div','ev-pan'); b.appendChild(box);
+    const top=h('div','hd'); box.appendChild(top);
+    const ti=field(top, 'Panel', inp('text', pa.title, 'e.g. AI in the Mortgage Process'), 'w2'); const dt=field(top, 'Date', dateField(pa.date)); const tm=field(top, 'Time', inp('text', pa.time, 'e.g. 10:30 AM'));
+    const nt=field(top, 'Note', inp('text', pa.note, 'The room, the track, who to contact'));
+    const rmp=btn('ev-btn warn', 'Remove Panel', ()=>{ if((pa.people||[]).length && !window.confirm('Remove this panel and its people?')) return; redo(E=>{ E.panels.splice(pi,1); }); }); top.appendChild(rmp);
+    const rows=h('div','ev-rows'); box.appendChild(rows); const getters=[];
+    (pa.people||[]).forEach(x=>{ const r=panRow(x, ()=>{ const i=getters.indexOf(r.get); if(i>=0) getters.splice(i,1); r.el.remove(); markDirty(); }); rows.appendChild(r.el); getters.push(r.get); });
+    const ac=h('div','ac'); ac.appendChild(btn('ev-btn', '+ Add a Person', ()=>redo(E=>{ E.panels[pi].people.push({id:uid('pp'), role:E.panels[pi].people.length ? 'Panelist' : 'Moderator'}); }))); box.appendChild(ac);
+    pg.push(()=>({id:pa.id||uid('pn'), title:ti.value.trim(), date:dt.get(), time:tm.value.trim(), note:nt.value.trim(), people:getters.map(g=>g())})); });
+  const ab=btn('ev-btn', '+ Add a Panel', ()=>redo(E=>{ E.panels.push({id:uid('pn'), title:'', date:'', time:'', people:[{id:uid('pp'), role:'Moderator'}]}); })); ab.style.marginTop='10px'; b.appendChild(ab);
+  st.get=ev2=>{ ev2.panels=pg.map(g=>g()); };
+  if(ev.panels.length && PL.state!=='ok' && PL.state!=='none') peopleList().then(()=>{ note.textContent=m360Note(); }); }
+function panRow(x, onRemove){ const r=h('div','ev-row pp'); let link={k:x.k||'', cid:x.cid||''};
+  const fd=h('div','fd'); r.appendChild(fd);
+  const fw=h('div','ev-find'); const q=h('input'); q.type='search'; q.placeholder='Find in Member 360: name, company or email'; q.setAttribute('aria-label','Find in Member 360'); q.autocomplete='off';
+  const res=h('div','ev-res'); res.setAttribute('role','listbox'); fw.appendChild(q); fw.appendChild(res); fd.appendChild(fw);
+  const lk=h('span','ev-lk'); fd.appendChild(lk);
+  const n=field(r, 'Name', inp('text', x.name)); const ro=field(r, 'Role on the Panel', inp('text', x.role, 'Pick or type')); ro.setAttribute('list','ev-prole-list'); ro.autocomplete='off';
+  const ti=field(r, 'Title', inp('text', x.title)); const co=field(r, 'Company', inp('text', x.company)); const em=field(r, 'Email', inp('email', x.email));
+  const cc=h('div','ckc'); const mb=chk('Member', x.member); cc.appendChild(mb); field(r, ' ', cc);
+  const rm=btn('rm','×', onRemove); rm.title='Remove'; rm.setAttribute('aria-label','Remove'); r.appendChild(rm);
+  function showLink(){ lk.textContent=''; if(!link.k){ lk.hidden=true; return; } lk.hidden=false; lk.appendChild(document.createTextNode('From Member 360'));
+    const u=btn(null,'×', ()=>{ link={k:'', cid:''}; showLink(); markDirty(); }); u.title='No longer linked to Member 360 (keeps the details)'; u.setAttribute('aria-label','Unlink from Member 360'); lk.appendChild(u); }
+  showLink();
+  let hits=[], on=-1;
+  function paint(){ res.textContent=''; const v=q.value.trim(); if(!v){ res.classList.remove('open'); return; } res.classList.add('open');
+    if(PL.state!=='ok'){ res.appendChild(h('p',null, m360Note() || 'Getting Member 360’s people list…')); return; }
+    hits=findPeople(v); if(!hits.length){ res.appendChild(h('p',null,'No one in Member 360 matches. Type the details in below.')); return; }
+    hits.forEach((o,i)=>{ const b=btn(i===on?'on':'', o.name); b.setAttribute('role','option'); b.appendChild(h('small',null,[o.title, o.company, o.member?'Member':o.level].filter(Boolean).join(' · ')));
+      b.addEventListener('mousedown', e=>e.preventDefault()); b.addEventListener('click', ()=>pickIt(o)); res.appendChild(b); }); }
+  function pickIt(o){ n.value=o.name; ti.value=o.title; co.value=o.company; em.value=o.email; mb.box.checked=o.member; link={k:o.k, cid:o.cid};
+    q.value=''; res.classList.remove('open'); showLink(); markDirty(); ro.focus(); }
+  q.addEventListener('focus', ()=>{ if(PL.state!=='ok' && PL.state!=='none') peopleList().then(paint); });
+  ['input','change'].forEach(k=>q.addEventListener(k, e=>e.stopPropagation())); /* searching isn't a change to the event */
+  q.addEventListener('input', ()=>{ on=-1; if(PL.state==='ok') paint(); else { paint(); peopleList().then(paint); } });
+  q.addEventListener('keydown', e=>{ if(!res.classList.contains('open') || !hits.length) return;
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){ e.preventDefault(); on=(on+(e.key==='ArrowDown'?1:-1)+hits.length)%hits.length; paint(); }
+    else if(e.key==='Enter'){ e.preventDefault(); pickIt(hits[on<0?0:on]); } });
+  q.addEventListener('blur', ()=>setTimeout(()=>res.classList.remove('open'), 150));
+  return {el:r, get:()=>({id:x.id||uid('pp'), name:n.value.trim(), role:ro.value.trim(), title:ti.value.trim(), company:co.value.trim(), email:em.value.trim(), member:mb.box.checked, k:link.k, cid:link.cid})}; }
+
 /* Graphics: uploaded right here; each opens in a new tab */
 const thumbs={};
 function pGraphics(b, ev){ const st=P.panel;
@@ -6689,7 +6793,7 @@ function tile(el, size){ start(); const box=h('div','ev-tile'); el.appendChild(b
 function tripsFor(who){ return live().filter(e=>!e.example && e.status==='Going' && e.people.some(p=>p.who===who)).filter(e=>{ const n=daysTo(endOf(e)); return n==null || n>=-60; })
   .sort(byStart).map(e=>{ const p=e.people.find(x=>x.who===who)||{}; return {trip:e.name, from:p.from||e.start||'', to:p.to||e.end||e.start||''}; }); }
 
-window.__hqEvents={ version:'1.1', page, tile, start, tripsFor, open:openPanel,
+window.__hqEvents={ version:'1.2', page, tile, start, tripsFor, open:openPanel,
   get list(){ return M.list; },
   onChange(f){ M.listeners.push(f); return ()=>{ M.listeners=M.listeners.filter(x=>x!==f); }; },
   redraw: draw,
@@ -12554,7 +12658,7 @@ const NEW=[
 <p><b>System Health</b> at the foot of the left menu checks every 5 minutes: <b>Saving</b>, <b>Storage</b> (how full the biggest files are), the <b>Email</b> flows, the <b>Outlook calendar</b> flows, the <b>Do It in Outlook</b> flow, and <b>errors on this page</b>. Its dot is green, amber or red, and a red bar appears across the top if something stops. The <b>Team Error Log</b> lists errors from anyone's screen in the last 7 days; <b>Copy Report</b> copies everything to send to whoever is fixing it.</p>
 <p><b>Recent Changes</b> lists who changed what on the team’s tasks, Team Projects, key dates, plans and agenda in the last 7 days, with Open to go to the item. Each of those items also shows its own <b>History</b> at the foot of its panel (the last 90 days). Changes appear within the hour of being saved. Expenses, Sync Ups and notes are never included.</p>
 `},
- {after:'expenses', id:'events', t:'Industry Events', d:'The conferences, trade shows and dinners MISMO goes to: who’s going, speaking, promotion, tasks, graphics and contacts.', h:`
+ {after:'expenses', id:'events', t:'Industry Events', d:'The conferences, trade shows and dinners MISMO goes to: who’s going, speaking, panels, promotion, tasks, graphics and contacts.', h:`
 <p><b>Industry Events</b> (under Team Projects in the left menu, or add its tile with <b>+ Add a Tile</b>) is the list of other organizations’ events MISMO goes to or is thinking about. MISMO’s own Summits stay in Summit HQ. Everyone on the team can add and change events.</p>
 <h4>The Page</h4>
 <p>The boxes across the top show the next event we’re going to with a countdown, how many we’re going to, how many we’re still considering, speaking slots accepted, and what’s due in the next 30 days. Select a box to filter the list. Under them, filter by <b>Upcoming</b>, <b>Going</b>, <b>Considering</b>, <b>Speaking</b>, <b>Past</b>, <b>Not Going</b> or <b>Set Aside</b>, pick a person to see only their events, or search events, cities, people and contacts. Events are listed by month. On the right, <b>Coming Up</b> lists registration deadlines, speaking proposals due, promotion steps due, the event’s own tasks due and events starting in the next 60 days, and <b>Who’s Going Where</b> shows each person’s upcoming events.</p>
@@ -12563,13 +12667,14 @@ const NEW=[
 <p><b>Details</b>: name, who hosts it, kind, our status (Considering, Going, Not Going), dates, the registration deadline, city and venue, the event’s website, our role (Attending, Speaking, Exhibiting, Sponsoring), costs, the hotel or room block, the media kit or speaker portal link, and notes. Dates can be typed (3/15/27) or picked from the calendar button.<br>
 <b>Who’s Going</b>: each person, their arrive and leave dates, and whether they’re registered and have a room. Once the event is set to Going, it shows as a trip choice in that person’s Expenses, so their receipts land on the right trip.<br>
 <b>Speaking</b>: each session or topic, the speaker, when the proposal is due, where it stands (Idea, Submitted, Accepted, Confirmed, Declined, Done), and the session’s date and time.<br>
+<b>Panels</b>: each panel (its title, date, time and a note) and who is on it: name, role on the panel (Moderator, Panelist, Keynote, Speaker, Other, or type your own), title, company, email and whether their company is a member. Type a name, company or email in <b>Find in Member 360</b> and pick the person to fill in their details; they’re marked <b>From Member 360</b>. If you don’t have Member 360, or it can’t be reached, it says so quietly and you type the details in.<br>
 <b>Promotion</b>: the steps for telling people we’ll be there, each with a channel, due date, who and a link to the post. <b>Add the Usual Steps</b> adds five, dated from the event: MISMO Matters 30 days before, an announcement 21 days before, speaker graphics a week before, a post from the event, and a recap 3 days after. <b>Ask MISMO Media</b> opens MISMO Media’s request form in a new tab. Nothing is ever posted or sent from here.<br>
 <b>Tasks</b>: <b>From the Event</b> lists the dates already on the event (registering, speaking proposals, promotion steps), oldest first; select one to change it on its own tab. Under it, <b>Our Own Tasks</b> are anything else to do: what, the owner, the due date and Done. Open tasks with a due date show in <b>Coming Up</b>, and the event card shows how many are done.<br>
 <b>Graphics</b>: drop in the logos, speaker cards, banners and social posts the event gives us (up to 4 MB each). Each opens in a new tab.<br>
 <b>Contacts</b>: the people we meet or need to reach there, their <b>Role</b> at the event (pick Speaker, Panelist, Moderator, Organizer, Sponsor Contact, Exhibitor, Attendee or Other, or type your own), who met them, and whether to follow up.</p>
 <p><b>Set Aside</b> takes an event off the list without deleting it; bring it back from the <b>Set Aside</b> filter.</p>
 <h4>Where It’s Kept</h4>
-<p>In Team HQ’s own data (one record per event, collection <b>events</b>), saved through the save relay like everything else in Team HQ, with history. Graphics are kept in Team HQ’s file storage. <b>MISMO Media</b> reads each event’s graphics (with the signed-in person’s own sign-in) and keeps a copy in its Image Library; it only reads, and never changes anything in Team HQ. Contacts reaching Member 360 are on the Connections Map as a request.</p>
+<p>In Team HQ’s own data (one record per event, collection <b>events</b>), saved through the save relay like everything else in Team HQ, with history. Graphics are kept in Team HQ’s file storage. <b>MISMO Media</b> reads each event’s graphics (with the signed-in person’s own sign-in) and keeps a copy in its Image Library; it only reads, and never changes anything in Team HQ. Panels look people up in <b>Member 360</b>’s people list with your own sign-in; Team HQ only reads it and never changes anything in Member 360. Contacts reaching Member 360 are on the Connections Map as a request.</p>
 `},
  {after:'health', id:'systems', t:'Connected Systems', d:'How MISMO’s systems fit together, what each one does, and what runs on its own.', h:`
 <p><b>Connected Systems</b> (under Team in the left menu, or add its tile with <b>+ Add a Tile</b>) is the map of every MISMO system and the work that moves between them. Point at a box to light up everything it touches; select it for what it does, where it lives, what it replaced, and what it sends and receives. The area buttons show one part of the operation. A moving dot means the work moves automatically; a <b>dashed line</b> means a person copies it.</p>
