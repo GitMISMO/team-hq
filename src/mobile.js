@@ -208,7 +208,7 @@ const css=h('style'); css.id='mob-css'; css.textContent=`
   header.hqtop .logoplate{padding:3px 8px!important}
   header.hqtop .logoplate svg{width:80px!important}
   header.hqtop .mastrule{height:20px!important}
-  .nx{bottom:calc(42px + env(safe-area-inset-bottom,0px))!important}
+  .nx.nx-shell{bottom:calc(42px + env(safe-area-inset-bottom,0px))!important}
   html.nx-on body{padding-bottom:calc(44px + env(safe-area-inset-bottom,0px))!important}
   html.nx-on .nx-tabbar{padding:2px 6px calc(2px + env(safe-area-inset-bottom,0px))!important}
   .nx-tb{flex-direction:row!important;justify-content:center;gap:7px!important;padding:8px 4px!important;font-size:12px!important}
