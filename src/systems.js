@@ -39,13 +39,20 @@ function toast(msg, undo){ const t=window.__nxToast; if(t) t(msg, undo); }
 function start(){ if(M.sub || !S.db || !S.db.collection) return; M.sub=true;
   try{ S.db.collection('systemsmap').onSnapshot(snap=>{ const rq=(snap && snap.docs ? snap.docs : []).find(x=>x.id==='requests'); if(rq){ let r=null; try{ r=JSON.parse(JSON.stringify(rq.data()||{})); }catch(e){} if(r && (!M.req || r.at!==M.req.at)){ M.req=r; if(M.data && !M.data.empty && P.rsWrap && P.rsWrap.isConnected) paintTodos(M.data); } }
       const d=(snap && snap.docs ? snap.docs : []).find(x=>x.id==='current'); let b=null; try{ b=d ? JSON.parse(JSON.stringify(d.data()||{})) : null; }catch(e){ b=null; }
+      if(b && Array.isArray(b.failures)) M.fail=b.failures; /* the Failure Watcher's log: always the newest copy seen, whoever saved it (CN-019) */
       if(b && Array.isArray(b.systems)){ if(M.data && !M.data.empty && b.at && b.at===M.data.at) return; /* our own save coming back */ fix(b); M.data=b; } else if(!M.data) M.data={empty:true}; else return;
       notify(false); }, e=>{ M.err=e; if(!M.data){ M.data={empty:true}; notify(false); } }); }catch(e){ M.err=e; } }
 function fix(d){ d.areas=d.areas||{}; d.connections=d.connections||[]; d.protection=d.protection||[]; d.replaced=d.replaced||[]; d.automations=d.automations||[]; d.archived=d.archived||{systems:[],connections:[]};
   d.connections.forEach((c,i)=>{ if(!c.id) c.id='c'+Date.now().toString(36)+i; if(!c.how) c.how='auto'; }); }
 function save(next, msg){ const prev=M.data && !M.data.empty ? clone(M.data) : null;
+  keepFeeds(next);
   next.asOf=todayISO(); next.by=me(); next.at=Date.now(); fix(next); M.data=next; M.mine=next.at; notify(true);
   return Promise.resolve().then(()=>S.db.collection('systemsmap').doc('current').set(next)).then(()=>{ if(msg) toast(msg, prev ? ()=>save(prev, 'Put back the way it was.') : null); }, e=>{ console.error(e); toast('That didn’t save. Try again in a moment.'); if(prev){ M.data=prev; notify(true); } }); }
+/* The Failure Watcher and the Change Notices job write "failures" and "notices" straight into this record (CN-019).
+   The page never edits them, so a save here always carries the newest failures seen, and keeps the notices when
+   what's being saved has none (an undo or a refresh from the Connections Map). */
+function keepFeeds(next){ if(Array.isArray(M.fail)) next.failures=clone(M.fail); else if(!Array.isArray(next.failures) && M.data && Array.isArray(M.data.failures)) next.failures=clone(M.data.failures);
+  if(!Array.isArray(next.notices) && M.data && Array.isArray(M.data.notices)) next.notices=clone(M.data.notices); }
 /* own saves redraw right away; changes from elsewhere wait while you're typing in a form */
 function notify(force){ if(P.el && P.el.isConnected && (force || !document.querySelector('.cs .cs-f :focus'))) draw(); M.listeners.forEach(f=>{ try{ f(); }catch(e){ console.error(e); } }); }
 /* Team HQ's Claude uses this to load a refresh from the Connections Map (it keeps the layout of systems already placed). */
@@ -233,6 +240,8 @@ html[data-theme="dark"] .cs-n .box{fill:color-mix(in srgb,var(--pc,#9fb3c4) 18%,
 .cs-cnr{padding:12px 16px;border-radius:10px;border-left:4px solid #74bfeb}.cs-cnr.jon{border-left-color:#f2b134}
 .cs-cnr .t{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.cs-cnr .t b{font-size:13px;font-variant-numeric:tabular-nums}.cs-cnr .t span{font-weight:700}.cs-cnr .t small{margin-left:auto;color:var(--ink-3);font-size:12px}
 .cs-cnr p{margin:6px 0 0;font-size:13.5px}.cs-cnr p.d{color:var(--ink-2)}.cs-cnr p.s{color:var(--ink-3);font-size:12.5px}
+.cs-fr[hidden]{display:none}.cs-fr .t small a,.cs-fyou a{color:var(--cs-hot);font-weight:700}.cs-fyou{margin:6px 0 0;font-size:13.5px;padding:6px 10px;border-radius:6px;background:rgba(242,177,52,.12)}
+.cs-stat.cs-statf{border-color:rgba(242,177,52,.7);background:linear-gradient(180deg,rgba(242,177,52,.22),rgba(242,177,52,.08))}.cs-stat.cs-statf em{color:#f2b134}
 .cs-tag.prog{color:#9a6700;background:rgba(242,177,52,.16)}.cs-tag.ok{color:#2b8a3e;background:rgba(47,191,113,.14)}.cs-tag.warn{color:#b54708;background:rgba(232,131,58,.16)}.cs-tag.mute{color:var(--ink-3);background:var(--surface-2)}
 .cs-ph .cs-tag{background:rgba(255,255,255,.95)}
 .cs-live{color:#0f7b5c;background:color-mix(in srgb,#0f7b5c 14%,transparent)}
@@ -722,6 +731,7 @@ function draw0(){ const root=P.el; if(!root) return; root.textContent=''; root.c
   /* the road to rock solid */
   if(Array.isArray(d.todos) && d.todos.length){ const br=todoBand(d); root.appendChild(br); addSec('To Rock Solid', br); }
   if(Array.isArray(d.notices) && d.notices.length){ const bn=noticeBand(d); root.appendChild(bn); addSec('Change Notices', bn); }
+  if(Array.isArray(d.failures)){ const bf=failBand(d); root.appendChild(bf); addSec('Failures', bf); }
   if(d.keyperson && Array.isArray(d.keyperson.people) && d.keyperson.people.length){ const bk=peopleBand(d); root.appendChild(bk); addSec(d.keyperson.nav||'Coverage', bk); }
   else if(d.keyperson && Array.isArray(d.keyperson.groups) && d.keyperson.groups.length){ const bk=keyBand(d); root.appendChild(bk); addSec('Depends on Jonna', bk); }
   /* protection */
@@ -746,6 +756,7 @@ function draw0(){ const root=P.el; if(!root) return; root.textContent=''; root.c
   const tabs=secs.slice(1); if(!tabs.some(x=>x[0]===P.secTab)) P.secTab=tabs.length ? tabs[0][0] : null;
   const cnt={'Follow the Work':journeys(d).length, 'What Changed':swaps(d).length, 'On Its Own':c.jobs, 'Security':d.protection.filter(l=>/in place/i.test(l.status||'')).length+'/'+d.protection.length};
   { const T=(d.todos||[]).reduce((n,g)=>n+(g.items||[]).filter(it=>!it.done && !(dueOf(it) && (dueOf(it)-new Date())/864e5>LATER_DAYS)).length,0)+((M.req&&M.req.items)||[]).filter(x=>!x.done).length; cnt['To Rock Solid']=T; }
+  if(Array.isArray(d.failures)) cnt['Failures']=d.failures.filter(fJon).length;
   if(Array.isArray(d.notices)) cnt['Change Notices']=d.notices.filter(x=>nStat(x)==='wait'||nStat(x)==='jonna').length;
   if(d.keyperson && d.keyperson.people) cnt[d.keyperson.nav||'Coverage']=d.keyperson.people.filter(x=>(x.items||[]).length).length;
   const show=(label, scroll)=>{ P.secTab=label; tabs.forEach(([l, el])=>{ el.hidden= l!==label; }); [...nav.children].forEach(b=>{ const on=b.dataset.tab===label; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
@@ -791,6 +802,42 @@ function noticeBand(d){ const b=band('Change notices','What Each System Is Waiti
   keys.forEach(k=>{ const w=by[k].filter(x=>nStat(x)==='wait'); if(!w.length) return; const sec=h('div','cs-cng'); sec.dataset.k=k; sec.appendChild(h('h3',null,'Waiting on '+k)); w.forEach(x=>row(x, sec)); b.appendChild(sec); });
   if(done.length){ const sec=h('div','cs-cng'); sec.dataset.k='__done'; sec.appendChild(h('h3',null,'Done')); done.slice().reverse().slice(0,12).forEach(x=>row(x, sec)); b.appendChild(sec); }
   b.appendChild(h('p','cs-foot','Kept in GitHub (GitMISMO/mismo-connections, CHANGE-NOTICES.md), where every system’s Claude can reach them, and brought in with each refresh. Finished notices clear off this page '+CN_KEEP_DAYS+' days after they’re done'+(cleared?' ('+cleared+' cleared so far)':'')+'; GitHub keeps the full history.'));
+  return b; }
+/* Failures (CN-019, Nov 23, 2026): the Failure Watcher's log. Every 30 minutes it finds failed GitHub jobs across GitMISMO,
+   has the owning system's Claude rerun or fix them, and copies its log (newest 100) into this record as "failures":
+   [{at, failed, system, repo, workflow, url, times, outcome, cause, done, forJonna, link}]. outcome is Resolved, Needs Jonna,
+   Passed On or Fixed Itself. Read only: the page never changes it, and keepFeeds() carries it through every save. */
+const fJon=x=>/needs jonna/i.test(String(x && x.outcome||''));
+const fCount=d=>Array.isArray(d.failures) ? d.failures.filter(fJon).length : 0;
+const fWhen=x=>{ const t=Date.parse((x && (x.failed||x.at))||''); return isNaN(t) ? 0 : t; };
+function fTime(x){ const t=fWhen(x); if(!t) return ''; const d=new Date(t); let hh=d.getHours(); const ap=hh<12?'AM':'PM'; hh=hh%12||12; return MON[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear()+', '+hh+':'+String(d.getMinutes()).padStart(2,'0')+' '+ap; }
+const safeUrl=u=>{ try{ const x=new URL(String(u||'')); return /^https?:$/.test(x.protocol) ? x.href : null; }catch(e){ return null; } };
+function extLink(u, text){ const href=safeUrl(u); if(!href) return h('span',null,text); const a=h('a',null,text); a.href=href; a.target='_blank'; a.rel='noopener noreferrer'; return a; }
+const F_OUT=[['Needs Jonna','__jonna','Need you','warn'],['Resolved','resolved','Resolved','ok'],['Fixed Itself','itself','Fixed itself','ok'],['Passed On','passed','Passed on','prog']];
+function fKey(x){ const o=String(x.outcome||'').toLowerCase(); return /needs jonna/.test(o) ? '__jonna' : /resolved/.test(o) ? 'resolved' : /itself/.test(o) ? 'itself' : /passed/.test(o) ? 'passed' : 'other'; }
+function failBand(d){ const b=band('Failures','When a Job Fails','Every 30 minutes the Failure Watcher looks for failed jobs across MISMO’s systems in GitHub. The system each one belongs to reruns or fixes it, and you get one email. Anything only you can sort out is listed first, marked Needs Jonna.');
+  const L=d.failures.filter(x=>x && typeof x==='object').sort((a,c)=>fWhen(c)-fWhen(a)), jon=L.filter(fJon), rest=L.filter(x=>!fJon(x));
+  const sm=h('div','cs-card cs-rsum2 cs-cn cs-fsum'); const st=h('div','st'); const big=h('div','big'); big.appendChild(h('b',null,String(jon.length))); big.appendChild(h('span',null, jon.length===1?'needs you':'need you')); st.appendChild(big);
+  st.appendChild(h('p',null, L.length ? L.length+(L.length===1?' failure':' failures')+' in the log' : 'Nothing has failed')); sm.appendChild(st);
+  const lk=h('div','cs-lks'); const tiles=[];
+  const show=k=>{ const on=k && b._f!==k ? k : null; b._f=on; tiles.forEach(t=>{ t.classList.toggle('on', t.dataset.k===on); t.setAttribute('aria-pressed', String(t.dataset.k===on)); });
+    [...b.querySelectorAll('.cs-fr')].forEach(r=>{ r.hidden = !!on && r.dataset.k!==on; }); [...b.querySelectorAll('.cs-cng')].forEach(g=>{ g.hidden = !g.querySelector('.cs-fr:not([hidden])'); }); };
+  big.classList.add('cs-cnall'); big.title='Show every failure'; big.tabIndex=0; big.setAttribute('role','button'); big.addEventListener('click', ()=>show(null)); big.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); show(null); } });
+  const used=F_OUT.filter(o=>o[1]==='__jonna' || L.some(x=>fKey(x)===o[1]));
+  used.forEach(o=>{ const n=L.filter(x=>fKey(x)===o[1]).length; const r=btn('l'+(o[1]==='__jonna' && n ? ' you' : ''), null, ()=>show(o[1])); r.dataset.k=o[1]; r.title='Show just these'; r.setAttribute('aria-pressed','false'); r.appendChild(h('b',null,String(n))); r.appendChild(h('span',null,o[2])); tiles.push(r); lk.appendChild(r); });
+  lk.style.setProperty('--n', String(Math.max(2, used.length))); lk.style.setProperty('--n2', String(Math.min(Math.max(2, used.length),4)));
+  sm.appendChild(lk); b.appendChild(sm);
+  const row=(x, list)=>{ const k=fKey(x), o=F_OUT.find(z=>z[1]===k); const r=h('div','cs-card cs-cnr cs-fr'+(k==='__jonna'?' jon':'')); r.dataset.k=k;
+    const top=h('div','t'); if(fTime(x)) top.appendChild(h('b',null,fTime(x))); top.appendChild(h('span',null,String(x.system||x.repo||''))); top.appendChild(h('span','cs-tag '+(o?o[3]:'mute'), String(x.outcome||'Unknown')));
+    const job=extLink(x.url, String(x.workflow||'The job')+(x.repo?' ('+x.repo+')':'')); if(job.tagName==='A') job.title='Open the failed job in GitHub (new tab)'; const sm2=h('small'); sm2.appendChild(job); if(+x.times>1) sm2.append(' · failed '+x.times+' times'); top.appendChild(sm2); r.appendChild(top);
+    if(x.cause){ const p=h('p','w'); p.appendChild(h('b',null,'What went wrong: ')); p.append(String(x.cause)); r.appendChild(p); }
+    if(x.done){ const p=h('p','d'); p.appendChild(h('b',null,'What was done: ')); p.append(String(x.done)); r.appendChild(p); }
+    if(k==='__jonna' && (x.forJonna || safeUrl(x.link))){ const p=h('p','cs-fyou'); p.appendChild(h('b',null,'What you need to do: ')); if(x.forJonna) p.append(String(x.forJonna)+' '); if(safeUrl(x.link)) p.appendChild(extLink(x.link, 'Open it')); r.appendChild(p); }
+    list.appendChild(r); };
+  if(jon.length){ const sec=h('div','cs-cng'); sec.appendChild(h('h3',null,'Needs You')); jon.forEach(x=>row(x, sec)); b.appendChild(sec); }
+  if(rest.length){ const sec=h('div','cs-cng'); sec.appendChild(h('h3',null, jon.length ? 'Everything Else' : 'All Failures')); rest.forEach(x=>row(x, sec)); b.appendChild(sec); }
+  if(!L.length) b.appendChild(h('p','cs-none2','No failed jobs in the log.'));
+  b.appendChild(h('p','cs-foot','Newest first, the latest 100. Kept in GitHub (GitMISMO/mismo-connections, FAILURE-LOG.md) and copied here by the Failure Watcher. Select a job to open it in GitHub in a new tab.'));
   return b; }
 function todoBand(d){ const b=band('Road to rock solid','What’s Left to Make Each System Rock Solid','What’s open now, who it’s waiting on, and the four safety nets every system gets. Things that aren’t due for months, like key renewals, wait in Coming Up Later and don’t count until they’re close.');
   const wrap=h('div','cs-rs'); b.appendChild(wrap); P.rsWrap=wrap; paintTodos(d); return b; }
@@ -983,7 +1030,8 @@ function hero(d, c){ const hs=h('section','cs-hero'); const cv=h('canvas'); hs.a
   if(d.lede) hs.appendChild(h('p','lede',d.lede));
   const st=h('div','cs-stats'); const nums=[];
   const dr=h('div','cs-drill'); dr.hidden=true;
-  [['apps',c.apps,'MISMO systems on resources.mismo.org'],['auto',c.auto,'automatic hand-offs between systems'],['jobs',c.jobs,'jobs that run on their own'],['swaps',c.swaps,'multi-step manual workflows replaced']].forEach(x=>{ const s=btn('cs-stat'); s.dataset.k=x[0]; const b=h('b',null, P.counted||reduce() ? String(x[1]) : '0'); s.appendChild(b); s.appendChild(h('span',null,x[2])); s.appendChild(h('em',null,'See the list')); s.setAttribute('aria-expanded','false');
+  [['apps',c.apps,'MISMO systems on resources.mismo.org'],['auto',c.auto,'automatic hand-offs between systems'],['jobs',c.jobs,'jobs that run on their own'],['swaps',c.swaps,'multi-step manual workflows replaced']].concat(fCount(d) ? [['fails',fCount(d),fCount(d)===1?'failed job needs you':'failed jobs need you']] : []).forEach(x=>{ const s=btn('cs-stat'); s.dataset.k=x[0]; const b=h('b',null, P.counted||reduce() ? String(x[1]) : '0'); s.appendChild(b); s.appendChild(h('span',null,x[2])); s.appendChild(h('em',null,'See the list')); s.setAttribute('aria-expanded','false');
+    if(x[0]==='fails'){ s.classList.add('cs-statf'); s.lastChild.textContent='See the failures'; s.removeAttribute('aria-expanded'); s.addEventListener('click', ()=>{ if(P.showTab) P.showTab('Failures', true); }); st.appendChild(s); nums.push([b,x[1]]); return; }
     s.addEventListener('click', ()=>{ P.drill = P.drill===x[0] ? null : x[0]; drill(d, st, dr); }); st.appendChild(s); nums.push([b,x[1]]); }); hs.appendChild(st); hs.appendChild(dr); if(P.drill) drill(d, st, dr);
   const sb=h('div','cs-sbar'); const bar=h('div','bar'); const segs=[[c.live,'#2fbf71','Live'],[c.launching,'#e0a83c','Launching'],[c.building,'#9fb3c4','Building']];
   segs.forEach(z=>{ const i=h('i'); i.style.background=z[1]; i.style.width=P.counted||reduce() ? (c.apps?z[0]/c.apps*100:0)+'%' : '0%'; i.title=z[0]+' '+z[2]; bar.appendChild(i); }); sb.appendChild(bar);

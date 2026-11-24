@@ -49,7 +49,7 @@ prompt) lives only in the private `systemsmap` collection, never in this code.
 | `meeting.js` | Team Meeting run of show and Put It on the Screen |
 | `mobile.js` | Phone layout and bottom tab bar |
 | `syncs.js` | Sync Ups |
-| `systems.js` | Connected Systems (the page; its content comes from the private record) |
+| `systems.js` | Connected Systems (the page; its content comes from the private record), including the Change Notices and Failures tabs |
 | `events.js` | Industry Events: the page, the event panel, its dashboard tile, and `tripsFor` for the Expenses trip list (Nov 22, 2026) |
 | `next.js` | The current Team HQ shell: My Dashboard, Inbox, My Tasks, Calendar, System Health and more |
 | `oofdates.js` | Out of Office key dates from Outlook automatic replies |
@@ -113,7 +113,9 @@ real page and delete the test page.
 - Collections in `team-hq-data` include the team's tasks, projects, plans and dates, plus `comments`,
   `templates`, `rules`, `syncs` and `syncitems`, `expinbox` (emailed receipts), `errors` (the team error log) and
   `systemsmap` (Connected Systems: `current` and `requests`; `current.notices` holds the Change Notices from
-  GitMISMO/mismo-connections CHANGE-NOTICES.md, one row per system that has to act, brought in with each refresh) and `events` (Industry Events, one record per event,
+  GitMISMO/mismo-connections CHANGE-NOTICES.md, one row per system that has to act, brought in with each refresh; `current.failures` holds the Failure Watcher's log, newest 100, written straight into the
+  record by GitMISMO/mismo-connections `tools/failures-to-teamhq.mjs` (CN-019); the page only reads it and `keepFeeds()`
+  in `systems.js` carries the newest copy through every save, so a save or a refresh never drops it) and `events` (Industry Events, one record per event,
   graphics in Team HQ's file storage; they land under `receipts/`, since `events` isn't a storage folder).
 - **Change History:** the `Team HQ Change History` job in `team-hq-data` (`tools/history.mjs`, every hour) reads each save and keeps 90 days of who changed what on tasks, Team Projects, key dates, plans, plan items and agenda items in `data/history.json`. Expenses, Sync Ups and notes are never read. Like Recently Deleted (`tools/trash.mjs`), it only writes its own file.
 - Team HQ reads other systems' headline numbers for their dashboard tiles through the relay, and each system's
@@ -202,6 +204,12 @@ The MISMO Connections Map (Jonna's Claude Doc) is the source of truth for every 
 - **Contractor HQ** (formerly Service Orders): reads the staff list and contractor expense receipts.
 - **Every system's tile:** headline numbers read from each system for its dashboard tile.
 - **Ask, Plan My Day and receipt reading** go through the relay's ask route; MISMO's API key stays in the relay.
+- **Failure Watcher → Connected Systems (CN-019, Nov 23, 2026):** GitMISMO/mismo-connections' Failure Watcher (every 30
+  minutes) writes its log into `team-hq-data` `data/systemsmap.json` as `docs.current.failures` (newest 100; each entry
+  `at`, `failed`, `system`, `repo`, `workflow`, `url`, `times`, `outcome` = Resolved, Needs Jonna, Passed On or Fixed Itself,
+  `cause`, `done`, `forJonna`, `link`). The Failures tab shows it (Needs Jonna first and counted in the figure boxes and the
+  tab, then newest first). **Never drop, rename or overwrite `failures` when saving the page**; if the shape changes, the
+  Failure Watcher posts a Change Notice.
 - **Connected Systems:** refreshed from the Connections Map when Jonna asks Team HQ's Claude to "refresh
   Connected Systems" (the team-hq-refresh-connected-systems skill).
 

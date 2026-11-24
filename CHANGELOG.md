@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 23** — Connected Systems: a Failures tab lists GitHub jobs that failed and what was done about each, newest first, with the ones that need Jonna listed first and counted at the top of the page; Help says so.
 - **Nov 23** — Industry Events: MISMO Media's Image Library now reads each event's graphics (read only); Help says so.
 - **Nov 23** — Task notes written in the classic editor or brought in from Smartsheet show as plain lines (bullets kept) in the task panel, not as HTML code.
 - **Nov 23** — The installed Team HQ and Expenses apps turn sideways with the phone (the Expenses app was held upright).
