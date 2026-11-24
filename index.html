@@ -864,7 +864,8 @@
     if (lost) { toast('A change didn’t save (' + whyOf(e) + '). It has been taken back.', 'bad'); return; }
     var first = !troubled; troubled = true;
     if (e && (e.status === 401 || e.code === 'SIGNED_OUT')) { toast('Sign in again to finish saving — nothing is lost.', 'bad'); return; }
-    if (e && e.code === 'OFFLINE') { toast('Not saved yet — no connection. Your changes are kept and will save when it’s back.', 'bad'); return; }
+    /* no signal: the small Offline note (guard.js) already says changes are kept, so no second, red warning (Nov 23, 2026) */
+    if (e && e.code === 'OFFLINE') { try { window.__hqOffPaint && window.__hqOffPaint(); } catch (x) {} return; }
     /* say it once in full; after that, a short reminder so it is not a wall of red every few seconds */
     toast(first ? 'Not saved yet. ' + whyOf(e) + '. Your changes are kept on this computer and Team HQ keeps trying.'
                 : 'Still not saved — ' + whyOf(e) + '. Your changes are kept.', 'bad');

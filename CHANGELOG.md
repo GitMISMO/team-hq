@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 23** — Offline: one small note instead of two big warnings. It shows the full sentence for a few seconds, then shrinks to a small "Offline · 1 waiting" tag in the corner (tap it to read it again), and goes away when the signal is back. The red "Not saved yet — no connection" warning no longer appears.
 - **Nov 23** — Connected Systems: a Failures tab lists GitHub jobs that failed and what was done about each, newest first, with the ones that need Jonna listed first and counted at the top of the page; Help says so.
 - **Nov 23** — Industry Events: MISMO Media's Image Library now reads each event's graphics (read only); Help says so.
 - **Nov 23** — Task notes written in the classic editor or brought in from Smartsheet show as plain lines (bullets kept) in the task panel, not as HTML code.
