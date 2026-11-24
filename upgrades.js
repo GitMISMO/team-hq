@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261124a';
+var BUILD='20261124b';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4616,7 +4616,7 @@ const css=h('style'); css.id='mob-css'; css.textContent=`
   header.hqtop .logoplate{padding:3px 8px!important}
   header.hqtop .logoplate svg{width:80px!important}
   header.hqtop .mastrule{height:20px!important}
-  .nx{bottom:calc(42px + env(safe-area-inset-bottom,0px))!important}
+  .nx.nx-shell{bottom:calc(42px + env(safe-area-inset-bottom,0px))!important}
   html.nx-on body{padding-bottom:calc(44px + env(safe-area-inset-bottom,0px))!important}
   html.nx-on .nx-tabbar{padding:2px 6px calc(2px + env(safe-area-inset-bottom,0px))!important}
   .nx-tb{flex-direction:row!important;justify-content:center;gap:7px!important;padding:8px 4px!important;font-size:12px!important}
@@ -7247,7 +7247,7 @@ function myNudges(){ return (S.nudges||[]).filter(n=>n.to===me() && !n.done && !
 /* ---------- the shell: the main area beside the MISMO rail ---------- */
 let shell=null, head=null, body=null, tabbar=null;
 function build(){
-  shell=h('div','nx'); shell.setAttribute('role','main'); shell.hidden=true;
+  shell=h('div','nx nx-shell'); shell.setAttribute('role','main'); shell.hidden=true;
   head=h('div','nx-head'); body=h('div','nx-body');
   shell.appendChild(head); shell.appendChild(body);
   document.body.appendChild(shell);
@@ -8971,10 +8971,10 @@ html.nx-show body{overflow:hidden}
 html.nx-show main{visibility:hidden}
 html.nx-on .mob-bar{display:none!important}
 html.app-exp .nx-tabbar,html.app-exp .nx,html.app-exp .hq.rail{display:none!important}html.app-exp.nx-on body{padding-bottom:0!important}
-.nx{position:fixed;top:calc(var(--hq-h) + env(safe-area-inset-top,0px));left:var(--rail-w,240px);right:0;bottom:0;z-index:90;display:flex;flex-direction:column;background:var(--ground);font-variant-numeric:tabular-nums;transition:left .2s cubic-bezier(.4,0,.2,1)}
-body.railmini .nx{left:var(--rail-mini,62px)}
-@media(max-width:900px){body:not(.railmini) .nx{left:var(--rail-mini,62px)}}
-.nx[hidden]{display:none}
+.nx.nx-shell{position:fixed;top:calc(var(--hq-h) + env(safe-area-inset-top,0px));left:var(--rail-w,240px);right:0;bottom:0;z-index:90;display:flex;flex-direction:column;background:var(--ground);font-variant-numeric:tabular-nums;transition:left .2s cubic-bezier(.4,0,.2,1)}
+body.railmini .nx.nx-shell{left:var(--rail-mini,62px)}
+@media(max-width:900px){body:not(.railmini) .nx.nx-shell{left:var(--rail-mini,62px)}}
+.nx.nx-shell[hidden]{display:none}
 /* rail items */
 .hq nav .nx-rl{display:flex;align-items:center;padding:12px 10px 3px}
 .hq nav .nx-rl:first-child{padding-top:4px}
@@ -9727,7 +9727,7 @@ a.nx-mini{text-decoration:none}
 }
 /* phones */
 @media (max-width:640px),(max-height:500px) and (max-width:1000px){
-  .nx{left:0!important;bottom:calc(58px + env(safe-area-inset-bottom,0px))}
+  .nx.nx-shell{left:0!important;bottom:calc(58px + env(safe-area-inset-bottom,0px))}
   html.nx-on .nx-tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:99;padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px));background:var(--navy);box-shadow:0 -1px 0 rgba(116,191,235,.25)}
   html.nx-on body{padding-bottom:calc(62px + env(safe-area-inset-bottom,0px))!important}
   .nx-tb{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;border:0;border-radius:8px;background:transparent;color:rgba(255,255,255,.7);font:inherit;font-size:10.5px;font-weight:700;cursor:pointer}
