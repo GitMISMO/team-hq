@@ -94,8 +94,29 @@ goes live:
 - every source file parses on its own, and `src/` builds the newest version exactly;
 - `CHANGELOG.md` is here.
 
-Run Check in the Test Copy is the browser check on every page and tile. Still to come: browser tests on made-up
-records that run on GitHub.
+`tools/back.test.mjs` (also in Team HQ Checks) is the first browser test on made-up records that runs on GitHub:
+the browser's Back button (see below). Run Check in the Test Copy is the browser check on every page and tile.
+
+## The Browser's Back Button (CN-033, Nov 25, 2026)
+
+Back and Forward come from MISMO's shared `/assets/back.js` (owned by Forms and shared pages), loaded in
+`index.html`'s `<head>` right after `session.js`. **Never copy back.js into this repository and never add a
+`history.pushState` or change the address for Back**; Team HQ's own phone-Back code in `next.js` was removed for it.
+Team HQ's part is in `src/next.js` (search `CN-033`):
+
+- **Pages:** `MismoBack.pages({current: pageNow, go: pageGo})`. A page is one of ours (`ui.view`: `day`, `inbox`,
+  `p:<project>`, `u:<person>` …) or a classic one (`c:` + its `data-hq` menu button, or `c:help`). Only what a person
+  does makes a step. Our menu buttons also carry `data-back-page` and `aria-current`; Help carries
+  `data-back-page="help"`.
+- **Layers:** everything open on top (`#panel`, `#sheet`, the Team Projects and Industry Events panels, dialogs,
+  menus, the phone's left menu; the list is `LAYERS`) counts, newest on top, as eight "at least this many open"
+  layers, so Back closes one at a time the way its own × or Cancel does (unsaved-changes questions included). A new
+  panel or pop-up needs nothing more if it has `role="dialog"` and a × or Cancel button; otherwise add its class to
+  `LAYERS` (and to `closeLayer` if it closes another way).
+- **Check:** `tools/back.test.mjs` (in Team HQ Checks) opens the newest version as a Test Copy in headless Chrome
+  with made-up records and the live back.js (`MISMO_BACK=<file>` tries a local copy): two menu pages and Back,
+  Forward, Inbox and My Tasks, a record's panel closed by Back, a panel closed with its × then Back, Help, a
+  project's panel, and no page errors. Run it with `npm i --no-save playwright-core@1.63.0 && node tools/back.test.mjs`.
 
 ## Browser Tab Icon (CN-030, Nov 25, 2026)
 

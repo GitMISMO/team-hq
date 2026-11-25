@@ -2,6 +2,7 @@
 # What it checks is in tools/check.mjs: the newest saved version parses and says which version it is,
 # no keys or tokens, the Test Copy still holds back saves, the live page and its file match,
 # every source file parses, the source builds the newest version exactly, and the change log is here.
+# Then tools/back.test.mjs checks the browser's Back button in headless Chrome on made-up records (CN-033).
 # A failed check emails whoever made the change (GitHub's own notice).
 name: Team HQ Checks
 on:
@@ -28,3 +29,7 @@ jobs:
           node-version: "20"
       - name: Team HQ checks
         run: node tools/check.mjs
+      - name: The browser's Back button (tools/back.test.mjs, CN-033)
+        run: |
+          npm i --no-save --no-package-lock playwright-core@1.63.0
+          node tools/back.test.mjs

@@ -12,6 +12,7 @@
   document.documentElement.classList.add(out ? 'hq-out' : 'hq-in');
 })();</script>
 <script src="/assets/session.js"></script>
+<script src="/assets/back.js"></script>
 <script>(function(){
   function sync(){
     var rs = window.ResourcesSession, inn = !!(rs && rs.current());
@@ -3415,7 +3416,7 @@ c57 -33 76 -84 76 -200 0 -116 -19 -167 -76 -200 -32 -19 -52 -20 -294 -20
       <span>Expenses</span></button>
   </nav>
   <div class="mast-right">
-    <button class="theme-btn" id="help-btn" type="button" title="Help">
+    <button class="theme-btn" id="help-btn" type="button" title="Help" data-back-page="help">
       <svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.5a2.5 2.5 0 113.4 2.4c-.6.3-.9.8-.9 1.4v.5M12 17.2v.1"/></svg>
       <span>Help</span>
     </button>
@@ -17111,6 +17112,7 @@ const HELP_SECS = [
 <li><b>Jump to Anything</b>: press <span class="hk">Ctrl</span>+<span class="hk">K</span> (<span class="hk">⌘</span>+<span class="hk">K</span> on a Mac) anywhere to jump to a system, project, task or date, or to start something (see <i>Jump to Anything and Keyboard Shortcuts</i>).</li>
 <li><b>Add a Task</b> and <b>Jot It Down</b> in the navy bar across the top work from every page. On a team project's page or a person's page, a new task already has that project or person filled in. Press <span class="hk">C</span> to add a task from anywhere.</li>
 <li><b>The right-hand pane.</b> Almost anything you click (a task, a project, a note, a card) opens in a pane on the right. The arrows at its top right make it wider or put it back. The × closes it; a back arrow steps out one level when you have opened something from inside something else.</li>
+<li><b>The browser's Back button</b> goes to the last page you were on. If a pane, pop-up or menu is open, Back closes it first, one at a time. Back never undoes a change. Forward goes again.</li>
 </ul>`},
 
 {id:'dash', t:'My Dashboard', d:'Your front page: your day, your week, and tiles you choose.', h:`
@@ -17563,7 +17565,7 @@ const HELP_SECS = [
 {id:'phone', t:'On a Phone', d:'Using Team HQ on a small screen.', h:`
 <ul>
 <li><b>The bar along the bottom</b> has <b>Dashboard</b>, <b>My Tasks</b>, <b>Calendar</b>, <b>Inbox</b> and <b>Everything</b>. <b>Everything</b> lists every page.</li>
-<li><b>Your phone's Back button</b> closes whatever is open first (a menu, a pane, a dialog), then steps back through the pages you visited, then goes to My Dashboard before leaving Team HQ.</li>
+<li><b>Your phone's Back button</b> closes whatever is open first (a menu, a pane, a dialog), one at a time, then steps back through the pages you visited. It never undoes a change.</li>
 <li>Tiles, panels and lists stack into one column. Menus open from the bottom of the screen.</li>
 <li><b>Adding with a quick-add box</b>: type, then tap the <b>Add</b> button beside the box, or your keyboard's Return key.</li>
 <li><b>Expenses</b> can go on your home screen as its own app (see <i>Expenses</i>).</li>
