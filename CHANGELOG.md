@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 25** — Connected Systems: picking an engine-room piece (like Change Notices) now also lights up the systems its own lines go to (like Outlook and GitHub), instead of leaving them greyed out at the end of a lit line.
 - **Nov 25** — Industry Events: emails to mismoevents@mismo.org now do their best to find their event: the words of its name and host (rarer words count more), the sender writing from the event's website, its date or its city. The clear best goes onto that event by itself; anything it can't place for sure waits under Event Emails with its best guess first. An email taken off an event by hand is never moved by itself again.
 - **Nov 25** — Industry Events: email event details to mismoevents@mismo.org (CN-025). An email that names an event on the list goes onto that event's new Emails tab by itself; anything else waits under Event Emails at the top of the page (Add to an event, Start a New Event, Not an Event). The Emails tab offers the dates and links it found (Use the Dates, Use as Event Website) and the attachments (+ Add to Graphics); nothing is written to an event until someone chooses it, and nothing is sent from the mailbox. The sample event (IMB Conference) is gone.
 - **Nov 25** — Browser tab icon now matches mismo.org (the MISMO S mark), on Team HQ, the Test Copy and its other pages. The home-screen icons for Team HQ and Expenses are unchanged.
