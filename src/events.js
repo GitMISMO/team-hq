@@ -18,8 +18,8 @@
      Company ID (cid) stay with the panelist so it can be matched again. Never writes to Member 360 or uses its flows
      or keys. With no Member 360 access (401, 403) or no list yet (404), the details are typed in.
    - CN-025 (Nov 25, 2026): email event details to mismoevents@mismo.org. Team HQ's own Power Automate flow saves each
-     email (from, name, subject, text, when, and its attachments under receipts/) into collection "eventmail". An email
-     that plainly names one event on the list is added to that event's Emails tab by itself; anything else waits in
+     email (from, name, subject, text, when, and its attachments under receipts/) into collection "eventmail". Each email
+     is scored against every event (see scores()); the clear best is added to that event's Emails tab by itself; anything else waits in
      Event Emails on this page to be added to an event, start a new one, or be set aside. Dates and links found in an
      email are offered on the Emails tab, never written to the event without someone choosing them. Nothing is ever
      sent from the mailbox. */
@@ -366,7 +366,7 @@ function draw(){ const el=P.el; if(!el || !el.isConnected && el.childNodes.lengt
   const mb=h('div','ev-box'); mb.appendChild(h('h3',null,'Promoting an Event')); mb.appendChild(h('p','hint','Each event has a Promotion list. To have the Strategic Growth team make a post or graphic, send a request to MISMO Media.'));
   const ra=h('a','ev-btn', 'Ask MISMO Media'); ra.href=REQUEST_FORM; ra.target='_blank'; ra.rel='noopener'; mb.appendChild(ra); right.appendChild(mb);
   const xb=h('div','ev-box'); xb.appendChild(h('h3',null,'Email It In')); const xp=h('p','hint'); xp.appendChild(document.createTextNode('Forward invitations, agendas, speaker details and graphics to '));
-  const xa=h('a',null,MAILBOX); xa.href='mailto:'+MAILBOX; xp.appendChild(xa); xp.appendChild(document.createTextNode('. An email that names an event on the list goes onto it; anything else waits under Event Emails at the top of this page.'));
+  const xa=h('a',null,MAILBOX); xa.href='mailto:'+MAILBOX; xp.appendChild(xa); xp.appendChild(document.createTextNode('. Each email goes onto the event it’s about; one it can’t place for sure waits under Event Emails at the top of this page, with its best guess first.'));
   xb.appendChild(xp); right.appendChild(xb);
 }
 function matches(e){ const q=P.q.trim().toLowerCase(); if(P.who && !e.people.some(p=>p.who===P.who) && !e.talks.some(t=>t.who===P.who)) return false; if(!q) return true;
@@ -666,18 +666,46 @@ const mailSubj=d=>String(d.subject||'').replace(/^\s*((fwd?|fw|re)\s*:\s*)+/i,''
 const mailAt=d=>{ const t=Date.parse(d.at||''); return isNaN(t) ? 0 : t; };
 const mailWhen=d=>{ const t=mailAt(d); return t ? new Date(t).toLocaleDateString('en-US',{month:'short', day:'numeric'}) : ''; };
 const waiting=()=>(EM.list||[]).filter(d=>!d.filed && !d.aside).sort((a,b)=>mailAt(b)-mailAt(a));
-/* which event an email is about: the event's whole name, or its name without the year, in the subject or the text */
+/* which event an email is about (Jonna, Nov 25, 2026: "do its best to find where it should go"). Each event gets a score:
+   - its whole name (year aside) in the subject or text: a sure match;
+   - otherwise the words of its name and host found in the subject (counted in full) or the text (counted at 0.6), each
+     word weighted by how rare it is across the list ("Ohio" says more than "Mortgage"), plus extra when a word only this
+     event has is in the subject;
+   - plus the sender writing from its website's address (or a link to it), its start date written out, or its city.
+   The email goes onto the best event by itself when that score is clearly ahead (0.6 or more, and the next best under
+   60% of it); otherwise it waits in Event Emails with the best guess offered first. */
 const nameKey=n=>String(n||'').toLowerCase().replace(/&/g,' and ').replace(/\b(19|20)\d\d\b/g,' ').replace(/[^a-z0-9]+/g,' ').trim();
-function matchesFor(d){ const hay=' '+nameKey(mailSubj(d)+' \n '+mailText(d).slice(0,6000))+' ';
-  return live().filter(e=>{ const k=nameKey(e.name); return k.length>=6 && k.split(' ').length>=2 && hay.indexOf(' '+k+' ')>=0; }); }
-function bestGuess(d){ const strong=matchesFor(d); if(strong.length) return strong[0];
-  const W=nameKey(mailSubj(d)).split(' ').filter(w=>w.length>3); if(!W.length) return null;
-  let best=null, sc=0; live().forEach(e=>{ const k=' '+nameKey(e.name)+' '; const n=W.filter(w=>k.indexOf(' '+w+' ')>=0).length; if(n>sc){ sc=n; best=e; } });
-  return sc>=2 ? best : null; }
-/* one event plainly named → the email goes onto it by itself (whoever has Industry Events open does it, once) */
+const STOPW={the:1,and:1,for:1,of:1,a:1,an:1,in:1,on:1,at:1,to:1,with:1,annual:1,event:1,events:1,conference:1,summit:1,forum:1,expo:1,meeting:1,day:1,days:1,inc:1,llc:1};
+const words=t=>nameKey(t).split(' ').filter(w=>w.length>=3 && !STOPW[w] && !/^\d+$/.test(w));
+const hostOf=u=>{ try{ return new URL(/^https?:/i.test(u)?u:'https://'+u).hostname.replace(/^www\./,'').toLowerCase(); }catch(e){ return ''; } };
+function scores(d){ const L=live(); if(!L.length) return [];
+  const subj=' '+nameKey(mailSubj(d))+' ', body=' '+nameKey(mailText(d).slice(0,8000))+' ', all=subj+body;
+  const raw=(mailSubj(d)+' \n '+mailText(d)).toLowerCase(), from=String(d.from||'').toLowerCase();
+  const W=L.map(e=>{ const w={}; words(e.name+' '+(e.host||'')).forEach(x=>w[x]=1); return w; });
+  const df={}; W.forEach(w=>Object.keys(w).forEach(x=>df[x]=(df[x]||0)+1));
+  const wt=x=>Math.log(1+L.length/(df[x]||1));
+  return L.map((e,i)=>{ let sc=0; const k=nameKey(e.name);
+    if(k.length>=6 && k.split(' ').length>=2 && all.indexOf(' '+k+' ')>=0) sc=1.5;
+    else { let tot=0, got=0, uniq=false; Object.keys(W[i]).forEach(x=>{ const v=wt(x); tot+=v; const inS=subj.indexOf(' '+x+' ')>=0, inB=!inS && body.indexOf(' '+x+' ')>=0;
+        if(inS){ got+=v; if(df[x]===1 && x.length>=4) uniq=true; } else if(inB) got+=v*0.6; });
+      sc=tot ? got/tot : 0; if(uniq) sc+=0.3; }
+    /* the event's own website: the sender writes from it, or the email links to it (MISMO's and MBA's own addresses,
+       which are in every signature, and link wrappers don't count) */
+    const eh=hostOf(e.url||''); if(eh && !/(^|\.)(mba\.org|mismo\.org|urldefense\.com|safelinks\.protection\.outlook\.com|outlook\.com|office\.com)$/.test(eh)){
+      if(from.endsWith('@'+eh) || from.endsWith('.'+eh)) sc+=0.7; else if(raw.indexOf(eh)>=0) sc+=0.5; }
+    if(e.start){ const dd=pd(e.start); if(dd){ const lo=raw; const long=MON[dd.getMonth()].toLowerCase(); if(new RegExp('\\b'+long+'[a-z]*\\.?\\s+'+dd.getDate()+'\\b').test(lo)) sc+=0.3; } }
+    const city=String(e.city||'').split(',')[0].trim().toLowerCase(); if(city.length>=4 && all.indexOf(' '+nameKey(city)+' ')>=0) sc+=0.15;
+    const n=daysTo(endOf(e)); if(n!=null && n<-30) sc-=0.2;   /* long over: less likely */
+    return {e, sc}; }).filter(x=>x.sc>0).sort((a,b)=>b.sc-a.sc); }
+function matchesFor(d){ const S2=scores(d); if(!S2.length) return []; const b=S2[0], n=S2[1];
+  return (b.sc>=0.6 && (!n || n.sc<b.sc*0.6)) ? [b.e] : []; }
+function bestGuess(d){ const S2=scores(d); return S2.length && S2[0].sc>=0.3 ? S2[0].e : null; }
+/* the clear best match → the email goes onto it by itself (whoever has Industry Events open does it, once per email
+   and once more after this matching changed); anything taken off an event by hand is never filed by itself again */
+const AUTO_V=2;
 function autoFile(){ if(!me() || !EM.list || !M.list) return;
-  waiting().forEach(d=>{ if(EM.tried[d.id] || d.autoTried) return; EM.tried[d.id]=1; const L=matchesFor(d);
-    if(L.length===1) fileTo(d, L[0], true); else setMail(Object.assign({}, d, {autoTried:Date.now()})).catch(()=>{}); }); }
+  waiting().forEach(d=>{ if(EM.tried[d.id] || d.noAuto || (d.autoV||(d.autoTried?1:0))>=AUTO_V) return; EM.tried[d.id]=1; const L=matchesFor(d);
+    if(L.length===1) fileTo(d, L[0], true); else setMail(Object.assign({}, d, {autoTried:Date.now(), autoV:AUTO_V})).catch(()=>{}); }); }
 function emailEntry(d){ return {id:d.id, from:d.from||'', fromName:d.fromName||'', subject:mailSubj(d)||'(No subject)', at:d.at||'', text:mailText(d).slice(0,20000),
   files:(Array.isArray(d.files)?d.files:[]).filter(f=>f && f.path).map(f=>({id:f.path, name:f.name||f.path.split('/').pop(), type:f.type||'', size:f.size||0}))}; }
 function fileTo(d, ev, auto){ const src=(M.list||[]).find(x=>x.id===ev.id); if(!src) return Promise.resolve(false);
@@ -722,13 +750,13 @@ function mailBox(el){ startMail(); const W=waiting(); if(!W.length) return;
 /* the Emails tab: what was sent in about this event, with what it offers */
 function pEmails(b, ev){ const st=P.panel;
   const hd=h('div','ev-sec'); hd.appendChild(h('h3',null,'Emails About This Event')); const hn=h('span','hint'); hn.appendChild(document.createTextNode('Forward anything about it to ')); const a=h('a',null,MAILBOX); a.href='mailto:'+MAILBOX; hn.appendChild(a); hn.appendChild(document.createTextNode('.')); hd.appendChild(hn); b.appendChild(hd);
-  if(!ev.emails.length){ b.appendChild(h('p','ev-empty','No emails yet. One that names this event goes here by itself.')); return; }
+  if(!ev.emails.length){ b.appendChild(h('p','ev-empty','No emails yet. An email about this event comes here by itself.')); return; }
   ev.emails.slice().sort((x,y)=>String(y.at).localeCompare(String(x.at))).forEach(m=>{ const c=h('div','ev-em');
     const top=h('div','top'); const tt=h('div','tt'); tt.appendChild(h('b',null,m.subject)); tt.appendChild(h('span',null,[m.fromName||m.from, mailWhen(m)].filter(Boolean).join(' · '))); top.appendChild(tt);
     if(!st.isNew) top.appendChild(btn('ev-btn', 'Take Off This Event', ()=>{ if(!window.confirm('Take this email off '+(ev.name||'this event')+'? It goes back to Event Emails.')) return;
       const src=(M.list||[]).find(x=>x.id===ev.id); if(!src) return; const nx=fix(clone(src)); nx.emails=nx.emails.filter(x=>x.id!==m.id);
       save(nx, 'Taken off. It’s back in Event Emails.').then(ok=>{ if(!ok) return; collect(); st.ev.emails=st.ev.emails.filter(x=>x.id!==m.id); if(st.orig) st.orig.emails=(st.orig.emails||[]).filter(x=>x.id!==m.id); paintPanel();
-        const d=(EM.list||[]).find(x=>x.id===m.id); if(d){ const x=clone(d); delete x.filed; x.autoTried=Date.now(); setMail(x).catch(()=>{}); } }); }));
+        const d=(EM.list||[]).find(x=>x.id===m.id); if(d){ const x=clone(d); delete x.filed; x.noAuto=1; setMail(x).catch(()=>{}); } }); }));
     c.appendChild(top);
     const f=found(m); const sug=h('div','sug');
     if(f.dates && (f.dates[0]!==ev.start || f.dates[1]!==(ev.end||ev.start))){ sug.appendChild(btn('ev-btn', 'Use the Dates: '+span(f.dates[0], f.dates[1]), ()=>{ collect(); st.ev.start=f.dates[0]; st.ev.end=f.dates[1]; markDirty(); paintPanel(); toast('Dates set. Press Save Changes to keep them.'); })); }
@@ -759,7 +787,7 @@ function tile(el, size){ start(); const box=h('div','ev-tile'); el.appendChild(b
 function tripsFor(who){ return live().filter(e=>!e.example && e.status==='Going' && e.people.some(p=>p.who===who)).filter(e=>{ const n=daysTo(endOf(e)); return n==null || n>=-60; })
   .sort(byStart).map(e=>{ const p=e.people.find(x=>x.who===who)||{}; return {trip:e.name, from:p.from||e.start||'', to:p.to||e.end||e.start||''}; }); }
 
-window.__hqEvents={ version:'1.3', page, tile, start, tripsFor, open:openPanel, _found:found, _matches:matchesFor,
+window.__hqEvents={ version:'1.4', page, tile, start, tripsFor, open:openPanel, _found:found, _matches:matchesFor, _scores:d=>scores(d).map(x=>({name:x.e.name, sc:Math.round(x.sc*100)/100})),
   get list(){ return M.list; },
   onChange(f){ M.listeners.push(f); return ()=>{ M.listeners=M.listeners.filter(x=>x!==f); }; },
   redraw: draw,
