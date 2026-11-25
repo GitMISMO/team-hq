@@ -22,6 +22,7 @@ an installable phone app), System Health and Connected Systems. Jonna owns it.
 | Every saved version | `releases/upgrades-<version>.js` (the Test Copy and Publish a Version read these) |
 | Offline copy | `sw.js` (always network first; opens the last copy with no signal) |
 | Team data (private) | `GitMISMO/team-hq-data`, only through the save relay, project key `team-hq` |
+| Connected Systems, view only | `connected-systems/index.html`, at /team-hq/connected-systems/ (Nov 24, 2026): its own page, not part of `upgrades.js`. It reads `team-hq-data` `data/connected-systems/systemsmap.json` (written by that repository's `connected-systems.yml`) with the relay key `connected-systems`, or with `team-hq` for Team HQ people who weren't given Connected Systems on its own (CN-027), draws it with `src/systems.js` and saves nothing. It goes live when pushed to `main`; no version needed |
 | Private plan notes (private) | `GitMISMO/team-hq-private-data`, relay key `team-hq-private`, only for people given *Team HQ Private Notes* |
 | Sign-in and who can open what | `/assets/session.js` on resources.mismo.org, and People & Access in the admin console |
 
@@ -218,6 +219,11 @@ The MISMO Connections Map (Jonna's Claude Doc) is the source of truth for every 
   `cause`, `done`, `forJonna`, `link`). The Failures tab shows it (Needs Jonna first and counted in the figure boxes and the
   tab, then newest first). **Never drop, rename or overwrite `failures` when saving the page**; if the shape changes, the
   Failure Watcher posts a Change Notice.
+- **Connected Systems, view only (CN-026, CN-027):** the page at /team-hq/connected-systems/ opens for anyone with
+  the `connected-systems` tool (People & Access, given on its own, e.g. Rick Hill at MBA) or with Team HQ. Team HQ
+  people read the same view-only file with the `team-hq` key, because `connected-systems` isn't in Team HQ's `also`
+  yet (People & Access would take it from people who have it on its own; Initiative Hub is fixing that). Once it is,
+  the `team-hq` fallback can stay; it changes nothing for anyone.
 - **Connected Systems:** refreshed from the Connections Map when Jonna asks Team HQ's Claude to "refresh
   Connected Systems" (the team-hq-refresh-connected-systems skill).
 

@@ -13,7 +13,9 @@
      without being in Team HQ. Access is its own tool in People & Access ("Connected Systems", key connected-systems).
      It reads a view-only copy (team-hq-data data/connected-systems/systemsmap.json, written by that repository's
      Connected Systems View-Only Copy job) through the relay key connected-systems, which can read only that folder
-     and save nothing. The drawing code is Team HQ's own src/systems.js, shown with no editing. -->
+     and save nothing. The drawing code is Team HQ's own src/systems.js, shown with no editing.
+     Team HQ people without Connected Systems of their own read the same file with the team-hq key (CN-027, Nov 24,
+     2026), until People & Access gives connected-systems with Team HQ (Team HQ's "also"). -->
 <script src="/assets/session.js"></script>
 <style>
 :root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><script>/* home-screen app details: Team HQ, or Expenses when opened as /team-hq/?app=expenses. Set here, while the page
@@ -129,7 +131,7 @@ c57 -33 76 -84 76 -200 0 -116 -19 -167 -76 -200 -32 -19 -52 -20 -294 -20
 (function(){
   'use strict';
   var RELAY = 'https://rgvdi67cg27o5kcmiytcqbqnrm0hmztx.lambda-url.us-east-1.on.aws';
-  var KEY = 'connected-systems', PATH = '/data/connected-systems/systemsmap';
+  var OWN = 'connected-systems', TEAM = 'team-hq', KEY = OWN, PATH = '/data/connected-systems/systemsmap';
   var root = document.getElementById('cs-root'), foot = document.getElementById('foot');
   var subs = [], last = null, lastData = null;
   function msg(t, p){ root.innerHTML = '<div class="msg"><b></b><span></span></div>'; root.querySelector('b').textContent = t; root.querySelector('span').textContent = p || ''; }
@@ -155,7 +157,17 @@ c57 -33 76 -84 76 -200 0 -116 -19 -167 -76 -200 -32 -19 -52 -20 -294 -20
   function boot(){
     var rs = window.ResourcesSession;
     if (!rs) { msg('Connected Systems Couldn’t Load', 'The resources.mismo.org sign-in didn’t load. Check your connection, then reload the page.'); return; }
-    rs.requireAccess(KEY, { toolName: 'Connected Systems', eyebrow: 'MISMO' }).then(function(){
+    /* Connected Systems' own key first; anyone with Team HQ may open it with Team HQ's key, which already reads
+       team-hq-data data/ (CN-027). The sign-in comes first so the right key is picked before anyone is turned away. */
+    function pick(){
+      if (rs.role(OWN)) return Promise.resolve(OWN);
+      if (rs.role(TEAM)) return Promise.resolve(TEAM);
+      return rs.refreshAccess([OWN, TEAM]).then(function(){ return rs.role(OWN) ? OWN : rs.role(TEAM) ? TEAM : OWN; }, function(){ return OWN; });
+    }
+    (rs.requireSignIn ? rs.requireSignIn({ toolName: 'Connected Systems', eyebrow: 'MISMO' }) : Promise.resolve()).then(pick).then(function(k){
+      KEY = k;
+      return rs.requireAccess(KEY, { toolName: 'Connected Systems', eyebrow: 'MISMO' });
+    }).then(function(){
       return refresh();
     }).then(function(){
       if (!lastData || !lastData.docs || !lastData.docs.current) { msg('Connected Systems Isn’t Ready Yet', 'The map hasn’t been shared to this page yet. Try again in a few minutes.'); return; }

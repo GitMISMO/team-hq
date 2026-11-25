@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 24** — Connected Systems, view only: everyone with Team HQ can now open /team-hq/connected-systems/ too, without being given Connected Systems on its own.
 - **Nov 24** — Connected Systems, view only: a page of its own at /team-hq/connected-systems/ for people who should see the system map without being in Team HQ (its own access, "Connected Systems"). It shows the map, Follow the Work, Security, What Changed and On Its Own; Team HQ's working sections stay in Team HQ.
 - **Nov 24** — Industry Events: a Panels tab on each event. Add a panel and who is on it (name, role on the panel, title, company, email, member or not); Find in Member 360 fills in a person’s details for anyone with Member 360, and everyone else types them in. Help says so.
 - **Nov 24** — Industry Events: a Tasks tab on each event, listing the event's own dates (registering, speaking proposals, promotion steps) and your own tasks (what, owner, due date, done); open ones show in Coming Up. Each contact now has a Role (Speaker, Panelist, Moderator, Organizer, Sponsor Contact, Exhibitor, Attendee, Other, or type your own). Help says so.
