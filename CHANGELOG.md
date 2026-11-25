@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 24** — Connected Systems in the left menu, the phone's Everything list and its dashboard tile now open the Connected Systems app (resources.mismo.org/connected-systems/) in a new tab. Team HQ's own page stays for editing: the app's Edit in Team HQ opens it.
 - **Nov 24** — Connected Systems, view only, is now its own app at /connected-systems/ (its own access and storage); /team-hq/connected-systems/ forwards there. It draws with this repository's src/systems.js, so systems.js has to keep working with a stand-in window.__S (DEVELOPING.md).
 - **Nov 24** — Connected Systems, view only: everyone with Team HQ can now open /team-hq/connected-systems/ too, without being given Connected Systems on its own.
 - **Nov 24** — Connected Systems, view only: a page of its own at /team-hq/connected-systems/ for people who should see the system map without being in Team HQ (its own access, "Connected Systems"). It shows the map, Follow the Work, Security, What Changed and On Its Own; Team HQ's working sections stay in Team HQ.
