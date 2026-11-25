@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261125c';
+var BUILD='20261125d';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -7539,7 +7539,7 @@ function build(){
 /* ---------- the rail: our items live inside the MISMO rail ---------- */
 let railNodes=[];
 const navEl=()=>document.querySelector('.hq.rail nav');
-function railBtn(key, label, icon, extra){ const b=btn('nx-rb'); b.dataset.nx=key; b.title=label;
+function railBtn(key, label, icon, extra){ const b=btn('nx-rb'); b.dataset.nx=key; b.dataset.backPage=key; b.title=label;
   b.innerHTML=(icon||'')+'<span>'+label+'</span>'+(extra||''); b.addEventListener('click', e=>{ e.preventDefault(); e.stopPropagation(); open(key); closeRailOnPhone(); }); return b; }
 function openCS(){ try{ window.open(new URL('/connected-systems/', document.baseURI).href, '_blank', 'noopener'); }catch(e){ location.href='/connected-systems/'; } }
 function closeRailOnPhone(){ if(window.matchMedia('(max-width:900px)').matches && window.__rail && window.__rail.hide) window.__rail.hide(); }
@@ -7567,7 +7567,7 @@ function drawRail(){
   if(window.__hqEvents){ const tp=nav.querySelector('button[data-hq="rocks"]'); add(railBtn('events','Industry Events', ic('pin')), tp && tp.nextSibling ? tp.nextSibling : null); }
   /* Connected Systems opens its own app (Jonna, Nov 24, 2026: "I like it better"). Team HQ's own page stays for editing:
      the app's Edit in Team HQ opens /team-hq/?page=systems. */
-  if(window.__hqSystems){ const cs=railBtn('systems','Connected Systems', ic('net')); const fresh=cs.cloneNode(true); fresh.title='Connected Systems (opens in a new tab)';
+  if(window.__hqSystems){ const cs=railBtn('systems','Connected Systems', ic('net')); const fresh=cs.cloneNode(true); delete fresh.dataset.backPage; fresh.title='Connected Systems (opens in a new tab)';
     fresh.addEventListener('click', e=>{ e.preventDefault(); e.stopPropagation(); openCS(); closeRailOnPhone(); }); add(fresh); }
   markRail();
 }
@@ -7575,7 +7575,7 @@ function markRail(){
   const nav=navEl(); if(!nav) return;
   const inApp=viewKind()!=='classic';
   nav.querySelectorAll('button[data-nx]').forEach(b=>{ if(inApp && b.dataset.nx===ui.view) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
-  if(inApp) nav.querySelectorAll('button[data-hq]').forEach(b=>b.removeAttribute('aria-current'));
+  if(inApp){ nav.querySelectorAll('button[data-hq]').forEach(b=>b.removeAttribute('aria-current')); const hb=document.getElementById('help-btn'); if(hb) hb.removeAttribute('aria-current'); }
   if(tabbar) [...tabbar.querySelectorAll('button')].forEach(b=>b.classList.toggle('on', b.dataset.k===ui.view));
 }
 
@@ -7584,12 +7584,12 @@ function open(key){
   if(key==='all') key='mine'; /* All Tasks is gone; My Tasks is the list */
   if(key==='people'){ openClassic('today'); setTimeout(()=>{ const t=document.querySelector('#app-today .td-team'); if(t) t.scrollIntoView({block:'start', behavior:'smooth'}); }, 150); return; } /* People now lives in Today's Where My Team Is Today */
   if(key.indexOf('c:')===0){ openClassic(key.slice(2)); return; }
-  ui.view=key; ui.ws=''; ui.q=''; sel=-1; save(); pushView(key);
+  ui.view=key; ui.ws=''; ui.q=''; sel=-1; save();
   document.documentElement.classList.add('nx-show'); shell.hidden=false;
   paint(); body.scrollTop=0; markRail();
 }
 function openClassic(k){
-  ui.view='c:'+k; save(); pushView(ui.view); hideApp();
+  ui.view='c:'+k; save(); hideApp();
   const b=document.querySelector('.hq.rail nav button[data-hq="'+k+'"]');
   if(b) b.click(); else if(window.__show) window.__show(k);
   markRail(); window.scrollTo(0,0);
@@ -7597,34 +7597,54 @@ function openClassic(k){
 function hideApp(){ document.documentElement.classList.remove('nx-show'); if(shell) shell.hidden=true; closeMenus(); }
 /* a click on a classic tab in the rail leaves the app area for that page */
 function onRailClick(e){ if(!ui.on) return; const b=e.target.closest && e.target.closest('.hq.rail nav button[data-hq], #help-btn'); if(!b) return;
-  ui.view='c:'+(b.dataset.hq||'help'); save(); pushView(ui.view); hideApp(); setTimeout(markRail, 0); }
+  ui.view='c:'+(b.dataset.hq||'help'); save(); hideApp(); setTimeout(markRail, 0); }
 
-/* ---------- the phone's Back button ----------
-   Back closes whatever is open on top (a menu, a system, a dialog, a task), then steps back
-   through the pages you went to, and only leaves Team HQ from My Dashboard. */
-let navPop=false, navOn=false;
-function pushView(v){ if(navPop || !navOn) return; try{ const st=history.state; if(st && st.nx===v) return; history.pushState({nx:v}, ''); }catch(e){} }
+/* ---------- the browser's Back button (CN-033, Nov 25, 2026) ----------
+   MISMO's shared /assets/back.js (loaded in index.html's <head>) makes each page change from the left menu a step
+   in the browser's history and closes what's open on top first. Team HQ never adds its own history steps.
+   Team HQ tells it which page shows with MismoBack.pages (pageNow/pageGo below), so a project, a person or Connected
+   Systems in Team HQ are steps too, though they have no menu button; our own menu buttons also carry data-back-page
+   and aria-current (the left-nav standard), and Help carries data-back-page="help". Everything that opens on top
+   (the record panels, dialogs, menus, the phone menu) counts as one layer each, newest on top, and Back closes
+   the top one the way its own × or Cancel does (unsaved-changes questions included). */
 const seen=e=>e && e.isConnected && e.getClientRects().length>0 && getComputedStyle(e).visibility!=='hidden';
-function closeTop(){
+const LAYERS='#panel, #sheet, .pv2-panel.on, .ev-pn, .hqx-sys, .hqx-ov, .nx-dlg-ov, .nx-bl, .nx-menu, .mob-sheet, .ed-ov, .pv2-sov, '+
+  'dialog[open], [role=dialog], [aria-modal=true], .modal.open, .modal.show, .sheet.open, .drawer.open, .mt-cover';
+function openLayers(){
+  const all=[...document.querySelectorAll(LAYERS)].filter(e=>e.id!=='hq-gate' && !e.closest('.nx-tabbar') && seen(e));
+  const L=all.filter(e=>!all.some(o=>o!==e && o.contains(e)));
+  const sc=document.getElementById('rail-scrim'); if(sc && seen(sc)) L.unshift(sc); /* the phone's left menu, under everything */
+  return L;
+}
+const closeBtn=el=>{ const bs=[...el.querySelectorAll('button')].filter(seen);
+  return bs.find(b=>/^close/i.test(b.getAttribute('aria-label')||'') || /^(×|✕)$/.test((b.textContent||'').trim()))
+    || bs.find(b=>/^(cancel|close|done)$/i.test((b.textContent||'').trim())); };
+function closeLayer(el){
   const x=X();
-  if(menuEl){ closeMenus(); return true; }
-  const ov=[...document.querySelectorAll('.hqx-ov')].filter(seen).pop();
-  if(ov){ document.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape', bubbles:true})); if(ov.isConnected && seen(ov)){ const c=[...ov.querySelectorAll('button')].find(b=>/^(cancel|close|done|×|✕)$/i.test((b.textContent||'').trim()) || /close/i.test(b.getAttribute('aria-label')||'')); if(c) c.click(); else ov.remove(); } return true; }
-  if(document.querySelector('.hqx-sys') && x && x.closeSys){ x.closeSys(); return true; }
-  const dlg=[...document.querySelectorAll('dialog[open], [role=dialog], [aria-modal=true], .modal.open, .modal.show, .sheet.open, .drawer.open, .mt-cover')].filter(e=>!e.closest('.nx-tabbar') && seen(e)).pop();
-  if(dlg){ const c=[...dlg.querySelectorAll('button')].find(b=>/^(cancel|close|done|×|✕)$/i.test((b.textContent||'').trim()) || /close/i.test(b.getAttribute('aria-label')||''));
-    if(c) c.click(); else { dlg.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape', bubbles:true})); document.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape', bubbles:true})); if(dlg.tagName==='DIALOG' && dlg.open) try{ dlg.close(); }catch(e){} return !seen(dlg); } return true; }
-  const rail=document.querySelector('.hq.rail.open, html.rail-open .hq.rail'); if(rail){ const sc=document.querySelector('.railscrim'); if(sc) sc.click(); return true; }
-  return false; }
-function onPop(e){ if(!ui.on) return; const st=e.state||{};
-  /* something is open on top: close it and stay on this page */
-  if(closeTop()){ try{ history.pushState({nx:ui.view}, ''); }catch(x){} return; }
-  if(st.nx==='root'){ /* the bottom of the stack: back to My Dashboard first, then out */
-    if(ui.view!=='day' && !document.documentElement.classList.contains('app-exp')){ navPop=true; try{ open('day'); }finally{ navPop=false; } try{ history.pushState({nx:'day'}, ''); }catch(x){} }
-    else history.back();
-    return; }
-  if(st.nx && st.nx!==ui.view){ navPop=true; try{ open(st.nx); }finally{ navPop=false; } } }
-function navInit(){ if(navOn) return; navOn=true; try{ history.replaceState({nx:'root'}, ''); history.pushState({nx:ui.view}, ''); }catch(e){} window.addEventListener('popstate', onPop); }
+  if(el.id==='rail-scrim'){ el.click(); return; }
+  if(el===menuEl){ closeMenus(); return; }
+  if(el.classList.contains('pv2-panel') && window.__pv2){ window.__pv2.closePanel(); return; }
+  if(el.classList.contains('hqx-sys') && x && x.closeSys){ x.closeSys(); return; }
+  if(el.classList.contains('ev-pn')){ const s=el.previousElementSibling; if(s && s.classList.contains('ev-scrim')){ s.click(); return; } }
+  const c=closeBtn(el); if(c){ c.click(); return; }
+  el.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape', bubbles:true, cancelable:true}));
+  if(el.tagName==='DIALOG' && el.open) try{ el.close(); }catch(e){}
+}
+function closeTop(){ const L=openLayers(); if(!L.length) return false; closeLayer(L[L.length-1]); return true; }
+/* each slot is "at least this many things open", so Back closes one at a time */
+if(window.MismoBack) for(let i=0;i<8;i++) window.MismoBack.layer({ isOpen:()=>openLayers().length>i, close:()=>{ closeTop(); } });
+/* which page shows: one of ours (ui.view) or a classic one ('c:' + its menu button, or c:help) */
+function pageNow(){
+  if(document.documentElement.classList.contains('nx-show') && shell && !shell.hidden) return ui.view;
+  const b=document.querySelector('.hq nav button[data-hq][aria-current]'); if(b) return 'c:'+b.dataset.hq;
+  const hb=document.getElementById('help-btn'); if(hb && hb.hasAttribute('aria-current')) return 'c:help';
+  return ui.view||'';
+}
+function pageGo(v){
+  if(v==='c:help'){ const hb=document.getElementById('help-btn'); if(hb){ hb.click(); return; } }
+  open(v);
+}
+if(window.MismoBack && window.MismoBack.pages) window.MismoBack.pages({ current:pageNow, go:pageGo });
 
 
 /* ---------- painting ---------- */
@@ -9191,7 +9211,7 @@ function openMenuSheet(){
   /* Team Pages in exactly the left menu's order (Industry Events under Team Projects, Connected Systems last) */
   grp('Team Pages'); const seen=new Set(); [...document.querySelectorAll('.hq.rail nav button[data-hq], .hq.rail nav button[data-nx]')].forEach(b=>{ const k=b.dataset.nx; if(k && !(VIEWS[k] && VIEWS[k].team)) return; const id=k ? 'nx:'+k : b.dataset.hq; if(id==='mine' || seen.has(id)) return; seen.add(id); const s=b.querySelector('svg'); const label=k ? VIEWS[k].t : b.textContent.trim(); item(label, k ? ()=>open(k) : ()=>openClassic(b.dataset.hq), s?s.outerHTML:''); });
   Object.keys(VIEWS).filter(k=>VIEWS[k].team && !seen.has('nx:'+k) && (k!=='systems' || window.__hqSystems) && (k!=='events' || window.__hqEvents)).forEach(k=>item(VIEWS[k].t, ()=> k==='systems' ? openCS() : open(k), ic(VIEWS[k].i)));
-  { const hb=document.getElementById('help-btn'); if(hb){ const s=hb.querySelector('svg'); item('Help', ()=>{ hideApp(); ui.view='c:help'; save(); pushView(ui.view); hb.click(); markRail(); }, s?s.outerHTML:''); } }
+  { const hb=document.getElementById('help-btn'); if(hb){ const s=hb.querySelector('svg'); item('Help', ()=>{ hideApp(); ui.view='c:help'; save(); hb.click(); markRail(); }, s?s.outerHTML:''); } }
   document.body.appendChild(menuEl);
   { const mine=menuEl; setTimeout(()=>document.addEventListener('click', function off(e){ if(menuEl!==mine){ document.removeEventListener('click', off); return; } if(mine && !mine.contains(e.target) && !e.target.closest('.nx-tbm')){ closeMenus(); document.removeEventListener('click', off); } }), 0); }
 }
@@ -10061,9 +10081,9 @@ const mo=new MutationObserver(()=>{});
 /* it always opens on My Dashboard */
 /* opened from the Expenses phone app: go straight to Expenses and nothing else */
 const APPX=document.documentElement.classList.contains('app-exp') || new URLSearchParams(location.search).get('app')==='expenses';
-if(ui.on){ build(); document.documentElement.classList.add('nx-on'); drawRail(); if(APPX) openClassic('expenses'); else open(DEEP||'day'); navInit(); lastSig=sig(); try{ window.__hub && window.__hub.paint(); }catch(e){} }
+if(ui.on){ build(); document.documentElement.classList.add('nx-on'); drawRail(); if(APPX) openClassic('expenses'); else open(DEEP||'day'); lastSig=sig(); try{ window.__hub && window.__hub.paint(); }catch(e){} }
 window.__nx={ version:'2.2', paint, open, setOn, parse:parseQuick, ui, pinTile,
-  destroy(){ window.removeEventListener('popstate', onPop); clearInterval(live); clearInterval(clock); mo.disconnect(); railMo.disconnect(); document.removeEventListener('keydown', onKey); document.removeEventListener('click', onRailClick, true); document.removeEventListener('click', onPgx, true); window.removeEventListener('resize', onResize);
+  destroy(){ clearInterval(live); clearInterval(clock); mo.disconnect(); railMo.disconnect(); document.removeEventListener('keydown', onKey); document.removeEventListener('click', onRailClick, true); document.removeEventListener('click', onPgx, true); window.removeEventListener('resize', onResize);
     railNodes.forEach(n=>n.remove()); restoreBoardBtn(); if(shell) shell.remove(); if(tabbar) tabbar.remove(); if(sw) sw.remove(); closeMenus(); if(toastEl) toastEl.remove(); css.remove(); document.documentElement.classList.remove('nx-on','nx-show','nx-dragging'); } };
 })();
 
