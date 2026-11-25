@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 24** — Calendar and the dashboard's day: an Outlook event that runs across several days (like an out-of-office week not marked all-day) no longer stretches into one huge block that hides the week. A day it covers completely shows it with the all-day items; on its first and last day it's cut to that day.
 - **Nov 24** — Connected Systems: the System Map takes the full width until you pick a system or a story; the list of stories beside it is gone (they play from Follow the Work, on the map).
 - **Nov 24** — Connected Systems in the left menu, the phone's Everything list and its dashboard tile now open the Connected Systems app (resources.mismo.org/connected-systems/) in a new tab. Team HQ's own page stays for editing: the app's Edit in Team HQ opens it.
 - **Nov 24** — Connected Systems, view only, is now its own app at /connected-systems/ (its own access and storage); /team-hq/connected-systems/ forwards there. It draws with this repository's src/systems.js, so systems.js has to keep working with a stand-in window.__S (DEVELOPING.md).
