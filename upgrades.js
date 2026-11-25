@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261124i';
+var BUILD='20261125a';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -6169,13 +6169,20 @@ MODS.push(function(){
      title, company, email, member or not); "Find in Member 360" fills them in from Member 360's people list
      (member-360/data/peoplelist), read only with the signed-in person's own sign-in. The record key (k) and Aptify
      Company ID (cid) stay with the panelist so it can be matched again. Never writes to Member 360 or uses its flows
-     or keys. With no Member 360 access (401, 403) or no list yet (404), the details are typed in. */
+     or keys. With no Member 360 access (401, 403) or no list yet (404), the details are typed in.
+   - CN-025 (Nov 25, 2026): email event details to mismoevents@mismo.org. Team HQ's own Power Automate flow saves each
+     email (from, name, subject, text, when, and its attachments under receipts/) into collection "eventmail". An email
+     that plainly names one event on the list is added to that event's Emails tab by itself; anything else waits in
+     Event Emails on this page to be added to an event, start a new one, or be set aside. Dates and links found in an
+     email are offered on the Emails tab, never written to the event without someone choosing them. Nothing is ever
+     sent from the mailbox. */
 (function(){
 'use strict';
 if(window.__hqEvents && window.__hqEvents.destroy) window.__hqEvents.destroy();
 const S=window.__S; if(!S) return;
 const COLL='events';
 const REQUEST_FORM='https://resources.mismo.org/forms/request/';
+const MAILBOX='mismoevents@mismo.org';
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MONL=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -6229,10 +6236,10 @@ function toast(msg, undo){ const t=window.__nxToast; if(t) t(msg, undo); }
 const safeUrl=u=>{ u=String(u||'').trim(); if(!u) return ''; if(!/^https?:\/\//i.test(u)) u='https://'+u; try{ const x=new URL(u); return /^https?:$/.test(x.protocol) ? x.href : ''; }catch(e){ return ''; } };
 
 /* ---------- the data: one record per event ---------- */
-function start(){ if(M.sub || !S.db || !S.db.collection) return; M.sub=true;
+function start(){ if(M.sub || !S.db || !S.db.collection) return; M.sub=true; setTimeout(()=>startMail(), 0);
   try{ S.db.collection(COLL).onSnapshot(snap=>{ const L=[]; (snap && snap.docs ? snap.docs : []).forEach(d=>{ let v=null; try{ v=JSON.parse(JSON.stringify(d.data()||{})); }catch(e){} if(v && v.name){ v.id=v.id||d.id; fix(v); L.push(v); } });
-      M.list=L; notify(); }, e=>{ console.error('Industry Events', e); if(!M.list){ M.list=[]; notify(); } }); }catch(e){ console.error(e); M.list=M.list||[]; } }
-function fix(v){ ['people','talks','promo','graphics','contacts','roles','tasks','panels'].forEach(k=>{ if(!Array.isArray(v[k])) v[k]=[]; }); v.panels.forEach(p=>{ if(!Array.isArray(p.people)) p.people=[]; }); if(STATUS.indexOf(v.status)<0) v.status='Considering'; return v; }
+      M.list=L; notify(); autoFile(); }, e=>{ console.error('Industry Events', e); if(!M.list){ M.list=[]; notify(); } }); }catch(e){ console.error(e); M.list=M.list||[]; } }
+function fix(v){ ['people','talks','promo','graphics','contacts','roles','tasks','panels','emails'].forEach(k=>{ if(!Array.isArray(v[k])) v[k]=[]; }); v.panels.forEach(p=>{ if(!Array.isArray(p.people)) p.people=[]; }); if(STATUS.indexOf(v.status)<0) v.status='Considering'; return v; }
 function save(ev, msg, undoTo){ ev=fix(clone(ev)); ev.by=me(); ev.at=Date.now(); if(!ev.created){ ev.created=ev.at; ev.createdBy=me(); }
   const L=(M.list||[]).filter(x=>x.id!==ev.id); L.push(ev); M.list=L; notify();
   return Promise.resolve().then(()=>S.db.collection(COLL).doc(ev.id).set(ev)).then(()=>{ if(msg) toast(msg, undoTo ? ()=>save(undoTo, 'Put back the way it was.') : null); return true; },
@@ -6317,6 +6324,17 @@ css.textContent=`
 @container (max-width:600px){.ev-card{grid-template-columns:72px minmax(0,1fr)}.ev-card .ev-side2{grid-column:2;min-width:0;padding:8px 0 0;border-left:0;border-top:1px solid var(--border);flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}.ev-cnt{justify-content:start}}.ev-cnt b{color:var(--ink);font-variant-numeric:tabular-nums}
 .ev-box{border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:14px;display:flex;flex-direction:column;gap:8px}
 .ev-box+.ev-box{margin-top:12px}
+.ev-mail{margin:0 0 14px;border-color:#74bfeb;box-shadow:inset 4px 0 0 #74bfeb}
+.ev-mhd{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}.ev-mhd h3{margin:0}
+.ev-mr{display:flex;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--rule,var(--border))}
+.ev-mr .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.ev-mr .tx b{font-size:14px}.ev-mr .tx span{font-size:12px;color:var(--ink-3)}.ev-mr .tx small{font-size:12px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ev-mr .ac{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:58%}.ev-mr .ac select{height:32px;max-width:200px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);font:inherit;font-size:12.5px}
+.ev-em{border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;display:flex;flex-direction:column;gap:8px}
+.ev-em .top{display:flex;gap:10px;align-items:flex-start}.ev-em .tt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.ev-em .tt span{font-size:12px;color:var(--ink-3)}
+.ev-em .k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--ink-3)}
+.ev-em .sug,.ev-em .fl{display:flex;gap:6px;flex-wrap:wrap}
+.ev-em details summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--ink-2)}.ev-em .body{white-space:pre-wrap;font-size:13px;line-height:1.5;color:var(--ink-2);margin-top:6px;max-height:320px;overflow:auto}
+@media(max-width:640px),(max-height:500px) and (max-width:1000px){.ev-mr{flex-direction:column;align-items:stretch}.ev-mr .ac{max-width:none;justify-content:flex-start}}
 .ev-box .hint{font-size:12.5px;color:var(--ink-3);margin:0}
 .ev-due{display:grid;grid-template-columns:62px minmax(0,1fr);gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--border);cursor:pointer;font:inherit;text-align:left;background:none;border-left:0;border-right:0;border-bottom:0;color:inherit;width:100%}
 .ev-due:first-of-type{border-top:0}
@@ -6480,6 +6498,7 @@ function draw(){ const el=P.el; if(!el || !el.isConnected && el.childNodes.lengt
   const who=sel([{v:'', t:'Everyone'}].concat(teamOpts()), P.who); who.setAttribute('aria-label','Who’s going'); who.addEventListener('change', ()=>{ P.who=who.value; draw(); }); bar.appendChild(who);
   const q=h('input'); q.type='search'; q.placeholder='Search events, cities, people, contacts…'; q.value=P.q; q.addEventListener('input', ()=>{ P.q=q.value; clearTimeout(q._t); q._t=setTimeout(()=>{ drawList(); }, 150); }); bar.appendChild(q);
   bar.appendChild(btn('ev-btn pri', '+ Add an Event', openNew));
+  mailBox(el);
   const cols=h('div','ev-cols'); el.appendChild(cols);
   const left=h('div','ev-left'); cols.appendChild(left); P.left=left;
   const right=h('div','ev-right'); cols.appendChild(right);
@@ -6499,6 +6518,9 @@ function draw(){ const el=P.el; if(!el || !el.isConnected && el.childNodes.lengt
   right.appendChild(wb);
   const mb=h('div','ev-box'); mb.appendChild(h('h3',null,'Promoting an Event')); mb.appendChild(h('p','hint','Each event has a Promotion list. To have the Strategic Growth team make a post or graphic, send a request to MISMO Media.'));
   const ra=h('a','ev-btn', 'Ask MISMO Media'); ra.href=REQUEST_FORM; ra.target='_blank'; ra.rel='noopener'; mb.appendChild(ra); right.appendChild(mb);
+  const xb=h('div','ev-box'); xb.appendChild(h('h3',null,'Email It In')); const xp=h('p','hint'); xp.appendChild(document.createTextNode('Forward invitations, agendas, speaker details and graphics to '));
+  const xa=h('a',null,MAILBOX); xa.href='mailto:'+MAILBOX; xp.appendChild(xa); xp.appendChild(document.createTextNode('. An email that names an event on the list goes onto it; anything else waits under Event Emails at the top of this page.'));
+  xb.appendChild(xp); right.appendChild(xb);
 }
 function matches(e){ const q=P.q.trim().toLowerCase(); if(P.who && !e.people.some(p=>p.who===P.who) && !e.talks.some(t=>t.who===P.who)) return false; if(!q) return true;
   const hay=[e.name, e.host, e.city, e.venue, e.kind, e.notes].concat(e.people.map(p=>pname(p.who))).concat(e.contacts.map(c=>[c.name,c.company,c.title,c.role].join(' '))).concat(e.talks.map(t=>t.title)).concat(e.tasks.map(t=>t.t)).concat(e.panels.map(p=>[p.title].concat(p.people.map(x=>[x.name,x.company,x.title].join(' '))).join(' '))).join(' ').toLowerCase();
@@ -6545,7 +6567,7 @@ function card(e){ const c=btn('ev-card'+(e.status==='Not Going'||e.gone?' dim':'
   return c; }
 
 /* ---------- the right-hand panel: one event, every part of it, with one Save ---------- */
-const TABS=[['details','Details'],['people','Who’s Going'],['talks','Speaking'],['panels','Panels'],['promo','Promotion'],['tasks','Tasks'],['graphics','Graphics'],['contacts','Contacts']];
+const TABS=[['details','Details'],['people','Who’s Going'],['talks','Speaking'],['panels','Panels'],['promo','Promotion'],['tasks','Tasks'],['graphics','Graphics'],['contacts','Contacts'],['emails','Emails']];
 function openNew(){ const ev=fix({id:uid('ev'), name:'', status:'Considering', kind:'Conference', roles:['Attending']}); openPanel(null, 'details', ev); }
 function openPanel(id, tab, fresh){ closePanel();
   const src=fresh || (M.list||[]).find(e=>e.id===id); if(!src) return;
@@ -6568,11 +6590,11 @@ function paintPanel(){ const st=P.panel; if(!st) return; const ev=st.ev, pn=st.p
   tt.appendChild(h('h2',null, ev.name || 'Name the Event'));
   tt.appendChild(h('div','meta', [span(ev.start, ev.end), [ev.city, ev.venue].filter(Boolean).join(' · '), ev.status].filter(Boolean).join('  ·  ') || 'Add the dates and where it is'));
   top.appendChild(tt); const x=btn('ev-x', '×', tryClose); x.setAttribute('aria-label','Close'); top.appendChild(x); ph.appendChild(top);
-  const tabs=h('div','ev-tabs'); TABS.forEach(t=>{ const n={people:ev.people.length, talks:ev.talks.length, panels:ev.panels.length, promo:ev.promo.length, tasks:ev.tasks.filter(x=>!x.done).length, graphics:ev.graphics.length, contacts:ev.contacts.length}[t[0]];
+  const tabs=h('div','ev-tabs'); TABS.forEach(t=>{ const n={people:ev.people.length, talks:ev.talks.length, panels:ev.panels.length, promo:ev.promo.length, tasks:ev.tasks.filter(x=>!x.done).length, graphics:ev.graphics.length, contacts:ev.contacts.length, emails:ev.emails.length}[t[0]];
     const b=btn(st.tab===t[0]?'on':'', t[1], ()=>{ collect(); st.tab=t[0]; paintPanel(); }); if(n) b.appendChild(h('i',null,String(n))); tabs.appendChild(b); }); ph.appendChild(tabs);
   pn.appendChild(ph);
   const body=h('div','ev-pb'); pn.appendChild(body); st.body=body; st.get=null;
-  ({details:pDetails, people:pPeople, talks:pTalks, panels:pPanels, promo:pPromo, tasks:pTasks, graphics:pGraphics, contacts:pContacts}[st.tab]||pDetails)(body, ev);
+  ({details:pDetails, people:pPeople, talks:pTalks, panels:pPanels, promo:pPromo, tasks:pTasks, graphics:pGraphics, contacts:pContacts, emails:pEmails}[st.tab]||pDetails)(body, ev);
   body.addEventListener('input', markDirty); body.addEventListener('change', markDirty);
   const pf=h('div','ev-pf');
   const sv=btn('ev-btn pri', st.isNew ? 'Save the Event' : 'Save Changes', doSave); pf.appendChild(sv);
@@ -6588,7 +6610,8 @@ function doSave(){ const st=P.panel; if(!st) return; collect(); const ev=st.ev;
   if(ev.start && ev.end && ev.end<ev.start){ st.tab='details'; paintPanel(); toast('The end date is before the start date.'); return; }
   ev.people=ev.people.filter(p=>p.who); ev.talks=ev.talks.filter(t=>t.title||t.who); ev.promo=ev.promo.filter(p=>p.t); ev.contacts=ev.contacts.filter(c=>c.name||c.company||c.email); ev.tasks=ev.tasks.filter(t=>t.t);
   ev.panels=ev.panels.map(p=>Object.assign(p, {people:(p.people||[]).filter(x=>x.name||x.email)})).filter(p=>p.title||p.people.length);
-  const prev=st.orig; save(ev, st.isNew ? '“'+ev.name+'” is on the list.' : 'Saved.', prev).then(ok=>{ if(!ok) return; st.orig=clone(ev); st.ev=clone(ev); st.dirty=false; st.isNew=false; paintPanel(); }); }
+  const prev=st.orig, fromMail=st.fromMail; save(ev, st.isNew ? '“'+ev.name+'” is on the list.' : 'Saved.', prev).then(ok=>{ if(!ok) return; st.orig=clone(ev); st.ev=clone(ev); st.dirty=false; st.isNew=false; st.fromMail=null; paintPanel();
+    if(fromMail) setMail(Object.assign({}, fromMail, {filed:{ev:ev.id, by:me(), at:Date.now(), auto:0}})).catch(()=>{}); }); }
 
 /* Details */
 function pDetails(b, ev){ const g=h('div','ev-grid'); b.appendChild(g);
@@ -6782,6 +6805,98 @@ function view(g){ try{ if(window.__att && window.__att.view) window.__att.view(g
 async function thumb(g, el){ try{ let u=thumbs[g.id]; if(!u){ const api=window.__expApi; if(!api || !api.attBlob) return; const bl=await api.attBlob(g.id); u=URL.createObjectURL(bl); thumbs[g.id]=u; }
   el.style.backgroundImage='url("'+u+'")'; el.textContent=''; }catch(e){} }
 
+/* ---------- emails to mismoevents@mismo.org (CN-025, Nov 25, 2026) ---------- */
+const EM={list:null, sub:false, tried:{}};
+function startMail(){ if(EM.sub || !S.db || !S.db.collection) return; EM.sub=true;
+  try{ S.db.collection('eventmail').onSnapshot(snap=>{ const L=[]; (snap && snap.docs ? snap.docs : []).forEach(d=>{ let v=null; try{ v=JSON.parse(JSON.stringify(d.data()||{})); }catch(e){} if(v){ v.id=d.id; L.push(v); } });
+      EM.list=L; autoFile(); if(P.el && P.el.isConnected){ clearTimeout(drawWait); drawWait=setTimeout(draw, 30); } }, e=>{ console.error('Event emails', e); }); }catch(e){ console.error(e); } }
+function setMail(d){ const x=clone(d); delete x.id;
+  if(EM.list){ EM.list=EM.list.filter(y=>y.id!==d.id).concat([clone(d)]); if(P.el && P.el.isConnected){ clearTimeout(drawWait); drawWait=setTimeout(draw, 30); } }
+  return Promise.resolve().then(()=>S.db.collection('eventmail').doc(d.id).set(x)); }
+/* the email's text without MBA's “CAUTION: This email originated from outside…” banner */
+const mailText=d=>String(d.text||d.preview||'').replace(/^\s*CAUTION:[\s\S]*?(content is safe\.?|is safe\.)\s*/i,'').replace(/\r/g,'').replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+const mailSubj=d=>String(d.subject||'').replace(/^\s*((fwd?|fw|re)\s*:\s*)+/i,'').trim();
+const mailAt=d=>{ const t=Date.parse(d.at||''); return isNaN(t) ? 0 : t; };
+const mailWhen=d=>{ const t=mailAt(d); return t ? new Date(t).toLocaleDateString('en-US',{month:'short', day:'numeric'}) : ''; };
+const waiting=()=>(EM.list||[]).filter(d=>!d.filed && !d.aside).sort((a,b)=>mailAt(b)-mailAt(a));
+/* which event an email is about: the event's whole name, or its name without the year, in the subject or the text */
+const nameKey=n=>String(n||'').toLowerCase().replace(/&/g,' and ').replace(/\b(19|20)\d\d\b/g,' ').replace(/[^a-z0-9]+/g,' ').trim();
+function matchesFor(d){ const hay=' '+nameKey(mailSubj(d)+' \n '+mailText(d).slice(0,6000))+' ';
+  return live().filter(e=>{ const k=nameKey(e.name); return k.length>=6 && k.split(' ').length>=2 && hay.indexOf(' '+k+' ')>=0; }); }
+function bestGuess(d){ const strong=matchesFor(d); if(strong.length) return strong[0];
+  const W=nameKey(mailSubj(d)).split(' ').filter(w=>w.length>3); if(!W.length) return null;
+  let best=null, sc=0; live().forEach(e=>{ const k=' '+nameKey(e.name)+' '; const n=W.filter(w=>k.indexOf(' '+w+' ')>=0).length; if(n>sc){ sc=n; best=e; } });
+  return sc>=2 ? best : null; }
+/* one event plainly named → the email goes onto it by itself (whoever has Industry Events open does it, once) */
+function autoFile(){ if(!me() || !EM.list || !M.list) return;
+  waiting().forEach(d=>{ if(EM.tried[d.id] || d.autoTried) return; EM.tried[d.id]=1; const L=matchesFor(d);
+    if(L.length===1) fileTo(d, L[0], true); else setMail(Object.assign({}, d, {autoTried:Date.now()})).catch(()=>{}); }); }
+function emailEntry(d){ return {id:d.id, from:d.from||'', fromName:d.fromName||'', subject:mailSubj(d)||'(No subject)', at:d.at||'', text:mailText(d).slice(0,20000),
+  files:(Array.isArray(d.files)?d.files:[]).filter(f=>f && f.path).map(f=>({id:f.path, name:f.name||f.path.split('/').pop(), type:f.type||'', size:f.size||0}))}; }
+function fileTo(d, ev, auto){ const src=(M.list||[]).find(x=>x.id===ev.id); if(!src) return Promise.resolve(false);
+  const nx=fix(clone(src)); if(!nx.emails.some(x=>x.id===d.id)) nx.emails.push(emailEntry(d));
+  return save(nx, auto ? null : 'Added to '+src.name+'.').then(ok=>{ if(!ok) return false;
+    return setMail(Object.assign({}, d, {filed:{ev:src.id, by:me(), at:Date.now(), auto:auto?1:0}})).then(()=>true, ()=>true); }); }
+function newFromMail(d){ const f=found(d); const ev=fix({id:uid('ev'), name:mailSubj(d).replace(/^(invitation|invite|save the date|registration( is)? open|reminder)\s*[:\-–]\s*/i,'').slice(0,120), status:'Considering', kind:'Conference', roles:['Attending'],
+    start:f.dates?f.dates[0]:'', end:f.dates?f.dates[1]:'', url:f.links[0]||'', emails:[emailEntry(d)]});
+  openPanel(null, 'details', ev); P.panel.fromMail=d; }
+/* what an email offers: dates (“March 3–5, 2027”, “Oct 18 - Oct 21, 2026”, “May 5, 2027”) and links */
+const MONRX='(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
+function found(d){ const t=mailSubj(d)+'\n'+mailText(d); const out={dates:null, links:[]};
+  const mo=x=>MON.findIndex(m=>m.toLowerCase()===x.slice(0,3).toLowerCase())+1;
+  const mk=(y,m,dd)=>{ const x=new Date(+y, m-1, +dd); return x.getMonth()===m-1 ? iso(x) : null; };
+  let r=new RegExp(MONRX+'\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?\\s*(?:-|–|—|to|through)\\s*(?:'+MONRX+'\\.?\\s+)?(\\d{1,2})(?:st|nd|rd|th)?,?\\s+(20\\d\\d)','i').exec(t);
+  if(r){ const a=mk(r[5], mo(r[1]), r[2]), b=mk(r[5], r[3]?mo(r[3]):mo(r[1]), r[4]); if(a && b && b>=a) out.dates=[a,b]; }
+  if(!out.dates){ r=new RegExp(MONRX+'\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?,?\\s+(20\\d\\d)','i').exec(t); if(r){ const a=mk(r[3], mo(r[1]), r[2]); if(a) out.dates=[a,a]; } }
+  const seen={}; (t.match(/https?:\/\/[^\s<>"'\])]+/gi)||[]).forEach(u=>{ u=u.replace(/[.,;:!?)]+$/,''); const lo=u.toLowerCase();
+    if(/unsubscribe|safelinks|urldefense|mimecast|linkedin\.com|facebook\.com|twitter\.com|x\.com\/|instagram|youtube|mailto:|list-manage|email\.|click\.|track|\.(png|jpe?g|gif)(\?|$)/.test(lo)) return;
+    if(!seen[lo]){ seen[lo]=1; out.links.push(u); } });
+  out.links=out.links.slice(0,3); return out; }
+
+/* Event Emails: what came in and isn't on an event yet */
+function mailBox(el){ startMail(); const W=waiting(); if(!W.length) return;
+  const bx=h('div','ev-box ev-mail'); const hd=h('div','ev-mhd'); hd.appendChild(h('h3',null,'Event Emails')); hd.appendChild(h('span','hint', W.length+' waiting · sent to '+MAILBOX)); bx.appendChild(hd);
+  W.slice(0,8).forEach(d=>{ const r=h('div','ev-mr'); const tx=h('div','tx');
+    tx.appendChild(h('b',null, mailSubj(d)||'(No subject)'));
+    const nf=(Array.isArray(d.files)?d.files:[]).filter(f=>f && f.path).length;
+    tx.appendChild(h('span',null, [d.fromName||d.from, mailWhen(d), nf ? nf+' attachment'+(nf===1?'':'s') : ''].filter(Boolean).join(' · ')));
+    const pv=mailText(d).replace(/\s+/g,' ').slice(0,180); if(pv) tx.appendChild(h('small',null,pv+(mailText(d).length>180?'…':'')));
+    r.appendChild(tx);
+    const ac=h('div','ac'); const g=bestGuess(d);
+    if(g) ac.appendChild(btn('ev-btn pri', 'Add to '+(g.name.length>34?g.name.slice(0,32)+'…':g.name), ()=>fileTo(d, g)));
+    const pk=sel([{v:'', t:g?'Another event…':'Add to an event…'}].concat(live().filter(e=>!g || e.id!==g.id).sort(byStart).map(e=>({v:e.id, t:e.name+(e.start?' ('+fmt(e.start)+')':'')}))), '');
+    pk.setAttribute('aria-label','Add this email to an event'); pk.addEventListener('change', ()=>{ const e=live().find(x=>x.id===pk.value); if(e) fileTo(d, e); }); ac.appendChild(pk);
+    ac.appendChild(btn('ev-btn', 'Start a New Event', ()=>newFromMail(d)));
+    ac.appendChild(btn('ev-btn', 'Not an Event', ()=>{ setMail(Object.assign({}, d, {aside:{by:me(), at:Date.now()}})).then(()=>toast('Set aside.', ()=>{ const x=clone(d); delete x.aside; setMail(x); }), ()=>toast('That didn’t save. Try again in a moment.')); }));
+    r.appendChild(ac); bx.appendChild(r); });
+  if(W.length>8) bx.appendChild(h('p','hint', '+ '+(W.length-8)+' more, oldest last.'));
+  el.appendChild(bx); }
+
+/* the Emails tab: what was sent in about this event, with what it offers */
+function pEmails(b, ev){ const st=P.panel;
+  const hd=h('div','ev-sec'); hd.appendChild(h('h3',null,'Emails About This Event')); const hn=h('span','hint'); hn.appendChild(document.createTextNode('Forward anything about it to ')); const a=h('a',null,MAILBOX); a.href='mailto:'+MAILBOX; hn.appendChild(a); hn.appendChild(document.createTextNode('.')); hd.appendChild(hn); b.appendChild(hd);
+  if(!ev.emails.length){ b.appendChild(h('p','ev-empty','No emails yet. One that names this event goes here by itself.')); return; }
+  ev.emails.slice().sort((x,y)=>String(y.at).localeCompare(String(x.at))).forEach(m=>{ const c=h('div','ev-em');
+    const top=h('div','top'); const tt=h('div','tt'); tt.appendChild(h('b',null,m.subject)); tt.appendChild(h('span',null,[m.fromName||m.from, mailWhen(m)].filter(Boolean).join(' · '))); top.appendChild(tt);
+    if(!st.isNew) top.appendChild(btn('ev-btn', 'Take Off This Event', ()=>{ if(!window.confirm('Take this email off '+(ev.name||'this event')+'? It goes back to Event Emails.')) return;
+      const src=(M.list||[]).find(x=>x.id===ev.id); if(!src) return; const nx=fix(clone(src)); nx.emails=nx.emails.filter(x=>x.id!==m.id);
+      save(nx, 'Taken off. It’s back in Event Emails.').then(ok=>{ if(!ok) return; collect(); st.ev.emails=st.ev.emails.filter(x=>x.id!==m.id); if(st.orig) st.orig.emails=(st.orig.emails||[]).filter(x=>x.id!==m.id); paintPanel();
+        const d=(EM.list||[]).find(x=>x.id===m.id); if(d){ const x=clone(d); delete x.filed; x.autoTried=Date.now(); setMail(x).catch(()=>{}); } }); }));
+    c.appendChild(top);
+    const f=found(m); const sug=h('div','sug');
+    if(f.dates && (f.dates[0]!==ev.start || f.dates[1]!==(ev.end||ev.start))){ sug.appendChild(btn('ev-btn', 'Use the Dates: '+span(f.dates[0], f.dates[1]), ()=>{ collect(); st.ev.start=f.dates[0]; st.ev.end=f.dates[1]; markDirty(); paintPanel(); toast('Dates set. Press Save Changes to keep them.'); })); }
+    f.links.filter(u=>u!==ev.url && u!==ev.kit).slice(0,2).forEach(u=>{ let host=''; try{ host=new URL(u).hostname.replace(/^www\./,''); }catch(e){}
+      if(!ev.url) sug.appendChild(btn('ev-btn', 'Use as Event Website: '+host, ()=>{ collect(); st.ev.url=u; markDirty(); paintPanel(); toast('Website set. Press Save Changes to keep it.'); }));
+      const o=h('a','ev-btn', 'Open '+host+' ↗'); o.href=safeUrl(u); o.target='_blank'; o.rel='noopener noreferrer'; sug.appendChild(o); });
+    if(sug.childNodes.length){ c.appendChild(h('div','k','Found in This Email')); c.appendChild(sug); }
+    if(m.files && m.files.length){ const fl=h('div','fl'); m.files.forEach(g=>{ const o=btn('ev-btn', g.name, ()=>view(g)); o.title='Open '+g.name; fl.appendChild(o);
+        const img=/^image\//.test(g.type||'') || /\.(png|jpe?g|gif|webp|svg)$/i.test(g.name);
+        if(img && !st.ev.graphics.some(x=>x.id===g.id)) fl.appendChild(btn('ev-btn', '+ Add to Graphics', ()=>{ collect(); st.ev.graphics.push(Object.assign({}, g, {use:/logo/i.test(g.name)?'Logo':/speaker/i.test(g.name)?'Speaker Card':/banner/i.test(g.name)?'Banner':'Other', label:g.name.replace(/\.[^.]+$/,'')})); markDirty(); paintPanel(); toast('Added to Graphics. Press Save Changes to keep it.'); })); });
+      c.appendChild(fl); }
+    if(m.text){ const det=h('details'); det.appendChild(h('summary',null,'Read the Email')); det.appendChild(h('div','body', m.text)); c.appendChild(det); }
+    b.appendChild(c); });
+  st.get=null; }
+
 /* ---------- the dashboard tile ---------- */
 function tile(el, size){ start(); const box=h('div','ev-tile'); el.appendChild(box);
   if(M.list==null){ box.appendChild(h('div','st-sub','Getting Industry Events…')); return; }
@@ -6797,7 +6912,7 @@ function tile(el, size){ start(); const box=h('div','ev-tile'); el.appendChild(b
 function tripsFor(who){ return live().filter(e=>!e.example && e.status==='Going' && e.people.some(p=>p.who===who)).filter(e=>{ const n=daysTo(endOf(e)); return n==null || n>=-60; })
   .sort(byStart).map(e=>{ const p=e.people.find(x=>x.who===who)||{}; return {trip:e.name, from:p.from||e.start||'', to:p.to||e.end||e.start||''}; }); }
 
-window.__hqEvents={ version:'1.2', page, tile, start, tripsFor, open:openPanel,
+window.__hqEvents={ version:'1.3', page, tile, start, tripsFor, open:openPanel, _found:found, _matches:matchesFor,
   get list(){ return M.list; },
   onChange(f){ M.listeners.push(f); return ()=>{ M.listeners=M.listeners.filter(x=>x!==f); }; },
   redraw: draw,
