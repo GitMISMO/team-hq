@@ -243,6 +243,11 @@ The MISMO Connections Map (Jonna's Claude Doc) is the source of truth for every 
   Claude builds its side, Team HQ never writes into it).
 - **Contractor HQ** (formerly Service Orders): reads the staff list and contractor expense receipts.
 - **Every system's tile:** headline numbers read from each system for its dashboard tile.
+- **MyMISMO tile (CN-035, Nov 25, 2026):** MyMISMO (`/mymismo/`, GitMISMO/mymismo) is in `SYS` and `SYM` in `src/hqx.js`, so it
+  shows in Add a Tile; it is never placed on anyone's dashboard by itself. `extract()` reads its Home figure boxes as they
+  are (`.pass-figs`: the number in `<b>`, the label in `<span>`: Sessions, Speakers, Sponsors) and leaves out **Starred**,
+  which is kept on each phone, not for the team (`PERPHONE`). If MyMISMO renames `.pass-figs` or its markup, it posts a
+  Change Notice; Team HQ never reads `mymismo-data`.
 - **Ask, Plan My Day and receipt reading** go through the relay's ask route; MISMO's API key stays in the relay.
 - **Failure Watcher → Connected Systems (CN-019, Nov 23, 2026):** GitMISMO/mismo-connections' Failure Watcher (every 30
   minutes) writes its log into `team-hq-data` `data/systemsmap.json` as `docs.current.failures` (newest 100; each entry

@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 25** — MyMISMO, MISMO’s own summit app, is in + Add a Tile: its tile shows the Sessions, Speakers and Sponsors on its Home page (Starred stays on each phone, so it isn’t shown). Nobody’s dashboard gets the tile unless they add it.
 - **Nov 25** — The browser's Back button now goes to the last page you were on in Team HQ, and closes an open pane, pop-up or menu first, one at a time (CN-033). It never undoes a change; Forward goes again. Team HQ still opens on My Dashboard and the address doesn't change.
 - **Nov 25** — Connected Systems: picking an engine-room piece (like Change Notices) now also lights up the systems its own lines go to (like Outlook and GitHub), instead of leaving them greyed out at the end of a lit line.
 - **Nov 25** — Industry Events: emails to mismoevents@mismo.org now do their best to find their event: the words of its name and host (rarer words count more), the sender writing from the event's website, its date or its city. The clear best goes onto that event by itself; anything it can't place for sure waits under Event Emails with its best guess first. An email taken off an event by hand is never moved by itself again.

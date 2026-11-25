@@ -228,7 +228,8 @@ const SYS=[
   ['glossary','Business Glossary','/glossary/','#2DD4BF','MISMO’s terms and definitions'],
   ['mismo-link','MISMO Link','/mismo-link/','#2477b8','MISMO Link AI pilot: agreements, testers, help desk and feedback'],
   ['qr','QR Code Manager','/qr/','#74BFEB','Codes, scan tracking and expiry'],
-  ['mms','MISMO Manufacturing System','/mms/','#A78BFA','Work requests, reviews and the facilitator queue']
+  ['mms','MISMO Manufacturing System','/mms/','#A78BFA','Work requests, reviews and the facilitator queue'],
+  ['mymismo','MyMISMO','/mymismo/','#14486e','MISMO’s own app: summit agenda, speakers, sponsors, attendees']   /* CN-035, Nov 25, 2026 */
 ].map(([k,n,u,c,d])=>({k,n,u,c,d}));
 /* Website Migration HQ (website-migration) was retired Nov 21, 2026: it is left off here and skipped below, so it never comes back as
    a New app; a tile for it already on someone's dashboard simply stops showing, and their saved layout is left as it is.
@@ -275,6 +276,7 @@ const SYM={
   'glossary':'<path d="M24 12c-5-4-12-4-18-2v28c6-2 13-2 18 2 5-4 12-4 18-2V10c-6-2-13-2-18 2z"/><path d="M24 12v28"/>',
   'mismo-link':'<path d="M20 28l8-8"/><path d="M22 14l4-4a8 8 0 0 1 12 12l-4 4M26 34l-4 4a8 8 0 0 1-12-12l4-4"/>',
   'mms':'<circle cx="18" cy="20" r="7"/><path d="M18 9v4M18 27v4M7 20h4M25 20h4M10.2 12.2l2.9 2.9M22.9 24.9l2.9 2.9M10.2 27.8l2.9-2.9M22.9 15.1l2.9-2.9"/><path d="M6 40h36M30 40V28l6-4v16M36 24l6-4v20"/>',
+  'mymismo':'<rect x="13" y="4" width="22" height="40" rx="4"/><path d="M21 9h6M22 39h4"/><path d="M24 15l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/>',
   'qr':'<rect x="7" y="7" width="13" height="13" rx="1"/><rect x="28" y="7" width="13" height="13" rx="1"/><rect x="7" y="28" width="13" height="13" rx="1"/><path d="M28 28h5v5h-5zM36 36h5v5h-5zM36 28h5M28 38v3"/>'
 };
 const symbol=k=>'<svg class="hqx-sym" viewBox="0 0 48 48" aria-hidden="true">'+(SYM[k]||'<rect x="7" y="7" width="14" height="14" rx="3"/><rect x="27" y="7" width="14" height="14" rx="3"/><rect x="7" y="27" width="14" height="14" rx="3"/><circle cx="34" cy="34" r="7"/>')+'</svg>';
@@ -453,6 +455,13 @@ function extract(doc){
   const BAD=BADT;
   out.cards=out.cards.filter(c=>!BAD.test(c.t||'') && !BAD.test(c.text||'') && !BAD.test(c.head||'') && !BAD.test(c.sub||''));
   if(BAD.test(cleanT(((doc.querySelector('[role=alert],.err,.error,.errbox,.loaderr,.fail')||{}).textContent)||'')) && !out.cards.length) out.failed=1;
+  /* MyMISMO's Home figure boxes (.pass-figs: the number in <b>, the label in <span>), read as they are. Starred is
+     kept on each phone, not for the team, so it never comes onto a tile (CN-035, Nov 25, 2026) */
+  const PERPHONE=/^starred$/i;
+  try{ const pf=pick(doc,'.pass-figs'); if(pf.length){ out.figs=[]; out.cards=out.cards.filter(c=>!PERPHONE.test(c.t||''));
+    pf.forEach(box=>[...box.children].forEach(f=>{ const b=f.querySelector('b'), sp=f.querySelector('span'); if(!b || !sp) return; const n=cleanT(words(sp)), v=numText(b);
+      if(!n || PERPHONE.test(n) || !VAL.test(v) || out.figs.some(z=>z.n===n)) return; out.figs.push({n, v, s:'', tone:''}); }));
+    out.cards=out.cards.filter(c=>!(c.big && out.figs.some(f=>f.n===c.t))); out.passFigs=1; } }catch(e){}
   try{ const mt=readMtToday(doc); if(mt){ out.cards=out.cards.filter(c=>c.t!=='Today'); out.cards.unshift(mt); } }catch(e){} try{ readTables(doc).forEach(c=>{ if(!out.cards.some(z=>z.t===c.t)) out.cards.unshift(c); }); }catch(e){}
   const vis=e=>e.offsetParent!==null;
   let GL=pick(doc,'[role=meter],[class*="gauge"]').filter(g=>g.getAttribute('role')==='meter' || String(g.className||'').split(/\s+/).some(c=>/^gauge([-_](card|box|item|tile))?$/.test(c)));
@@ -475,10 +484,10 @@ function extract(doc){
     if(!label || label.length>48 || label.length<3 || /^[a-z][a-z\s]{0,3}$/.test(label) || /^(today|tomorrow|yesterday|sun|mon|tue|wed|thu|fri|sat|sunday|monday|tuesday|wednesday|thursday|friday|saturday|days?|hrs?|hours?|mins?|minutes?|secs?|seconds?|weeks?|months?)$/i.test(label)) return; const key=label+'|'+tv; if(seen.has(key)) return; seen.add(key);
     if(!/[a-z]/.test(label) || /^[a-z]/.test(label)) label=tcase(label);
     const cl=String(box.className||''); out.figs.push({n:label, v:tv, s:sub.slice(0,90), tone:/(^|\s)(good|ok|up|pos)(\s|$)/.test(cl)?'good':/(^|\s)(bad|warn|late|down|neg|over)(\s|$)/.test(cl)?'bad':''}); });
-  scan(19); if(!out.figs.length) scan(15);
+  if(!out.passFigs){ scan(19); if(!out.figs.length) scan(15); }
   /* pages built around a table: a summary line ("Revenue $3.9M · Expense $4.2M · Net …") and its Total / Net rows */
   const money=v=>{ v=cleanT(v).replace(/^-/,'−'); return /\.\d\d$/.test(v) && /\d{1,3},\d{3}/.test(v) ? v.replace(/\.\d\d$/,'') : v; };
-  if(out.figs.length<6){ pick(doc,'table').filter(vis).slice(0,2).forEach(tb=>{
+  if(out.figs.length<6 && !out.passFigs){ pick(doc,'table').filter(vis).slice(0,2).forEach(tb=>{
       const hr=[...tb.querySelectorAll('thead tr')].pop(); const hds=hr ? [...hr.children].map(c=>cleanT(c.textContent)) : [];
       const pref=['YTD ACTUAL','YEAR TO DATE','ACTUAL + REMAINING FORECAST','LIVE, FOR THE YEAR','FORECAST FOR THE YEAR','ACTUAL','TOTAL'];
       [...tb.querySelectorAll('tbody tr, tfoot tr')].forEach(tr=>{ if(out.figs.length>=6) return; const cells=[...tr.children]; const lab=cleanT(cells[0] && cells[0].textContent); if(!/^(total|net)\b/i.test(lab) || lab.length>40) return;
@@ -486,7 +495,7 @@ function extract(doc){
         if(col<0) col=cells.findIndex((c,i)=>i>0 && /^[−\-(]?\$?[\d,]+/.test(cleanT(c.textContent)));
         if(col<0) return; const v=cleanT(cells[col].textContent).split(' ')[0]; if(!VAL.test(v.replace(/\.\d+$/,''))) return;
         const vv=money(v); if(!out.figs.some(f=>f.n===lab)) out.figs.push({n:lab.replace(/\b\w/g,c=>c.toUpperCase()).replace(/\B\w+/g,w=>w.toLowerCase()), v:(/\$/.test(vv)||!/\d,\d{3}/.test(vv)) ? vv : vv.replace(/^([−\-(]?)/,'$1$'), s:hds[col-off] ? hds[col-off].toLowerCase().replace(/^./,c=>c.toUpperCase()) : '', tone:/^[−\-(]/.test(v)?'bad':''}); }); }); }
-  if(out.figs.length<3){ const RX=/([A-Z][A-Za-z’' ]{2,30}?)\s+([−\-]?\$[\d,]+(?:\.\d+)?)/g;
+  if(out.figs.length<3 && !out.passFigs){ const RX=/([A-Z][A-Za-z’' ]{2,30}?)\s+([−\-]?\$[\d,]+(?:\.\d+)?)/g;
     pick(doc,'p,div,span,small,li').some(e=>{ if(!vis(e) || e.children.length>3) return false; const tx=String(e.innerText||e.textContent).replace(/[ \t]+/g,' '); if(tx.length>220 || !/[·|]/.test(tx)) return false; const m=[...tx.matchAll(RX)]; if(m.length<2) return false;
       m.slice(0,4).forEach(z=>{ const n=cleanT(String(z[1]).split(/\n/).pop()); if(!out.figs.some(f=>f.n===n)) out.figs.push({n, v:money(z[2]), s:'', tone:''}); }); return true; }); }
   /* every headline number can be its own tile too, when the page's tiles don't already carry it */
