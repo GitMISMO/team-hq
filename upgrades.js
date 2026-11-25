@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261124g';
+var BUILD='20261124h';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4867,6 +4867,8 @@ html[data-theme="dark"] .cs{--cs-hot:#74bfeb}
 @media(max-width:700px){.cs-find{margin-left:0;width:100%}.cs-find input{width:100%}}
 /* map */
 .cs-grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;align-items:start}
+/* nothing picked: the map takes the whole width; the side panel opens when a system or a story is picked (Jonna, Nov 24, 2026) */
+.cs-grid.solo{grid-template-columns:minmax(0,1fr)}.cs-grid.solo>.cs-panel{display:none}
 @media(max-width:1100px){.cs-grid{grid-template-columns:minmax(0,1fr)}}
 .cs-mapwrap{position:relative;scroll-margin-top:62px}.cs-panel{scroll-margin-top:62px}
 .cs-mapbox{overflow-x:auto;border-radius:14px}
@@ -6009,7 +6011,7 @@ function placeBub(){ const d=M.data, mi=P.mapin, b=mi && mi.querySelector('.cs-b
   if(w==='below' || w==='above') b.style.setProperty('--ax', Math.max(14, Math.min(bw-14, px-l))+'px'); else b.style.setProperty('--ay', Math.max(14, Math.min(bh-14, py-t))+'px'); }
 
 /* ---------- the side panel: what a system does (or, in Edit mode, the form) ---------- */
-function side(){ const p=P.panel, d=M.data; if(!p || !d || d.empty) return; p.textContent=''; p.classList.remove('is-intro'); if(P.fitPanel) P.fitPanel();
+function side(){ const p=P.panel, d=M.data; if(!p || !d || d.empty) return; p.textContent=''; p.classList.remove('is-intro'); if(p.parentNode) p.parentNode.classList.remove('solo'); if(P.fitPanel) P.fitPanel();
   if(P.form){ const w=h('div','cs-ep'); p.appendChild(w); P.form(w); return; }
   let id=P.sel; if(P.jr){ const j=journeys(d).find(x=>x.id===P.jr.id); if(j){ storyPanel(p, d, j); return; } }
   if(!id){ intro(p, d); return; }
@@ -6038,6 +6040,8 @@ function intro(p, d){ p.classList.add('is-intro'); if(P.fitPanel) P.fitPanel(); 
   if(P.edit){ w.appendChild(h('div','cs-k','Edit mode')); w.appendChild(h('h3',null,'Change the Map')); w.appendChild(h('p',null,'Select a system to change its status or details, or to add, change or set aside its connections. Drag a box to move it. Every save updates the “as of” date.'));
     const n=confirms(d); if(n) w.appendChild(h('span','cs-cf', n+' item'+(n>1?'s':'')+' still to confirm, marked with an amber dot. They’re only marked here, not for everyone else.'));
     return; }
+  /* the stories used to be listed here; they play from Follow the Work, on this map (Jonna, Nov 24, 2026) */
+  if(p.parentNode) p.parentNode.classList.add('solo'); return;
   const kr=h('div','cs-krow'); kr.appendChild(h('div','cs-k','Start here')); w.appendChild(kr); w.appendChild(h('h3',null,'Pick a System, or Follow the Work'));
   w.appendChild(h('p',null,'Every line is a hand-off between two systems. Moving dots show work flowing automatically; dashed lines are copied by a person.'));
   /* as many stories as fit beside the map (the area filters already sit above it) */
