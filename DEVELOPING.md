@@ -97,6 +97,15 @@ goes live:
 Run Check in the Test Copy is the browser check on every page and tile. Still to come: browser tests on made-up
 records that run on GitHub.
 
+## Browser Tab Icon (CN-030, Nov 25, 2026)
+
+Every page here (`index.html`, so the Test Copy too; `open.html`; `connected-systems/index.html`) has exactly one tab
+icon line in its `<head>`, pointing at MISMO's shared copy:
+`<link rel="icon" type="image/png" sizes="48x48" href="https://resources.mismo.org/assets/favicon-48x48.png">`.
+Never copy the image into this repository or add another `rel="icon"` (by hand or by script); a new page gets the same
+line. The home-screen icons (`*.webmanifest`, `apple-touch-icon`, the `hq-icon-*` and `expenses-icon-*` files) are
+separate and stay as they are. The page safety list's `img-src` already allows `https:`.
+
 ## Page Safety List
 
 `index.html` carries a Content-Security-Policy: code only from Team HQ's own address, fonts from Google Fonts, and
