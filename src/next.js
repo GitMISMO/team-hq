@@ -1032,11 +1032,11 @@ function dayPanel(id, withNav){
   const ad=h('div','nx-dpa');
   keyDatesOn(day).forEach(x=>{ const k=btn('kd', x.t, ()=>window.__editDate && window.__editDate(x)); ad.appendChild(k); });
   const hol=holiday(day); if(hol) ad.appendChild(h('span','kd hol', hol));
-  (all||[]).filter(e=>e.all && e.s<+day+864e5 && e.e>+day).forEach(e=>ad.appendChild(h('span','kd ev', e.t||'All day')));
+  (all||[]).filter(e=>(e.all && e.s<+day+864e5 && e.e>+day) || wholeDay(e,day)).forEach(e=>ad.appendChild(h('span','kd ev'+(e.show==='oof'?' oof':''), e.t||(e.show==='oof'?'Out of Office':'All day'))));
   S.tasks.filter(t=>isOpen(t) && t.due===iso(day) && doers(t).indexOf(id)>=0).forEach(t=>{ const k=btn('du', null, ()=>editTask(t)); k.innerHTML=sIcon(st(t))+'<span>'+t.t.replace(/</g,'&lt;')+'</span>'; ad.appendChild(k); });
   if(ad.childNodes.length) c.appendChild(ad);
   if(!all){ c.appendChild(h('p','nx-empty','Outlook isn’t coming through for '+(id===me()?'you':first(id))+' yet.')); return c; }
-  const ev=all.filter(e=>e.e>+day && e.s<+day+864e5 && e.show!=='free' && !e.all).sort((a,b)=>a.s-b.s);
+  const ev=all.filter(e=>e.e>+day && e.s<+day+864e5 && e.show!=='free' && !e.all && !wholeDay(e,day)).map(e=>Object.assign({}, e, dayCut(e,day))).sort((a,b)=>a.s-b.s);
   const ws=etAt(day,8), we=etAt(day,18);
   let a=Math.min(ws, ...ev.map(e=>e.s)), b=Math.max(we, ...ev.map(e=>e.e)); const A=new Date(a); A.setMinutes(0,0,0); a=+A; const B=new Date(b); if(B.getMinutes()) B.setHours(B.getHours()+1,0,0,0); b=+B;
   const H=(b-a)/3600e3, px=52, col=h('div','nx-vday'); col.style.height=(H*px)+'px';
@@ -1491,7 +1491,7 @@ function ftPick(cfg, L, after){ closeMenus(); const chosen=new Set(Array.isArray
 function freeTimes(ids, mins, max){ const now=Date.now(); let d=today(); const C=ids.map(id=>({id, ev:cal(id)})).filter(c=>c.ev); const out=[]; if(!C.length) return {list:out, seen:0};
   for(let k=0;k<15 && out.length<max;k++,d=addD(d,1)){ if(!workday(d)) continue; let t=Math.max(etAt(d,9), now); t=Math.ceil(t/18e5)*18e5; const end=etAt(d,17); let perDay=0, lastEnd=0;
     for(; t+mins*6e4<=end && perDay<3 && out.length<max; t+=18e5){ const e2=t+mins*6e4; if(t<lastEnd) continue;
-      if(C.every(c=>!c.ev.some(e=>e.show!=='free' && !e.all && e.s<e2 && e.e>t))){ out.push({t, e:e2}); perDay++; lastEnd=e2+60*6e4; } } }
+      if(C.every(c=>!c.ev.some(e=>e.show!=='free' && e.s<e2 && e.e>t))){ out.push({t, e:e2}); perDay++; lastEnd=e2+60*6e4; } } }
   return {list:out, seen:C.length}; }
 function ftDialog(cfg, L){ const x=X(); closeMenus(); let mins=cfg.mins||30;
   const ov=h('div','hqx-ov'); const box=h('div','hqx-box nx-ftd'); box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true'); box.setAttribute('aria-label','Find a Time');
@@ -1518,7 +1518,7 @@ function ftDialog(cfg, L){ const x=X(); closeMenus(); let mins=cfg.mins||30;
 function nextShared(ids, mins){ const now=Date.now(); let d=today(); const C=ids.map(id=>({id, ev:cal(id)})).filter(c=>c.ev); if(!C.length) return null;
   let best=null;
   for(let k=0;k<15;k++,d=addD(d,1)){ if(!workday(d)) continue; let t=Math.max(etAt(d,9), now); t=Math.ceil(t/18e5)*18e5; const end=etAt(d,17);
-    for(; t+mins*6e4<=end; t+=18e5){ const e2=t+mins*6e4; const freeIds=C.filter(c=>!c.ev.some(e=>e.show!=='free' && !e.all && e.s<e2 && e.e>t)).map(c=>c.id);
+    for(; t+mins*6e4<=end; t+=18e5){ const e2=t+mins*6e4; const freeIds=C.filter(c=>!c.ev.some(e=>e.show!=='free' && e.s<e2 && e.e>t)).map(c=>c.id);
       if(freeIds.length===C.length) return {t, n:C.length, of:C.length, out:[]};
       if(freeIds.indexOf(me())>=0 && (!best || freeIds.length>best.n)) best={t, n:freeIds.length, of:C.length, out:C.map(c=>c.id).filter(id=>freeIds.indexOf(id)<0)}; } }
   return best; }
@@ -2176,6 +2176,10 @@ function vWeek(){
   body.appendChild(wk);
 }
 
+/* An Outlook event that runs across days (an out-of-office week that isn't marked all-day) is cut to the one day being drawn.
+   One that covers the whole day shows with the all-day items instead of as a block the height of the whole week (Nov 24, 2026). */
+function dayCut(e, d){ const d0=+d, d1=d0+864e5; if(e.s<=d0 && e.e>=d1) return {whole:true}; return {s:Math.max(e.s,d0), e:Math.min(e.e,d1)}; }
+function wholeDay(e, d){ return !e.all && e.show!=='free' && e.s<=+d && e.e>=+d+864e5; }
 /* ---------- CALENDAR: the week ---------- */
 function vCal(){
   const t0=today(); let mon=addD(t0, -((t0.getDay()+6)%7)); if(t0.getDay()===6 || t0.getDay()===0) mon=addD(mon,7); mon=addD(mon, 7*(ui.tw||0));
@@ -2194,18 +2198,19 @@ function vCal(){
   D.forEach(d=>{ const hd=h('div','nx-cd'+(+d===+t0?' today':'')); hd.appendChild(h('small',null,WD[d.getDay()])); hd.appendChild(h('b',null,String(d.getDate()))); const hol=holiday(d); if(hol) hd.appendChild(h('span','hol',hol)); grid.appendChild(hd); });
   grid.appendChild(h('div','nx-cx al','All day'));
   const M=S.tasks.filter(t=>isOpen(t) && t.due && doers(t).indexOf(me())>=0);
-  D.forEach(d=>{ const c=h('div','nx-ca'); keyDatesOn(d).forEach(x=>{ const k=btn('kd', x.t, ()=>window.__editDate && window.__editDate(x)); k.title=(x.k||'')+' · '+x.t; c.appendChild(k); });
+  D.forEach(d=>{ const c=h('div','nx-ca'); (cal(me())||[]).filter(e=>(e.all && e.s<+d+864e5 && e.e>+d) || wholeDay(e,d)).forEach(e=>{ const k=h('span','kd ev'+(e.show==='oof'?' oof':''), e.t||(e.show==='oof'?'Out of Office':'Busy')); k.title=(e.t||'Busy')+' · all day'; c.appendChild(k); });
+    keyDatesOn(d).forEach(x=>{ const k=btn('kd', x.t, ()=>window.__editDate && window.__editDate(x)); k.title=(x.k||'')+' · '+x.t; c.appendChild(k); });
     M.filter(t=>t.due===iso(d)).forEach(t=>{ const k=btn('du', null, ()=>editTask(t)); k.innerHTML=sIcon(st(t))+'<span>'+t.t.replace(/</g,'&lt;')+'</span>'; c.appendChild(k); }); grid.appendChild(c); });
   const hours=h('div','nx-chs'); for(let k=startH;k<=endH;k++){ const l=h('span',null, (k%12||12)+(k<12?'a':'p')); l.style.top=((k-startH)*px)+'px'; hours.appendChild(l); } hours.style.height=((endH-startH)*px)+'px'; grid.appendChild(hours);
   const now=Date.now();
   D.forEach(d=>{ const col=h('div','nx-cc'+(+d===+t0?' today':'')); col.style.height=((endH-startH)*px)+'px';
-    const base=new Date(d); base.setHours(startH,0,0,0); const y=ms=>(ms-+base)/3600e3*px;
+    const base=new Date(d); base.setHours(startH,0,0,0); const y=ms=>(ms-+base)/3600e3*px, Hpx=(endH-startH)*px;
     for(let k=0;k<=endH-startH;k++){ const g=h('i','gl'); g.style.top=(k*px)+'px'; col.appendChild(g); }
-    ui.tpeople.forEach((pid,k)=>{ const p=person(pid); if(!p) return; (cal(pid)||[]).filter(e=>e.s<+d+864e5 && e.e>+d && e.show!=='free' && !e.all).forEach(e=>{ const s=h('i','ob'); s.style.top=Math.max(0,y(e.s))+'px'; s.style.height=Math.max(4, y(e.e)-Math.max(0,y(e.s)))+'px'; s.style.setProperty('--pc', pcol(p)); s.style.left=(3+k*5)+'px'; s.title=p.name+' busy '+tmL(e.s)+'–'+tmL(e.e); col.appendChild(s); }); });
-    const ev=(cal(me())||[]).filter(e=>e.s<+d+864e5 && e.e>+d && e.show!=='free' && !e.all).sort((a,b)=>a.s-b.s);
+    ui.tpeople.forEach((pid,k)=>{ const p=person(pid); if(!p) return; (cal(pid)||[]).filter(e=>e.s<+d+864e5 && e.e>+d && e.show!=='free').forEach(e=>{ const t1=Math.min(Hpx, Math.max(0,y(e.s))), t2=Math.min(Hpx, Math.max(0,y(e.e))); if(t2<=t1) return; const s=h('i','ob'); s.style.top=t1+'px'; s.style.height=Math.max(4, t2-t1)+'px'; s.style.setProperty('--pc', pcol(p)); s.style.left=(3+k*5)+'px'; s.title=p.name+' busy '+tmL(e.s)+'–'+tmL(e.e); col.appendChild(s); }); });
+    const ev=(cal(me())||[]).filter(e=>e.s<+d+864e5 && e.e>+d && e.show!=='free' && !e.all && !wholeDay(e,d)).map(e=>Object.assign({}, e, dayCut(e,d))).filter(e=>y(e.e)>0 && y(e.s)<Hpx).sort((a,b)=>a.s-b.s);
     const lanes=[]; ev.forEach(e=>{ let i=lanes.findIndex(x=>x<=e.s); if(i<0){ i=lanes.length; lanes.push(0); } lanes[i]=e.e; e._l=i; }); const nl=Math.max(1,lanes.length);
     const off=ui.tpeople.length*5+4;
-    ev.forEach(e=>{ const x=h('div','ce '+(e.show||'busy')+(e.e<now?' past':'')); x.style.top=y(e.s)+'px'; x.style.height=Math.max(18, y(e.e)-y(e.s)-2)+'px';
+    ev.forEach(e=>{ const x=h('div','ce '+(e.show||'busy')+(e.e<now?' past':'')); const t1=Math.max(0,y(e.s)), t2=Math.min(Hpx,y(e.e)); x.style.top=t1+'px'; x.style.height=Math.max(18, t2-t1-2)+'px';
       x.style.left='calc('+off+'px + (100% - '+(off+3)+'px) * '+(e._l/nl)+')'; x.style.width='calc((100% - '+(off+3)+'px) / '+nl+' - 2px)';
       const short=(e.e-e.s)<45*60e3; if(short) x.classList.add('short'); x.appendChild(h('span','et', short ? tm(e.s)+' '+(e.t||'Busy') : (e.t||'Busy'))); if(!short) x.appendChild(h('span','ei',tmL(e.s)+'–'+tmL(e.e))); x.title=(e.t||'Busy')+' · '+tmL(e.s)+'–'+tmL(e.e); col.appendChild(x); });
     if(+d===+t0 && now>+base && now<+base+(endH-startH)*3600e3){ const n=h('i','nowl'); n.style.top=y(now)+'px'; col.appendChild(n); }
@@ -2950,7 +2955,8 @@ a.nx-mini{text-decoration:none}
 .nx-dpa .kd,.nx-dpa .du,.nx-ca .kd,.nx-ca .du{display:flex;align-items:center;gap:6px;width:100%;min-height:24px;padding:2px 8px;border:0;border-radius:4px;font:inherit;font-size:12px;font-weight:600;text-align:left;color:var(--ink);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .nx-dpa .kd,.nx-ca .kd{background:color-mix(in srgb,var(--c2) 15%,var(--surface));box-shadow:inset 3px 0 0 var(--c2)}
 .nx-dpa .kd.hol{background:var(--warn-soft);box-shadow:inset 3px 0 0 var(--warn);cursor:default}
-.nx-dpa .kd.ev{background:var(--surface-3);box-shadow:inset 3px 0 0 var(--c1);cursor:default}
+.nx-dpa .kd.ev,.nx-ca .kd.ev{background:var(--surface-3);box-shadow:inset 3px 0 0 var(--c1);cursor:default}
+.nx-dpa .kd.ev.oof,.nx-ca .kd.ev.oof{background:var(--warn-soft);box-shadow:inset 3px 0 0 var(--warn)}
 .nx-dpa .du,.nx-ca .du{background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--border)}
 .nx-dpa .du span,.nx-ca .du span{overflow:hidden;text-overflow:ellipsis}
 .nx-dps{flex:1;min-height:0;overflow:auto;padding:12px 14px 12px 6px}

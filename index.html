@@ -15340,8 +15340,10 @@ function calEv(x){
   if(!x) return null;
   const show=String(x.show||x.showAs||'').toLowerCase();
   if(!show || show==='free' || show==='workingelsewhere') return null;
-  const av=(x.allDay!==undefined? x.allDay : x.isAllDay), all = av===true || String(av).toLowerCase()==='true';
-  if(all) return {all:1, show, d0:String(x.s||x.start||'').slice(0,10), d1:String(x.e||x.end||'').slice(0,10)};
+  /* the Outlook copy calls it allday; older copies allDay or isAllDay (allday was missed until Nov 24, 2026, so a holiday drew as a 24-hour meeting) */
+  const av=(x.allDay!==undefined? x.allDay : x.allday!==undefined? x.allday : x.isAllDay), all = av===true || String(av).toLowerCase()==='true';
+  if(all){ const d0=String(x.s||x.start||'').slice(0,10), d1=String(x.e||x.end||'').slice(0,10); const md=v=>{ const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(v); return m? +new Date(+m[1], +m[2]-1, +m[3]) : null; };
+    return {all:1, show, d0, d1, s:md(d0), e:md(d1), t:String(x.title||x.t||'').trim().slice(0,80)}; }
   const s=calTime(x.s||x.start), e=calTime(x.e||x.end); if(s==null || e==null) return null;
   return {all:0, show, s, e, t:String(x.title||x.t||'').trim().slice(0,80)};
 }
