@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261125b';
+var BUILD='20261125c';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -5908,7 +5908,9 @@ function dragable(g, s, d){ g.addEventListener('pointerdown', ev=>{ if(ev.button
 const ENGD={robots:['spon','mms','web','media','social','news','m360','money','cms','elect','tracker','summit','iif'], flows:['aptify','spon','pros','mms','m360','money','sched','orders','media','summit','tracker','cms','team','elect','outlook','sp','teams','web','docu']};
 function engServes(d, s){ if(!s || s.zone!=='eng') return []; const ids=new Set(d.systems.map(x=>x.id)), apps=d.systems.filter(x=>x.zone==='apps').map(x=>x.id);
   const L=Array.isArray(s.serves) ? s.serves : ENGD[s.id] ? ENGD[s.id] : s.id==='aws' ? ['relay'].concat(apps) : apps; return L.filter(x=>ids.has(x) && x!==s.id); }
-function linked(id){ const s={}; s[id]=1; const d=M.data, me0=d.systems.find(x=>x.id===id); if(me0 && me0.zone==='eng'){ engServes(d, me0).forEach(x=>s[x]=1); return s; }
+/* what lights up with a system: the systems at the other end of its lines, and for an engine-room piece also the apps
+   it holds up (Nov 25, 2026: an engine-room piece's own lines, like Change Notices to Outlook, used to end at a greyed-out box) */
+function linked(id){ const s={}; s[id]=1; const d=M.data, me0=d.systems.find(x=>x.id===id); if(me0 && me0.zone==='eng') engServes(d, me0).forEach(x=>s[x]=1);
   (d.connections||[]).forEach(c=>{ if(c.from===id) s[c.to]=1; if(c.to===id) s[c.from]=1; }); return s; }
 function declutter(){ const shown=[]; (P.edges||[]).forEach(e=>{ e.lb.classList.remove('clash'); if(!e.lb.classList.contains('on') || e.lb.classList.contains('short')) return; const b=e.box; if(shown.some(o=>b.x<o.x+o.w+4 && o.x<b.x+b.w+4 && b.y<o.y+o.h+2 && o.y<b.y+b.h+2)) e.lb.classList.add('clash'); else shown.push(b); }); }
 function paintState(){ paintState0(); declutter(); }
