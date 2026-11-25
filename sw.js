@@ -21,6 +21,7 @@ self.addEventListener('fetch', e=>{
   if(u.origin!==self.location.origin && !fonts) return;
   if(u.origin===self.location.origin && !(u.pathname.indexOf('/team-hq/')===0 || u.pathname==='/assets/session.js' || u.pathname==='/assets/tools.json')) return;
   if(u.pathname.indexOf('/team-hq/releases/')===0) return;
+  if(u.pathname.indexOf('/team-hq/connected-systems/')===0) return;   /* the view-only Connected Systems page is its own page (Nov 24, 2026) */
   if(r.mode==='navigate'){
     e.respondWith(fetch(r).then(res=>{ if(res.ok){ const cp=res.clone(); caches.open(V).then(c=>c.put(pageKey(u), cp)).catch(()=>{}); } return res; })
       .catch(()=>caches.match(pageKey(u)).then(m=>m || caches.match('/team-hq/'))));
