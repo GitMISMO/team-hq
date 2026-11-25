@@ -585,6 +585,7 @@ let railNodes=[];
 const navEl=()=>document.querySelector('.hq.rail nav');
 function railBtn(key, label, icon, extra){ const b=btn('nx-rb'); b.dataset.nx=key; b.title=label;
   b.innerHTML=(icon||'')+'<span>'+label+'</span>'+(extra||''); b.addEventListener('click', e=>{ e.preventDefault(); e.stopPropagation(); open(key); closeRailOnPhone(); }); return b; }
+function openCS(){ try{ window.open(new URL('/connected-systems/', document.baseURI).href, '_blank', 'noopener'); }catch(e){ location.href='/connected-systems/'; } }
 function closeRailOnPhone(){ if(window.matchMedia('(max-width:900px)').matches && window.__rail && window.__rail.hide) window.__rail.hide(); }
 function railLbl(txt, foldKey){ const l=h('div','nx-rl'); if(foldKey){ const b=btn('nx-rlb', null, ()=>{ ui.fold[foldKey]=!ui.fold[foldKey]; save(); drawRail(); }); b.innerHTML='<span>'+txt+'</span>'+ic('down', ui.fold[foldKey]?'shut':''); l.appendChild(b); } else l.appendChild(h('span',null,txt)); return l; }
 let mineHome=null;
@@ -608,7 +609,10 @@ function drawRail(){
   /* Connected Systems sits at the end of the Team list, just above System Health (Jonna's call) */
   /* Industry Events (Amy's idea, Nov 2026) sits right under Team Projects (Jonna's call, Nov 22, 2026) */
   if(window.__hqEvents){ const tp=nav.querySelector('button[data-hq="rocks"]'); add(railBtn('events','Industry Events', ic('pin')), tp && tp.nextSibling ? tp.nextSibling : null); }
-  if(window.__hqSystems) add(railBtn('systems','Connected Systems', ic('net')));
+  /* Connected Systems opens its own app (Jonna, Nov 24, 2026: "I like it better"). Team HQ's own page stays for editing:
+     the app's Edit in Team HQ opens /team-hq/?page=systems. */
+  if(window.__hqSystems){ const cs=railBtn('systems','Connected Systems', ic('net')); const fresh=cs.cloneNode(true); fresh.title='Connected Systems (opens in a new tab)';
+    fresh.addEventListener('click', e=>{ e.preventDefault(); e.stopPropagation(); openCS(); closeRailOnPhone(); }); add(fresh); }
   markRail();
 }
 function markRail(){
@@ -1779,7 +1783,7 @@ function tile(cfg, i, L){
     el.appendChild(h('div','st-next', free+' of '+ids.length+' free now · tap for more times'));
     meta.go=()=>ftDialog(cfg, L); }
   else if(cfg.t==='events'){ if(window.__hqEvents) window.__hqEvents.tile(el, SZ); else el.appendChild(h('div','st-sub','Open it to see the events.')); meta.go=()=>open('events'); }
-  else if(cfg.t==='systems'){ if(window.__hqSystems) window.__hqSystems.tile(el, SZ); else el.appendChild(h('div','st-sub','Open it to see the map.')); meta.go=()=>open('systems'); }
+  else if(cfg.t==='systems'){ if(window.__hqSystems) window.__hqSystems.tile(el, SZ); else el.appendChild(h('div','st-sub','Open it to see the map.')); meta.go=()=>openCS(); }
   else if(cfg.t==='sys'){ meta.draw(el, top, SZ); }
   if(cfg.t!=='sys' && lvlOf(cfg)==='hi' && !tall){ el.classList.add('lv-hi'); el.querySelectorAll('.nx-kl2:not(.nx-ftmore),.nx-tl2,.nx-gaps,.mic-steps').forEach(z=>z.remove()); }
   el.addEventListener('click', e=>{ if(dashEdit || e.target.closest('button:not(.st-tile)')) return; go(); });
@@ -2220,12 +2224,12 @@ function openMenuSheet(){
   closeMenus(); menuEl=h('div','nx-menu sheet tall');
   const grp=(t)=>menuEl.appendChild(h('div','nx-ml',t));
   const item=(label, fn, iconHtml)=>{ const b=btn('nx-mi', null, ()=>{ closeMenus(); fn(); }); b.innerHTML=(iconHtml||'')+'<span>'+label+'</span>'; menuEl.appendChild(b); };
-  grp('You'); Object.keys(VIEWS).filter(k=>!VIEWS[k].team).forEach(k=>item(VIEWS[k].t, ()=>open(k), ic(VIEWS[k].i)));
+  grp('You'); Object.keys(VIEWS).filter(k=>!VIEWS[k].team).forEach(k=>item(VIEWS[k].t, ()=> k==='systems' ? openCS() : open(k), ic(VIEWS[k].i)));
   /* My Board is yours: it sits under You, as on the left menu, not among the Team Pages (Nov 24, 2026) */
   { const mb=document.querySelector('.hq.rail nav button[data-hq="mine"]'); if(mb){ const s0=mb.querySelector('svg'); item('My Board', ()=>openClassic('mine'), s0?s0.outerHTML:''); } }
   /* Team Pages in exactly the left menu's order (Industry Events under Team Projects, Connected Systems last) */
   grp('Team Pages'); const seen=new Set(); [...document.querySelectorAll('.hq.rail nav button[data-hq], .hq.rail nav button[data-nx]')].forEach(b=>{ const k=b.dataset.nx; if(k && !(VIEWS[k] && VIEWS[k].team)) return; const id=k ? 'nx:'+k : b.dataset.hq; if(id==='mine' || seen.has(id)) return; seen.add(id); const s=b.querySelector('svg'); const label=k ? VIEWS[k].t : b.textContent.trim(); item(label, k ? ()=>open(k) : ()=>openClassic(b.dataset.hq), s?s.outerHTML:''); });
-  Object.keys(VIEWS).filter(k=>VIEWS[k].team && !seen.has('nx:'+k) && (k!=='systems' || window.__hqSystems) && (k!=='events' || window.__hqEvents)).forEach(k=>item(VIEWS[k].t, ()=>open(k), ic(VIEWS[k].i)));
+  Object.keys(VIEWS).filter(k=>VIEWS[k].team && !seen.has('nx:'+k) && (k!=='systems' || window.__hqSystems) && (k!=='events' || window.__hqEvents)).forEach(k=>item(VIEWS[k].t, ()=> k==='systems' ? openCS() : open(k), ic(VIEWS[k].i)));
   { const hb=document.getElementById('help-btn'); if(hb){ const s=hb.querySelector('svg'); item('Help', ()=>{ hideApp(); ui.view='c:help'; save(); pushView(ui.view); hb.click(); markRail(); }, s?s.outerHTML:''); } }
   document.body.appendChild(menuEl);
   { const mine=menuEl; setTimeout(()=>document.addEventListener('click', function off(e){ if(menuEl!==mine){ document.removeEventListener('click', off); return; } if(mine && !mine.contains(e.target) && !e.target.closest('.nx-tbm')){ closeMenus(); document.removeEventListener('click', off); } }), 0); }
