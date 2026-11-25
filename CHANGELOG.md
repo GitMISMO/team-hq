@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 24** — Connected Systems, view only, is now its own app at /connected-systems/ (its own access and storage); /team-hq/connected-systems/ forwards there. It draws with this repository's src/systems.js, so systems.js has to keep working with a stand-in window.__S (DEVELOPING.md).
 - **Nov 24** — Connected Systems, view only: everyone with Team HQ can now open /team-hq/connected-systems/ too, without being given Connected Systems on its own.
 - **Nov 24** — Connected Systems, view only: a page of its own at /team-hq/connected-systems/ for people who should see the system map without being in Team HQ (its own access, "Connected Systems"). It shows the map, Follow the Work, Security, What Changed and On Its Own; Team HQ's working sections stay in Team HQ.
 - **Nov 24** — Industry Events: a Panels tab on each event. Add a panel and who is on it (name, role on the panel, title, company, email, member or not); Find in Member 360 fills in a person’s details for anyone with Member 360, and everyone else types them in. Help says so.

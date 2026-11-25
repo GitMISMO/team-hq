@@ -255,3 +255,8 @@ the team error log, which gathers errors from everyone's screen. Its dot turns y
   make the change, and update the Connections Map.
 - Going live, sending to a list or posting publicly needs Jonna's OK.
 - Never type a password or sign in for anyone.
+
+
+## Connected Systems app (Nov 24, 2026)
+
+resources.mismo.org/connected-systems/ (GitMISMO.github.io connected-systems/) loads this repository's `src/systems.js` directly to draw a view-only Connected Systems for people without Team HQ. It sets a stand-in `window.__S` = {me: '', db: {collection: () => ({onSnapshot, doc: () => ({set: rejects})})}} and reads the record from its own storage (GitMISMO/connected-systems-data, copied from data/systemsmap.json every 10 minutes by mismo-connections' Connected Systems Copy). Keep `src/systems.js` working with only that: no other Team HQ globals required, `page()`, `onChange()` and the `.cs-nav button[data-tab]` tabs kept. /team-hq/connected-systems/ only forwards there.
