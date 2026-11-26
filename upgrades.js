@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261126d';
+var BUILD='20261126e';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -128,7 +128,7 @@ window.__HQ_BUILD=BUILD;
   css.textContent+=
     '#hh-btn{position:relative}#hh-btn .hh-dot{position:absolute;left:21px;top:6px;width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.35);box-shadow:0 0 0 2px var(--navy,#0d314c)}'+
     '#hh-btn .hh-dot.ok{background:#72C08E}#hh-btn .hh-dot.warn{background:#E0A83C}#hh-btn .hh-dot.bad{background:#F08579}body.railmini #hh-btn .hh-dot{left:24px;top:7px}'+
-    '#hh-bar{position:fixed;top:calc(64px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:9980;display:flex;align-items:center;gap:12px;max-width:min(760px,calc(100vw - 32px));background:#FBE8E6;color:#7A1913;border:1px solid #A32219;border-radius:8px;padding:9px 10px 9px 14px;font:500 13px/1.4 "IBM Plex Sans",system-ui,sans-serif;box-shadow:0 6px 20px rgba(13,49,76,.16)}'+
+    '#hh-bar{position:fixed;top:calc(var(--hq-h,68px) + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:9980;display:flex;align-items:center;gap:12px;max-width:min(760px,calc(100vw - 32px));background:#FBE8E6;color:#7A1913;border:1px solid #A32219;border-radius:8px;padding:9px 10px 9px 14px;font:500 13px/1.4 "IBM Plex Sans",system-ui,sans-serif;box-shadow:0 6px 20px rgba(13,49,76,.16)}'+
     '#hh-bar[hidden]{display:none}@media (max-width:640px),(max-height:500px) and (max-width:1000px){#hh-bar{left:8px;right:8px;transform:none;max-width:none;flex-wrap:wrap;gap:8px 10px}#hh-bar>span{flex:1 1 100%}#hh-bar .hh-x{margin-left:auto}}#hh-bar .hh-go{flex:none;background:#A32219;color:#fff;border:0;border-radius:5px;padding:6px 11px;font:inherit;font-weight:600;cursor:pointer}#hh-bar .hh-x{flex:none;background:none;border:0;color:inherit;font-size:20px;line-height:1;padding:0 4px;cursor:pointer}'+
     '.hh-in{padding:14px 18px 18px}.hh-sum{display:flex;align-items:center;gap:10px;margin:0 0 12px;font-size:13.5px}.hh-big{width:12px;height:12px;border-radius:50%;flex:none}'+
     '.hh-big.ok,.hh-row.ok::before{background:var(--good,#0F7B5C)}.hh-big.warn,.hh-row.warn::before{background:#A2701A}.hh-big.bad,.hh-row.bad::before{background:#A32219}.hh-big.off,.hh-row.off::before{background:var(--ink-3,#71777F)}'+
@@ -1144,7 +1144,7 @@ const css2=document.createElement('style'); css2.id='hqx-css2'; css2.textContent
 .hqx-sym{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .hqx-sys{position:fixed;inset:0;z-index:380}
 .hqx-scrim{position:absolute;inset:0;background:rgba(6,32,47,.42);animation:hqxFade .2s ease}
-.hqx-pane{position:absolute;top:calc(var(--hq-h,64px) + env(safe-area-inset-top,0px));right:0;bottom:0;width:75vw;display:flex;flex-direction:column;background:var(--surface);box-shadow:-18px 0 50px rgba(6,32,47,.35);animation:hqxIn .24s cubic-bezier(.2,.8,.2,1)}
+.hqx-pane{position:absolute;top:calc(var(--hq-h,68px) + env(safe-area-inset-top,0px));right:0;bottom:0;width:75vw;display:flex;flex-direction:column;background:var(--surface);box-shadow:-18px 0 50px rgba(6,32,47,.35);animation:hqxIn .24s cubic-bezier(.2,.8,.2,1)}
 .hqx-sys.out .hqx-pane{transform:translateX(100%);transition:transform .2s ease}.hqx-sys.out .hqx-scrim{opacity:0;transition:opacity .2s}
 @keyframes hqxIn{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
 @keyframes hqxFade{from{opacity:0}to{opacity:1}}
@@ -1471,7 +1471,7 @@ html.app-exp body{padding-left:0!important}
 html.app-exp .hq.rail,html.app-exp .railscrim,html.app-exp #newtask,html.app-exp #jot{display:none!important}
 html.app-exp .hqtop{margin-left:0!important;width:100%!important;padding-top:env(safe-area-inset-top,0px)}
 html.app-exp .hqname{font-size:0!important;letter-spacing:0!important}
-html.app-exp .hqname::after{content:"Expenses";font-size:17px!important;letter-spacing:normal}
+html.app-exp .hqname::after{content:"Expenses";font-size:16px!important;letter-spacing:normal}
 html.app-exp main{padding:16px 14px calc(100px + env(safe-area-inset-bottom,0px))}
 html.app-exp #app-expenses > .vhead{display:none}
 html.app-exp #app-expenses .snapzone{min-height:180px}
