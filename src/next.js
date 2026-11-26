@@ -16,7 +16,7 @@ if(!ui.modes || typeof ui.modes!=='object') ui.modes={}; if(!ui.groups || typeof
 if(!Array.isArray(ui.tpeople)) ui.tpeople=[];
 if(['home','work','team','time'].indexOf(ui.view)>=0 || !ui.view) ui.view='day';
 /* a link straight to a page: resources.mismo.org/team-hq/?page=systems */
-let DEEP=''; try{ const pg=new URLSearchParams(location.search).get('page'); if(pg && ['systems','events','reports'].indexOf(pg)>=0) DEEP=pg; }catch(e){}
+let DEEP=''; try{ const pg=new URLSearchParams(location.search).get('page'); if(pg && ['systems','events','reports','trivia','mymismo'].indexOf(pg)>=0) DEEP=pg; }catch(e){}
 /* the new Team HQ is the only Team HQ now — no classic switch */
 ui.on=true;
 const save=()=>{ try{ localStorage.setItem(KEY, JSON.stringify({on:ui.on, view:ui.view, modes:ui.modes, groups:ui.groups, who:ui.who, proj:ui.proj, showDone:ui.showDone, tpeople:ui.tpeople, fold:ui.fold, ibf:ui.ibf})); }catch(e){} };
@@ -46,6 +46,8 @@ const I={
   folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11v5M9.5 13.5L12 16l2.5-2.5"/>',
   trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
   pin:'<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
+  phone:'<rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18.5h2"/>',
+  trophy:'<path d="M8 4h8v5a4 4 0 0 1-8 0V4zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20.5h7M10 17h4v3.5h-4z"/>',
   net:'<rect x="2.5" y="3.5" width="7" height="5" rx="1.2"/><rect x="14.5" y="3.5" width="7" height="5" rx="1.2"/><rect x="8.5" y="15.5" width="7" height="5" rx="1.2"/><path d="M9.5 6h5M6 8.5c0 4 6 3 6 7M18 8.5c0 4-6 3-6 7"/>' };
 const ic=(k,c)=>'<svg class="'+(c||'')+'" viewBox="0 0 24 24" aria-hidden="true">'+I[k]+'</svg>';
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -563,7 +565,7 @@ function statusOf(p){
 
 /* ---------- the views ---------- */
 const VIEWS={
-  day:{t:'My Dashboard', i:'home'}, inbox:{t:'Inbox', i:'inbox'}, mine:{t:'My Tasks', i:'mine'}, cal:{t:'Calendar', i:'cal'}, events:{t:'Industry Events', i:'pin', team:true}, reports:{t:'Attendee Reports', i:'flag', team:true}, systems:{t:'Connected Systems', i:'net', team:true} };
+  day:{t:'My Dashboard', i:'home'}, inbox:{t:'Inbox', i:'inbox'}, mine:{t:'My Tasks', i:'mine'}, cal:{t:'Calendar', i:'cal'}, events:{t:'Industry Events', i:'pin', team:true}, mymismo:{t:'MyMISMO', i:'phone', team:true}, reports:{t:'Attendee Reports', i:'flag', mm:true}, trivia:{t:'MISMO Trivia', i:'trophy', mm:true}, systems:{t:'Connected Systems', i:'net', team:true} };
 function viewKind(v){ v=v||ui.view; if(v.indexOf('p:')===0) return 'project'; if(v.indexOf('u:')===0) return 'person'; if(v.indexOf('c:')===0) return 'classic'; return v; }
 function myOpen(){ return S.tasks.filter(t=>isOpen(t) && doers(t).indexOf(me())>=0); }
 function myAsks(){ return (S.asks||[]).filter(a=>a.state!=='Built' && a.state!=='Not Doing' && (me()==='jonna' || a.by===me())); }
@@ -609,8 +611,9 @@ function drawRail(){
   /* Connected Systems sits at the end of the Team list, just above System Health (Jonna's call) */
   /* Industry Events (Amy's idea, Nov 2026) sits right under Team Projects (Jonna's call, Nov 22, 2026) */
   if(window.__hqEvents){ const tp=nav.querySelector('button[data-hq="rocks"]'); add(railBtn('events','Industry Events', ic('pin')), tp && tp.nextSibling ? tp.nextSibling : null); }
-  /* MyMISMO Attendee Reports (CN-041): only for the people MyMISMO's route lets in, and only once it has answered */
-  if(reportsOn()){ const evb=nav.querySelector('button[data-nx="events"]'), tp=nav.querySelector('button[data-hq="rocks"]'), af=evb||tp; add(railBtn('reports','Attendee Reports', ic('flag')), af && af.nextSibling ? af.nextSibling : null); }
+  /* MyMISMO (CN-041 Attendee Reports, CN-043 MISMO Trivia): one menu item for both, only for the people MyMISMO's routes let
+     in, and only once one of them has answered 200 */
+  if(mmOn()){ const evb=nav.querySelector('button[data-nx="events"]'), tp=nav.querySelector('button[data-hq="rocks"]'), af=evb||tp; add(railBtn('mymismo','MyMISMO', ic('phone')), af && af.nextSibling ? af.nextSibling : null); }
   /* Connected Systems opens its own app (Jonna, Nov 24, 2026: "I like it better"). Team HQ's own page stays for editing:
      the app's Edit in Team HQ opens /team-hq/?page=systems. */
   if(window.__hqSystems){ const cs=railBtn('systems','Connected Systems', ic('net')); const fresh=cs.cloneNode(true); delete fresh.dataset.backPage; fresh.title='Connected Systems (opens in a new tab)';
@@ -620,7 +623,7 @@ function drawRail(){
 function markRail(){
   const nav=navEl(); if(!nav) return;
   const inApp=viewKind()!=='classic';
-  nav.querySelectorAll('button[data-nx]').forEach(b=>{ if(inApp && b.dataset.nx===ui.view) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
+  nav.querySelectorAll('button[data-nx]').forEach(b=>{ if(inApp && (b.dataset.nx===ui.view || (b.dataset.nx==='mymismo' && VIEWS[ui.view] && VIEWS[ui.view].mm))) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
   if(inApp){ nav.querySelectorAll('button[data-hq]').forEach(b=>b.removeAttribute('aria-current')); const hb=document.getElementById('help-btn'); if(hb) hb.removeAttribute('aria-current'); }
   if(tabbar) [...tabbar.querySelectorAll('button')].forEach(b=>b.classList.toggle('on', b.dataset.k===ui.view));
 }
@@ -630,6 +633,7 @@ function open(key){
   if(key==='all') key='mine'; /* All Tasks is gone; My Tasks is the list */
   if(key==='people'){ openClassic('today'); setTimeout(()=>{ const t=document.querySelector('#app-today .td-team'); if(t) t.scrollIntoView({block:'start', behavior:'smooth'}); }, 150); return; } /* People now lives in Today's Where My Team Is Today */
   if(key.indexOf('c:')===0){ openClassic(key.slice(2)); return; }
+  if(key==='mymismo') key=reportsOn() ? 'reports' : triviaOn() ? 'trivia' : 'day'; /* MyMISMO opens on the first of its pages this person has */
   ui.view=key; ui.ws=''; ui.q=''; sel=-1; save();
   document.documentElement.classList.add('nx-show'); shell.hidden=false;
   paint(); body.scrollTop=0; markRail();
@@ -712,6 +716,7 @@ function paint(){
     else if(k==='systems') vSystems();
     else if(k==='events') vEvents();
     else if(k==='reports') vReports();
+    else if(k==='trivia') vTrivia();
     else vDash();
   }catch(e){ console.error(e); body.appendChild(h('p','nx-empty','Something went wrong drawing this view.')); }
   body.scrollTop=sy; const sl2=body.querySelector('.nx-sl, .nx-dl'); if(sl2) sl2.scrollTop=sly;
@@ -731,13 +736,28 @@ function vEvents(){ const EV=window.__hqEvents; if(!EV){ header('Industry Events
 /* ---------- MyMISMO Attendee Reports (CN-041; reports.js reads them from MyMISMO's route with the staff sign-in) ---------- */
 function reportsOn(){ const AR=window.__hqReports; return !!(AR && AR.ok()); }
 function reportsOpen(){ const AR=window.__hqReports; return AR && AR.ok() ? AR.open : 0; }
+/* MISMO Trivia (CN-043; trivia.js reads it from MyMISMO's route with the staff sign-in) */
+function triviaOn(){ const TV=window.__hqTrivia; return !!(TV && TV.ok()); }
+function mmOn(){ return reportsOn() || triviaOn(); }
+/* MyMISMO's pages share one header with a tab for each page this person has */
+function mmTabs(){ const tabs=h('div','nx-mmt'); tabs.setAttribute('role','tablist');
+  [['reports','Attendee Reports',reportsOn()],['trivia','MISMO Trivia',triviaOn()]].forEach(([k,t,on])=>{ if(!on) return;
+    const b=btn('nx-mmb'+(ui.view===k?' on':''), t, ()=>{ if(ui.view!==k) open(k); }); b.setAttribute('role','tab'); b.setAttribute('aria-selected', ui.view===k?'true':'false'); tabs.appendChild(b); });
+  return tabs; }
 function vReports(){ const AR=window.__hqReports;
-  header('Attendee Reports', ic('flag'), 'What MyMISMO attendees have reported, for the MISMO team to look into');
+  header('MyMISMO', ic('phone'), 'Attendee Reports: what MyMISMO attendees have reported, for the MISMO team to look into');
+  body.appendChild(mmTabs());
   const pg=h('div','nx-ar'); if(AR) pg.appendChild(AR.page()); else pg.appendChild(h('p','nx-empty','Attendee Reports didn’t load. Refresh the page.')); body.appendChild(pg); }
-window.addEventListener('hq:reports', ()=>{ if(!ui.on || !shell) return; const AR=window.__hqReports;
-  if(ui.view==='reports' && AR && AR.state==='no'){ open('day'); return; }
+function vTrivia(){ const TV=window.__hqTrivia;
+  header('MyMISMO', ic('phone'), 'MISMO Trivia: monthly winners, the quarter’s finalists and the championship');
+  body.appendChild(mmTabs());
+  const pg=h('div','nx-tv'); if(TV) pg.appendChild(TV.page()); else pg.appendChild(h('p','nx-empty','MISMO Trivia didn’t load. Refresh the page.')); body.appendChild(pg); }
+function mmChanged(view, mod){ if(!ui.on || !shell) return; const M=window[mod];
+  if(ui.view===view && M && M.state==='no'){ open(mmOn() ? 'mymismo' : 'day'); return; }
   drawRail(); if(shell.hidden || dashEdit || busy()) return;
-  if(ui.view==='reports' || (ui.view==='day' && body.querySelector('.nx-hero'))) paint(); });
+  if(VIEWS[ui.view] && VIEWS[ui.view].mm) paint(); else if(view==='reports' && ui.view==='day' && body.querySelector('.nx-hero')) paint(); }
+window.addEventListener('hq:reports', ()=>mmChanged('reports','__hqReports'));
+window.addEventListener('hq:trivia', ()=>mmChanged('trivia','__hqTrivia'));
 function notesText(html){
   try{
     const doc=new DOMParser().parseFromString('<body>'+String(html||'')+'</body>','text/html'); let out='';
@@ -2264,12 +2284,12 @@ function openMenuSheet(){
   closeMenus(); menuEl=h('div','nx-menu sheet tall');
   const grp=(t)=>menuEl.appendChild(h('div','nx-ml',t));
   const item=(label, fn, iconHtml)=>{ const b=btn('nx-mi', null, ()=>{ closeMenus(); fn(); }); b.innerHTML=(iconHtml||'')+'<span>'+label+'</span>'; menuEl.appendChild(b); };
-  grp('You'); Object.keys(VIEWS).filter(k=>!VIEWS[k].team).forEach(k=>item(VIEWS[k].t, ()=> k==='systems' ? openCS() : open(k), ic(VIEWS[k].i)));
+  grp('You'); Object.keys(VIEWS).filter(k=>!VIEWS[k].team && !VIEWS[k].mm).forEach(k=>item(VIEWS[k].t, ()=> k==='systems' ? openCS() : open(k), ic(VIEWS[k].i)));
   /* My Board is yours: it sits under You, as on the left menu, not among the Team Pages (Nov 24, 2026) */
   { const mb=document.querySelector('.hq.rail nav button[data-hq="mine"]'); if(mb){ const s0=mb.querySelector('svg'); item('My Board', ()=>openClassic('mine'), s0?s0.outerHTML:''); } }
   /* Team Pages in exactly the left menu's order (Industry Events under Team Projects, Connected Systems last) */
   grp('Team Pages'); const seen=new Set(); [...document.querySelectorAll('.hq.rail nav button[data-hq], .hq.rail nav button[data-nx]')].forEach(b=>{ const k=b.dataset.nx; if(k && !(VIEWS[k] && VIEWS[k].team)) return; const id=k ? 'nx:'+k : b.dataset.hq; if(id==='mine' || seen.has(id)) return; seen.add(id); const s=b.querySelector('svg'); const label=k ? VIEWS[k].t : b.textContent.trim(); item(label, k ? ()=>open(k) : ()=>openClassic(b.dataset.hq), s?s.outerHTML:''); });
-  Object.keys(VIEWS).filter(k=>VIEWS[k].team && !seen.has('nx:'+k) && (k!=='systems' || window.__hqSystems) && (k!=='events' || window.__hqEvents) && (k!=='reports' || reportsOn())).forEach(k=>item(VIEWS[k].t, ()=> k==='systems' ? openCS() : open(k), ic(VIEWS[k].i)));
+  Object.keys(VIEWS).filter(k=>VIEWS[k].team && !seen.has('nx:'+k) && (k!=='systems' || window.__hqSystems) && (k!=='events' || window.__hqEvents) && (k!=='mymismo' || mmOn())).forEach(k=>item(VIEWS[k].t, ()=> k==='systems' ? openCS() : open(k), ic(VIEWS[k].i)));
   { const hb=document.getElementById('help-btn'); if(hb){ const s=hb.querySelector('svg'); item('Help', ()=>{ hideApp(); ui.view='c:help'; save(); hb.click(); markRail(); }, s?s.outerHTML:''); } }
   document.body.appendChild(menuEl);
   { const mine=menuEl; setTimeout(()=>document.addEventListener('click', function off(e){ if(menuEl!==mine){ document.removeEventListener('click', off); return; } if(mine && !mine.contains(e.target) && !e.target.closest('.nx-tbm')){ closeMenus(); document.removeEventListener('click', off); } }), 0); }
@@ -2370,6 +2390,11 @@ body.railmini .hq nav .nx-rl,body.railmini .hq nav .nx-rb.sub,body.railmini .nx-
 /* header */
 .nx-head{flex:0 0 auto;display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border)}
 .nx-hl{display:flex;align-items:center;gap:10px;min-width:0}
+/* MyMISMO's page tabs (Attendee Reports, MISMO Trivia) */
+.nx-mmt{display:flex;gap:4px;max-width:1200px;margin:0 auto;padding:12px clamp(16px,2.4vw,32px) 0;box-sizing:border-box;border-bottom:1px solid var(--border)}
+.nx-mmb{font:inherit;font-size:13.5px;font-weight:700;color:var(--ink-2);background:none;border:1px solid transparent;border-bottom:none;border-radius:6px 6px 0 0;padding:7px 14px;margin-bottom:-1px;cursor:pointer}
+.nx-mmb:hover{color:var(--ink)}
+.nx-mmb.on{color:var(--ink);background:var(--surface);border-color:var(--border)}
 .nx-hi{display:inline-flex;align-items:center;color:var(--c1)}
 .nx-hi>svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .nx-hi .av{width:30px;height:30px}

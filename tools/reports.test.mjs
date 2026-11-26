@@ -4,7 +4,7 @@
 //
 // Opens the newest saved version as a Test Copy (?try=<version>) in headless Chrome, with a pretend sign-in and a
 // pretend save relay, so nothing real is read or changed. Twice:
-//  1. MyMISMO's route answers 403 (not one of its alert senders): no Attendee Reports menu item, no count anywhere.
+//  1. MyMISMO's route answers 403 (not one of its alert senders): no MyMISMO menu item, no count anywhere.
 //  2. It answers 200 with made-up reports: the menu item, the open count on My Dashboard (its top line and On Your
 //     Plate), the page lists each report (summit, who it's about, who sent it, reason, note, when), Close needs a note
 //     of what was done, and the Test Copy sends nothing. No page errors either time.
@@ -77,14 +77,14 @@ try {
   console.log('Checking version ' + VER);
   { // 1. not let in
     const { page, errs } = await open(403);
-    expect(!(await page.$('nav button[data-nx="reports"]')), 'with a 403, there is no Attendee Reports menu item');
+    expect(!(await page.$('nav button[data-nx="mymismo"]')), 'with a 403, there is no MyMISMO menu item');
     expect(!/attendee report/i.test(await text(page, '.nx-hero')), 'with a 403, My Dashboard says nothing about reports');
     expect(!errs.length, 'with a 403, no page errors', errs.join(' | '));
     await page.close();
   }
   { // 2. let in
     const { page, errs, posts } = await open(200);
-    expect(!!(await page.$('nav button[data-nx="reports"]')), 'with a 200, Attendee Reports is in the menu');
+    expect(!!(await page.$('nav button[data-nx="mymismo"]')), 'with a 200, MyMISMO is in the menu');
     const hero = await text(page, '.nx-hero');
     expect(/2 MyMISMO attendee reports are open/.test(hero), 'My Dashboard says 2 attendee reports are open', hero.slice(0, 200));
     expect(/2 Open Attendee Reports/.test(await text(page, '.nx-needs')), 'On Your Plate lists the open reports');

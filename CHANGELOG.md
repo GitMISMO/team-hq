@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 25** — MyMISMO in the left menu (CN-043): Attendee Reports and the new MISMO Trivia are now tabs of one MyMISMO page. MISMO Trivia shows each month’s winner and top 10, this quarter’s three finalists, the championship standings once played, and a form to set the championship’s quarter, opening and closing times and minutes to play. Only the people MyMISMO lets see it have it; it appears once MyMISMO’s side is switched on, and nothing is emailed.
 - **Nov 25** — MyMISMO Attendee Reports (CN-041): attendees can report someone in MyMISMO, and the people MyMISMO lets see the reports now get Attendee Reports under Team in the left menu, with any open ones shown at the top of My Dashboard and first in On Your Plate. Each report shows the summit, who it’s about, who sent it, the reason, the note and when; Close it with a short note of what was done, or Reopen it. It appears once MyMISMO’s side is switched on; nobody else sees it, and nothing is emailed.
 - **Nov 25** — MyMISMO, MISMO’s own summit app, is in + Add a Tile: its tile shows the Sessions, Speakers and Sponsors on its Home page (Starred stays on each phone, so it isn’t shown). Nobody’s dashboard gets the tile unless they add it.
 - **Nov 25** — The browser's Back button now goes to the last page you were on in Team HQ, and closes an open pane, pop-up or menu first, one at a time (CN-033). It never undoes a change; Forward goes again. Team HQ still opens on My Dashboard and the address doesn't change.

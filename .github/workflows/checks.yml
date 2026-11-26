@@ -35,3 +35,5 @@ jobs:
           node tools/back.test.mjs
       - name: MyMISMO Attendee Reports (tools/reports.test.mjs, CN-041)
         run: node tools/reports.test.mjs
+      - name: MyMISMO Trivia (tools/trivia.test.mjs, CN-043)
+        run: node tools/trivia.test.mjs
