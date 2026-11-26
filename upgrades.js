@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261126b';
+var BUILD='20261126c';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4491,6 +4491,18 @@ const css=h('style'); css.id='mob-css'; css.textContent=`
   header.hqtop .hqtop-r .mastbtn{width:30px!important;height:30px!important;min-width:30px!important;padding:0!important;justify-content:center!important;gap:0!important}
   html.app-exp header.hqtop .exp-hq{padding-left:8px!important;padding-right:8px!important}
   @media (max-width:380px){header.hqtop .logoplate{padding:4px 6px!important}header.hqtop .mastrule{margin:0 5px!important}}
+  /* the Expenses app's top bar on a phone: a smaller logo and tighter spacing, so the name, the policy "i", Team HQ and
+     your initials each get room instead of touching (Jonna, Nov 26, 2026) */
+  @media (max-width:480px){
+    html.app-exp header.hqtop .logoplate{padding:4px 7px!important}
+    html.app-exp header.hqtop .logoplate svg{width:76px!important;height:auto!important}
+    html.app-exp header.hqtop .mastrule{height:22px!important;margin:0 8px!important}
+    html.app-exp header.hqtop .hqname::after{font-size:15.5px!important}
+    html.app-exp header.hqtop .x2-info-top{width:21px!important;height:21px!important;flex:0 0 21px!important;margin-left:7px!important;font-size:11px!important}
+    html.app-exp header.hqtop .hqtop-r{gap:8px!important;padding-left:8px}
+    html.app-exp header.hqtop .exp-hq{min-height:30px!important;padding:0 9px!important;font-size:12.5px!important}
+    html.app-exp header.hqtop .whoami{flex:0 0 auto}
+  }
   .mob-bar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:95;background:var(--surface);border-top:1px solid var(--border);box-shadow:0 -6px 20px rgba(6,32,47,.10);padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px))}
   .mob-b{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:54px;border:0;background:transparent;color:var(--ink-3);font:inherit;font-size:10.5px;font-weight:700;cursor:pointer;border-radius:8px;-webkit-tap-highlight-color:transparent}
   .mob-b svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
