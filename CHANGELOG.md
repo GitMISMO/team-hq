@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 26** — Expenses phone app: the top bar has room again: a smaller logo and tighter spacing, so Expenses, the policy "i", Team HQ and your initials don't touch.
 - **Nov 26** — Expenses: a round "i" beside the Expenses heading (computer and phone app) opens the Expense Policy card, the same as Contractor HQ's: meal limits, receipts, and airfare over $800 needing approval. The policy note at the bottom of the page is gone.
 - **Nov 26** — Expenses: the Archive (trips already entered in DataBasics) is desktop only. On a phone, and in the Expenses phone app, there is no Archive button or "entered in DataBasics" link; only the trips still being worked on show.
 - **Nov 25** — Connected Systems map: pointing at an engine-room piece also lights the engine-room pieces it runs on (Scheduled robots lights GitHub, the save relay lights AWS and GitHub).
