@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261125g';
+var BUILD='20261125h';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -5839,6 +5839,10 @@ function map(d){ const F=frame(d); P.vb=F.vb; P.ey=F.ey; const svg=sv('svg',{vie
     void c0; });
   [['MBA & Microsoft 365',110,44],['MISMO apps · resources.mismo.org',605,44],['Outside MISMO',1090,44],['Engine room · every app runs on these',600,F.et+22]].forEach(z=>{ const t=sv('text',{class:'cs-zl',x:z[1],y:z[2],'text-anchor':'middle'},svg); t.textContent=z[0]; });
   (d.appGroups||[]).forEach(g=>{ const M0=(g.ids||[]).map(id=>d.systems.find(x=>x.id===id)).filter(x=>x && x.zone==='apps' && x.y!=null); if(!M0.length) return; const y0=Math.min(...M0.map(x=>x.y)), x0=Math.min(...M0.filter(x=>x.y===y0).map(x=>x.x)); const t=sv('text',{class:'cs-gl',x:x0-W/2+2,y:y0-H/2-7},svg); t.textContent=g.name; t.style.setProperty('--pc', colorOf(d, M0.find(x=>x.area)||M0[0])); });
+  /* the engine room spreads its pieces evenly along the bottom; past seven they get a little narrower so none overlap
+     (Nov 25, 2026: the Failure Watcher made eight and sat on top of Change Notices) */
+  const ENG=d.systems.filter(x=>x.zone==='eng').sort((a,b)=>(a.x||0)-(b.x||0)), EW= ENG.length>7 ? Math.floor((1176-12-(ENG.length-1)*4)/ENG.length) : W;
+  if(ENG.length>7) ENG.forEach((x,i)=>{ x.x=Math.round(12+6+EW/2+i*(EW+4)); });
   const top=sv('svg',{viewBox:'0 0 1200 '+F.vb, class:'cs-top', role:'group', 'aria-label':'MISMO’s systems'}); P.svgTop=top; const gE=sv('g',{},svg), gN=sv('g',{},top), gL=sv('g',{},top); const by={}; d.systems.forEach(s=>by[s.id]= s.zone==='eng' ? Object.assign({}, s, {y:F.ey}) : s);
   P.edges=[]; P.nodes={}; const pairs={}; const OBS=Object.values(by), USED={};
   /* lines that go the same way between the same two boxes, the same way (automatic or by hand), are drawn as one line that lists them all */
@@ -5851,15 +5855,16 @@ function map(d){ const F=frame(d); P.vb=F.vb; P.ey=F.ey; const svg=sv('svg',{vie
     const more=cs.length>1 ? ' +'+(cs.length-1) : '', lbMax=30-more.length; const lbTxt=(c.what.length>lbMax ? c.what.slice(0,lbMax-1)+'…' : c.what)+more; const lw=Math.round(lbTxt.length*5.9+14);
     const lb=sv('g',{class:'cs-lb'+(c.how==='hand'?' hand':c.how==='soon'?' soon':'')+(geo.len<lw+40 || c.quiet?' short':''), transform:'translate('+Math.round(geo.mx-lw/2)+','+Math.round(geo.my-10)+')'},gL); sv('rect',{x:0,y:0,width:lw,height:20,rx:10},lb); const lt=sv('text',{x:lw/2,y:13.5,'text-anchor':'middle'},lb); lt.textContent=lbTxt; e.lb=lb; e.box={x:Math.round(geo.mx-lw/2), y:Math.round(geo.my-10), w:lw, h:20};
     P.edges.push(e); });
-  d.systems.forEach(s=>{ const g=sv('g',{class:'cs-n'+(s.zone==='eng'?' eng':''), tabindex:0, role:'button', 'aria-label':s.name+', '+(s.status||''), transform:'translate('+(s.x-W/2)+','+(by[s.id].y-H/2)+')'},gN);
-    g.style.setProperty('--pc', colorOf(d,s)); sv('rect',{class:'box',x:0,y:0,width:W,height:H,rx:9},g); sv('rect',{class:'bar',x:0,y:0,width:6,height:H,rx:3,fill:colorOf(d,s)},g);
+  d.systems.forEach(s=>{ const BWd= s.zone==='eng' ? EW : W; const g=sv('g',{class:'cs-n'+(s.zone==='eng'?' eng':''), tabindex:0, role:'button', 'aria-label':s.name+', '+(s.status||''), transform:'translate('+(s.x-BWd/2)+','+(by[s.id].y-H/2)+')'},gN);
+    g.style.setProperty('--pc', colorOf(d,s)); sv('rect',{class:'box',x:0,y:0,width:BWd,height:H,rx:9},g); sv('rect',{class:'bar',x:0,y:0,width:6,height:H,rx:3,fill:colorOf(d,s)},g);
     /* a short status ("Pilot") sits beside the name when both fit on one line; a longer one goes underneath (Jonna, Nov 21, 2026) */
     const beside=!!(s.statusNote && s.zone!=='eng' && 13+s.name.length*7.2+7+String(s.statusNote).length*6.1<=W-22);
-    const two=!beside && !!(s.statusNote || s.zone==='eng' || s.sub); const t=sv('text',{x:13,y:two?17:25},g); t.textContent=s.name.length>19 ? s.name.slice(0,18)+'…' : s.name;
+    const two=!beside && !!(s.statusNote || s.zone==='eng' || s.sub); const nmax=19+Math.floor((BWd-W)/7.2), t=sv('text',{x:13,y:two?17:25},g); t.textContent=s.name.length>nmax ? s.name.slice(0,nmax-1).trim()+'…' : s.name; if(BWd<W) t.style.fontSize='11.6px';
+    if(s.name.length>nmax || String(s.statusNote||'').length>Math.floor((BWd-16)/5.6)){ const ti=sv('title',{},g); ti.textContent=s.name+(s.statusNote?' · '+s.statusNote:''); }
     if(beside){ const ts=sv('tspan',{class:'sub',dx:7},t); ts.textContent=s.statusNote; }
-    if(two){ const t2=sv('text',{class:'sub',x:13,y:31},g); t2.textContent=s.statusNote || s.sub || (s.id==='robots'?'run on schedules':s.id==='flows'?'inside Microsoft 365':'used by every app'); }
-    const k=stKey(s); sv('circle',{class:'sd '+k,cx:W-11,cy:11,r:4},g);
-    if(P.edit && (s.confirm || d.connections.some(c=>c.confirm && (c.from===s.id || c.to===s.id)))){ sv('circle',{class:'cf',cx:W-11,cy:H-10,r:4},g); }
+    if(two){ const t2=sv('text',{class:'sub',x:13,y:31},g); const sx=s.statusNote || s.sub || (s.id==='robots'?'run on schedules':s.id==='flows'?'inside Microsoft 365':'used by every app'), smax=Math.floor((BWd-16)/5.6); t2.textContent=sx.length>smax ? sx.slice(0,smax).replace(/\s+\S*$/,'').replace(/[,;:]$/,'')+'…' : sx; }
+    const k=stKey(s); sv('circle',{class:'sd '+k,cx:BWd-(BWd<W?9:11),cy:11,r:4},g);
+    if(P.edit && (s.confirm || d.connections.some(c=>c.confirm && (c.from===s.id || c.to===s.id)))){ sv('circle',{class:'cf',cx:BWd-11,cy:H-10,r:4},g); }
     P.nodes[s.id]=g;
     g.addEventListener('click', ()=>{ if(g._moved){ g._moved=false; return; } select(s.id); });
     g.addEventListener('keydown', ev=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); select(s.id); } });
