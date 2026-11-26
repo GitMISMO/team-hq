@@ -16,7 +16,7 @@ if(!ui.modes || typeof ui.modes!=='object') ui.modes={}; if(!ui.groups || typeof
 if(!Array.isArray(ui.tpeople)) ui.tpeople=[];
 if(['home','work','team','time'].indexOf(ui.view)>=0 || !ui.view) ui.view='day';
 /* a link straight to a page: resources.mismo.org/team-hq/?page=systems */
-let DEEP=''; try{ const pg=new URLSearchParams(location.search).get('page'); if(pg && ['systems','events'].indexOf(pg)>=0) DEEP=pg; }catch(e){}
+let DEEP=''; try{ const pg=new URLSearchParams(location.search).get('page'); if(pg && ['systems','events','reports'].indexOf(pg)>=0) DEEP=pg; }catch(e){}
 /* the new Team HQ is the only Team HQ now — no classic switch */
 ui.on=true;
 const save=()=>{ try{ localStorage.setItem(KEY, JSON.stringify({on:ui.on, view:ui.view, modes:ui.modes, groups:ui.groups, who:ui.who, proj:ui.proj, showDone:ui.showDone, tpeople:ui.tpeople, fold:ui.fold, ibf:ui.ibf})); }catch(e){} };
@@ -563,7 +563,7 @@ function statusOf(p){
 
 /* ---------- the views ---------- */
 const VIEWS={
-  day:{t:'My Dashboard', i:'home'}, inbox:{t:'Inbox', i:'inbox'}, mine:{t:'My Tasks', i:'mine'}, cal:{t:'Calendar', i:'cal'}, events:{t:'Industry Events', i:'pin', team:true}, systems:{t:'Connected Systems', i:'net', team:true} };
+  day:{t:'My Dashboard', i:'home'}, inbox:{t:'Inbox', i:'inbox'}, mine:{t:'My Tasks', i:'mine'}, cal:{t:'Calendar', i:'cal'}, events:{t:'Industry Events', i:'pin', team:true}, reports:{t:'Attendee Reports', i:'flag', team:true}, systems:{t:'Connected Systems', i:'net', team:true} };
 function viewKind(v){ v=v||ui.view; if(v.indexOf('p:')===0) return 'project'; if(v.indexOf('u:')===0) return 'person'; if(v.indexOf('c:')===0) return 'classic'; return v; }
 function myOpen(){ return S.tasks.filter(t=>isOpen(t) && doers(t).indexOf(me())>=0); }
 function myAsks(){ return (S.asks||[]).filter(a=>a.state!=='Built' && a.state!=='Not Doing' && (me()==='jonna' || a.by===me())); }
@@ -609,6 +609,8 @@ function drawRail(){
   /* Connected Systems sits at the end of the Team list, just above System Health (Jonna's call) */
   /* Industry Events (Amy's idea, Nov 2026) sits right under Team Projects (Jonna's call, Nov 22, 2026) */
   if(window.__hqEvents){ const tp=nav.querySelector('button[data-hq="rocks"]'); add(railBtn('events','Industry Events', ic('pin')), tp && tp.nextSibling ? tp.nextSibling : null); }
+  /* MyMISMO Attendee Reports (CN-041): only for the people MyMISMO's route lets in, and only once it has answered */
+  if(reportsOn()){ const evb=nav.querySelector('button[data-nx="events"]'), tp=nav.querySelector('button[data-hq="rocks"]'), af=evb||tp; add(railBtn('reports','Attendee Reports', ic('flag')), af && af.nextSibling ? af.nextSibling : null); }
   /* Connected Systems opens its own app (Jonna, Nov 24, 2026: "I like it better"). Team HQ's own page stays for editing:
      the app's Edit in Team HQ opens /team-hq/?page=systems. */
   if(window.__hqSystems){ const cs=railBtn('systems','Connected Systems', ic('net')); const fresh=cs.cloneNode(true); delete fresh.dataset.backPage; fresh.title='Connected Systems (opens in a new tab)';
@@ -709,6 +711,7 @@ function paint(){
     else if(k==='people') vPeople();
     else if(k==='systems') vSystems();
     else if(k==='events') vEvents();
+    else if(k==='reports') vReports();
     else vDash();
   }catch(e){ console.error(e); body.appendChild(h('p','nx-empty','Something went wrong drawing this view.')); }
   body.scrollTop=sy; const sl2=body.querySelector('.nx-sl, .nx-dl'); if(sl2) sl2.scrollTop=sly;
@@ -725,6 +728,16 @@ function vSystems(){ const CS=window.__hqSystems; if(!CS){ header('Connected Sys
 function vEvents(){ const EV=window.__hqEvents; if(!EV){ header('Industry Events', ic('pin')); body.appendChild(h('p','nx-empty','Industry Events didn’t load. Refresh the page.')); return; }
   header('Industry Events', ic('pin'), 'The conferences and shows MISMO goes to');
   const pg=h('div','nx-ev'); pg.appendChild(EV.page()); body.appendChild(pg); }
+/* ---------- MyMISMO Attendee Reports (CN-041; reports.js reads them from MyMISMO's route with the staff sign-in) ---------- */
+function reportsOn(){ const AR=window.__hqReports; return !!(AR && AR.ok()); }
+function reportsOpen(){ const AR=window.__hqReports; return AR && AR.ok() ? AR.open : 0; }
+function vReports(){ const AR=window.__hqReports;
+  header('Attendee Reports', ic('flag'), 'What MyMISMO attendees have reported, for the MISMO team to look into');
+  const pg=h('div','nx-ar'); if(AR) pg.appendChild(AR.page()); else pg.appendChild(h('p','nx-empty','Attendee Reports didn’t load. Refresh the page.')); body.appendChild(pg); }
+window.addEventListener('hq:reports', ()=>{ if(!ui.on || !shell) return; const AR=window.__hqReports;
+  if(ui.view==='reports' && AR && AR.state==='no'){ open('day'); return; }
+  drawRail(); if(shell.hidden || dashEdit || busy()) return;
+  if(ui.view==='reports' || (ui.view==='day' && body.querySelector('.nx-hero'))) paint(); });
 function notesText(html){
   try{
     const doc=new DOMParser().parseFromString('<body>'+String(html||'')+'</body>','text/html'); let out='';
@@ -1465,6 +1478,7 @@ function dashHero(now, hr){
   else if(M[0]) bits.push(()=>{ p.append('next up is '); p.appendChild(em(M[0].t)); });
   const kd=nextKeyDate(); if(kd) bits.push(()=>{ p.appendChild(em(kd.t)); const n=days(kd.d); p.append(n<=0?' is happening now':' is '); if(n>0) p.appendChild(em(n+(n===1?' day':' days'))); if(n>0) p.append(' away'); });
   const asks=myAsks().filter(a=>(a.state||'New')==='New'); if(me()==='jonna' && asks.length) bits.push(()=>{ p.appendChild(em(asks.length+(asks.length===1?' new ask':' new asks'))); p.append(' waiting on you'); });
+  const arN=reportsOpen(); if(arN) bits.unshift(()=>{ p.appendChild(em(arN+(arN===1?' MyMISMO attendee report is':' MyMISMO attendee reports are'))); p.append(' open'); });
   bits.forEach((f,i)=>{ if(i) p.append('; '); f(); }); if(bits.length) p.append('.'); else p.append('A clear runway. Pick something from your list and get ahead.');
   const s0=p.firstChild; if(s0 && s0.nodeType===3) s0.textContent=s0.textContent.charAt(0).toUpperCase()+s0.textContent.slice(1);
   hi.appendChild(p); hero.appendChild(hi);
@@ -1476,6 +1490,7 @@ function dashHero(now, hr){
   (S.dates||[]).filter(d=>d.d && days(d.d)>=0 && days(d.d)<=7 && (!(d.who||[]).length || (d.who||[]).indexOf(me())>=0)).forEach(d=>items.push({d:fmt(d.d), k:'#3CCB7F', t:d.t, fn:()=>window.__editDate && window.__editDate(d), o:days(d.d)}));
   try{ const nm=window.__mtg && window.__mtg.next && window.__mtg.next(); const md=typeof nm==='string'?nm:''; if(md && days(md)>=0 && days(md)<=7) items.push({d:fmt(md), k:'#E86F5A', t:'Team Meeting', fn:()=>openClassic('agenda'), o:days(md)}); }catch(e){}
   if(me()==='jonna') asks.forEach(a=>items.push({d:'New Ask', k:'#E8833A', t:a.t, fn:()=>window.__editAsk && window.__editAsk(a), o:-0.5}));
+  if(arN) items.push({d:'MyMISMO', k:'#E8833A', t:arN+(arN===1?' Open Attendee Report':' Open Attendee Reports'), fn:()=>open('reports'), o:-2});
   items.sort((a,b)=>a.o-b.o);
   if(!items.length) nd.appendChild(h('div','nx-nempty','Nothing due in the next seven days.'));
   items.slice(0,6).forEach(it=>{ const b=btn('nx-need', null, it.fn); b.style.setProperty('--k', it.k); b.appendChild(h('span',null,it.d)); b.appendChild(h('b',null,it.t)); nd.appendChild(b); });
@@ -2254,7 +2269,7 @@ function openMenuSheet(){
   { const mb=document.querySelector('.hq.rail nav button[data-hq="mine"]'); if(mb){ const s0=mb.querySelector('svg'); item('My Board', ()=>openClassic('mine'), s0?s0.outerHTML:''); } }
   /* Team Pages in exactly the left menu's order (Industry Events under Team Projects, Connected Systems last) */
   grp('Team Pages'); const seen=new Set(); [...document.querySelectorAll('.hq.rail nav button[data-hq], .hq.rail nav button[data-nx]')].forEach(b=>{ const k=b.dataset.nx; if(k && !(VIEWS[k] && VIEWS[k].team)) return; const id=k ? 'nx:'+k : b.dataset.hq; if(id==='mine' || seen.has(id)) return; seen.add(id); const s=b.querySelector('svg'); const label=k ? VIEWS[k].t : b.textContent.trim(); item(label, k ? ()=>open(k) : ()=>openClassic(b.dataset.hq), s?s.outerHTML:''); });
-  Object.keys(VIEWS).filter(k=>VIEWS[k].team && !seen.has('nx:'+k) && (k!=='systems' || window.__hqSystems) && (k!=='events' || window.__hqEvents)).forEach(k=>item(VIEWS[k].t, ()=> k==='systems' ? openCS() : open(k), ic(VIEWS[k].i)));
+  Object.keys(VIEWS).filter(k=>VIEWS[k].team && !seen.has('nx:'+k) && (k!=='systems' || window.__hqSystems) && (k!=='events' || window.__hqEvents) && (k!=='reports' || reportsOn())).forEach(k=>item(VIEWS[k].t, ()=> k==='systems' ? openCS() : open(k), ic(VIEWS[k].i)));
   { const hb=document.getElementById('help-btn'); if(hb){ const s=hb.querySelector('svg'); item('Help', ()=>{ hideApp(); ui.view='c:help'; save(); hb.click(); markRail(); }, s?s.outerHTML:''); } }
   document.body.appendChild(menuEl);
   { const mine=menuEl; setTimeout(()=>document.addEventListener('click', function off(e){ if(menuEl!==mine){ document.removeEventListener('click', off); return; } if(mine && !mine.contains(e.target) && !e.target.closest('.nx-tbm')){ closeMenus(); document.removeEventListener('click', off); } }), 0); }

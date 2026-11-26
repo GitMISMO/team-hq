@@ -33,3 +33,5 @@ jobs:
         run: |
           npm i --no-save --no-package-lock playwright-core@1.63.0
           node tools/back.test.mjs
+      - name: MyMISMO Attendee Reports (tools/reports.test.mjs, CN-041)
+        run: node tools/reports.test.mjs

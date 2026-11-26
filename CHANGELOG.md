@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 25** — MyMISMO Attendee Reports (CN-041): attendees can report someone in MyMISMO, and the people MyMISMO lets see the reports now get Attendee Reports under Team in the left menu, with any open ones shown at the top of My Dashboard and first in On Your Plate. Each report shows the summit, who it’s about, who sent it, the reason, the note and when; Close it with a short note of what was done, or Reopen it. It appears once MyMISMO’s side is switched on; nobody else sees it, and nothing is emailed.
 - **Nov 25** — MyMISMO, MISMO’s own summit app, is in + Add a Tile: its tile shows the Sessions, Speakers and Sponsors on its Home page (Starred stays on each phone, so it isn’t shown). Nobody’s dashboard gets the tile unless they add it.
 - **Nov 25** — The browser's Back button now goes to the last page you were on in Team HQ, and closes an open pane, pop-up or menu first, one at a time (CN-033). It never undoes a change; Forward goes again. Team HQ still opens on My Dashboard and the address doesn't change.
 - **Nov 25** — Connected Systems: picking an engine-room piece (like Change Notices) now also lights up the systems its own lines go to (like Outlook and GitHub), instead of leaving them greyed out at the end of a lit line.
