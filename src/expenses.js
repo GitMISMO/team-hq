@@ -493,7 +493,11 @@ function paint(r){
   const nArc=isPhone() ? 0 : archTrips().length;
   if(nArc){ const ab=btn('btn ghost x2-arcb', null, ()=>openArchive(''), 'Trips already entered in DataBasics'); ab.appendChild(svg(IC.box)); ab.appendChild(h('span',null,'Archive')); ab.appendChild(h('small',null, String(nArc))); right.appendChild(ab); }
   right.appendChild(nb);
-  vhead(r, 'Expenses', 'Snap the receipt and it’s done: Team HQ reads it and fills in the details. When a trip is all in, send it to be entered in DataBasics.', right);
+  const vh=vhead(r, 'Expenses', 'Snap the receipt and it’s done: Team HQ reads it and fills in the details. When a trip is all in, send it to be entered in DataBasics.', right);
+  /* the expense policy, one press away, like Contractor HQ's (Jonna, Nov 26, 2026); it replaces the policy note that sat at the bottom */
+  const h1=vh.querySelector('h1'); if(h1){ h1.classList.add('x2-h1'); const ib=btn('x2-info','i', ()=>openPolicy(), 'The expense policy'); ib.setAttribute('aria-label','The expense policy'); ib.setAttribute('aria-haspopup','dialog'); h1.appendChild(ib); }
+  /* the Expenses phone app hides that heading, so its "i" sits beside Expenses in the top bar */
+  if(document.documentElement.classList.contains('app-exp')){ const nm=document.querySelector('.hqtop .hqname'); if(nm && !document.querySelector('.hqtop .x2-info')){ const tb=btn('x2-info x2-info-top','i', ()=>openPolicy(), 'The expense policy'); tb.setAttribute('aria-label','The expense policy'); tb.setAttribute('aria-haspopup','dialog'); nm.insertAdjacentElement('afterend', tb); } }
   if(!me()){ const bx=h('div','box'); bx.appendChild(emptyBox('Team HQ doesn’t know who you are yet.','Sign in and your expenses show up here.')); r.appendChild(bx); return; }
   const phone=isPhone(), all=seesAll() && !phone, sc=scopeNow();
 
@@ -543,11 +547,24 @@ function paint(r){
     ppl.forEach(w=>personBox(r, w, L.filter(x=>x.who===w), true));
   } else personBox(r, me(), L.filter(x=>x.who===me()), false);
 
-  const c=h('div','callout x2-rules');
-  c.innerHTML='<b>MBA travel policy, built in:</b> a receipt for anything '+X.money(X.RCPT_AT)+' or more (not mileage); meals up to '+X.money(25)+' breakfast, '+X.money(40)+' lunch, '+X.money(60)+' dinner, '+X.money(15)+' snacks, and '+X.money(X.DAY_CAP)+' a day for all meals. Anything outside it is flagged, never stopped — put the reason in the notes.';
-  r.appendChild(c);
 }
 
+/* the Expense Policy card. The numbers come from the same constants the checks use, so the card can't say one thing while
+   the checks do another (the same card as Contractor HQ's). Airfare over $800 needs approval from the Director of
+   Programs & Operations (Jonna, Nov 25, 2026); that one is a rule to know, not a check. */
+const AIR_OK=800;
+function openPolicy(){
+  sheet(box=>{
+    box.classList.add('x2-dlg','x2-pol'); box.appendChild(h('h2',null,'Expense Policy'));
+    box.appendChild(h('p',null,'MISMO reimburses under MBA’s travel and expense policy.'));
+    box.appendChild(h('h3',null,'Meals, Per Person')); const t=h('table','x2-pt'); box.appendChild(t);
+    [['Breakfast','up to '+X.money(X.MEAL_CAP['Meal Trvl - Breakfast'])],['Lunch','up to '+X.money(X.MEAL_CAP['Meal Trvl - Lunch'])],['Dinner','up to '+X.money(X.MEAL_CAP['Meal Trvl - Dinner'])],
+     ['Snacks','up to '+X.money(X.MEAL_CAP['Meal Trvl - Snack'])],['All Meals in One Day','no more than '+X.money(X.DAY_CAP)]].forEach(x=>{ const tr=h('tr'); const th=h('th',null,x[0]); th.scope='row'; tr.appendChild(th); tr.appendChild(h('td',null,x[1])); t.appendChild(tr); });
+    box.appendChild(h('h3',null,'Receipts')); box.appendChild(h('p',null,'A receipt is needed for anything '+X.money(X.RCPT_AT)+' or more. Mileage is the exception: it is worked out from the miles.'));
+    box.appendChild(h('h3',null,'Airfare')); box.appendChild(h('p',null,'Airfare over '+X.money(AIR_OK)+' needs approval from the Director of Programs & Operations.'));
+    box.appendChild(h('p','x2-pn','Anything outside the policy is flagged, never stopped: put the reason in the notes.'));
+    const acts=h('div','modal-acts'); acts.appendChild(btn('btn','Close', ()=>closeSheet())); box.appendChild(acts); });
+}
 /* one person's trips (with a heading when Jonna or Vanessa sees everyone's) */
 function personBox(r, who, rows, heading){
   const wrap=h('div','x2-pers'); wrap.id='x2-p-'+who; r.appendChild(wrap);
@@ -1412,6 +1429,13 @@ const css=h('style'); css.id='x2-css'; css.textContent=`
 .x2-in li .w{font-weight:700;white-space:nowrap}.x2-in li .s{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-2)}
 .x2-in li .asg{font:inherit;font-size:12.5px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--ink)}.x2-more{margin-top:6px;font-size:12px;color:var(--ink-3)}
 .x2-rules{font-size:12.5px}
+#app-expenses .x2-h1{display:flex;align-items:center;gap:10px}
+.x2-info{width:22px;height:22px;flex:0 0 22px;border-radius:50%;border:1.5px solid var(--navy-mid,#2c6a96);background:transparent;color:var(--navy-mid,#2c6a96);font:italic 700 12px/1 Georgia,'Times New Roman',serif;display:inline-flex;align-items:center;justify-content:center;padding:0;cursor:pointer}
+.x2-info:hover{background:var(--navy-mid,#2c6a96);color:#fff}.x2-info:focus-visible{outline:2px solid var(--sky,#74bfeb);outline-offset:2px}
+:root[data-theme="dark"] .x2-info{border-color:var(--sky,#74bfeb);color:var(--sky,#74bfeb)}
+.hqtop .x2-info-top{margin-left:10px;border-color:var(--sky,#74bfeb);color:var(--sky,#74bfeb);width:24px;height:24px;flex:0 0 24px;min-height:0}.hqtop .x2-info-top:hover{background:var(--sky,#74bfeb);color:var(--navy-deep,#0d314c)}
+.x2-pol h3{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3,#5b6b7a);margin:14px 0 6px}.x2-pol p{margin:0 0 6px}
+.x2-pt{border-collapse:collapse;width:100%}.x2-pt th,.x2-pt td{text-align:left;padding:5px 0;border-bottom:1px solid var(--line,#e3e8ee);font-weight:400}.x2-pt td{text-align:right}.x2-pn{color:var(--ink-3,#5b6b7a);font-size:12.5px;margin-top:10px!important}
 .x2-dlg .x2-db{font-size:14px;line-height:1.45}.x2-dlg .x2-db p{margin:6px 0 10px}.x2-warn ul{margin:4px 0 4px 18px;padding:0}.x2-warn small{display:block}
 .x2-note{display:block}.x2-note span{display:block;font-size:13px;font-weight:600;margin-bottom:4px}
 .x2-note textarea{width:100%;box-sizing:border-box;font:inherit;font-size:14px;border:1px solid var(--border-strong);border-radius:5px;padding:8px;background:var(--surface);color:inherit}
