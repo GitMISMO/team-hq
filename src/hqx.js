@@ -588,7 +588,7 @@ const css2=document.createElement('style'); css2.id='hqx-css2'; css2.textContent
 .hqx-sym{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .hqx-sys{position:fixed;inset:0;z-index:380}
 .hqx-scrim{position:absolute;inset:0;background:rgba(6,32,47,.42);animation:hqxFade .2s ease}
-.hqx-pane{position:absolute;top:calc(var(--hq-h,64px) + env(safe-area-inset-top,0px));right:0;bottom:0;width:75vw;display:flex;flex-direction:column;background:var(--surface);box-shadow:-18px 0 50px rgba(6,32,47,.35);animation:hqxIn .24s cubic-bezier(.2,.8,.2,1)}
+.hqx-pane{position:absolute;top:calc(var(--hq-h,68px) + env(safe-area-inset-top,0px));right:0;bottom:0;width:75vw;display:flex;flex-direction:column;background:var(--surface);box-shadow:-18px 0 50px rgba(6,32,47,.35);animation:hqxIn .24s cubic-bezier(.2,.8,.2,1)}
 .hqx-sys.out .hqx-pane{transform:translateX(100%);transition:transform .2s ease}.hqx-sys.out .hqx-scrim{opacity:0;transition:opacity .2s}
 @keyframes hqxIn{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
 @keyframes hqxFade{from{opacity:0}to{opacity:1}}

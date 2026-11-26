@@ -120,6 +120,17 @@ Team HQ's part is in `src/next.js` (search `CN-033`):
   Forward, Inbox and My Tasks, a record's panel closed by Back, a panel closed with its × then Back, Help, a
   project's panel, and no page errors. Run it with `npm i --no-save playwright-core@1.63.0 && node tools/back.test.mjs`.
 
+## Masthead (CN-053, Nov 26, 2026)
+
+The top bar (`.hqtop` in `index.html`) matches Certification Management's (resources.mismo.org/cms/) to the pixel, as the
+brand standard says: `--hq-h:68px`, padding 13px 22px; `.logoplate` 9px 13px, 5px corners, box-shadow
+`0 1px 0 rgba(80,164,219,.35)`, logo 24px tall; `.mastrule` 1px × 42px in rgba(80,164,219,.4) with 14px either side;
+`.hqname` 16px, weight 500, #94c8e9. Everything that sits under the bar (the left menu, `#panel`, the Team Projects
+panel, the new-shell pages, the hover pane in `hqx.js`, the System Health bar in `guard.js`) reads `var(--hq-h)`, never a
+number, so a height change is one line. Phones keep their own smaller logo (`src/mobile.js`), and a phone turned
+sideways keeps its 44px bar. The older December hat (`.santa`, `#mismo-hat`, `data-season`, the `season()` script) was
+removed; the shared `/assets/holiday.js`, loaded by session.js, puts the hat on in December.
+
 ## Browser Tab Icon (CN-030, Nov 25, 2026)
 
 Every page here (`index.html`, so the Test Copy too; `open.html`; `connected-systems/index.html`) has exactly one tab

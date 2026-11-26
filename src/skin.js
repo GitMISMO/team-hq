@@ -139,7 +139,7 @@ html.app-exp body{padding-left:0!important}
 html.app-exp .hq.rail,html.app-exp .railscrim,html.app-exp #newtask,html.app-exp #jot{display:none!important}
 html.app-exp .hqtop{margin-left:0!important;width:100%!important;padding-top:env(safe-area-inset-top,0px)}
 html.app-exp .hqname{font-size:0!important;letter-spacing:0!important}
-html.app-exp .hqname::after{content:"Expenses";font-size:17px!important;letter-spacing:normal}
+html.app-exp .hqname::after{content:"Expenses";font-size:16px!important;letter-spacing:normal}
 html.app-exp main{padding:16px 14px calc(100px + env(safe-area-inset-bottom,0px))}
 html.app-exp #app-expenses > .vhead{display:none}
 html.app-exp #app-expenses .snapzone{min-height:180px}
