@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 25** — Connected Systems map: pointing at an engine-room piece also lights the engine-room pieces it runs on (Scheduled robots lights GitHub, the save relay lights AWS and GitHub).
 - **Nov 25** — Connected Systems map: the engine room spreads its eight pieces evenly (the Failure Watcher no longer sits on Change Notices); MyMISMO sits in the Summits & Sponsorship row and Connected Systems in Team & Operations; names and notes too long for their box end in … (the whole thing shows on hover).
 - **Nov 25** — MyMISMO in the left menu (CN-043): Attendee Reports and the new MISMO Trivia are now tabs of one MyMISMO page. MISMO Trivia shows each month’s winner and top 10, this quarter’s three finalists, the championship standings once played, and a form to set the championship’s quarter, opening and closing times and minutes to play. Only the people MyMISMO lets see it have it; it appears once MyMISMO’s side is switched on, and nothing is emailed.
 - **Nov 25** — MyMISMO Attendee Reports (CN-041): attendees can report someone in MyMISMO, and the people MyMISMO lets see the reports now get Attendee Reports under Team in the left menu, with any open ones shown at the top of My Dashboard and first in On Your Plate. Each report shows the summit, who it’s about, who sent it, the reason, the note and when; Close it with a short note of what was done, or Reopen it. It appears once MyMISMO’s side is switched on; nobody else sees it, and nothing is emailed.

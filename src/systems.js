@@ -1192,6 +1192,8 @@ function engServes(d, s){ if(!s || s.zone!=='eng') return []; const ids=new Set(
 /* what lights up with a system: the systems at the other end of its lines, and for an engine-room piece also the apps
    it holds up (Nov 25, 2026: an engine-room piece's own lines, like Change Notices to Outlook, used to end at a greyed-out box) */
 function linked(id){ const s={}; s[id]=1; const d=M.data, me0=d.systems.find(x=>x.id===id); if(me0 && me0.zone==='eng') engServes(d, me0).forEach(x=>s[x]=1);
+  /* and the engine-room pieces it runs on (Nov 25, 2026: Scheduled robots now lights GitHub, which runs them) */
+  if(me0 && me0.zone==='eng') d.systems.filter(x=>x.zone==='eng' && x.id!==id && Array.isArray(x.serves) && x.serves.indexOf(id)>=0).forEach(x=>s[x.id]=1);
   (d.connections||[]).forEach(c=>{ if(c.from===id) s[c.to]=1; if(c.to===id) s[c.from]=1; }); return s; }
 function declutter(){ const shown=[]; (P.edges||[]).forEach(e=>{ e.lb.classList.remove('clash'); if(!e.lb.classList.contains('on') || e.lb.classList.contains('short')) return; const b=e.box; if(shown.some(o=>b.x<o.x+o.w+4 && o.x<b.x+b.w+4 && b.y<o.y+o.h+2 && o.y<b.y+b.h+2)) e.lb.classList.add('clash'); else shown.push(b); }); }
 function paintState(){ paintState0(); declutter(); }
