@@ -170,7 +170,7 @@ five. The new one goes live only after it does everything on this list, checked 
   the miles into the notes, and needs no receipt.
 - **MBA travel policy** (`/topics/mba-travel-expense-policy` in Jonna's notes): breakfast $25, lunch $40, dinner $60,
   snacks $15, $140 a day for all meals; a receipt for anything $15 or more (mileage excepted). Flag, never block.
-- **Archive (Nov 21, 2026):** a trip whose expenses are all entered leaves the Expenses list for the Archive (grouped by month, search, person and year filters, Report and Receipts per trip). Archived means entered; nothing is moved in the data.
+- **Archive (Nov 21, 2026):** a trip whose expenses are all entered leaves the Expenses list for the Archive (grouped by month, search, person and year filters, Report and Receipts per trip). Archived means entered; nothing is moved in the data. Desktop only since Nov 26, 2026: on a phone (isPhone(), including the Expenses phone app) there is no Archive button or "entered in DataBasics" link, and openArchive() and jump() do nothing for entered trips.
 - **Trips:** an expense with no trip offers one-tap buttons for the person's open trips (closest dates first), then
   New Trip; a snapped or emailed receipt joins the person's trip with an expense within 3 days; Name This Trip for a
   group with no name; trips start folded; entered trips fold into one line per person; Jonna and Vanessa get the

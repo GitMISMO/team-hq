@@ -487,8 +487,10 @@ function paint(r){
   const right=h('div','rowflex');
   const nb=btn('btn ghost', null, ()=>edit(null), 'Add an expense without a receipt, or type the details yourself');
   nb.appendChild(svg(IC.plus)); nb.appendChild(h('span',null,'Add by Hand'));
+  /* the Archive is desktop only: the phone app shows just the trips still being worked on (Jonna, Nov 26, 2026) */
+  if(UI.view==='archive' && isPhone()) UI.view='';
   if(me() && UI.view==='archive'){ paintArchive(r); return; }
-  const nArc=archTrips().length;
+  const nArc=isPhone() ? 0 : archTrips().length;
   if(nArc){ const ab=btn('btn ghost x2-arcb', null, ()=>openArchive(''), 'Trips already entered in DataBasics'); ab.appendChild(svg(IC.box)); ab.appendChild(h('span',null,'Archive')); ab.appendChild(h('small',null, String(nArc))); right.appendChild(ab); }
   right.appendChild(nb);
   vhead(r, 'Expenses', 'Snap the receipt and it’s done: Team HQ reads it and fills in the details. When a trip is all in, send it to be entered in DataBasics.', right);
@@ -572,7 +574,7 @@ function personBox(r, who, rows, heading){
   const live=names.filter(n=>n===X.NOTRIP || T[n].state!=='entered'), done=names.filter(n=>n!==X.NOTRIP && T[n].state==='entered');
   live.forEach(n=>wrap.appendChild(tripBox(who, n, rows.filter(x=>(x.trip||X.NOTRIP)===n), T[n])));
   /* trips already entered in DataBasics live in the Archive, not here (Jonna, Nov 21, 2026) */
-  if(done.length){
+  if(done.length && !isPhone()){
     const tot=done.reduce((a,n)=>a+T[n].total,0);
     const b=btn('x2-enth x2-arcl', null, ()=>openArchive(heading ? who : ''), 'Open the Archive');
     b.appendChild(svg(IC.box)); b.appendChild(h('b',null, done.length+(done.length===1?' trip':' trips')+' entered in DataBasics'));
@@ -762,7 +764,7 @@ function entered(T, b){
   L.forEach(x=>change(x.id, {submitted:1}));
   sayUndo(first(T.who)+'’s '+T.trip+': '+L.length+(L.length===1?' expense':' expenses')+' marked entered.', async ()=>{ L.forEach(x=>change(x.id, {submitted:0})); });
 }
-function jump(T){ if(X.tripOf(E(), T.who, T.trip).state==='entered'){ UI.afold[T.who+'|'+T.trip]=true; UI.aq=T.trip; openArchive(seesAll() ? T.who : ''); return; }
+function jump(T){ if(X.tripOf(E(), T.who, T.trip).state==='entered'){ if(isPhone()) return; UI.afold[T.who+'|'+T.trip]=true; UI.aq=T.trip; openArchive(seesAll() ? T.who : ''); return; }
   UI.pfold[T.who]=false; UI.fold[T.who+'|'+T.trip]=true;
   if(scopeNow()==='needs') UI.scope='all'; draw();
   setTimeout(()=>{ const b=document.getElementById(tid(T.who, T.trip)); if(b){ b.scrollIntoView({block:'start', behavior:'smooth'}); b.classList.add('x2-hit'); setTimeout(()=>b.classList.remove('x2-hit'), 1600); } }, 60); }
@@ -816,7 +818,7 @@ async function saveReceipts(list){
 function archTrips(){ const L=(seesAll() && !isPhone()) ? E() : E().filter(x=>x.who===me()); const seen={}, out=[];
   L.forEach(x=>{ if(!x.trip) return; const k=x.who+'|'+x.trip; if(seen[k]) return; seen[k]=1; const T=X.tripOf(E(), x.who, x.trip); if(T.state==='entered') out.push(T); });
   return out.sort((a,b)=>b.last-a.last || a.trip.localeCompare(b.trip)); }
-function openArchive(who){ UI.view='archive'; UI.awho=who||''; draw(); window.scrollTo(0,0); }
+function openArchive(who){ if(isPhone()) return; UI.view='archive'; UI.awho=who||''; draw(); window.scrollTo(0,0); }
 function paintArchive(r){
   const right=h('div','rowflex'); right.appendChild(btn('btn ghost', '‹ Back to Expenses', ()=>{ UI.view='main'; UI.aq=''; draw(); window.scrollTo(0,0); }));
   vhead(r, 'Expenses Archive', 'Trips already entered in DataBasics, newest first. Nothing here is deleted; a trip goes back to Expenses if any of it is un-entered.', right);
