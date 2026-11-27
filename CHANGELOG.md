@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 27** — Calendar check now goes by the flow's last hourly run, so quiet weekends and holidays no longer look like a broken flow (CN-054).
 - **Nov 26** — Masthead matches the other MISMO tools (CN-053): the top bar is 68px tall with the MISMO logo in the same spot as Certification Management's (logo box 9px 13px, 5px corners, a thin sky line under it), a thin divider, and Team HQ in a lighter 16px. The left menu, panels and alerts start right under it. The older December hat is gone; the shared holiday hat replaces it.
 - **Nov 26** — Connected Systems map: a long name that would run into its box's status dot is set a size smaller (MBA Accounting Desk).
 - **Nov 26** — Expenses phone app: the top bar has room again: a smaller logo and tighter spacing, so Expenses, the policy "i", Team HQ and your initials don't touch.

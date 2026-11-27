@@ -313,6 +313,9 @@ the team error log, which gathers errors from everyone's screen. Its dot turns y
 - **Daily Health Check:** `team-hq-data/.github/workflows/health.yml` runs every weekday morning, even when nobody
   has Team HQ open: the email and calendar flows, saving, and errors in the last day. When something is wrong it
   opens a GitHub issue in `team-hq-data` that mentions Jonna (so GitHub emails her), and closes it when all is clear.
+  A calendar flow is judged by its last hourly run (CN-054, Nov 27, 2026): its newest commit "Outlook availability
+  for <Name>" in `team-hq-data`, since `cal-<person>.json` only changes when that calendar does. The file's own last
+  change is used only for someone with no such commit. Over 26 hours since the last run is a problem.
 - **Recently Deleted:** `team-hq-data/.github/workflows/trash.yml` runs every hour and, from the save history,
   keeps a 30-day copy of anything deleted (`data/trash.json`). System Health lists it with Restore; Jonna sees
   everyone's, everyone else sees their own.
