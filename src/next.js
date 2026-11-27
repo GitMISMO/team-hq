@@ -14,9 +14,9 @@ const ui={on:undefined, view:'day', modes:{}, groups:{}, who:'', proj:'', ws:'',
 try{ Object.assign(ui, JSON.parse(localStorage.getItem(KEY)||'{}')); }catch(e){}
 if(!ui.modes || typeof ui.modes!=='object') ui.modes={}; if(!ui.groups || typeof ui.groups!=='object') ui.groups={}; if(!ui.fold || typeof ui.fold!=='object') ui.fold={};
 if(!Array.isArray(ui.tpeople)) ui.tpeople=[];
-if(['home','work','team','time'].indexOf(ui.view)>=0 || !ui.view) ui.view='day';
+if(['home','work','team','time','mymismo','reports','trivia'].indexOf(ui.view)>=0 || !ui.view) ui.view='day'; /* MyMISMO's pages moved to MISMO Media (CN-062) */
 /* a link straight to a page: resources.mismo.org/team-hq/?page=systems */
-let DEEP=''; try{ const pg=new URLSearchParams(location.search).get('page'); if(pg && ['systems','events','reports','trivia','mymismo'].indexOf(pg)>=0) DEEP=pg; }catch(e){}
+let DEEP=''; try{ const pg=new URLSearchParams(location.search).get('page'); if(pg && ['systems','events'].indexOf(pg)>=0) DEEP=pg; }catch(e){}
 /* the new Team HQ is the only Team HQ now — no classic switch */
 ui.on=true;
 const save=()=>{ try{ localStorage.setItem(KEY, JSON.stringify({on:ui.on, view:ui.view, modes:ui.modes, groups:ui.groups, who:ui.who, proj:ui.proj, showDone:ui.showDone, tpeople:ui.tpeople, fold:ui.fold, ibf:ui.ibf})); }catch(e){} };
@@ -565,7 +565,7 @@ function statusOf(p){
 
 /* ---------- the views ---------- */
 const VIEWS={
-  day:{t:'My Dashboard', i:'home'}, inbox:{t:'Inbox', i:'inbox'}, mine:{t:'My Tasks', i:'mine'}, cal:{t:'Calendar', i:'cal'}, events:{t:'Industry Events', i:'pin', team:true}, mymismo:{t:'MyMISMO', i:'phone', team:true}, reports:{t:'Attendee Reports', i:'flag', mm:true}, trivia:{t:'MISMO Trivia', i:'trophy', mm:true}, systems:{t:'Connected Systems', i:'net', team:true} };
+  day:{t:'My Dashboard', i:'home'}, inbox:{t:'Inbox', i:'inbox'}, mine:{t:'My Tasks', i:'mine'}, cal:{t:'Calendar', i:'cal'}, events:{t:'Industry Events', i:'pin', team:true}, systems:{t:'Connected Systems', i:'net', team:true} };
 function viewKind(v){ v=v||ui.view; if(v.indexOf('p:')===0) return 'project'; if(v.indexOf('u:')===0) return 'person'; if(v.indexOf('c:')===0) return 'classic'; return v; }
 function myOpen(){ return S.tasks.filter(t=>isOpen(t) && doers(t).indexOf(me())>=0); }
 function myAsks(){ return (S.asks||[]).filter(a=>a.state!=='Built' && a.state!=='Not Doing' && (me()==='jonna' || a.by===me())); }
@@ -611,9 +611,6 @@ function drawRail(){
   /* Connected Systems sits at the end of the Team list, just above System Health (Jonna's call) */
   /* Industry Events (Amy's idea, Nov 2026) sits right under Team Projects (Jonna's call, Nov 22, 2026) */
   if(window.__hqEvents){ const tp=nav.querySelector('button[data-hq="rocks"]'); add(railBtn('events','Industry Events', ic('pin')), tp && tp.nextSibling ? tp.nextSibling : null); }
-  /* MyMISMO (CN-041 Attendee Reports, CN-043 MISMO Trivia): one menu item for both, only for the people MyMISMO's routes let
-     in, and only once one of them has answered 200 */
-  if(mmOn()){ const evb=nav.querySelector('button[data-nx="events"]'), tp=nav.querySelector('button[data-hq="rocks"]'), af=evb||tp; add(railBtn('mymismo','MyMISMO', ic('phone')), af && af.nextSibling ? af.nextSibling : null); }
   /* Connected Systems opens its own app (Jonna, Nov 24, 2026: "I like it better"). Team HQ's own page stays for editing:
      the app's Edit in Team HQ opens /team-hq/?page=systems. */
   if(window.__hqSystems){ const cs=railBtn('systems','Connected Systems', ic('net')); const fresh=cs.cloneNode(true); delete fresh.dataset.backPage; fresh.title='Connected Systems (opens in a new tab)';
@@ -623,7 +620,7 @@ function drawRail(){
 function markRail(){
   const nav=navEl(); if(!nav) return;
   const inApp=viewKind()!=='classic';
-  nav.querySelectorAll('button[data-nx]').forEach(b=>{ if(inApp && (b.dataset.nx===ui.view || (b.dataset.nx==='mymismo' && VIEWS[ui.view] && VIEWS[ui.view].mm))) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
+  nav.querySelectorAll('button[data-nx]').forEach(b=>{ if(inApp && b.dataset.nx===ui.view) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
   if(inApp){ nav.querySelectorAll('button[data-hq]').forEach(b=>b.removeAttribute('aria-current')); const hb=document.getElementById('help-btn'); if(hb) hb.removeAttribute('aria-current'); }
   if(tabbar) [...tabbar.querySelectorAll('button')].forEach(b=>b.classList.toggle('on', b.dataset.k===ui.view));
 }
@@ -633,7 +630,7 @@ function open(key){
   if(key==='all') key='mine'; /* All Tasks is gone; My Tasks is the list */
   if(key==='people'){ openClassic('today'); setTimeout(()=>{ const t=document.querySelector('#app-today .td-team'); if(t) t.scrollIntoView({block:'start', behavior:'smooth'}); }, 150); return; } /* People now lives in Today's Where My Team Is Today */
   if(key.indexOf('c:')===0){ openClassic(key.slice(2)); return; }
-  if(key==='mymismo') key=reportsOn() ? 'reports' : triviaOn() ? 'trivia' : 'day'; /* MyMISMO opens on the first of its pages this person has */
+  if(key==='mymismo' || key==='reports' || key==='trivia') key='day'; /* MyMISMO's team area moved to MISMO Media (CN-062, Nov 27, 2026) */
   ui.view=key; ui.ws=''; ui.q=''; sel=-1; save();
   document.documentElement.classList.add('nx-show'); shell.hidden=false;
   paint(); body.scrollTop=0; markRail();
@@ -715,8 +712,6 @@ function paint(){
     else if(k==='people') vPeople();
     else if(k==='systems') vSystems();
     else if(k==='events') vEvents();
-    else if(k==='reports') vReports();
-    else if(k==='trivia') vTrivia();
     else vDash();
   }catch(e){ console.error(e); body.appendChild(h('p','nx-empty','Something went wrong drawing this view.')); }
   body.scrollTop=sy; const sl2=body.querySelector('.nx-sl, .nx-dl'); if(sl2) sl2.scrollTop=sly;
@@ -733,31 +728,7 @@ function vSystems(){ const CS=window.__hqSystems; if(!CS){ header('Connected Sys
 function vEvents(){ const EV=window.__hqEvents; if(!EV){ header('Industry Events', ic('pin')); body.appendChild(h('p','nx-empty','Industry Events didn’t load. Refresh the page.')); return; }
   header('Industry Events', ic('pin'), 'The conferences and shows MISMO goes to');
   const pg=h('div','nx-ev'); pg.appendChild(EV.page()); body.appendChild(pg); }
-/* ---------- MyMISMO Attendee Reports (CN-041; reports.js reads them from MyMISMO's route with the staff sign-in) ---------- */
-function reportsOn(){ const AR=window.__hqReports; return !!(AR && AR.ok()); }
-function reportsOpen(){ const AR=window.__hqReports; return AR && AR.ok() ? AR.open : 0; }
-/* MISMO Trivia (CN-043; trivia.js reads it from MyMISMO's route with the staff sign-in) */
-function triviaOn(){ const TV=window.__hqTrivia; return !!(TV && TV.ok()); }
-function mmOn(){ return reportsOn() || triviaOn(); }
-/* MyMISMO's pages share one header with a tab for each page this person has */
-function mmTabs(){ const tabs=h('div','nx-mmt'); tabs.setAttribute('role','tablist');
-  [['reports','Attendee Reports',reportsOn()],['trivia','MISMO Trivia',triviaOn()]].forEach(([k,t,on])=>{ if(!on) return;
-    const b=btn('nx-mmb'+(ui.view===k?' on':''), t, ()=>{ if(ui.view!==k) open(k); }); b.setAttribute('role','tab'); b.setAttribute('aria-selected', ui.view===k?'true':'false'); tabs.appendChild(b); });
-  return tabs; }
-function vReports(){ const AR=window.__hqReports;
-  header('MyMISMO', ic('phone'), 'Attendee Reports: what MyMISMO attendees have reported, for the MISMO team to look into');
-  body.appendChild(mmTabs());
-  const pg=h('div','nx-ar'); if(AR) pg.appendChild(AR.page()); else pg.appendChild(h('p','nx-empty','Attendee Reports didn’t load. Refresh the page.')); body.appendChild(pg); }
-function vTrivia(){ const TV=window.__hqTrivia;
-  header('MyMISMO', ic('phone'), 'MISMO Trivia: monthly winners, the quarter’s finalists and the championship');
-  body.appendChild(mmTabs());
-  const pg=h('div','nx-tv'); if(TV) pg.appendChild(TV.page()); else pg.appendChild(h('p','nx-empty','MISMO Trivia didn’t load. Refresh the page.')); body.appendChild(pg); }
-function mmChanged(view, mod){ if(!ui.on || !shell) return; const M=window[mod];
-  if(ui.view===view && M && M.state==='no'){ open(mmOn() ? 'mymismo' : 'day'); return; }
-  drawRail(); if(shell.hidden || dashEdit || busy()) return;
-  if(VIEWS[ui.view] && VIEWS[ui.view].mm) paint(); else if(view==='reports' && ui.view==='day' && body.querySelector('.nx-hero')) paint(); }
-window.addEventListener('hq:reports', ()=>mmChanged('reports','__hqReports'));
-window.addEventListener('hq:trivia', ()=>mmChanged('trivia','__hqTrivia'));
+/* MyMISMO's team area (Attendee Reports, MISMO Trivia) moved to MISMO Media (CN-061, CN-062, Nov 27, 2026) */
 function notesText(html){
   try{
     const doc=new DOMParser().parseFromString('<body>'+String(html||'')+'</body>','text/html'); let out='';
@@ -1498,7 +1469,6 @@ function dashHero(now, hr){
   else if(M[0]) bits.push(()=>{ p.append('next up is '); p.appendChild(em(M[0].t)); });
   const kd=nextKeyDate(); if(kd) bits.push(()=>{ p.appendChild(em(kd.t)); const n=days(kd.d); p.append(n<=0?' is happening now':' is '); if(n>0) p.appendChild(em(n+(n===1?' day':' days'))); if(n>0) p.append(' away'); });
   const asks=myAsks().filter(a=>(a.state||'New')==='New'); if(me()==='jonna' && asks.length) bits.push(()=>{ p.appendChild(em(asks.length+(asks.length===1?' new ask':' new asks'))); p.append(' waiting on you'); });
-  const arN=reportsOpen(); if(arN) bits.unshift(()=>{ p.appendChild(em(arN+(arN===1?' MyMISMO attendee report is':' MyMISMO attendee reports are'))); p.append(' open'); });
   bits.forEach((f,i)=>{ if(i) p.append('; '); f(); }); if(bits.length) p.append('.'); else p.append('A clear runway. Pick something from your list and get ahead.');
   const s0=p.firstChild; if(s0 && s0.nodeType===3) s0.textContent=s0.textContent.charAt(0).toUpperCase()+s0.textContent.slice(1);
   hi.appendChild(p); hero.appendChild(hi);
@@ -1510,7 +1480,6 @@ function dashHero(now, hr){
   (S.dates||[]).filter(d=>d.d && days(d.d)>=0 && days(d.d)<=7 && (!(d.who||[]).length || (d.who||[]).indexOf(me())>=0)).forEach(d=>items.push({d:fmt(d.d), k:'#3CCB7F', t:d.t, fn:()=>window.__editDate && window.__editDate(d), o:days(d.d)}));
   try{ const nm=window.__mtg && window.__mtg.next && window.__mtg.next(); const md=typeof nm==='string'?nm:''; if(md && days(md)>=0 && days(md)<=7) items.push({d:fmt(md), k:'#E86F5A', t:'Team Meeting', fn:()=>openClassic('agenda'), o:days(md)}); }catch(e){}
   if(me()==='jonna') asks.forEach(a=>items.push({d:'New Ask', k:'#E8833A', t:a.t, fn:()=>window.__editAsk && window.__editAsk(a), o:-0.5}));
-  if(arN) items.push({d:'MyMISMO', k:'#E8833A', t:arN+(arN===1?' Open Attendee Report':' Open Attendee Reports'), fn:()=>open('reports'), o:-2});
   items.sort((a,b)=>a.o-b.o);
   if(!items.length) nd.appendChild(h('div','nx-nempty','Nothing due in the next seven days.'));
   items.slice(0,6).forEach(it=>{ const b=btn('nx-need', null, it.fn); b.style.setProperty('--k', it.k); b.appendChild(h('span',null,it.d)); b.appendChild(h('b',null,it.t)); nd.appendChild(b); });
@@ -2284,12 +2253,12 @@ function openMenuSheet(){
   closeMenus(); menuEl=h('div','nx-menu sheet tall');
   const grp=(t)=>menuEl.appendChild(h('div','nx-ml',t));
   const item=(label, fn, iconHtml)=>{ const b=btn('nx-mi', null, ()=>{ closeMenus(); fn(); }); b.innerHTML=(iconHtml||'')+'<span>'+label+'</span>'; menuEl.appendChild(b); };
-  grp('You'); Object.keys(VIEWS).filter(k=>!VIEWS[k].team && !VIEWS[k].mm).forEach(k=>item(VIEWS[k].t, ()=> k==='systems' ? openCS() : open(k), ic(VIEWS[k].i)));
+  grp('You'); Object.keys(VIEWS).filter(k=>!VIEWS[k].team).forEach(k=>item(VIEWS[k].t, ()=> k==='systems' ? openCS() : open(k), ic(VIEWS[k].i)));
   /* My Board is yours: it sits under You, as on the left menu, not among the Team Pages (Nov 24, 2026) */
   { const mb=document.querySelector('.hq.rail nav button[data-hq="mine"]'); if(mb){ const s0=mb.querySelector('svg'); item('My Board', ()=>openClassic('mine'), s0?s0.outerHTML:''); } }
   /* Team Pages in exactly the left menu's order (Industry Events under Team Projects, Connected Systems last) */
   grp('Team Pages'); const seen=new Set(); [...document.querySelectorAll('.hq.rail nav button[data-hq], .hq.rail nav button[data-nx]')].forEach(b=>{ const k=b.dataset.nx; if(k && !(VIEWS[k] && VIEWS[k].team)) return; const id=k ? 'nx:'+k : b.dataset.hq; if(id==='mine' || seen.has(id)) return; seen.add(id); const s=b.querySelector('svg'); const label=k ? VIEWS[k].t : b.textContent.trim(); item(label, k ? ()=>open(k) : ()=>openClassic(b.dataset.hq), s?s.outerHTML:''); });
-  Object.keys(VIEWS).filter(k=>VIEWS[k].team && !seen.has('nx:'+k) && (k!=='systems' || window.__hqSystems) && (k!=='events' || window.__hqEvents) && (k!=='mymismo' || mmOn())).forEach(k=>item(VIEWS[k].t, ()=> k==='systems' ? openCS() : open(k), ic(VIEWS[k].i)));
+  Object.keys(VIEWS).filter(k=>VIEWS[k].team && !seen.has('nx:'+k) && (k!=='systems' || window.__hqSystems) && (k!=='events' || window.__hqEvents)).forEach(k=>item(VIEWS[k].t, ()=> k==='systems' ? openCS() : open(k), ic(VIEWS[k].i)));
   { const hb=document.getElementById('help-btn'); if(hb){ const s=hb.querySelector('svg'); item('Help', ()=>{ hideApp(); ui.view='c:help'; save(); hb.click(); markRail(); }, s?s.outerHTML:''); } }
   document.body.appendChild(menuEl);
   { const mine=menuEl; setTimeout(()=>document.addEventListener('click', function off(e){ if(menuEl!==mine){ document.removeEventListener('click', off); return; } if(mine && !mine.contains(e.target) && !e.target.closest('.nx-tbm')){ closeMenus(); document.removeEventListener('click', off); } }), 0); }
@@ -2390,11 +2359,6 @@ body.railmini .hq nav .nx-rl,body.railmini .hq nav .nx-rb.sub,body.railmini .nx-
 /* header */
 .nx-head{flex:0 0 auto;display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border)}
 .nx-hl{display:flex;align-items:center;gap:10px;min-width:0}
-/* MyMISMO's page tabs (Attendee Reports, MISMO Trivia) */
-.nx-mmt{display:flex;gap:4px;max-width:1200px;margin:0 auto;padding:12px clamp(16px,2.4vw,32px) 0;box-sizing:border-box;border-bottom:1px solid var(--border)}
-.nx-mmb{font:inherit;font-size:13.5px;font-weight:700;color:var(--ink-2);background:none;border:1px solid transparent;border-bottom:none;border-radius:6px 6px 0 0;padding:7px 14px;margin-bottom:-1px;cursor:pointer}
-.nx-mmb:hover{color:var(--ink)}
-.nx-mmb.on{color:var(--ink);background:var(--surface);border-color:var(--border)}
 .nx-hi{display:inline-flex;align-items:center;color:var(--c1)}
 .nx-hi>svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .nx-hi .av{width:30px;height:30px}

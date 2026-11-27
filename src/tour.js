@@ -12,10 +12,9 @@ function h(t,c,x){ const e=document.createElement(t); if(c) e.className=c; if(x!
 function btn(c,x,f){ const b=h('button',c,x); b.type='button'; if(f) b.addEventListener('click', f); return b; }
 
 /* ---------- help for the page you're on ---------- */
-const NX={day:'dash', inbox:'inbox', mine:'mytasks', cal:'calendar', people:'views', systems:'systems', events:'events', reports:'reports', trivia:'trivia'};
+const NX={day:'dash', inbox:'inbox', mine:'mytasks', cal:'calendar', people:'views', systems:'systems', events:'events'};
 const HQ={today:'today', rocks:'rocks', plans:'plans', dates:'dates', findtime:'findtime', agenda:'agenda', syncs:'syncs', expenses:'expenses', mine:'board'};
 function helpFor(){ const on=document.querySelector('.hq.rail .on[data-nx], .hq.rail [data-nx][aria-current], .hq.rail .on[data-hq], .hq.rail [data-hq][aria-current]');
-  if(on && on.dataset.nx==='mymismo') return document.querySelector('.nx-tv') ? 'trivia' : 'reports'; /* MyMISMO: the tab showing */
   if(on && on.dataset.nx) return NX[on.dataset.nx] || 'start';
   if(on && on.dataset.hq) return HQ[on.dataset.hq] || 'start';
   if(document.documentElement.classList.contains('nx-show')) return 'views';
@@ -85,26 +84,6 @@ const NEW=[
 <p><b>Set Aside</b> takes an event off the list without deleting it; bring it back from the <b>Set Aside</b> filter.</p>
 <h4>Where It’s Kept</h4>
 <p>In Team HQ’s own data (one record per event, collection <b>events</b>), saved through the save relay like everything else in Team HQ, with history. Graphics are kept in Team HQ’s file storage. <b>MISMO Media</b> reads each event’s graphics (with the signed-in person’s own sign-in) and keeps a copy in its Image Library; it only reads, and never changes anything in Team HQ. Panels look people up in <b>Member 360</b>’s people list with your own sign-in; Team HQ only reads it and never changes anything in Member 360. Contacts reaching Member 360 are on the Connections Map as a request.</p>
-`},
- {after:'events', id:'reports', t:'Attendee Reports', d:'What MyMISMO attendees report about someone, for the MISMO team to look into and close.', h:`
-<p>Apple and Google require MyMISMO, MISMO’s summit app, to let attendees report someone (from that person’s profile or a conversation) and the MISMO team to respond quickly. <b>Attendee Reports</b> is where those reports come in: select <b>MyMISMO</b> under Team in the left menu, then the <b>Attendee Reports</b> tab (MISMO Trivia is the other tab). Only the people MyMISMO lets see them (the people who send its alerts) have it; for everyone else it isn’t there at all.</p>
-<h4>Seeing What’s Open</h4>
-<p>When any report is open, <b>My Dashboard</b> says so at the top and puts it first under <b>On Your Plate</b>; select it to go to the reports. The boxes at the top of the page count the <b>Open Reports</b>, <b>Closed</b> and <b>All Reports</b>; select one to list just those.</p>
-<h4>A Report</h4>
-<p>Each report shows the summit, who it’s about, who sent it, the reason (Harassment, Spam, Inappropriate or Other), the attendee’s note and when it was sent, newest first. Look into it, then select <b>Close…</b>, type a short note of what was done and press <b>Close Report</b>. A closed report keeps that note; <b>Reopen</b> puts it back on the open list.</p>
-<h4>Where It’s Kept</h4>
-<p>The reports stay in MyMISMO’s own data. Team HQ reads them with your own sign-in when it opens and every 5 minutes while it’s open, keeps no copy, and only changes whether a report is open or closed and its note. Nothing is emailed. In the Test Copy, Close and Reopen are held back.</p>
-`},
- {after:'reports', id:'trivia', t:'MISMO Trivia', d:'MyMISMO’s trivia: each month’s winner and top 10, the quarter’s finalists, and the championship.', h:`
-<p><b>MISMO Trivia</b> is the trivia game in MyMISMO, MISMO’s app, played all year. Select <b>MyMISMO</b> under Team in the left menu, then the <b>MISMO Trivia</b> tab. Only the people MyMISMO lets see it (the people who send its alerts) have it; for everyone else it isn’t there at all.</p>
-<h4>Monthly Winners and the Top 10</h4>
-<p>Each round is ten questions, scored on right answers and speed. The boxes at the top show this month’s players, last month’s winner, this quarter’s finalists so far and whether the championship is set. <b>Monthly Winners</b> shows the #1 of each finished month, for recognition. <b>Top 10 Each Month</b> shows this month so far and the three months before, with each player’s points and how many they got right; the winner is highlighted.</p>
-<h4>Quarterly Championship</h4>
-<p>Each month’s winner is a finalist for that quarter’s championship (if someone wins twice, MyMISMO brings in a runner-up), so a quarter has three. The championship cards show this quarter’s and last quarter’s finalists and, once the championship has been played, the standings.</p>
-<h4>Set the Championship</h4>
-<p>Pick the <b>Quarter</b>, when it <b>Opens</b> and <b>Closes</b> (in your computer’s time zone) and the <b>Minutes to Play</b> (1 to 120), then <b>Save Championship</b>. Each finalist plays once, on their own phone, any time it’s open. <b>Clear</b> takes the championship away until it’s set again.</p>
-<h4>Where It’s Kept</h4>
-<p>Everything stays in MyMISMO’s own data. Team HQ reads it with your own sign-in when it opens and every 15 minutes while it’s open, keeps no copy, and only sets the championship’s dates. Nothing is emailed. In the Test Copy, Save Championship and Clear are held back.</p>
 `},
  {after:'health', id:'systems', t:'Connected Systems', d:'How MISMO’s systems fit together, what each one does, and what runs on its own.', h:`
 <p><b>Connected Systems</b> (under Team in the left menu, or add its tile with <b>+ Add a Tile</b>) is the map of every MISMO system and the work that moves between them. Point at a box to light up everything it touches; select it for what it does, where it lives, what it replaced, and what it sends and receives. The area buttons show one part of the operation. A moving dot means the work moves automatically; a <b>dashed line</b> means a person copies it.</p>

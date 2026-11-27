@@ -33,7 +33,5 @@ jobs:
         run: |
           npm i --no-save --no-package-lock playwright-core@1.63.0
           node tools/back.test.mjs
-      - name: MyMISMO Attendee Reports (tools/reports.test.mjs, CN-041)
-        run: node tools/reports.test.mjs
-      - name: MyMISMO Trivia (tools/trivia.test.mjs, CN-043)
-        run: node tools/trivia.test.mjs
+      - name: MyMISMO's team area is gone from Team HQ (tools/mymismo.test.mjs, CN-062)
+        run: node tools/mymismo.test.mjs

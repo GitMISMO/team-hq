@@ -52,8 +52,6 @@ prompt) lives only in the private `systemsmap` collection, never in this code.
 | `syncs.js` | Sync Ups |
 | `systems.js` | Connected Systems (the page; its content comes from the private record), including the Change Notices and Failures tabs |
 | `events.js` | Industry Events: the page, the event panel, its dashboard tile, and `tripsFor` for the Expenses trip list (Nov 22, 2026). Each event's own tasks (`tasks`: id, t, who, due, done) and each contact's `role` were added Nov 24, 2026 (CN-023); its Panels (`panels`: id, title, date, time, note, people: id, name, role, title, company, email, member, k, cid) Nov 24, 2026 (CN-024) |
-| `reports.js` | MyMISMO Attendee Reports (CN-041, Nov 25, 2026): reads `GET /mymismo/staff/reports` (every summit's) with the signed-in person's staff sign-in when Team HQ opens and every 5 minutes, and closes or reopens one with `POST /mymismo/staff/reports`. Shown only once the route answers 200 (see What Team HQ Connects To) |
-| `trivia.js` | MyMISMO's MISMO Trivia (CN-043, Nov 25, 2026): reads `GET /mymismo/staff/trivia` with the signed-in person's staff sign-in when Team HQ opens, every 15 minutes and when the page is opened, and sets or clears the quarterly championship with `POST /mymismo/staff/trivia`. Shown only once the route answers 200 |
 | `next.js` | The current Team HQ shell: My Dashboard, Inbox, My Tasks, Calendar, System Health and more |
 | `oofdates.js` | Out of Office key dates from Outlook automatic replies |
 | `expenses.js` | Expenses: the whole page, editor, mileage, policy, trips, expense@ inbox, sending, Ready to Enter, downloads (live Nov 21, 2026; `?exp=old` turns it off for a tab) |
@@ -97,7 +95,7 @@ goes live:
 - `CHANGELOG.md` is here.
 
 `tools/back.test.mjs` (also in Team HQ Checks) is the first browser test on made-up records that runs on GitHub:
-the browser's Back button (see below). `tools/reports.test.mjs` (also in Team HQ Checks, CN-041) opens the newest version the same way with MyMISMO's reports route answering 403 (nothing shows) and then 200 with made-up reports (the menu item, the count on My Dashboard, the list, Close needing a note, and the Test Copy sending nothing): `node tools/reports.test.mjs` after the same `npm i`. `tools/trivia.test.mjs` (also in Team HQ Checks, CN-043) does the same for MISMO Trivia: 403 (no MyMISMO menu item) and then 200 with made-up players (each finished month's winner, the top 10, the quarter's finalists and standings, the championship form refusing a close before the open, and the Test Copy sending nothing): `node tools/trivia.test.mjs`. Run Check in the Test Copy is the browser check on every page and tile.
+the browser's Back button (see below). `tools/mymismo.test.mjs` (also in Team HQ Checks, CN-062) opens the newest version the same way with MyMISMO's staff routes answering 200 with made-up reports and trivia, and checks Team HQ leaves them alone: it never calls them, there is no MyMISMO menu item, My Dashboard and On Your Plate say nothing about attendee reports, an old `?page=reports` link opens My Dashboard, and the MyMISMO tile is still in + Add a Tile: `node tools/mymismo.test.mjs` after the same `npm i`. Run Check in the Test Copy is the browser check on every page and tile.
 
 ## The Browser's Back Button (CN-033, Nov 25, 2026)
 
@@ -261,34 +259,13 @@ The MISMO Connections Map (Jonna's Claude Doc) is the source of truth for every 
   are (`.pass-figs`: the number in `<b>`, the label in `<span>`: Sessions, Speakers, Sponsors) and leaves out **Starred**,
   which is kept on each phone, not for the team (`PERPHONE`). If MyMISMO renames `.pass-figs` or its markup, it posts a
   Change Notice; Team HQ never reads `mymismo-data`.
-- **MyMISMO Attendee Reports (CN-041, Nov 25, 2026):** Apple (App Review Guideline 1.2) needs attendees to be able to report
-  someone and the MISMO team to respond. MyMISMO's save relay routes (relay request 15, GitMISMO/mymismo
-  `_internal/relay-request-15`) keep the reports in MyMISMO's own data; `src/reports.js` only reads and closes them, with the
-  signed-in person's own sign-in: `GET <relay>/mymismo/staff/reports` (no `summit`, so every summit's) returns
-  `{reports:[{summit, id, about, aboutName, byName, reason, note, at, status: 'open'|'closed', action}], open}`, and
-  `POST <relay>/mymismo/staff/reports {summit, id, status, action}` closes (with a required short note of what was done) or
-  reopens one. The relay lets in only the people in the `mymismo` entry's `alertSenders` (403 for anyone else; 404 until
-  request 15 is deployed), so **nothing shows (no menu item, no count, no page) unless the GET answers 200**. When it does:
-  Attendee Reports under MyMISMO in the left menu (no count there, Jonna's rule), and when any are open a line at the top of
-  My Dashboard and an item first in On Your Plate. Read when Team HQ opens and every 5 minutes while the tab is in view;
-  Team HQ keeps no copy and nothing is emailed. The Test Copy holds Close and Reopen back (the Test Copy's own guard only
-  covers data, file and commit routes). Summit HQ's panel for CN-040 was replaced by this. If MyMISMO changes the routes
-  or the shape, it posts a Change Notice.
-- **MyMISMO area (CN-043, Nov 25, 2026):** Team HQ is MyMISMO's home for the MISMO team's year-round work (summit alerts stay
-  in Summit HQ). One left-menu item, **MyMISMO** (`data-nx="mymismo"`, under Team after Industry Events), shows once either
-  route answers 200 and opens on the first page the person has; the page has a tab for each (`reports`, `trivia`; `VIEWS[k].mm`
-  marks them, `mmTabs()` in `next.js`). A new MyMISMO page goes in the same way: its own module, a `VIEWS` entry with `mm:true`,
-  a tab in `mmTabs()`, and `mmOn()`.
-- **MyMISMO Trivia (CN-043, Nov 25, 2026):** `src/trivia.js` reads `GET <relay>/mymismo/staff/trivia` with the signed-in
-  person's own sign-in: `{month, quarter, boards:[{month, players, top:[{rank, name, score, right}]}] (this month and the three
-  before, top 10), quarters:[{quarter, finalists:[{name, month}], standings:[{name, total, played}]|null}] (this quarter and the
-  last), champ:{quarter, opens, closes, minutes, open}|null}`, and `POST <relay>/mymismo/staff/trivia {champ:{quarter ('2027-Q1'),
-  opens, closes (ISO times, closes after opens), minutes (1 to 120)}}` (or `{champ:null}` to clear) sets the championship
-  window. Same people and same rule as the reports: 403 for anyone not in `alertSenders`, 404 until relay request 15 is
-  deployed and `trivia: true` is set, and **nothing shows unless the GET answers 200**. The page shows each finished month's
-  winner, the top 10 for each month, this quarter's and last quarter's finalists and standings, and the Set the
-  Championship form (times typed in the computer's own time zone, sent as ISO). Team HQ keeps no copy and nothing is
-  emailed; the Test Copy holds Save and Clear back. If MyMISMO changes the route or the shape, it posts a Change Notice.
+- **MyMISMO's team area moved to MISMO Media (CN-061, CN-062, Nov 27, 2026):** Attendee Reports (CN-041) and MISMO Trivia
+  (CN-043) were in Team HQ from Nov 25, 2026 under a MyMISMO menu item, with open reports on My Dashboard and On Your Plate.
+  They now live in MISMO Media's MyMISMO area (with MyMISMO's numbers on its Results page), so Team HQ no longer calls
+  `/mymismo/staff/reports` or `/mymismo/staff/trivia`: `src/reports.js`, `src/trivia.js`, the MyMISMO menu item and page,
+  its tabs, the dashboard line and On Your Plate item, their help and their tests were taken out in version 20261127a
+  (every earlier version is still in `releases/`). A saved or linked `mymismo`, `reports` or `trivia` page opens My
+  Dashboard. Only the MyMISMO tile (above) stays. Don't add MyMISMO's team work back here; it belongs to MISMO Media.
 - **Ask, Plan My Day and receipt reading** go through the relay's ask route; MISMO's API key stays in the relay.
 - **Failure Watcher → Connected Systems (CN-019, Nov 23, 2026):** GitMISMO/mismo-connections' Failure Watcher (every 30
   minutes) writes its log into `team-hq-data` `data/systemsmap.json` as `docs.current.failures` (newest 100; each entry

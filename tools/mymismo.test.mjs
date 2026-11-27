@@ -1,14 +1,12 @@
-// MyMISMO Attendee Reports in Team HQ (CN-041). Run on every change by .github/workflows/checks.yml:
+// MyMISMO's team area moved out of Team HQ (CN-062, Nov 27, 2026). Run on every change by .github/workflows/checks.yml:
 //
-//   npm i --no-save playwright-core@1.63.0 && node tools/reports.test.mjs
+//   npm i --no-save playwright-core@1.63.0 && node tools/mymismo.test.mjs
 //
-// Opens the newest saved version as a Test Copy (?try=<version>) in headless Chrome, with a pretend sign-in and a
-// pretend save relay, so nothing real is read or changed. Twice:
-//  1. MyMISMO's route answers 403 (not one of its alert senders): no MyMISMO menu item, no count anywhere.
-//  2. It answers 200 with made-up reports: the menu item, the open count on My Dashboard (its top line and On Your
-//     Plate), the page lists each report (summit, who it's about, who sent it, reason, note, when), Close needs a note
-//     of what was done, and the Test Copy sends nothing. No page errors either time.
-// Exit code 1 if anything fails.
+// Attendee Reports and MISMO Trivia now live in MISMO Media (CN-061). This opens the newest saved version as a Test Copy
+// (?try=<version>) in headless Chrome with a pretend sign-in and a pretend save relay in which MyMISMO's staff routes
+// answer 200 with made-up reports and trivia, and checks Team HQ ignores them: it never calls those routes, there is no
+// MyMISMO menu item, My Dashboard and On Your Plate say nothing about attendee reports, an old ?page=reports link opens
+// My Dashboard, and the MyMISMO tile is still in + Add a Tile. No page errors. Exit code 1 if anything fails.
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -26,6 +24,7 @@ const REPORTS = { open: 2, reports: [
   { summit: 'fall-2026', id: 'RP1b', about: 'A2', aboutName: 'Lee Madeup', byName: 'Kim Pretend', reason: 'spam', note: '', at: new Date(Date.now() - 864e5).toISOString(), status: 'open', action: '' },
   { summit: 'spring-2026', id: 'RP1c', about: 'A3', aboutName: 'Ray Test', byName: 'Jo Trial', reason: 'other', note: 'Old one', at: '2026-04-02T15:00:00Z', status: 'closed', action: 'Spoke with them' },
 ] };
+const TRIVIA = { month: '2026-11', quarter: '2026-Q4', boards: [{ month: '2026-11', players: 3, top: [{ rank: 1, name: 'Pat Example', score: 900, right: 9 }] }], quarters: [], champ: null };
 
 let browser;
 for (const o of [{ channel: 'chrome' }, { executablePath: process.env.CHROME || '/usr/bin/google-chrome' }, { executablePath: '/usr/bin/chromium' }]) {
@@ -39,19 +38,18 @@ const pass = m => console.log('ok   ' + m);
 const fail = m => { failed++; console.log('::error::' + m); };
 const expect = (c, m, why) => c ? pass(m) : fail(m + (why ? ' (' + why + ')' : ''));
 
-async function open(answer) {
+async function open(query) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-  const errs = [], posts = [];
+  const errs = [], calls = [];
   await page.addInitScript(() => { try { localStorage.setItem('tools:team-hq:hq.tour.kelly', 'done'); } catch (e) {} });
   page.on('pageerror', e => errs.push(e.message));
   await page.route('**/*', async r => {
     const u = r.request().url(), m = r.request().method();
     if (u.includes('/assets/session.js')) return r.fulfill({ contentType: 'application/javascript', body: SESSION });
     if (u.includes('/assets/back.js')) return r.fulfill({ contentType: 'application/javascript', body: '' });
-    if (u.includes('lambda-url') && u.includes('/mymismo/staff/reports')) {
-      if (m === 'POST') { posts.push(u); return r.fulfill({ contentType: 'application/json', body: '{"ok":true}' }); }
-      return answer === 200 ? r.fulfill({ contentType: 'application/json', body: JSON.stringify(REPORTS) })
-        : r.fulfill({ status: answer, contentType: 'application/json', body: '{"error":"NOT_ALLOWED"}' });
+    if (u.includes('lambda-url') && u.includes('/mymismo/staff/')) {
+      calls.push(m + ' ' + u);
+      return r.fulfill({ contentType: 'application/json', body: JSON.stringify(u.includes('/trivia') ? TRIVIA : REPORTS) });
     }
     if (u.includes('lambda-url')) {
       if (m === 'GET') return r.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: null }) });
@@ -66,48 +64,34 @@ async function open(answer) {
     }
     return r.abort();
   });
-  await page.goto('http://hq.test/team-hq/?try=' + VER);
+  await page.goto('http://hq.test/team-hq/?try=' + VER + (query || ''));
   await page.waitForFunction(() => window.__nx && document.querySelector('nav button[data-nx="day"]'), null, { timeout: 30000 }).catch(() => {});
   await page.waitForTimeout(12000);
-  return { page, errs, posts };
+  return { page, errs, calls };
 }
 const text = (page, sel) => page.evaluate(s => { const e = document.querySelector(s); return e ? e.innerText : ''; }, sel);
 
 try {
   console.log('Checking version ' + VER);
-  { // 1. not let in
-    const { page, errs } = await open(403);
-    expect(!(await page.$('nav button[data-nx="mymismo"]')), 'with a 403, there is no MyMISMO menu item');
-    expect(!/attendee report/i.test(await text(page, '.nx-hero')), 'with a 403, My Dashboard says nothing about reports');
-    expect(!errs.length, 'with a 403, no page errors', errs.join(' | '));
+  {
+    const { page, errs, calls } = await open('');
+    expect(!(await page.$('nav button[data-nx="mymismo"]')), 'there is no MyMISMO menu item');
+    expect(!/attendee report/i.test(await text(page, '.nx-hero')), 'My Dashboard says nothing about attendee reports');
+    expect(!/attendee report/i.test(await text(page, '.nx-needs')), 'On Your Plate says nothing about attendee reports');
+    expect(!calls.length, 'Team HQ never calls MyMISMO\'s staff routes', calls.join(', '));
+    expect(!errs.length, 'no page errors', errs.join(' | '));
     await page.close();
   }
-  { // 2. let in
-    const { page, errs, posts } = await open(200);
-    expect(!!(await page.$('nav button[data-nx="mymismo"]')), 'with a 200, MyMISMO is in the menu');
-    const hero = await text(page, '.nx-hero');
-    expect(/2 MyMISMO attendee reports are open/.test(hero), 'My Dashboard says 2 attendee reports are open', hero.slice(0, 200));
-    expect(/2 Open Attendee Reports/.test(await text(page, '.nx-needs')), 'On Your Plate lists the open reports');
-    await page.click('.nx-needs .nx-need:has-text("Open Attendee Reports")'); await page.waitForTimeout(700);
-    const pg = await text(page, '.ar');
-    expect(/Pat Example/.test(pg) && /Sam Sample/.test(pg) && /fall-2026/.test(pg) && /Harassment/.test(pg) && /Made-up note one/.test(pg) && /Today|Yesterday|ago|\d/.test(pg),
-      'the page shows the summit, who it is about, who sent it, the reason, the note and when', pg.slice(0, 300));
-    expect(!/Ray Test/.test(pg), 'the closed report is not in the open list');
-    await page.click('.ar-row:has-text("Pat Example") .ar-btn.pri'); await page.waitForTimeout(400);
-    expect(!!(await page.$('.ar-close input')), 'Close… asks what was done');
-    await page.click('.ar-close .ar-btn.pri'); await page.waitForTimeout(400);
-    expect(!!(await page.$('.ar-close input.need')), 'Close Report needs a note of what was done');
-    await page.fill('.ar-close input', 'Spoke with the attendee');
-    await page.click('.ar-close .ar-btn.pri'); await page.waitForTimeout(800);
-    expect(!posts.length, 'the Test Copy sends nothing', posts.join(', '));
-    await page.click('.ar-fig:has-text("Closed")'); await page.waitForTimeout(400);
-    const cl = await text(page, '.ar');
-    expect(/Ray Test/.test(cl) && /Spoke with them/.test(cl) && /Reopen/.test(cl), 'Closed lists the closed report with what was done and Reopen');
-    expect(!errs.length, 'with a 200, no page errors', errs.join(' | '));
+  {
+    const { page, errs } = await open('&page=reports');
+    expect(!!(await page.$('nav button[data-nx="day"][aria-current="page"]')), 'an old ?page=reports link opens My Dashboard');
+    expect(!errs.length, 'with ?page=reports, no page errors', errs.join(' | '));
     await page.close();
   }
+  const rel = fs.readFileSync(path.join(ROOT, 'releases', 'upgrades-' + VER + '.js'), 'utf8');
+  expect(/\['mymismo','MyMISMO','\/mymismo\/'/.test(rel), 'the MyMISMO tile is still in + Add a Tile');
 } catch (e) {
-  fail('the Attendee Reports check stopped: ' + e.message);
+  fail('the MyMISMO check stopped: ' + e.message);
 }
 await browser.close();
 console.log(failed ? failed + ' problem' + (failed > 1 ? 's' : '') + '.' : 'No problems.');
