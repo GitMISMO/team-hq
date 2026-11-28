@@ -17,7 +17,7 @@
    version from releases/ instead of this one, and index.html stops every save there, so nothing anyone
    does in the Test Copy is kept. Problems: errors anyone hits are written to the errors file, and Jonna
    sees them under Problems at the foot of the left menu. */
-var BUILD='20261127a';
+var BUILD='20261127b';
 if(window.__HQ_TRY && window.__HQ_TRY!==BUILD){
   if(!window.__hqTryLoad){ window.__hqTryLoad=BUILD;
     var ts=document.createElement('script'); ts.src='releases/upgrades-'+window.__HQ_TRY+'.js';
@@ -4491,18 +4491,22 @@ const css=h('style'); css.id='mob-css'; css.textContent=`
   header.hqtop .hqtop-r .mastbtn{width:30px!important;height:30px!important;min-width:30px!important;padding:0!important;justify-content:center!important;gap:0!important}
   html.app-exp header.hqtop .exp-hq{padding-left:8px!important;padding-right:8px!important}
   @media (max-width:380px){header.hqtop .logoplate{padding:4px 6px!important}header.hqtop .mastrule{margin:0 5px!important}}
-  /* the Expenses app's top bar on a phone: a smaller logo and tighter spacing, so the name, the policy "i", Team HQ and
-     your initials each get room instead of touching (Jonna, Nov 26, 2026) */
-  @media (max-width:480px){
-    html.app-exp header.hqtop .logoplate{padding:4px 7px!important}
-    html.app-exp header.hqtop .logoplate svg{width:76px!important;height:auto!important}
-    html.app-exp header.hqtop .mastrule{height:22px!important;margin:0 8px!important}
-    html.app-exp header.hqtop .hqname::after{font-size:15.5px!important}
-    html.app-exp header.hqtop .x2-info-top{width:21px!important;height:21px!important;flex:0 0 21px!important;margin-left:7px!important;font-size:11px!important}
-    html.app-exp header.hqtop .hqtop-r{gap:8px!important;padding-left:8px}
-    html.app-exp header.hqtop .exp-hq{min-height:30px!important;padding:0 9px!important;font-size:12.5px!important}
-    html.app-exp header.hqtop .whoami{flex:0 0 auto}
-  }
+  /* the Expenses app's top bar on a phone is MyMISMO's, measure for measure (Jonna, Nov 27, 2026): a 58px bar (9px above
+     and below, 14px in), the logo box 7px 10px with 5px corners, the logo 19px tall, 10px either side of a 1px sky
+     line, the name at 16px/500, and 40px square buttons. The MISMO logo goes to Team HQ, as MyMISMO's goes to its
+     dashboard, which leaves room for the policy "i" and your initials. */
+  html.app-exp header.hqtop{height:auto!important;min-height:58px;padding:9px 14px!important;gap:0}
+  html.app-exp header.hqtop .logoplate{padding:7px 10px!important;border-radius:5px;cursor:pointer;flex:none;line-height:0}
+  html.app-exp header.hqtop .logoplate svg{height:19px!important;width:auto!important}
+  html.app-exp header.hqtop .mastrule{width:1px!important;height:40px!important;margin:0 10px!important;background:rgba(116,191,235,.4)!important;flex:none}
+  html.app-exp header.hqtop .hqname{min-width:0;overflow:hidden}
+  html.app-exp header.hqtop .hqname::after{font-size:16px!important;font-weight:500!important;color:var(--sky-soft,#a9d8f3)!important}
+  html.app-exp header.hqtop .hqtop-r{gap:6px!important;padding-left:8px;flex:none}
+  html.app-exp header.hqtop .exp-hq{display:none!important}
+  html.app-exp header.hqtop .x2-info-top{width:40px!important;height:40px!important;flex:0 0 40px!important;margin:0!important;border-radius:4px!important;border:1px solid rgba(255,255,255,.2)!important;background:rgba(255,255,255,.1)!important;color:#fff!important;font-size:18px!important}
+  html.app-exp header.hqtop .whoami{flex:0 0 auto;min-height:40px}
+  /* the smallest phones, as MyMISMO does it */
+  @media (max-width:359px){ html.app-exp header.hqtop{padding-left:10px!important;padding-right:10px!important} html.app-exp header.hqtop .logoplate{padding:6px 8px!important} html.app-exp header.hqtop .logoplate svg{height:15px!important} html.app-exp header.hqtop .hqtop-r{gap:4px!important} html.app-exp header.hqtop .x2-info-top{width:36px!important;height:36px!important;flex-basis:36px!important} }
   .mob-bar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:95;background:var(--surface);border-top:1px solid var(--border);box-shadow:0 -6px 20px rgba(6,32,47,.10);padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px))}
   .mob-b{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:54px;border:0;background:transparent;color:var(--ink-3);font:inherit;font-size:10.5px;font-weight:700;cursor:pointer;border-radius:8px;-webkit-tap-highlight-color:transparent}
   .mob-b svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -10716,7 +10720,9 @@ function paint(r){
   /* the expense policy, one press away, like Contractor HQ's (Jonna, Nov 26, 2026); it replaces the policy note that sat at the bottom */
   const h1=vh.querySelector('h1'); if(h1){ h1.classList.add('x2-h1'); const ib=btn('x2-info','i', ()=>openPolicy(), 'The expense policy'); ib.setAttribute('aria-label','The expense policy'); ib.setAttribute('aria-haspopup','dialog'); h1.appendChild(ib); }
   /* the Expenses phone app hides that heading, so its "i" sits beside Expenses in the top bar */
-  if(document.documentElement.classList.contains('app-exp')){ const nm=document.querySelector('.hqtop .hqname'); if(nm && !document.querySelector('.hqtop .x2-info')){ const tb=btn('x2-info x2-info-top','i', ()=>openPolicy(), 'The expense policy'); tb.setAttribute('aria-label','The expense policy'); tb.setAttribute('aria-haspopup','dialog'); nm.insertAdjacentElement('afterend', tb); } }
+  if(document.documentElement.classList.contains('app-exp')){ const nm=document.querySelector('.hqtop .hqname'); if(nm && !document.querySelector('.hqtop .x2-info')){ const tb=btn('x2-info x2-info-top','i', ()=>openPolicy(), 'The expense policy'); tb.setAttribute('aria-label','The expense policy'); tb.setAttribute('aria-haspopup','dialog'); const rr=document.querySelector('.hqtop .hqtop-r'); if(rr) rr.insertBefore(tb, rr.firstChild); else nm.insertAdjacentElement('afterend', tb); }
+    /* the MISMO logo goes to Team HQ, as MyMISMO's goes to its dashboard (Nov 27, 2026) */
+    const lp=document.querySelector('.hqtop .logoplate'); if(lp && !lp.dataset.hq){ lp.dataset.hq='1'; lp.setAttribute('role','link'); lp.setAttribute('tabindex','0'); lp.setAttribute('aria-label','Team HQ'); lp.title='Go to Team HQ'; const go=()=>{ location.href='/team-hq/'; }; lp.addEventListener('click', go); lp.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } }); } }
   if(!me()){ const bx=h('div','box'); bx.appendChild(emptyBox('Team HQ doesn’t know who you are yet.','Sign in and your expenses show up here.')); r.appendChild(bx); return; }
   const phone=isPhone(), all=seesAll() && !phone, sc=scopeNow();
 
