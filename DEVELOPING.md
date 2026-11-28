@@ -220,6 +220,14 @@ names) also have their own checks: `node tools/expenses-rules.test.mjs`. It went
   the `exp=new` lines out of `bootscreen.js`; remove `vExpenses`, `expRow`, `editExp` and the receipt reading from
   `index.html` (by hand, checked); update the Expenses help in `tour.js` and add the CHANGELOG line.
 
+## Waiting: Bookmarks Through the Sign-in Chip (Jonna, Nov 27, 2026)
+
+Jonna has asked Perry to change the shared sign-in chip (`/assets/session.js`) so a bookmark can take someone straight
+to a specific place in an app, through the sign-in. When Perry's change arrives (a Change Notice For Team HQ, or a new
+`ResourcesSession` option), make the Expenses app use it: a bookmark to the Expenses app (`?app=expenses`) and to the
+places inside it (a trip, Add by Hand, the policy card, and on the desktop the Archive) should open there after
+sign-in, on the phone app and the desktop alike. Until then nothing changes here.
+
 ## What Team HQ Connects To
 
 The MISMO Connections Map (Jonna's Claude Doc) is the source of truth for every hand-off. Team HQ's part:
