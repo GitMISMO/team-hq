@@ -6,6 +6,7 @@ Team HQ is kept safe.
 
 ## November 2026
 
+- **Nov 27** — Expenses phone app: the top bar is MyMISMO's size (58px bar, the same logo, line and name sizes, 40px square buttons). The policy "i" is a square button beside your initials, and the MISMO logo goes to Team HQ, as MyMISMO's goes to its dashboard.
 - **Nov 27** — MyMISMO's Attendee Reports and MISMO Trivia have moved to MISMO Media (its MyMISMO area, with the app's numbers on Results), so the MyMISMO item is gone from Team HQ's left menu, and open attendee reports no longer show on My Dashboard or On Your Plate (CN-062). The MyMISMO tile in + Add a Tile stays.
 - **Nov 27** — Calendar check now goes by the flow's last hourly run, so quiet weekends and holidays no longer look like a broken flow (CN-054).
 - **Nov 26** — Masthead matches the other MISMO tools (CN-053): the top bar is 68px tall with the MISMO logo in the same spot as Certification Management's (logo box 9px 13px, 5px corners, a thin sky line under it), a thin divider, and Team HQ in a lighter 16px. The left menu, panels and alerts start right under it. The older December hat is gone; the shared holiday hat replaces it.

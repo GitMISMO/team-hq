@@ -497,7 +497,9 @@ function paint(r){
   /* the expense policy, one press away, like Contractor HQ's (Jonna, Nov 26, 2026); it replaces the policy note that sat at the bottom */
   const h1=vh.querySelector('h1'); if(h1){ h1.classList.add('x2-h1'); const ib=btn('x2-info','i', ()=>openPolicy(), 'The expense policy'); ib.setAttribute('aria-label','The expense policy'); ib.setAttribute('aria-haspopup','dialog'); h1.appendChild(ib); }
   /* the Expenses phone app hides that heading, so its "i" sits beside Expenses in the top bar */
-  if(document.documentElement.classList.contains('app-exp')){ const nm=document.querySelector('.hqtop .hqname'); if(nm && !document.querySelector('.hqtop .x2-info')){ const tb=btn('x2-info x2-info-top','i', ()=>openPolicy(), 'The expense policy'); tb.setAttribute('aria-label','The expense policy'); tb.setAttribute('aria-haspopup','dialog'); nm.insertAdjacentElement('afterend', tb); } }
+  if(document.documentElement.classList.contains('app-exp')){ const nm=document.querySelector('.hqtop .hqname'); if(nm && !document.querySelector('.hqtop .x2-info')){ const tb=btn('x2-info x2-info-top','i', ()=>openPolicy(), 'The expense policy'); tb.setAttribute('aria-label','The expense policy'); tb.setAttribute('aria-haspopup','dialog'); const rr=document.querySelector('.hqtop .hqtop-r'); if(rr) rr.insertBefore(tb, rr.firstChild); else nm.insertAdjacentElement('afterend', tb); }
+    /* the MISMO logo goes to Team HQ, as MyMISMO's goes to its dashboard (Nov 27, 2026) */
+    const lp=document.querySelector('.hqtop .logoplate'); if(lp && !lp.dataset.hq){ lp.dataset.hq='1'; lp.setAttribute('role','link'); lp.setAttribute('tabindex','0'); lp.setAttribute('aria-label','Team HQ'); lp.title='Go to Team HQ'; const go=()=>{ location.href='/team-hq/'; }; lp.addEventListener('click', go); lp.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } }); } }
   if(!me()){ const bx=h('div','box'); bx.appendChild(emptyBox('Team HQ doesn’t know who you are yet.','Sign in and your expenses show up here.')); r.appendChild(bx); return; }
   const phone=isPhone(), all=seesAll() && !phone, sc=scopeNow();
 
